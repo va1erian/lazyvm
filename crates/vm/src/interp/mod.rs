@@ -27,6 +27,9 @@ pub(crate) enum Flow {
 /// Extra frames allowed while creating a `StackOverflowError`, so its
 /// constructor can run.
 const OVERFLOW_HEADROOM: usize = 64;
+/// The same allowance for nested calls from Rust and for frame slots.
+const OVERFLOW_NESTING: usize = 16;
+const OVERFLOW_SLOTS: usize = 64 * 1024;
 
 impl Vm {
     /// Calls a method from Rust and runs it to completion. Reference
@@ -56,7 +59,7 @@ impl Vm {
             return f(self, args);
         }
         // Each nested run uses Rust stack; bound it like Java frames.
-        if self.nesting >= self.options.max_nesting {
+        if self.nesting >= self.options.max_nesting + self.headroom(OVERFLOW_NESTING) as u32 {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let base = self.frames.len();
@@ -68,12 +71,7 @@ impl Vm {
     }
 
     pub(crate) fn push_frame(&mut self, m: MethodRef, args: &[Value]) -> VmResult<()> {
-        let headroom = if self.creating_exception > 0 {
-            OVERFLOW_HEADROOM
-        } else {
-            0
-        };
-        if self.frames.len() >= self.options.max_frames + headroom {
+        if self.frames.len() >= self.options.max_frames + self.headroom(OVERFLOW_HEADROOM) {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let method = self.method(m);
@@ -89,13 +87,23 @@ impl Vm {
         // Locals and stack are not heap objects, so they get their own budget.
         let slots =
             usize::from(code.max_locals.max(method.arg_slots)) + usize::from(code.max_stack);
-        if self.frame_slots + slots > self.options.max_frame_slots {
+        if self.frame_slots + slots > self.options.max_frame_slots + self.headroom(OVERFLOW_SLOTS) {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let frame = Frame::new(m, code, method.arg_slots, args)?;
         self.frame_slots += slots;
         self.frames.push(frame);
         Ok(())
+    }
+
+    /// `extra` while a `StackOverflowError` (or any VM exception) is being
+    /// built, so its constructor can run past the limit it reports.
+    fn headroom(&self, extra: usize) -> usize {
+        if self.creating_exception > 0 {
+            extra
+        } else {
+            0
+        }
     }
 
     pub(crate) fn pop_frame(&mut self) {
@@ -168,19 +176,17 @@ impl Vm {
         result
     }
 
-    /// The root at `slot` is replaced when a catch type fails to resolve:
-    /// that error becomes the exception, and the search goes on with the
-    /// next handler, so the failing entry is not tried again (JVMS 5.4.3).
+    /// A catch type that fails to resolve ends the search in that frame,
+    /// as HotSpot does: its resolution error becomes the exception (the root
+    /// at `slot` is replaced) and unwinding continues in the caller.
     fn unwind_rooted(&mut self, mut ex: Ref, base: usize) -> VmResult<()> {
         let slot = self.roots.len() - 1;
-        while self.frames.len() > base {
+        'frames: while self.frames.len() > base {
             let (class, pc, code) = {
                 let f = self.top()?;
                 (f.class, f.pc, f.code.clone())
             };
-            let mut i = 0;
-            while let Some(h) = code.handlers.get(i) {
-                i += 1;
+            for h in &code.handlers {
                 if pc < usize::from(h.start_pc) || pc >= usize::from(h.end_pc) {
                     continue;
                 }
@@ -191,7 +197,8 @@ impl Vm {
                         Err(e) if e.is_catchable() => {
                             ex = self.materialize(e)?;
                             self.roots[slot] = ex;
-                            continue;
+                            self.pop_frame();
+                            continue 'frames;
                         }
                         Err(e) => return Err(e),
                     },

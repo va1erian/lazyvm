@@ -11,8 +11,10 @@ pub struct Exact {
     exponent: i64,
 }
 
-/// Exponents beyond this round to zero or infinity in every format anyway.
-const EXP_CLAMP: i64 = 100_000;
+/// Exponents are saturated here: far beyond any format's range, yet far
+/// below what could overflow when a string's digit scale (4 bits a digit)
+/// is added, so the two still cancel exactly.
+const EXP_CLAMP: i64 = 1 << 40;
 
 /// Parses the part after `0x`: hex digits with an optional point, then a
 /// mandatory `p` exponent with at most one sign.
@@ -52,11 +54,10 @@ pub fn parse(s: &str) -> Option<Exact> {
                 scale += 4;
             }
         }
-        scale = scale.clamp(-EXP_CLAMP, EXP_CLAMP);
     }
     Some(Exact {
         mantissa: mantissa | u128::from(sticky),
-        exponent: (exp + scale).clamp(-4 * EXP_CLAMP, 4 * EXP_CLAMP),
+        exponent: exp + scale,
     })
 }
 
@@ -150,6 +151,14 @@ mod tests {
             Some(0.0),
             "a tie at the smallest subnormal rounds to even (zero)"
         );
+    }
+
+    #[test]
+    fn digit_scale_and_exponent_cancel() {
+        let tiny = format!("0.{}1p120000", "0".repeat(30000));
+        assert_eq!(f64_of(&tiny), Some(0.0625));
+        let huge = format!("1{}p-120000", "0".repeat(30000));
+        assert_eq!(f64_of(&huge), Some(1.0));
     }
 
     #[test]

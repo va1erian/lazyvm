@@ -113,7 +113,6 @@ impl ConstantPool {
         }
     }
 
-    /// The internal name (`java/lang/String`, `[I`) of a `Class` constant.
     /// The UTF-16 contents of a Utf8 entry, exact even for unpaired
     /// surrogates; what a `String` constant must hold.
     pub fn utf16(&self, index: u16) -> Result<Vec<u16>, String> {
@@ -123,6 +122,7 @@ impl ConstantPool {
         Ok(self.utf8(index)?.encode_utf16().collect())
     }
 
+    /// The internal name (`java/lang/String`, `[I`) of a `Class` constant.
     pub fn class_name(&self, index: u16) -> Result<&Arc<str>, String> {
         match self.get(index) {
             Some(Constant::Class(name)) => self.utf8(*name),

@@ -157,24 +157,23 @@ impl Vm {
                 format!("{what}: {}", r.class),
             ));
         }
+        // JVMS 5.4.3.3 / 5.4.3.4: among maximally-specific superinterface
+        // methods, the one non-abstract method if there is one.
+        let from_interfaces = |vm: &Self| {
+            let candidates = vm.maximally_specific(owner, &r.name, &r.descriptor);
+            candidates
+                .iter()
+                .find(|m| !vm.method(**m).is_abstract())
+                .or(candidates.first())
+                .copied()
+        };
         let found = if interface {
             self.find_in_class(owner, &r.name, &r.descriptor, false)
                 .or_else(|| self.object_method(&r.name, &r.descriptor))
-                .or_else(|| {
-                    self.maximally_specific(owner, &r.name, &r.descriptor)
-                        .first()
-                        .copied()
-                })
+                .or_else(|| from_interfaces(self))
         } else {
             self.find_in_class(owner, &r.name, &r.descriptor, true)
-                .or_else(|| {
-                    let candidates = self.maximally_specific(owner, &r.name, &r.descriptor);
-                    candidates
-                        .iter()
-                        .find(|m| !self.method(**m).is_abstract())
-                        .or(candidates.first())
-                        .copied()
-                })
+                .or_else(|| from_interfaces(self))
         };
         let Some(m) = found else {
             return Err(VmError::exception(
