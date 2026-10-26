@@ -200,11 +200,14 @@ same jar runs on LazyOS.
 - [x] S3-05 App template: `templates/app/` with an IntelliJ project, a
       Gradle file and a `Main.java`.
       Check: `gradle -p templates/app jar` produces a jar that `lazyvm -jar` runs.
-- [ ] S3-06 LazyOS run: `lazyvm-lazyos` platform v0 (console, files, clock)
+- [x] S3-06 LazyOS run: `lazyvm-lazyos` platform v0 (console, files, clock)
       and `tools/lazyos_test.py`, which builds the musl binary, stages
       `lazyrt.jar` and the tests, and runs the suite in a LazyOS image under
       QEMU. Needs LOS-01.
       Check: `python tools/lazyos_test.py --filter s1,s2,s3` all `PASS`.
+      (Done: 32/32 inside LazyOS under QEMU on 2026-10-27, through LazyOS's
+      LOS-01 hook. No separate `lazyvm-lazyos` crate was needed: the std
+      platform runs unchanged through the Linux ABI.)
 
 Gate: the template app runs from IntelliJ's Run button on Windows and through
 `lazyos_test.py` on LazyOS.
