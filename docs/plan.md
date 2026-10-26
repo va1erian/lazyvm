@@ -34,7 +34,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 
 | Stage | Name | State |
 |---|---|---|
-| S0 | Workspace and harness | not started |
+| S0 | Workspace and harness | done |
 | S1 | One class | not started |
 | S2 | Objects, exceptions, strings, GC | not started |
 | S3 | Class path, jars, launcher, IntelliJ | not started |
@@ -53,35 +53,35 @@ follows [`../AGENTS.md`](../AGENTS.md).
 
 Goal: an empty VM that every later item can test against, on both platforms.
 
-- [ ] S0-01 Workspace. Rename `master` to `main`. Turn the scaffold into the
+- [x] S0-01 Workspace. Rename `master` to `main`. Turn the scaffold into the
       workspace in [`decisions.md`](decisions.md) D10, with empty crates that
       build. Add `rust-toolchain.toml` (stable, plus the
       `x86_64-unknown-linux-musl` target).
       Files: `Cargo.toml`, `crates/*/Cargo.toml`, `crates/*/src/lib.rs`.
       Check: `cargo build --workspace`; `cargo build -p launcher --target x86_64-unknown-linux-musl`.
-- [ ] S0-02 `tools/javac.py`: the one wrapper around javac
+- [x] S0-02 `tools/javac.py`: the one wrapper around javac
       (`-source 8 -target 8 -Xlint:-options -encoding UTF-8`, with an optional
       `-bootclasspath`). It finds javac through `LAZYVM_JAVAC` or `PATH` and
       fails with a readable message if it is missing or cannot emit major 52.
       Check: `python tools/javac.py --selftest` compiles a lambda class and asserts major version 52.
-- [ ] S0-03 Differential test runner. `tools/golden.py --bless <tests>` runs
+- [x] S0-03 Differential test runner. `tools/golden.py --bless <tests>` runs
       tests on the oracle JVM and writes the `.out` files. `tools/test.py
       [--filter]` runs them on `lazyvm` and prints one `PASS`/`FAIL name` line
       each plus a unified diff on failure.
       Files: `tools/golden.py`, `tools/test.py`, `tests/java/README.md`.
       Check: with a stub launcher that runs nothing, `tools/test.py` reports every test `FAIL`, and the exit code is 1.
-- [ ] S0-04 Agent rules check. `tools/check_rules.py` fails if any `AGENTS.md`
+- [x] S0-04 Agent rules check. `tools/check_rules.py` fails if any `AGENTS.md`
       or `CLAUDE.md` in the tree lacks the shared rules block, or if its copy
       differs from the one in `AGENTS.md`. It also fails if a `.rs`, `.py` or
       `.java` file is over 500 lines, or an `unsafe` block lacks `// SAFETY:`.
       With `--lazyos <checkout>`, it also compares the copy in LazyOS's
       `docs/agents/lazyvm.md`.
       Check: `python tools/check_rules.py` passes; deleting a line of the block in a copy makes it fail.
-- [ ] S0-05 License check. `tools/licenses.py` walks `cargo metadata` and fails
+- [x] S0-05 License check. `tools/licenses.py` walks `cargo metadata` and fails
       on any crate whose license is not in the allowed list
       ([`decisions.md`](decisions.md) D2) or that is missing from `THIRD_PARTY.md`.
       Check: `python tools/licenses.py` passes.
-- [ ] S0-06 CI. A GitHub workflow on Windows runs `cargo test`, `check_rules`,
+- [x] S0-06 CI. A GitHub workflow on Windows runs `cargo test`, `check_rules`,
       `licenses` and `tools/test.py`; a Linux job builds the musl target.
       Check: the workflow is green on a PR.
 

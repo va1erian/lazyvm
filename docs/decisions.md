@@ -97,14 +97,21 @@ confirmed by the owner. It holds until someone changes it here.
 - **Interpreter only:** a `match` over opcodes, with constant-pool entries
   resolved lazily and cached in place. No JIT. Quickening is a possible S11+
   item behind a benchmark.
-- **Heap:** precise, stop-the-world, mark-compact. Rust code never holds a raw
-  object pointer across a safepoint: it uses `Handle`s from a handle scope.
-  Every `unsafe` is confined to `heap/` and `interp/` with a `// SAFETY:` note.
-- **Threads:** real OS threads from S6, each `java.lang.Thread` mapped to one.
-  Cooperative safepoints sit at backward branches, calls and allocation; GC
-  stops the world. Monitors are a parking lot keyed by object, with thin locks
-  later if measured. Until S6 the VM runs one thread, and `Thread.start`
-  throws `UnsupportedOperationException`.
+- **Heap (revised in S0):** a slot table. A reference is a `Ref`, a checked
+  index into the table, never a raw pointer, so the VM core needs no `unsafe`.
+  The collector is precise, non-moving mark-sweep: roots are every thread's
+  frames, class statics, interned strings and the native root stack. Freed
+  slots carry a generation, so a stale `Ref` is detected rather than aliased.
+  Natives that hold a `Ref` across an allocation push it on the root stack
+  (`vm.roots`), and the review checks this.
+- **Threads (revised in S0):** real OS threads from S6, each `java.lang.Thread`
+  mapped to one, sharing one VM lock that a thread holds while it runs
+  bytecode. A thread releases the lock at blocking calls (I/O, `sleep`,
+  `wait`, monitor contention) and every few thousand backward branches. That
+  gives real concurrency for I/O and a simple memory model, but no parallel
+  bytecode, which is not a goal. GC runs under the lock, so it stops the world
+  without safepoint handshakes. Until S6 the VM runs one thread, and
+  `Thread.start` throws `UnsupportedOperationException`.
 
 ## D6. Class library scope
 
@@ -186,9 +193,10 @@ lazyvm/
   crates/classfile      parse class files and jars, no unsafe
   crates/vm             interpreter, heap, GC, threads, class loading
   crates/natives        native methods of lazyrt and lazy.*
-  crates/platform       the Platform trait and shared types
-  crates/lazyvm-win     Windows platform, xui winit window host
-  crates/lazyvm-lazyos  LazyOS platform (GPL-3.0-or-later)
+  crates/platform       the Platform trait and StdPlatform (files, console,
+                        clock, sockets through Rust std, on both systems)
+  crates/lazyvm-win     Windows-only parts: xui winit window host (S9)
+  crates/lazyvm-lazyos  LazyOS-only parts: Messenger, xuid (GPL-3.0-or-later, S9)
   crates/launcher       the `lazyvm` / `java` command line
   java/lazyrt           the java.* class library (Java source)
   java/lazy-api         the lazy.* API (Java source)

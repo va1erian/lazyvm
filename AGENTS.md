@@ -61,6 +61,18 @@ it everywhere.
 - New dependencies must have a permissive license (MIT, Apache-2.0, BSD, Zlib,
   ISC), be recorded in `THIRD_PARTY.md`, and pass `python tools/licenses.py`.
   Never add `ring`, `aws-lc` or a GPL crate outside `crates/lazyvm-lazyos`.
+
+**5. Review and merge.**
+- Before every push, run the CI basics (`AGENTS.md`, "Before you push"). A
+  failing gate is fixed at its cause, never skipped, ignored or loosened.
+- Before opening a PR, or marking one ready, review the committed branch in
+  a fresh context: the `/code-review` skill (`high` effort for the VM core,
+  the class-file parser, the verifier, natives and anything parsing untrusted
+  input), or a separate reviewer agent given the diff and not your
+  conclusions. Fix every real finding, re-run until a pass finds nothing
+  real, and note in the PR which review ran and what changed.
+- A PR may be merged (auto-merge included) only when the full CI suite is
+  green.
 <!-- lazyvm-rules:end -->
 
 ## Workflow
@@ -73,6 +85,40 @@ it everywhere.
    more, say why in the PR.
 4. Run the check, then `python tools/check_rules.py` and `cargo test --workspace`.
 5. Tick the item in its plan file and update the stage's state in "Status".
+
+## Before you push (required)
+
+Run every gate that applies before each push. "It compiles" is not enough.
+
+```bash
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+python tools/check_rules.py            # shared blocks, 500 lines, SAFETY comments
+python tools/licenses.py               # permissive dependency tree
+python tools/lazyrt.py                 # the class library builds
+python tools/test.py                   # the differential suite
+cargo build -p launcher --target x86_64-unknown-linux-musl
+```
+
+`.github/workflows/ci.yml` is the authoritative list.
+
+## Pre-PR review (required)
+
+This mirrors LazyOS's rule. When the work is committed and the gates above
+are green, run the `/code-review` skill through the `Skill` tool on the
+branch (`high` with `--max-findings all` for `crates/vm`, `crates/classfile`,
+`crates/natives` and any code reading files, jars or the network; the default
+level elsewhere). An agent without the skill uses a separate reviewer agent at
+its highest effort, given the diff only. Give the reviewer the risks to
+attack: panics or unbounded allocation on malformed class files and jars,
+integer overflow on sizes from input, GC roots missed across an allocation, a
+`Ref` used after its object was collected, wrong JVMS semantics (arithmetic,
+resolution, initialization order, exception tables), lock order and races
+once threads exist, and resource exhaustion. Fix every real finding, or say in
+the PR why one was declined. Then run the review again until a pass finds
+nothing real. The PR description says which review ran, what it found, what
+changed, and which gates ran locally.
 
 ## Commands
 
