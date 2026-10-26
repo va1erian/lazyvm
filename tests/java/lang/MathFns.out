@@ -1,0 +1,61 @@
+abs(-5) = 5
+abs(MIN_VALUE) = -2147483648
+abs(Long.MIN) = -9223372036854775808
+abs(-0.0) = 0.0
+abs(NaN) = NaN
+abs(-2.5f) = 2.5
+min/max int = -4 3 -1
+min/max long = 5 -1
+max(0.0,-0.0) = 0.0 0.0
+min(0.0,-0.0) = -0.0 -0.0
+max(NaN,1) = NaN NaN
+min(NaN,1) = NaN NaN
+round .5 cases = 1 2 3 0 -1 -2
+round other = 2 3 -2 -3 0
+round float = 1 0 3 -2
+round saturate = 9223372036854775807 -9223372036854775808 0 2147483647
+floor = 2.0 -3.0 -0.0 5.0
+ceil = 3.0 -2.0 -0.0 5.0
+rint = 2.0 4.0 -2.0 3.0
+floor/ceil special = NaN Infinity -Infinity
+floorDiv = 3 -4 -4 3 -4
+floorMod = 1 2 -2 -1 0
+floorDiv long = -4 1 3
+floorDiv MIN/-1 = -2147483648
+floorMod by zero: / by zero
+addExact ok = 3000
+addExact max+1 overflow: integer overflow
+addExact min+-1 overflow: integer overflow
+subtractExact min-1 overflow: integer overflow
+subtractExact ok = -4
+multiplyExact big overflow: integer overflow
+multiplyExact ok = 2147395600
+long addExact: long overflow
+long multiplyExact: long overflow
+toIntExact: integer overflow
+negateExact: integer overflow
+incrementExact: integer overflow
+toIntExact ok = -5
+signum = -1.0 0.0 1.0 -1.0
+copySign = -3.0 3.0
+IEEEremainder = -1.0 -1.0
+toRadians = 3.141592653589793 180.0
+sqrt = 4.0 1.4142135623730951 0.0 NaN Infinity
+cbrt = 3.0 -2.0 1.2599210498948732
+pow = 1024.0 0.25 3.0 1.0E15 NaN 1.0
+pow special = 1.4142135623730951 2.7556759606310752 1.0
+exp = 1.0 2.7182818284590455 0.36787944117144233 22026.465794806718
+log = 0.0 1.0 2.302585092994046 -Infinity NaN
+log10 = 3.0 0.3010299956639812
+sin = 0.0 0.8414709848078965 1.2246467991473532E-16 1.0
+cos = 1.0 0.5403023058681398 -1.0 6.123233995736766E-17
+tan = 0.0 1.5574077246549023 0.9999999999999999
+atan = 0.7853981633974483 0.0 1.5707963267948966
+atan2 = 0.7853981633974483 2.356194490192345 -2.356194490192345 3.141592653589793 -3.141592653589793
+asin/acos = 1.5707963267948966 0.0 1.5707963267948966 NaN
+sinh/cosh/tanh = 1.1752011936438014 1.543080634815244 0.7615941559557649
+hypot = 5.0 1.4142135623730951 13.0
+expm1/log1p = 1.718281828459045 0.6931471805599453 0.0
+Math.sqrt = 7.0 1.4142135623730951
+Math.pow int-ish = 81.0 4.611686018427388E18
+done

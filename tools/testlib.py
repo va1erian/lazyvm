@@ -10,6 +10,7 @@ Optional header lines in the source, before `package`:
     // ARGS: a b c          program arguments, split on spaces
     // VMARGS: -Xmx16m      extra arguments for both VMs
     // TIMEOUT: 120         seconds, default 60
+    // ORACLE: modern       bless on JDK 19+ (docs/decisions.md D9: float printing)
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ class Test:
     args: list[str] = field(default_factory=list)
     vm_args: list[str] = field(default_factory=list)
     timeout: int = DEFAULT_TIMEOUT
+    modern_oracle: bool = False
 
     @property
     def golden(self) -> Path:
@@ -63,6 +65,10 @@ def parse_test(source: Path) -> Test:
             test.args = value.split()
         elif key == "VMARGS":
             test.vm_args = value.split()
+        elif key == "ORACLE":
+            if value.strip() != "modern":
+                die(f"{source}: ORACLE must be 'modern', got {value.strip()!r}")
+            test.modern_oracle = True
         elif key == "TIMEOUT":
             if not value.strip().isdigit():
                 die(f"{source}: TIMEOUT must be whole seconds, got {value.strip()!r}")

@@ -1,0 +1,13 @@
+normal -> 1 log=try;finally;
+withReturn -> 10 log=try;finally;
+overriding -> 2 log=
+swallow -> 3 log=
+noEffect -> 1 log=x=99;
+arrayEffect 99
+sbEffect a
+loops -> 0 log=body0;fin0;fin1;body2;fin2;fin3;w1;w2;w3;
+exceptionPath -> 0 log=t;f1;c;f2;
+finallyThrows -> 0 log=got replacement;
+nestedReturn -> 1 log=inner;outer;
+labeled -> 36 log=
+done

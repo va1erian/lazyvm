@@ -1,0 +1,22 @@
+java.lang.IllegalArgumentException: level3 failed
+  s2.StackTraces.level3:6
+  s2.StackTraces.level2:11
+  s2.StackTraces.level1:15
+  s2.StackTraces.main:41
+java.lang.IllegalArgumentException: level3 failed
+  s2.StackTraces.level3:6
+  s2.StackTraces.level2:11
+  s2.StackTraces.level1:15
+  s2.StackTraces$Inner.run:20
+  s2.StackTraces.main:46
+java.lang.Throwable: created in main
+  s2.StackTraces.main:50
+java.lang.ArrayIndexOutOfBoundsException
+  s2.StackTraces.main:54
+  file StackTraces.java
+npe at main:63
+--- stderr ---
+Exception in thread "main" java.lang.IllegalStateException: boom
+	at s2.StackTraces.helper(StackTraces.java:36)
+	at s2.StackTraces.main(StackTraces.java:68)
+--- exit 1 ---

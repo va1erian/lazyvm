@@ -1,0 +1,54 @@
+[hall] A dusty hall.
+  exits: north, south; items: nothing
+> look
+[hall] A dusty hall.
+  exits: north, south; items: nothing
+> go west
+  you cannot go west
+> go north
+[kitchen] Smells of old soup.
+  exits: east, south; items: lamp, knife
+> get lamp
+  taken lamp (weight now 2)
+> get knife
+  taken knife (weight now 3)
+> get spoon
+  no spoon here
+> inventory
+  carrying: lamp, knife weight 3
+> go east
+  the vault is locked
+> go south
+[hall] A dusty hall.
+  exits: north, south; items: nothing
+> go south
+[cellar] Cold and dark.
+  exits: north; items: key, anvil
+> get key
+  taken key (weight now 4)
+> get anvil
+  your hands are full
+> drop lamp
+  dropped lamp
+> go north
+[hall] A dusty hall.
+  exits: north, south; items: nothing
+> go north
+[kitchen] Smells of old soup.
+  exits: east, south; items: nothing
+> use key
+  the vault door clicks open
+> use key
+  nothing happens
+> go east
+[vault] Gold glitters.
+  exits: west; items: coin
+> get coin
+  taken coin (weight now 3)
+> use coin
+  you win with score 105
+> dance (ignored, game over)
+> go up (ignored, game over)
+> look (ignored, game over)
+moves 6 score 5 over true
+done
