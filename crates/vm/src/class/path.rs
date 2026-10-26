@@ -97,14 +97,15 @@ fn normalize(name: &str) -> Option<String> {
     Some(parts.join("/"))
 }
 
+/// Opens the entries in search order. A jar's `Class-Path` jars come right
+/// after it, before the next entry (depth first, as Java 8 searches them).
 fn open_all(paths: &[PathBuf], follow_manifests: bool) -> Vec<Entry> {
-    let mut queue: Vec<PathBuf> = paths.iter().map(|p| lexical(p)).collect();
+    let mut stack: Vec<PathBuf> = paths.iter().rev().map(|p| lexical(p)).collect();
     let mut seen = HashSet::new();
+    let mut pushed = stack.len();
     let mut out = Vec::new();
-    let mut i = 0;
-    while let Some(p) = queue.get(i).cloned() {
-        i += 1;
-        if !seen.insert(p.clone()) {
+    while let Some(p) = stack.pop() {
+        if !seen.insert(dedup_key(&p)) {
             continue;
         }
         if p.is_dir() {
@@ -116,15 +117,30 @@ fn open_all(paths: &[PathBuf], follow_manifests: bool) -> Vec<Entry> {
         };
         if follow_manifests {
             let base = p.parent().unwrap_or(Path::new("."));
-            for entry in manifest_class_path(&jar) {
-                if queue.len() < MAX_ENTRIES {
-                    queue.push(lexical(&base.join(entry)));
+            let children: Vec<PathBuf> = manifest_class_path(&jar)
+                .iter()
+                .map(|e| lexical(&base.join(e)))
+                .collect();
+            for child in children.into_iter().rev() {
+                if pushed < MAX_ENTRIES {
+                    pushed += 1;
+                    stack.push(child);
                 }
             }
         }
         out.push(Entry::Jar(Arc::new(jar)));
     }
     out
+}
+
+/// Windows file names are case-insensitive, so `A.jar` and `a.jar` are one jar.
+fn dedup_key(p: &Path) -> String {
+    let s = p.to_string_lossy();
+    if cfg!(windows) {
+        s.to_lowercase()
+    } else {
+        s.into_owned()
+    }
 }
 
 /// A jar's `Class-Path` entries: relative URLs only (no scheme), `%20`
@@ -157,6 +173,12 @@ fn lexical(p: &Path) -> PathBuf {
             {
                 out.pop();
             }
+            // `..` at the root stays at the root.
+            Component::ParentDir
+                if matches!(
+                    out.components().next_back(),
+                    Some(Component::RootDir | Component::Prefix(_))
+                ) => {}
             other => out.push(other.as_os_str()),
         }
     }

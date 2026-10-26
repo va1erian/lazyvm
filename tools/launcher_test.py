@@ -45,6 +45,8 @@ CASES = {
     "manifest_no_space": ["-jar", f"{J}/nospace.jar"],
     "cp_follows_class_path": ["-cp", f"{J}/chain.jar", "app.Probe"],
     "class_path_loop": ["-jar", f"{J}/loop.jar"],
+    # order_a.jar's Class-Path jar is searched before the next -cp entry.
+    "class_path_order": ["-cp", f"{J}/order_a.jar{SEP}{J}/order_c.jar{SEP}{J}/app.jar{SEP}{J}/lib.jar", "app.Probe"],
 }
 
 
@@ -85,6 +87,16 @@ def build() -> None:
             z.writestr("r.txt", "first")
             z.writestr("r.txt", "second")
     jar(OUT / "nospace.jar", OUT / "app", "Manifest-Version: 1.0\r\nMain-Class:app.Main\r\n\r\n")
+    for name, manifest, resource in [
+        ("order_a", "Manifest-Version: 1.0\r\nClass-Path: order_b.jar\r\n\r\n", None),
+        ("order_b", None, "from b"),
+        ("order_c", None, "from c"),
+    ]:
+        with zipfile.ZipFile(OUT / f"{name}.jar", "w") as z:
+            if manifest:
+                z.writestr("META-INF/MANIFEST.MF", manifest)
+            if resource:
+                z.writestr("r.txt", resource)
     # A Class-Path that names its own jar through `..` must not loop.
     jar(OUT / "loop.jar", OUT / "app", "Manifest-Version: 1.0\r\nMain-Class: app.Main\r\n"
         "Class-Path: lib.jar x/../loop.jar y/../loop.jar\r\n\r\n")
