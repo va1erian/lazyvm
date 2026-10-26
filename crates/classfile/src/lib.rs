@@ -160,6 +160,20 @@ impl ClassFile {
     /// class (they carry `private`, `protected` and `static`, which the class
     /// file's own flags cannot).
     pub fn inner_class_flags(&self) -> Option<u16> {
+        self.inner_class_entry().map(|(_, flags)| flags)
+    }
+
+    /// The enclosing class of a member class, from `InnerClasses`; `None`
+    /// for top-level, local and anonymous classes.
+    pub fn outer_class(&self) -> Option<Arc<str>> {
+        let (outer, _) = self.inner_class_entry()?;
+        (outer != 0)
+            .then(|| self.pool.class_name(outer).ok().cloned())
+            .flatten()
+    }
+
+    /// This class's own `InnerClasses` entry: `(outer_class_info, flags)`.
+    fn inner_class_entry(&self) -> Option<(u16, u16)> {
         let attr = self
             .attributes
             .iter()
@@ -167,14 +181,14 @@ impl ClassFile {
         let mut r = Reader::new(&attr.data);
         let count = r.u2().ok()?;
         for _ in 0..count {
-            let (inner, _outer, _name, flags) =
+            let (inner, outer, _name, flags) =
                 (r.u2().ok()?, r.u2().ok()?, r.u2().ok()?, r.u2().ok()?);
             if self
                 .pool
                 .class_name(inner)
                 .is_ok_and(|n| *n == self.this_class)
             {
-                return Some(flags);
+                return Some((outer, flags));
             }
         }
         None

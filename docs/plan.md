@@ -224,28 +224,28 @@ good enough for `lazy.msg` (S10).
       with bridges for `altMetafactory`, and one call site object per `indy`
       instruction. Other bootstrap methods throw `BootstrapMethodError`.
       Check: `tests/java/s4/Lambdas`, `MethodRefs` (static, bound, unbound, constructor), `Capture`.
-- [ ] S4-02 Language support classes: `Enum` (`values`, `valueOf`, `ordinal`,
+- [x] S4-02 Language support classes: `Enum` (`values`, `valueOf`, `ordinal`,
       `EnumMap`, `EnumSet`), string `switch`, `Iterable` for-each, varargs,
       try-with-resources (`addSuppressed`), and `assert` (`-ea`).
       Check: `tests/java/s4/Enums`, `StringSwitch`, `TryWithResources`, `Asserts`.
 - [x] S4-03 `java.util.function` (all interfaces) and the default methods on
       `Comparator`, `Iterable` and `Map` that use them.
       Check: `tests/java/util/FunctionalBasics`, `Comparators`.
-- [ ] S4-04 Reflection core ([`decisions.md`](decisions.md) D6): `Class`
+- [x] S4-04 Reflection core ([`decisions.md`](decisions.md) D6): `Class`
       metadata, `getDeclared*`/`get*` for methods, fields and constructors
       (public filtering per the Javadoc), `Method.invoke` with boxing and
       `InvocationTargetException`, `Field` access, `Modifier`, and
       `Class.forName` with initialization. No access-checking beyond
       `setAccessible` bookkeeping.
       Check: `tests/java/s4/ReflectBasics`, `ReflectInvoke`.
-- [ ] S4-05 Runtime annotations: parse `RuntimeVisible*Annotations` and
+- [x] S4-05 Runtime annotations: parse `RuntimeVisible*Annotations` and
       `AnnotationDefault`, generate annotation implementation classes (equals,
       hashCode and `toString` as in the Javadoc), and implement
       `getAnnotation`, `getAnnotations`, `isAnnotationPresent` and
       `getParameterAnnotations`. Includes `@Retention`, `@Target`, `@Inherited`,
       `@Repeatable` lookup and `@FunctionalInterface`.
       Check: `tests/java/s4/Annotations` (nested, arrays, enums, class values, defaults), `InheritedAnnotations`.
-- [ ] S4-06 Generic signatures: `getGenericSuperclass`,
+- [x] S4-06 Generic signatures: `getGenericSuperclass`,
       `getGenericInterfaces`, `Method.getGenericReturnType`, and
       `ParameterizedType` / `TypeVariable` / `WildcardType`, all parsed from
       `Signature` attributes. They are needed by `lazy.msg` codecs.

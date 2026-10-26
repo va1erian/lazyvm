@@ -1,0 +1,70 @@
+superclass: s4.GenericSignatures$Pair<java.lang.String, java.lang.Integer> | param raw=Pair owner=s4.GenericSignatures args=[class java.lang.String; class java.lang.Integer]
+interface 0: s4.GenericSignatures$Box<T[]> | param raw=Box owner=s4.GenericSignatures args=[array of var T of Holder bounds=[java.lang.Number]]
+interface 1: java.util.function.Function<T, java.util.function.Supplier<? extends T>> | param raw=Function owner=none args=[var T of Holder bounds=[java.lang.Number]; param raw=Supplier owner=none args=[wild upper=[T] lower=[]]]
+1 T [java.lang.Number] true
+[K, V] [java.lang.Comparable<V>] V
+pair super: class java.lang.Object | class java.lang.Object
+pair iface: java.lang.Comparable<s4.GenericSignatures$Pair<K, V>> | param raw=Comparable owner=none args=[param raw=Pair owner=s4.GenericSignatures args=[var K of Pair bounds=[java.lang.Object]; var V of Pair bounds=[java.lang.Comparable<V>]]]
+plain super: class java.lang.Object | class java.lang.Object
+0 0 true true
+enum super: java.lang.Enum<s4.GenericSignatures$Color> | param raw=Enum owner=none args=[class s4.GenericSignatures$Color]
+inner super: class java.lang.Object | class java.lang.Object
+[I] [O]
+pair: s4.GenericSignatures$Pair<java.lang.String, java.lang.Integer> | param raw=Pair owner=s4.GenericSignatures args=[class java.lang.String; class java.lang.Integer]
+  type=s4.GenericSignatures$Pair generic=public s4.GenericSignatures$Pair<java.lang.String, java.lang.Integer> s4.GenericSignatures$Holder.pair
+pairs: s4.GenericSignatures$Pair<? extends java.lang.Number, ? super java.lang.Integer>[] | array of param raw=Pair owner=s4.GenericSignatures args=[wild upper=[java.lang.Number] lower=[]; wild upper=[java.lang.Object] lower=[java.lang.Integer]]
+  type=[Ls4.GenericSignatures$Pair; generic=public s4.GenericSignatures$Pair<? extends java.lang.Number, ? super java.lang.Integer>[] s4.GenericSignatures$Holder.pairs
+wild: s4.GenericSignatures$Box<?> | param raw=Box owner=s4.GenericSignatures args=[wild upper=[java.lang.Object] lower=[]]
+  type=s4.GenericSignatures$Box generic=public s4.GenericSignatures$Box<?> s4.GenericSignatures$Holder.wild
+tarray: T[] | array of var T of Holder bounds=[java.lang.Number]
+  type=[Ljava.lang.Number; generic=public T[] s4.GenericSignatures$Holder.tarray
+boxes: s4.GenericSignatures$Box<T>[][] | array of array of param raw=Box owner=s4.GenericSignatures args=[var T of Holder bounds=[java.lang.Number]]
+  type=[[Ls4.GenericSignatures$Box; generic=public s4.GenericSignatures$Box<T>[][] s4.GenericSignatures$Holder.boxes
+inner: s4.GenericSignatures$Outer<java.lang.String>$Inner<java.lang.Integer> | param raw=Inner owner=s4.GenericSignatures$Outer<java.lang.String> args=[class java.lang.Integer]
+  type=s4.GenericSignatures$Outer$Inner generic=public s4.GenericSignatures$Outer<java.lang.String>$Inner<java.lang.Integer> s4.GenericSignatures$Holder.inner
+nested: s4.GenericSignatures$Outer$Nested<java.lang.String> | param raw=Nested owner=s4.GenericSignatures$Outer args=[class java.lang.String]
+  type=s4.GenericSignatures$Outer$Nested generic=public s4.GenericSignatures$Outer$Nested<java.lang.String> s4.GenericSignatures$Holder.nested
+ints: class [[I | class [[I
+boxOfInts: s4.GenericSignatures$Box<int[]> | param raw=Box owner=s4.GenericSignatures args=[class [I]
+  type=s4.GenericSignatures$Box generic=public s4.GenericSignatures$Box<int[]> s4.GenericSignatures$Holder.boxOfInts
+fn: java.util.function.Function<? super T, ? extends s4.GenericSignatures$Box<? extends T>> | param raw=Function owner=none args=[wild upper=[java.lang.Object] lower=[T]; wild upper=[s4.GenericSignatures$Box<? extends T>] lower=[]]
+  type=java.util.function.Function generic=public java.util.function.Function<? super T, ? extends s4.GenericSignatures$Box<? extends T>> s4.GenericSignatures$Holder.fn
+plain: class s4.GenericSignatures$Plain | class s4.GenericSignatures$Plain
+  type=s4.GenericSignatures$Plain generic=public s4.GenericSignatures$Plain s4.GenericSignatures$Holder.plain
+raw: interface s4.GenericSignatures$Box | class s4.GenericSignatures$Box
+true true false true false
+true false
+s4.GenericSignatures$Outer<java.lang.String> | class s4.GenericSignatures$Outer$Inner | class s4.GenericSignatures$Outer
+gen public <X,Y> Y s4.GenericSignatures$Holder.gen(s4.GenericSignatures$Box<? extends X>,X[],Y,int,java.lang.String...) throws X,java.io.IOException
+  public java.lang.Object s4.GenericSignatures$Holder.gen(s4.GenericSignatures$Box,java.lang.Exception[],java.lang.Object,int,java.lang.String[]) throws java.lang.Exception,java.io.IOException
+  ret: Y | var Y of method gen bounds=[java.lang.Object]
+  param 0: s4.GenericSignatures$Box<? extends X> | param raw=Box owner=s4.GenericSignatures args=[wild upper=[X] lower=[]]
+  param 1: X[] | array of var X of method gen bounds=[java.lang.Exception]
+  param 2: Y | var Y of method gen bounds=[java.lang.Object]
+  param 3: int | class int
+  param 4: class [Ljava.lang.String; | class [Ljava.lang.String;
+  throws [X, java.io.IOException] tparams [X, Y]
+  X decl=gen bounds=[java.lang.Exception]
+  Y decl=gen bounds=[java.lang.Object]
+enums public static <E> E[] s4.GenericSignatures$Holder.enums(java.lang.Class<E>)
+  public static java.lang.Enum[] s4.GenericSignatures$Holder.enums(java.lang.Class)
+  ret: E[] | array of var E of method enums bounds=[java.lang.Enum<E>]
+  param 0: java.lang.Class<E> | param raw=Class owner=none args=[var E of method enums bounds=[java.lang.Enum<E>]]
+  throws [] tparams [E]
+  E decl=enums bounds=[java.lang.Enum<E>]
+multi public <A> void s4.GenericSignatures$Holder.multi(A)
+  public void s4.GenericSignatures$Holder.multi(java.lang.Number)
+  ret: void | class void
+  param 0: A | var A of method multi bounds=[java.lang.Number; java.lang.Comparable<A>]
+  throws [] tparams [A]
+  A decl=multi bounds=[java.lang.Number, java.lang.Comparable<A>]
+rawParam public void s4.GenericSignatures$Holder.rawParam(s4.GenericSignatures$Box,s4.GenericSignatures$Plain)
+  public void s4.GenericSignatures$Holder.rawParam(s4.GenericSignatures$Box,s4.GenericSignatures$Plain)
+  ret: void | class void
+  param 0: interface s4.GenericSignatures$Box | class s4.GenericSignatures$Box
+  param 1: class s4.GenericSignatures$Plain | class s4.GenericSignatures$Plain
+  throws [] tparams []
+public T[] s4.GenericSignatures$Holder.get() | public java.util.function.Supplier<? extends T> s4.GenericSignatures$Holder.apply(T) | T[]
+public <Z> s4.GenericSignatures$Holder(Z,s4.GenericSignatures$Box<Z>) | public s4.GenericSignatures$Holder(java.lang.Object,s4.GenericSignatures$Box) | [Z, s4.GenericSignatures$Box<Z>] | [Z]
+true
+done

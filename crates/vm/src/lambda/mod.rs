@@ -6,6 +6,7 @@
 //! one field per captured value, and defines it like any other class. The
 //! call site then calls that class's static factory with the captured values.
 
+mod annotation;
 mod asm;
 mod spin;
 

@@ -25,6 +25,20 @@ public final class VM {
     /** Whether `c` came from the boot class path. */
     public static native boolean isBootClass(Class<?> c);
 
+    // Constant pool entries of a class, for annotation parsing (docs/design/reflection.md).
+    static native String poolUtf8(Class<?> c, int index);
+
+    static native int poolInt(Class<?> c, int index);
+
+    static native long poolLong(Class<?> c, int index);
+
+    static native float poolFloat(Class<?> c, int index);
+
+    static native double poolDouble(Class<?> c, int index);
+
+    /** The generated class implementing an annotation type: a subclass of AnnotationBase. */
+    static native Class<?> annotationClass(Class<?> annotationType);
+
     /** Called by the VM when an exception escapes the main thread. */
     static void uncaught(Throwable t) {
         System.err.print("Exception in thread \"" + Thread.currentThread().getName() + "\" ");
