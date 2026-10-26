@@ -5,7 +5,9 @@ use std::path::PathBuf;
 use vm::Options;
 
 pub const USAGE: &str = "usage: lazyvm [options] <main class> [args...]
-  -cp, -classpath <path>   application class path (directories)
+       lazyvm [options] -jar <file> [args...]
+  -cp, -classpath <path>   application class path (directories and jars)
+  -jar <file>              run the jar's Main-Class; it is the class path
   -Xbootclasspath:<path>   the class library (default: LAZYVM_BOOTCLASSPATH, or lazyrt next to lazyvm)
   -D<name>=<value>         set a system property
   -Xmx<size>               heap limit, e.g. 256m
@@ -47,7 +49,10 @@ pub struct Launch {
     pub boot_classpath: Vec<PathBuf>,
     pub properties: Vec<(String, String)>,
     pub options: Options,
-    pub main_class: String,
+    /// The class to run, or `None` with `-jar` (the manifest names it).
+    pub main_class: Option<String>,
+    /// `-jar <file>`: the jar is the whole application class path.
+    pub jar: Option<PathBuf>,
     pub args: Vec<String>,
 }
 
@@ -69,7 +74,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 boot_classpath: boot,
                 properties,
                 options,
-                main_class: a.to_owned(),
+                main_class: Some(a.to_owned()),
+                jar: None,
                 args: args[i + 1..].to_vec(),
             }));
         }
@@ -80,10 +86,27 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 classpath = Some(split_path(v));
             }
             "-version" | "--version" | "-showversion" => return Ok(Command::Version),
+            // IDEs probe a JDK with this; LazyVM's properties need a VM, so
+            // only the version is reported.
+            _ if a.starts_with("-XshowSettings") => {}
             "-help" | "-h" | "--help" | "-?" => return Ok(Command::Help),
             "-verbose:class" => options.verbose_class = true,
             "-Xtrace:interp" => options.trace_interp = true,
-            "-jar" => return Err("-jar arrives in stage S3".into()),
+            "-jar" => {
+                let jar = args.get(i + 1).ok_or("-jar needs a jar file")?;
+                let boot = boot
+                    .or_else(default_boot)
+                    .ok_or("cannot find lazyrt: pass -Xbootclasspath:<path>")?;
+                return Ok(Command::Run(Launch {
+                    classpath: Vec::new(),
+                    boot_classpath: boot,
+                    properties,
+                    options,
+                    main_class: None,
+                    jar: Some(PathBuf::from(jar)),
+                    args: args[i + 2..].to_vec(),
+                }));
+            }
             _ if a.starts_with("-Xbootclasspath:") => {
                 boot = Some(split_path(&a["-Xbootclasspath:".len()..]))
             }
@@ -118,17 +141,22 @@ fn default_classpath() -> Vec<PathBuf> {
     }
 }
 
-/// `LAZYVM_BOOTCLASSPATH`, else `lib/lazyrt` beside or above the binary.
+/// `LAZYVM_BOOTCLASSPATH`, else the class library next to the binary.
 fn default_boot() -> Option<Vec<PathBuf>> {
     if let Some(p) = std::env::var_os("LAZYVM_BOOTCLASSPATH") {
         return Some(std::env::split_paths(&p).collect());
     }
     let exe = std::env::current_exe().ok()?;
     let dir = exe.parent()?;
-    [dir.join("lazyrt"), dir.join("../lib/lazyrt")]
-        .into_iter()
-        .find(|p| p.is_dir())
-        .map(|p| vec![p])
+    // Beside the binary, an install's lib/, or the fake JDK home's jre/lib.
+    let candidates = [
+        dir.join("lazyrt.jar"),
+        dir.join("../lib/lazyrt.jar"),
+        dir.join("../jre/lib/rt.jar"),
+        dir.join("lazyrt"),
+        dir.join("../lib/lazyrt"),
+    ];
+    candidates.into_iter().find(|p| p.exists()).map(|p| vec![p])
 }
 
 /// `256m`, `1g`, `65536`, `512k`.
@@ -171,7 +199,7 @@ mod tests {
         let Ok(Command::Run(l)) = parse(&args) else {
             panic!("should parse")
         };
-        assert_eq!(l.main_class, "app.Main");
+        assert_eq!(l.main_class.as_deref(), Some("app.Main"));
         assert_eq!(l.args, ["x", "-y"]);
         assert_eq!(l.properties, [("k".to_string(), "v".to_string())]);
         assert_eq!(l.options.heap_limit, 64 << 20);

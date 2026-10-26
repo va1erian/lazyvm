@@ -19,6 +19,12 @@ public final class VM {
 
     public static native int availableProcessors();
 
+    /** The bytes of a class path resource (no leading slash), or null. */
+    public static native byte[] getResource(String name);
+
+    /** Whether `c` came from the boot class path. */
+    public static native boolean isBootClass(Class<?> c);
+
     /** Called by the VM when an exception escapes the main thread. */
     static void uncaught(Throwable t) {
         System.err.print("Exception in thread \"" + Thread.currentThread().getName() + "\" ");

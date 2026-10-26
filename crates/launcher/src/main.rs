@@ -3,6 +3,7 @@
 //! It accepts the options IntelliJ and the `java` launcher pass
 //! (docs/decisions.md D3) and ignores the IDE-only ones.
 
+mod jarfile;
 mod options;
 
 use std::process::ExitCode;
@@ -20,10 +21,11 @@ fn main() -> ExitCode {
     let launch = match options::parse(&args) {
         Ok(Command::Run(launch)) => launch,
         Ok(Command::Version) => {
-            println!(
-                "lazyvm {} (runs Java 8 bytecode)",
-                env!("CARGO_PKG_VERSION")
-            );
+            // On stderr, in the `<name> version "<version>"` shape IDEs parse.
+            let v = env!("CARGO_PKG_VERSION");
+            eprintln!("lazyvm version \"1.8.0\"");
+            eprintln!("LazyVM Runtime Environment (build {v})");
+            eprintln!("LazyVM (build {v}, interpreted mode, runs Java 8 bytecode)");
             return ExitCode::SUCCESS;
         }
         Ok(Command::Help) => {
@@ -51,8 +53,26 @@ fn main() -> ExitCode {
     code
 }
 
-fn run(launch: Launch) -> ExitCode {
-    let classpath = ClassPath::from_strings(&launch.boot_classpath, &launch.classpath);
+fn run(mut launch: Launch) -> ExitCode {
+    if let Some(jar) = &launch.jar {
+        match jarfile::resolve(jar) {
+            Ok(j) => {
+                launch.main_class = Some(j.main_class);
+                launch.classpath = j.classpath;
+            }
+            Err(msg) => {
+                eprintln!("{msg}");
+                return ExitCode::from(1);
+            }
+        }
+    }
+    let classpath = match ClassPath::open(&launch.boot_classpath, &launch.classpath) {
+        Ok(cp) => cp,
+        Err(e) => {
+            eprintln!("lazyvm: bad class path entry: {e}");
+            return ExitCode::from(1);
+        }
+    };
     let mut vm = Vm::new(classpath, launch.options.clone());
     natives::register_all(&mut vm);
     vm.properties.extend(platform::default_properties());
@@ -65,7 +85,8 @@ fn run(launch: Launch) -> ExitCode {
         eprintln!("  boot class path: {:?}", launch.boot_classpath);
         return ExitCode::from(1);
     }
-    let result = run_main(&mut vm, &launch.main_class, &launch.args);
+    let main_class = launch.main_class.clone().unwrap_or_default();
+    let result = run_main(&mut vm, &main_class, &launch.args);
     finish(&mut vm, result)
 }
 

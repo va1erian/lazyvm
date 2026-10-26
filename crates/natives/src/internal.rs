@@ -40,6 +40,11 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(VM_CLASS, "availableProcessors", "()I", |_, _| {
         ret_int(platform::available_processors())
     });
+    vm.register_native(VM_CLASS, "getResource", "(Ljava/lang/String;)[B", get_resource);
+    vm.register_native(VM_CLASS, "isBootClass", "(Ljava/lang/Class;)Z", |vm, a| {
+        let class = vm.class_of_mirror(obj(a, 0)?)?;
+        crate::ret_bool(vm.class(class).from_boot)
+    });
     vm.register_native(OUT, "write0", "(I[BII)V", write0);
     vm.register_native(OUT, "flush0", "(I)V", |_, a| {
         let stream = stream(int(a, 0)?)?;
@@ -57,6 +62,21 @@ fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         Some(v) => ret_ref(Some(vm.new_string(&v)?)),
         None => ret_ref(None),
     }
+}
+
+fn get_resource(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let name = vm.string_arg(arg(args, 0)?)?;
+    let Some(bytes) = vm.classpath.find_resource(&name) else {
+        return ret_ref(None);
+    };
+    let len = i32::try_from(bytes.len()).map_err(|_| VmError::OutOfMemory)?;
+    let array = vm.new_array_of("B", len)?;
+    if let Array::Byte(a) = vm.heap.array_mut(array)? {
+        for (dst, src) in a.iter_mut().zip(bytes) {
+            *dst = src as i8;
+        }
+    }
+    ret_ref(Some(array))
 }
 
 fn stream(fd: i32) -> VmResult<Stream> {

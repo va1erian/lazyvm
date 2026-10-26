@@ -15,6 +15,7 @@ Optional header lines in the source, before `package`:
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -92,6 +93,22 @@ def build(tests: list[Test], rebuild_lazyrt: bool = True) -> None:
         lazyrt.build()
     javac.compile([t.source for t in tests], TESTS_CLASSES,
                   bootclasspath=LAZYRT_CLASSES, sourcepath=TESTS_SRC)
+    copy_resources()
+
+
+def copy_resources() -> None:
+    """Every file under tests/java that is not a source or a golden is a
+    resource of its package and goes next to the classes."""
+    for path in TESTS_SRC.rglob("*"):
+        if path.is_file() and path.suffix not in (".java", ".out", ".md"):
+            target = TESTS_CLASSES / path.relative_to(TESTS_SRC)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, target)
+
+
+def tests_jar() -> Path:
+    """The compiled tests and their resources as one jar, for `--jar` runs."""
+    return lazyrt.write_jar(TESTS_CLASSES, TESTS_CLASSES.parent / "tests.jar")
 
 
 def close_line(text: str) -> str:
@@ -113,10 +130,10 @@ def transcript(stdout: str, stderr: str, code: int) -> str:
     return out
 
 
-def run(cmd: list[str], test: Test) -> str:
+def run(cmd: list[str], test: Test, classpath: Path = TESTS_CLASSES) -> str:
     """Run one VM command line for `test` and return its transcript."""
     try:
-        done = subprocess.run([*cmd, *test.vm_args, "-cp", str(TESTS_CLASSES),
+        done = subprocess.run([*cmd, *test.vm_args, "-cp", str(classpath),
                                test.main_class, *test.args],
                               capture_output=True, timeout=test.timeout)
     except subprocess.TimeoutExpired:

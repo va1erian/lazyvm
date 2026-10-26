@@ -1,0 +1,3 @@
+--- stderr ---
+no main manifest attribute, in build/launcher/nomain.jar
+--- exit 1 ---

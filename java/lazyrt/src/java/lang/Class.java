@@ -39,6 +39,48 @@ public final class Class<T> implements java.io.Serializable {
         return forName0(className, true);
     }
 
+    /**
+     * LazyVM has one application loader; a null loader means the boot
+     * loader, which only sees the class library.
+     */
+    public static Class<?> forName(String name, boolean initialize, ClassLoader loader)
+            throws ClassNotFoundException {
+        if (loader == null) {
+            Class<?> c = forName0(name, false);
+            if (!lazy.internal.VM.isBootClass(c)) {
+                throw new ClassNotFoundException(name);
+            }
+        }
+        return forName0(name, initialize);
+    }
+
+    /** Null for classes of the class library, as for any boot class. */
+    public ClassLoader getClassLoader() {
+        return lazy.internal.VM.isBootClass(this) ? null : ClassLoader.getSystemClassLoader();
+    }
+
+    /**
+     * Finds a resource next to this class: a relative name is resolved in
+     * this class's package, a name starting with '/' from the root.
+     */
+    public java.io.InputStream getResourceAsStream(String name) {
+        byte[] data = lazy.internal.VM.getResource(resolveName(name));
+        return data == null ? null : new java.io.ByteArrayInputStream(data);
+    }
+
+    private String resolveName(String name) {
+        if (name.startsWith("/")) {
+            return name.substring(1);
+        }
+        Class<?> c = this;
+        while (c.isArray()) {
+            c = c.getComponentType();
+        }
+        String binary = c.getName();
+        int dot = binary.lastIndexOf('.');
+        return dot < 0 ? name : binary.substring(0, dot).replace('.', '/') + "/" + name;
+    }
+
     public boolean desiredAssertionStatus() {
         return false;
     }

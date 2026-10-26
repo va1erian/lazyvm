@@ -17,3 +17,4 @@ path = "src/main.rs"
 vm = { path = "../vm" }
 natives = { path = "../natives" }
 platform = { path = "../platform" }
+classfile = { path = "../classfile" }

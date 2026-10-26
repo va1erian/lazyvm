@@ -72,6 +72,15 @@ public final class String implements java.io.Serializable, Comparable<String>, C
         value = StringCoding.decode(bytes, 0, bytes.length, charsetName);
     }
 
+    public String(byte[] bytes, int offset, int length, String charsetName)
+            throws UnsupportedEncodingException {
+        if (charsetName == null) {
+            throw new NullPointerException("charsetName");
+        }
+        checkRange(offset, length, bytes.length);
+        value = StringCoding.decode(bytes, offset, length, charsetName);
+    }
+
     public String(StringBuilder builder) {
         value = new char[builder.length()];
         builder.getChars(0, value.length, value, 0);

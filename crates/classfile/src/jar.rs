@@ -43,11 +43,9 @@ impl Jar {
     pub fn open(data: impl Into<Arc<[u8]>>) -> Result<Jar, FormatError> {
         let data: Arc<[u8]> = data.into();
         let eocd = find_eocd(&data)?;
-        let mut r = Reader::new(&data[eocd..]);
-        r.u4()?;
-        let (disk, cd_disk) = (r.u2()?, r.u2()?);
-        let (_here, count) = (r.u2()?, r.u2()?);
-        let (cd_size, cd_offset) = (r.u4()? as usize, r.u4()? as usize);
+        let e = &data[eocd..eocd + EOCD_LEN];
+        let (disk, cd_disk, count) = (le16(&e[4..]), le16(&e[6..]), le16(&e[10..]));
+        let (cd_size, cd_offset) = (le32(&e[12..]) as usize, le32(&e[16..]) as usize);
         if disk != 0 || cd_disk != 0 {
             return Err(FormatError::new(eocd, "multi-disk zip archives are not supported"));
         }
@@ -81,15 +79,16 @@ impl Jar {
     pub fn read(&self, name: &str) -> Result<Option<Vec<u8>>, FormatError> {
         let Some(&e) = self.entries.get(name) else { return Ok(None) };
         let at = e.local_offset as usize;
-        let mut r = Reader::new(self.data.get(at..).ok_or_else(|| FormatError::new(at, "entry outside the file"))?);
-        if r.u4()? != LOCAL_SIG {
+        let outside = || FormatError::new(at, format!("{name}: entry outside the file"));
+        let header = self.data.get(at..at.saturating_add(30)).ok_or_else(outside)?;
+        if le32(header) != LOCAL_SIG {
             return Err(FormatError::new(at, format!("bad local header for {name}")));
         }
-        r.bytes(22)?;
-        let name_len = usize::from(r.u2()?);
-        let extra_len = usize::from(r.u2()?);
-        r.bytes(name_len + extra_len)?;
-        let raw = r.bytes(e.compressed as usize)?;
+        let start = at + 30 + usize::from(le16(&header[26..])) + usize::from(le16(&header[28..]));
+        let raw = self
+            .data
+            .get(start..start.saturating_add(e.compressed as usize))
+            .ok_or_else(outside)?;
         let out = match e.method {
             0 => raw.to_vec(),
             8 => miniz_oxide::inflate::decompress_to_vec_with_limit(raw, e.size as usize)

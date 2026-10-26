@@ -22,10 +22,16 @@ impl Vm {
         if name.starts_with('[') {
             return self.load_array_class(name);
         }
-        let Some(bytes) = self.classpath.find(name) else {
+        let Some(found) = self.classpath.find_class(name) else {
             return Err(VmError::exception(NO_CLASS_DEF, name));
         };
-        self.define_class(name, &bytes)
+        // Only the class library may define classes in `java.*`.
+        if !found.boot && name.starts_with("java/") {
+            let package = name.rsplit_once('/').map_or(name, |(p, _)| p).replace('/', ".");
+            let msg = format!("Prohibited package name: {package}");
+            return Err(VmError::exception("java/lang/SecurityException", msg));
+        }
+        self.define_class(name, &found.bytes, found.boot)
     }
 
     /// Looks a class up without loading it.
@@ -33,7 +39,7 @@ impl Vm {
         self.by_name.get(name).copied()
     }
 
-    fn define_class(&mut self, name: &str, bytes: &[u8]) -> VmResult<ClassId> {
+    fn define_class(&mut self, name: &str, bytes: &[u8], boot: bool) -> VmResult<ClassId> {
         let cf = ClassFile::parse(bytes).map_err(|e| {
             let class = if e.message.starts_with("unsupported class file version") {
                 "java/lang/UnsupportedClassVersionError"
@@ -65,6 +71,7 @@ impl Vm {
         let all = self.interface_closure(super_class, &interfaces);
         let mut class = layout::build(id, cf, super_class, interfaces, super_template.as_deref())?;
         class.all_interfaces = all;
+        class.from_boot = boot;
         Ok(self.insert(class))
     }
 
@@ -130,8 +137,10 @@ impl Vm {
             Some(object),
             interfaces,
         );
+        // An array class has its component's loader.
         let class = Class {
             access: visible | ACC_FINAL | ACC_ABSTRACT,
+            from_boot: self.class(component).from_boot,
             ..class
         };
         Ok(self.insert(class))
@@ -225,6 +234,7 @@ fn synthetic(
         state: InitState::Initialized,
         mirror: None,
         cp_cache: Vec::new(),
+        from_boot: true,
     }
 }
 
