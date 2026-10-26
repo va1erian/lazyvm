@@ -44,6 +44,16 @@ pub fn register(vm: &mut Vm) {
         "(Ljava/lang/String;Z)Ljava/lang/Class;",
         for_name0,
     );
+    vm.register_native(CLASS, "desiredAssertionStatus", "()Z", |vm, args| {
+        let c = this_class(vm, args)?;
+        ret_bool(vm.options.assertions && !vm.class(c).from_boot)
+    });
+    vm.register_native(
+        CLASS,
+        "getEnumConstants0",
+        "()[Ljava/lang/Object;",
+        enum_constants,
+    );
 }
 
 fn this_class(vm: &Vm, args: &[Value]) -> VmResult<ClassId> {
@@ -152,6 +162,21 @@ fn get_primitive_class(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     };
     let c = vm.primitive_class(desc)?;
     ret_ref(Some(vm.mirror(c)?))
+}
+
+/// Calls the enum class's own `values()`, initializing it first.
+fn enum_constants(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let c = this_class(vm, args)?;
+    let desc = format!("()[L{};", vm.class(c).name);
+    let Some(index) = vm.class(c).find_method("values", &desc) else {
+        return ret_ref(None);
+    };
+    vm.initialize(c)?;
+    let values = vm.invoke(vm::MethodRef { class: c, index }, &[])?;
+    match values {
+        Some(Value::Ref(r)) => ret_ref(r),
+        _ => ret_ref(None),
+    }
 }
 
 /// `Class.forName`: binary names with dots; a missing class is

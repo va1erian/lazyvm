@@ -43,6 +43,13 @@ public final class Objects {
         return obj;
     }
 
+    public static <T> T requireNonNull(T obj, java.util.function.Supplier<String> messageSupplier) {
+        if (obj == null) {
+            throw new NullPointerException(messageSupplier == null ? null : messageSupplier.get());
+        }
+        return obj;
+    }
+
     public static boolean isNull(Object obj) {
         return obj == null;
     }

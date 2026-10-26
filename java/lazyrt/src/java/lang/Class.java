@@ -81,9 +81,19 @@ public final class Class<T> implements java.io.Serializable {
         return dot < 0 ? name : binary.substring(0, dot).replace('.', '/') + "/" + name;
     }
 
-    public boolean desiredAssertionStatus() {
-        return false;
+    /** `-ea` turns assertions on for application classes. */
+    public native boolean desiredAssertionStatus();
+
+    /** The constants of an enum class in declaration order, or null. */
+    public T[] getEnumConstants() {
+        if (!isEnum()) {
+            return null;
+        }
+        return getEnumConstants0();
     }
+
+    /** Calls the enum's static `values()`, which returns a fresh copy. */
+    private native T[] getEnumConstants0();
 
     public boolean isEnum() {
         return (getModifiers() & 0x4000) != 0;

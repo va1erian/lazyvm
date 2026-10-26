@@ -51,7 +51,20 @@ public abstract class Enum<E extends Enum<E>> implements Comparable<E>, Serializ
     }
 
     public static <T extends Enum<T>> T valueOf(Class<T> enumType, String name) {
-        throw new UnsupportedOperationException("Enum.valueOf arrives in S4");
+        T[] constants = enumType.getEnumConstants();
+        if (constants == null) {
+            throw new IllegalArgumentException(enumType.getName() + " is not an enum type");
+        }
+        if (name == null) {
+            throw new NullPointerException("Name is null");
+        }
+        for (T c : constants) {
+            if (c.name().equals(name)) {
+                return c;
+            }
+        }
+        throw new IllegalArgumentException(
+                "No enum constant " + enumType.getName().replace('$', '.') + "." + name);
     }
 
     protected final void finalize() {

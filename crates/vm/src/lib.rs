@@ -10,6 +10,7 @@ mod gc;
 pub mod heap;
 mod init;
 pub mod interp;
+mod lambda;
 pub mod native;
 mod objects;
 mod strings;
@@ -35,6 +36,8 @@ pub struct Options {
     pub max_frame_slots: usize,
     /// Nested calls from Rust into Java (each uses native stack).
     pub max_nesting: u32,
+    /// `-ea`: `assert` is checked in application classes.
+    pub assertions: bool,
     pub trace_interp: bool,
     pub verbose_class: bool,
 }
@@ -46,6 +49,7 @@ impl Default for Options {
             max_frames: 4096,
             max_frame_slots: 4 << 20,
             max_nesting: 1024,
+            assertions: false,
             trace_interp: false,
             verbose_class: false,
         }
@@ -79,6 +83,10 @@ pub struct Vm {
     pub(crate) interned: HashMap<Box<[u16]>, Ref>,
     pub(crate) natives: HashMap<String, NativeFn>,
     pub(crate) select_cache: HashMap<(ClassId, MethodRef), MethodRef>,
+    /// Linked lambda call sites: (caller, InvokeDynamic index) to factory.
+    pub(crate) lambda_sites: HashMap<(ClassId, u16), MethodRef>,
+    /// Numbers generated lambda class names.
+    pub(crate) lambda_count: u64,
     pub properties: BTreeMap<String, String>,
     pub options: Options,
     pub wk: WellKnown,
@@ -103,6 +111,8 @@ impl Vm {
             interned: HashMap::new(),
             natives: HashMap::new(),
             select_cache: HashMap::new(),
+            lambda_sites: HashMap::new(),
+            lambda_count: 0,
             properties: BTreeMap::new(),
             options,
             wk: WellKnown::default(),

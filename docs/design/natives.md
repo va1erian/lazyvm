@@ -46,6 +46,8 @@ The VM reads and writes these fields by name. Keep their names and types.
 - `public native int getModifiers()`
 - `static native Class<?> getPrimitiveClass(String name)` (`"int"`, `"void"`, ...)
 - `private static native Class<?> forName0(String name, boolean initialize) throws ClassNotFoundException`
+- `public native boolean desiredAssertionStatus()` (`-ea`, application classes only)
+- `private native T[] getEnumConstants0()` (calls the enum's static `values()`)
 
 ### `java.lang.System`
 - `public static native void arraycopy(Object src, int srcPos, Object dest, int destPos, int length)`

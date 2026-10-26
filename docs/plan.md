@@ -38,7 +38,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S1 | One class | done |
 | S2 | Objects, exceptions, strings, GC | done |
 | S3 | Class path, jars, launcher, IntelliJ | in progress |
-| S4 | Language completeness: lambdas, annotations, reflection | not started |
+| S4 | Language completeness: lambdas, annotations, reflection | in progress |
 | S5 | Core library | not started |
 | S6 | Threads, concurrency, `CompletionStage`, the event loop | not started |
 | S7 | Networking | not started |
@@ -217,7 +217,7 @@ Gate: the template app runs from IntelliJ's Run button on Windows and through
 Goal: everything javac 8 can emit runs, and annotations and reflection are
 good enough for `lazy.msg` (S10).
 
-- [ ] S4-01 `invokedynamic` with `LambdaMetafactory` (`metafactory` and
+- [x] S4-01 `invokedynamic` with `LambdaMetafactory` (`metafactory` and
       `altMetafactory`, including the serializable and marker flags, which are
       ignored with a note). The bootstrap is recognised by its owner and name;
       the VM generates a hidden class implementing the functional interface,
@@ -228,7 +228,7 @@ good enough for `lazy.msg` (S10).
       `EnumMap`, `EnumSet`), string `switch`, `Iterable` for-each, varargs,
       try-with-resources (`addSuppressed`), and `assert` (`-ea`).
       Check: `tests/java/s4/Enums`, `StringSwitch`, `TryWithResources`, `Asserts`.
-- [ ] S4-03 `java.util.function` (all interfaces) and the default methods on
+- [x] S4-03 `java.util.function` (all interfaces) and the default methods on
       `Comparator`, `Iterable` and `Map` that use them.
       Check: `tests/java/util/FunctionalBasics`, `Comparators`.
 - [ ] S4-04 Reflection core ([`decisions.md`](decisions.md) D6): `Class`

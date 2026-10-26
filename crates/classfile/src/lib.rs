@@ -11,6 +11,7 @@ mod cpool;
 pub mod descriptor;
 pub mod jar;
 mod reader;
+pub mod writer;
 
 use std::fmt;
 use std::sync::Arc;

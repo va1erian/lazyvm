@@ -68,10 +68,15 @@ impl Vm {
                 let target = self.select(rc, resolved)?;
                 self.call(target, 5)
             }
-            _ => Err(VmError::exception(
-                "java/lang/BootstrapMethodError",
-                "invokedynamic arrives in stage S4",
-            )),
+            _ => {
+                // JVMS 6.5 invokedynamic: the two bytes after the index are zero.
+                let f = self.top()?;
+                if f.u1(3)? != 0 || f.u1(4)? != 0 {
+                    return Err(VmError::verify("invokedynamic operand bytes must be zero"));
+                }
+                let factory = self.link_lambda(from, index)?;
+                self.call(factory, 5)
+            }
         }
     }
 

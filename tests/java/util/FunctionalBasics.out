@@ -1,0 +1,38 @@
+12 11 id
+10
+true false true false
+true true false
+true true false
+1x2xy33y
+ut|
+baaaxx
+6 4 9
+6 4 9
+6.0 4.0 9.0
+true false true false true false true false true
+i1!l2!d3.0!a1b2c3.5
+strue123.0
+i1l2d3.0 2 4 1.5 3 4 0.5
+30 0.75 5 0.75 3 -3
+3 3 3.0
+Function.andThen: java.lang.NullPointerException
+Function.compose: java.lang.NullPointerException
+BiFunction.andThen: java.lang.NullPointerException
+Predicate.and: java.lang.NullPointerException
+Predicate.or: java.lang.NullPointerException
+BiPredicate.and: java.lang.NullPointerException
+BiPredicate.or: java.lang.NullPointerException
+Consumer.andThen: java.lang.NullPointerException
+BiConsumer.andThen: java.lang.NullPointerException
+IntConsumer.andThen: java.lang.NullPointerException
+LongConsumer.andThen: java.lang.NullPointerException
+DoubleConsumer.andThen: java.lang.NullPointerException
+IntPredicate.and: java.lang.NullPointerException
+LongPredicate.or: java.lang.NullPointerException
+DoublePredicate.and: java.lang.NullPointerException
+IntUnaryOperator.andThen: java.lang.NullPointerException
+LongUnaryOperator.compose: java.lang.NullPointerException
+DoubleUnaryOperator.compose: java.lang.NullPointerException
+minBy: java.lang.NullPointerException
+maxBy: java.lang.NullPointerException
+done

@@ -1,0 +1,45 @@
+# Lambdas and method references
+
+javac compiles a lambda or method reference to `invokedynamic` with
+`LambdaMetafactory.metafactory` or `altMetafactory` as the bootstrap method.
+LazyVM links those call sites itself and supports no other bootstrap methods
+(`BootstrapMethodError` names the unsupported one). There is no general
+`MethodHandle` machinery.
+
+## Linking a call site (`crates/vm/src/lambda`)
+
+On the first execution of an `invokedynamic`, the VM reads, from the
+caller's constant pool:
+
+- the call site's name (the interface method) and type `(K1..Kn)I`: the
+  captured values and the functional interface;
+- the bootstrap arguments: the erased interface method type, the
+  implementation method handle, and the instantiated method type; for
+  `altMetafactory`, the flags, marker interfaces and bridge method types.
+
+It then writes a class file (`classfile::writer`) for a final class
+`<Caller>$$Lambda$<n>` that implements the interface (and the markers, and
+`Serializable` when flagged), with:
+
+- one private final field per captured value and a constructor storing them;
+- a static `get$Lambda(K1..Kn)` factory, which the call site calls from then on;
+- the interface method and each bridge: load the captured values, load each
+  argument, adapt it to the instantiated type and then to the implementation
+  method's parameter, call the implementation (`invokestatic`,
+  `invokevirtual`, `invokeinterface`, `invokespecial`, or `new` + `<init>`
+  for constructor references), and adapt the result back.
+
+The adaptations are the ones the `LambdaMetafactory` Javadoc lists:
+primitive widening, boxing, unboxing (through a cast to the wrapper when the
+source is not one), and reference casts. Anything else is a linkage error.
+
+The class is defined like a loaded class, so it is parsed and checked the
+same way, and the verifier (S8) will check it too. It has the caller's
+loader. The linked factory is cached per `(caller, constant pool index)`.
+
+## Limits
+
+- Serializable lambdas link and run, but serialization does not exist, so
+  `writeReplace` is not generated.
+- Access checks arrive in S8; generated classes call the caller's private
+  `lambda$...` methods, so S8 must treat them as part of the caller.

@@ -21,9 +21,9 @@ const IGNORED_PREFIXES: &[&str] = &[
     "-javaagent:",
     "-XX:",
     "-Xshare",
-    "-ea",
     "-da",
-    "-enableassertions",
+    "-esa",
+    "-dsa",
     "-disableassertions",
     "-Didea.",
     "-Xverify",
@@ -96,6 +96,10 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
             _ if a.starts_with("-XshowSettings") => {}
             "-help" | "-h" | "--help" | "-?" => return Ok(Command::Help),
             "-verbose:class" => options.verbose_class = true,
+            // Package and class filters (`-ea:pkg...`) enable all application assertions.
+            _ if a == "-ea" || a.starts_with("-ea:") || a.starts_with("-enableassertions") => {
+                options.assertions = true
+            }
             "-Xtrace:interp" => options.trace_interp = true,
             "-jar" => {
                 let jar = args.get(i + 1).ok_or("-jar needs a jar file")?;
