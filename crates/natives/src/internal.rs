@@ -40,7 +40,12 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(VM_CLASS, "availableProcessors", "()I", |_, _| {
         ret_int(platform::available_processors())
     });
-    vm.register_native(VM_CLASS, "getResource", "(Ljava/lang/String;)[B", get_resource);
+    vm.register_native(
+        VM_CLASS,
+        "getResource",
+        "(Ljava/lang/String;)[B",
+        get_resource,
+    );
     vm.register_native(VM_CLASS, "isBootClass", "(Ljava/lang/Class;)Z", |vm, a| {
         let class = vm.class_of_mirror(obj(a, 0)?)?;
         crate::ret_bool(vm.class(class).from_boot)

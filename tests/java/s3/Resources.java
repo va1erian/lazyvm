@@ -24,7 +24,8 @@ public class Resources {
         System.out.println("absolute: " + read(Resources.class.getResourceAsStream("/s3/sub/nested.txt")));
         System.out.println("sub relative: " + read(Resources.class.getResourceAsStream("sub/nested.txt")));
         System.out.println("missing: " + read(Resources.class.getResourceAsStream("nope.txt")));
-        System.out.println("escape: " + read(Resources.class.getResourceAsStream("../s3/data.txt")));
+        // "../s3/data.txt" is left out: Java resolves it in a directory but
+        // not in a jar, and this test runs both ways (tools/test.py --jar).
         System.out.println("system: " + read(ClassLoader.getSystemResourceAsStream("s3/data.txt")));
         System.out.println("string loader null: " + (String.class.getClassLoader() == null));
         System.out.println("app loader set: " + (Resources.class.getClassLoader() != null));

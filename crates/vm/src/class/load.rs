@@ -27,7 +27,10 @@ impl Vm {
         };
         // Only the class library may define classes in `java.*`.
         if !found.boot && name.starts_with("java/") {
-            let package = name.rsplit_once('/').map_or(name, |(p, _)| p).replace('/', ".");
+            let package = name
+                .rsplit_once('/')
+                .map_or(name, |(p, _)| p)
+                .replace('/', ".");
             let msg = format!("Prohibited package name: {package}");
             return Err(VmError::exception("java/lang/SecurityException", msg));
         }

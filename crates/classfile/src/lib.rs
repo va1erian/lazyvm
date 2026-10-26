@@ -7,9 +7,9 @@
 //! the byte offset; it never panics.
 
 mod attr;
-pub mod jar;
 mod cpool;
 pub mod descriptor;
+pub mod jar;
 mod reader;
 
 use std::fmt;

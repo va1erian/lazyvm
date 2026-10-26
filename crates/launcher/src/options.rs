@@ -54,6 +54,8 @@ pub struct Launch {
     /// `-jar <file>`: the jar is the whole application class path.
     pub jar: Option<PathBuf>,
     pub args: Vec<String>,
+    /// `-showversion`: print the version, then run.
+    pub show_version: bool,
 }
 
 pub fn parse(args: &[String]) -> Result<Command, String> {
@@ -61,6 +63,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     let mut boot: Option<Vec<PathBuf>> = None;
     let mut properties = Vec::new();
     let mut options = Options::default();
+    let mut show_version = false;
     let mut i = 0;
     while i < args.len() {
         let a = args[i].as_str();
@@ -77,6 +80,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 main_class: Some(a.to_owned()),
                 jar: None,
                 args: args[i + 1..].to_vec(),
+                show_version,
             }));
         }
         match a {
@@ -85,7 +89,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 let v = args.get(i).ok_or(format!("{a} needs a value"))?;
                 classpath = Some(split_path(v));
             }
-            "-version" | "--version" | "-showversion" => return Ok(Command::Version),
+            "-version" | "--version" => return Ok(Command::Version),
+            "-showversion" | "--show-version" => show_version = true,
             // IDEs probe a JDK with this; LazyVM's properties need a VM, so
             // only the version is reported.
             _ if a.starts_with("-XshowSettings") => {}
@@ -105,6 +110,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                     main_class: None,
                     jar: Some(PathBuf::from(jar)),
                     args: args[i + 2..].to_vec(),
+                    show_version,
                 }));
             }
             _ if a.starts_with("-Xbootclasspath:") => {

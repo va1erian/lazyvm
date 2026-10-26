@@ -21,11 +21,7 @@ fn main() -> ExitCode {
     let launch = match options::parse(&args) {
         Ok(Command::Run(launch)) => launch,
         Ok(Command::Version) => {
-            // On stderr, in the `<name> version "<version>"` shape IDEs parse.
-            let v = env!("CARGO_PKG_VERSION");
-            eprintln!("lazyvm version \"1.8.0\"");
-            eprintln!("LazyVM Runtime Environment (build {v})");
-            eprintln!("LazyVM (build {v}, interpreted mode, runs Java 8 bytecode)");
+            print_version();
             return ExitCode::SUCCESS;
         }
         Ok(Command::Help) => {
@@ -53,7 +49,23 @@ fn main() -> ExitCode {
     code
 }
 
+/// On stderr, in the `<name> version "<version>"` shape IDEs parse.
+fn print_version() {
+    let v = env!("CARGO_PKG_VERSION");
+    eprintln!("lazyvm version \"1.8.0\"");
+    eprintln!("LazyVM Runtime Environment (build {v})");
+    eprintln!("LazyVM (build {v}, interpreted mode, runs Java 8 bytecode)");
+}
+
 fn run(mut launch: Launch) -> ExitCode {
+    if launch.show_version {
+        print_version();
+    }
+    // `java.class.path` is what the user gave: the jar alone under -jar.
+    let user_classpath = match &launch.jar {
+        Some(jar) => vec![jar.clone()],
+        None => launch.classpath.clone(),
+    };
     if let Some(jar) = &launch.jar {
         match jarfile::resolve(jar) {
             Ok(j) => {
@@ -66,17 +78,11 @@ fn run(mut launch: Launch) -> ExitCode {
             }
         }
     }
-    let classpath = match ClassPath::open(&launch.boot_classpath, &launch.classpath) {
-        Ok(cp) => cp,
-        Err(e) => {
-            eprintln!("lazyvm: bad class path entry: {e}");
-            return ExitCode::from(1);
-        }
-    };
+    let classpath = ClassPath::open(&launch.boot_classpath, &launch.classpath);
     let mut vm = Vm::new(classpath, launch.options.clone());
     natives::register_all(&mut vm);
     vm.properties.extend(platform::default_properties());
-    let joined = std::env::join_paths(&launch.classpath).map(|p| p.to_string_lossy().into_owned());
+    let joined = std::env::join_paths(&user_classpath).map(|p| p.to_string_lossy().into_owned());
     vm.properties
         .insert("java.class.path".into(), joined.unwrap_or_default());
     vm.properties.extend(launch.properties.clone());

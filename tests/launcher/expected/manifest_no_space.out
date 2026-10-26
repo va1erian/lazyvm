@@ -1,0 +1,3 @@
+--- stderr ---
+Error: Invalid or corrupt jarfile build/launcher/nospace.jar
+--- exit 1 ---

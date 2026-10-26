@@ -27,35 +27,52 @@ pub struct Found {
 }
 
 impl ClassPath {
-    /// Builds both paths. Missing entries are skipped, as `java` does; a file
-    /// that is not a readable zip is an error naming it.
-    pub fn open(boot: &[PathBuf], app: &[PathBuf]) -> Result<ClassPath, String> {
-        Ok(ClassPath { boot: open_all(boot)?, app: open_all(app)? })
+    /// Builds both paths. Missing, unreadable and corrupt entries are
+    /// skipped, as `java` skips them.
+    pub fn open(boot: &[PathBuf], app: &[PathBuf]) -> ClassPath {
+        ClassPath {
+            boot: open_all(boot),
+            app: open_all(app),
+        }
     }
 
     /// The class file of `name` (internal form, no `.class`).
     pub fn find_class(&self, name: &str) -> Option<Found> {
-        is_safe_name(name).then(|| self.find(&format!("{name}.class"))).flatten()
+        is_safe_name(name)
+            .then(|| self.find(&format!("{name}.class")))
+            .flatten()
     }
 
-    /// A resource by its `/`-separated name, without a leading slash.
-    /// `.` and `..` segments are resolved first, never above the root.
+    /// A resource by its `/`-separated name, without a leading slash, as
+    /// Java finds it: in a directory, `.` and `..` are resolved (never above
+    /// the root) and a directory reads as empty; in a jar the name must match
+    /// an entry exactly, `name/` included for a directory entry.
     pub fn find_resource(&self, name: &str) -> Option<Vec<u8>> {
-        let name = normalize(name)?;
-        is_safe_name(&name).then(|| self.find(&name)).flatten().map(|f| f.bytes)
+        let in_dir = normalize(name.trim_end_matches('/')).filter(|n| is_safe_name(n));
+        let lookup = |e: &Entry| match e {
+            Entry::Dir(dir) => in_dir.as_deref().and_then(|n| read_resource(dir, n)),
+            Entry::Jar(jar) => jar
+                .read(name)
+                .ok()
+                .flatten()
+                .or_else(|| jar.read(&format!("{name}/")).ok().flatten()),
+        };
+        self.boot.iter().chain(&self.app).find_map(lookup)
     }
 
     fn find(&self, rel: &str) -> Option<Found> {
         let lookup = |e: &Entry| match e {
             Entry::Dir(dir) => read_in(dir, rel),
-            // A corrupt entry is treated as absent; the archive itself was
-            // already checked when the class path was opened.
+            // A corrupt entry is treated as absent.
             Entry::Jar(jar) => jar.read(rel).ok().flatten(),
         };
         if let Some(bytes) = self.boot.iter().find_map(lookup) {
             return Some(Found { bytes, boot: true });
         }
-        self.app.iter().find_map(lookup).map(|bytes| Found { bytes, boot: false })
+        self.app
+            .iter()
+            .find_map(lookup)
+            .map(|bytes| Found { bytes, boot: false })
     }
 }
 
@@ -74,18 +91,25 @@ fn normalize(name: &str) -> Option<String> {
     Some(parts.join("/"))
 }
 
-fn open_all(paths: &[PathBuf]) -> Result<Vec<Entry>, String> {
+fn open_all(paths: &[PathBuf]) -> Vec<Entry> {
     let mut out = Vec::new();
     for p in paths {
         if p.is_dir() {
             out.push(Entry::Dir(p.clone()));
-        } else if p.is_file() {
-            let data = std::fs::read(p).map_err(|e| format!("{}: {e}", p.display()))?;
-            let jar = Jar::open(data).map_err(|e| format!("{}: {e}", p.display()))?;
+        } else if let Some(jar) = std::fs::read(p).ok().and_then(|d| Jar::open(d).ok()) {
             out.push(Entry::Jar(Arc::new(jar)));
         }
     }
-    Ok(out)
+    out
+}
+
+/// A file's bytes, or nothing for a directory (Java gives an empty stream).
+fn read_resource(dir: &Path, rel: &str) -> Option<Vec<u8>> {
+    let path = dir.join(rel);
+    if path.is_dir() {
+        return Some(Vec::new());
+    }
+    read_in(dir, rel)
 }
 
 fn read_in(dir: &Path, rel: &str) -> Option<Vec<u8>> {
@@ -110,7 +134,16 @@ mod tests {
 
     #[test]
     fn unsafe_names_are_refused() {
-        for bad in ["", "../etc/passwd", "a//b", "a/./b", "C:/x", "a\\b", "a\0b", "/abs"] {
+        for bad in [
+            "",
+            "../etc/passwd",
+            "a//b",
+            "a/./b",
+            "C:/x",
+            "a\\b",
+            "a\0b",
+            "/abs",
+        ] {
             assert!(!is_safe_name(bad), "{bad:?}");
         }
         assert!(is_safe_name("java/lang/Object"));

@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
+import warnings
 import sys
 import zipfile
 from pathlib import Path
@@ -37,6 +38,11 @@ CASES = {
     "jar_no_main": ["-jar", f"{J}/nomain.jar"],
     "jar_corrupt": ["-jar", f"{J}/corrupt.jar"],
     "classpath_jars": ["-cp", f"{J}/app.jar{SEP}{J}/lib.jar", "app.Main", "plain"],
+    "bad_cp_entry": ["-cp", f"{J}/corrupt.jar{SEP}{J}/missing.jar{SEP}{J}/app.jar{SEP}{J}/lib.jar", "app.Main"],
+    "jar_prefixed": ["-jar", f"{J}/prefixed.jar"],
+    "jar_transitive": ["-jar", f"{J}/chain.jar"],
+    "duplicate_entry": ["-cp", f"{J}/dup.jar{SEP}{J}/app.jar{SEP}{J}/lib.jar", "app.Probe"],
+    "manifest_no_space": ["-jar", f"{J}/nospace.jar"],
 }
 
 
@@ -61,6 +67,22 @@ def build() -> None:
         "Manifest-Version: 1.0\r\nMain-Class: app.Main\r\nClass-Path: lib.jar\r\n\r\n")
     jar(OUT / "nomain.jar", OUT / "app", "Manifest-Version: 1.0\r\n\r\n")
     (OUT / "corrupt.jar").write_bytes(b"PK\x03\x04 this is not a zip archive")
+    # A launcher script in front of the archive (offsets are relative to its end).
+    script = b"#!/bin/sh\nexec java -jar \"$0\"\n"
+    (OUT / "prefixed.jar").write_bytes(script + (OUT / "app.jar").read_bytes())
+    # Class-Path is followed transitively: chain.jar -> chain1.jar -> lib.jar.
+    jar(OUT / "chain.jar", OUT / "app",
+        "Manifest-Version: 1.0\r\nMain-Class: app.Probe\r\nClass-Path: chain1.jar\r\n\r\n")
+    with zipfile.ZipFile(OUT / "chain1.jar", "w") as z:
+        z.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\r\nClass-Path: lib.jar\r\n\r\n")
+        z.writestr("r.txt", "from chain1")
+    # The same entry name twice: the later one wins.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with zipfile.ZipFile(OUT / "dup.jar", "w") as z:
+            z.writestr("r.txt", "first")
+            z.writestr("r.txt", "second")
+    jar(OUT / "nospace.jar", OUT / "app", "Manifest-Version: 1.0\r\nMain-Class:app.Main\r\n\r\n")
 
 
 def run(cmd: list[str], env: dict[str, str]) -> str:

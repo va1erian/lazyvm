@@ -28,6 +28,9 @@ struct Entry {
 #[derive(Clone)]
 pub struct Jar {
     data: Arc<[u8]>,
+    /// Bytes before the archive proper (a launcher script, say); every
+    /// offset in the central directory is relative to its end.
+    prefix: usize,
     entries: HashMap<String, Entry>,
     /// Entry names in central directory order.
     order: Vec<String>,
@@ -47,21 +50,32 @@ impl Jar {
         let (disk, cd_disk, count) = (le16(&e[4..]), le16(&e[6..]), le16(&e[10..]));
         let (cd_size, cd_offset) = (le32(&e[12..]) as usize, le32(&e[16..]) as usize);
         if disk != 0 || cd_disk != 0 {
-            return Err(FormatError::new(eocd, "multi-disk zip archives are not supported"));
+            return Err(FormatError::new(
+                eocd,
+                "multi-disk zip archives are not supported",
+            ));
         }
         if count == 0xffff || cd_offset == 0xffff_ffff {
             return Err(FormatError::new(eocd, "ZIP64 archives are not supported"));
         }
-        let cd = data
-            .get(cd_offset..cd_offset.saturating_add(cd_size))
-            .ok_or_else(|| FormatError::new(eocd, "central directory outside the file"))?;
-        let mut jar = Jar { data: data.clone(), entries: HashMap::new(), order: Vec::new() };
+        // The central directory ends where the end record starts; anything
+        // before the offset it claims is a prefix to skip.
+        let outside = || FormatError::new(eocd, "central directory outside the file");
+        let cd_start = eocd.checked_sub(cd_size).ok_or_else(outside)?;
+        let prefix = cd_start.checked_sub(cd_offset).ok_or_else(outside)?;
+        let cd = &data[cd_start..eocd];
+        let mut jar = Jar {
+            data: data.clone(),
+            prefix,
+            entries: HashMap::new(),
+            order: Vec::new(),
+        };
         let mut r = Reader::new(cd);
         for _ in 0..count {
             let (name, entry) = parse_central(&mut r)?;
-            if !jar.entries.contains_key(&name) {
-                jar.order.push(name.clone());
-                jar.entries.insert(name, entry);
+            // A repeated name: the later entry wins, as in Java.
+            if jar.entries.insert(name.clone(), entry).is_none() {
+                jar.order.push(name);
             }
         }
         Ok(jar)
@@ -77,10 +91,15 @@ impl Jar {
 
     /// The bytes of entry `name`, or `None` if there is no such entry.
     pub fn read(&self, name: &str) -> Result<Option<Vec<u8>>, FormatError> {
-        let Some(&e) = self.entries.get(name) else { return Ok(None) };
-        let at = e.local_offset as usize;
+        let Some(&e) = self.entries.get(name) else {
+            return Ok(None);
+        };
+        let at = self.prefix.saturating_add(e.local_offset as usize);
         let outside = || FormatError::new(at, format!("{name}: entry outside the file"));
-        let header = self.data.get(at..at.saturating_add(30)).ok_or_else(outside)?;
+        let header = self
+            .data
+            .get(at..at.saturating_add(30))
+            .ok_or_else(outside)?;
         if le32(header) != LOCAL_SIG {
             return Err(FormatError::new(at, format!("bad local header for {name}")));
         }
@@ -93,10 +112,18 @@ impl Jar {
             0 => raw.to_vec(),
             8 => miniz_oxide::inflate::decompress_to_vec_with_limit(raw, e.size as usize)
                 .map_err(|_| FormatError::new(at, format!("corrupt deflate data in {name}")))?,
-            m => return Err(FormatError::new(at, format!("{name}: unsupported compression method {m}"))),
+            m => {
+                return Err(FormatError::new(
+                    at,
+                    format!("{name}: unsupported compression method {m}"),
+                ));
+            }
         };
         if out.len() != e.size as usize || crc32(&out) != e.crc {
-            return Err(FormatError::new(at, format!("{name}: size or CRC mismatch")));
+            return Err(FormatError::new(
+                at,
+                format!("{name}: size or CRC mismatch"),
+            ));
         }
         Ok(Some(out))
     }
@@ -132,7 +159,10 @@ fn parse_central(r: &mut Reader<'_>) -> Result<(String, Entry), FormatError> {
     }
     let flags = le16(&h[8..]);
     if flags & 1 != 0 {
-        return Err(FormatError::new(at, "encrypted zip entries are not supported"));
+        return Err(FormatError::new(
+            at,
+            "encrypted zip entries are not supported",
+        ));
     }
     let entry = Entry {
         method: le16(&h[10..]),
@@ -144,8 +174,13 @@ fn parse_central(r: &mut Reader<'_>) -> Result<(String, Entry), FormatError> {
     if u64::from(entry.size) > MAX_ENTRY || entry.size == u32::MAX || entry.compressed == u32::MAX {
         return Err(FormatError::new(at, "zip entry too large"));
     }
-    let (name_len, extra_len, comment_len) = (usize::from(le16(&h[28..])), usize::from(le16(&h[30..])), usize::from(le16(&h[32..])));
-    let name = String::from_utf8(r.bytes(name_len)?.to_vec()).map_err(|_| FormatError::new(at, "zip entry name is not UTF-8"))?;
+    let (name_len, extra_len, comment_len) = (
+        usize::from(le16(&h[28..])),
+        usize::from(le16(&h[30..])),
+        usize::from(le16(&h[32..])),
+    );
+    let name = String::from_utf8(r.bytes(name_len)?.to_vec())
+        .map_err(|_| FormatError::new(at, "zip entry name is not UTF-8"))?;
     r.bytes(extra_len + comment_len)?;
     Ok((name, entry))
 }
@@ -158,32 +193,43 @@ pub fn crc32(data: &[u8]) -> u32 {
         for (i, slot) in t.iter_mut().enumerate() {
             let mut c = i as u32;
             for _ in 0..8 {
-                c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
+                c = if c & 1 != 0 {
+                    0xEDB8_8320 ^ (c >> 1)
+                } else {
+                    c >> 1
+                };
             }
             *slot = c;
         }
         t
     });
-    !data.iter().fold(!0u32, |c, &b| table[((c ^ u32::from(b)) & 0xff) as usize] ^ (c >> 8))
+    !data.iter().fold(!0u32, |c, &b| {
+        table[((c ^ u32::from(b)) & 0xff) as usize] ^ (c >> 8)
+    })
 }
 
 /// The main section of a `META-INF/MANIFEST.MF` (JAR spec): `Name: value`
-/// lines, continuation lines starting with one space.
-pub fn manifest_attributes(text: &str) -> Vec<(String, String)> {
+/// lines, continuation lines starting with one space. Any other line is a
+/// malformed manifest, as `java -jar` reports it.
+pub fn manifest_attributes(text: &str) -> Result<Vec<(String, String)>, String> {
     let mut out: Vec<(String, String)> = Vec::new();
     for line in text.split('\n').map(|l| l.strip_suffix('\r').unwrap_or(l)) {
         if line.is_empty() {
             break;
         }
         if let Some(cont) = line.strip_prefix(' ') {
-            if let Some(last) = out.last_mut() {
-                last.1.push_str(cont);
-            }
-        } else if let Some((k, v)) = line.split_once(": ") {
+            let last = out
+                .last_mut()
+                .ok_or("manifest starts with a continuation line")?;
+            last.1.push_str(cont);
+        } else {
+            let (k, v) = line
+                .split_once(": ")
+                .ok_or_else(|| format!("bad manifest line {line:?}"))?;
             out.push((k.to_owned(), v.to_owned()));
         }
     }
-    out
+    Ok(out)
 }
 
 #[cfg(test)]

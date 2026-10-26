@@ -3,8 +3,6 @@ line two: café
 absolute: nested resource
 sub relative: nested resource
 missing: null
-escape: line one
-line two: café
 system: line one
 line two: café
 string loader null: true

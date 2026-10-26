@@ -79,7 +79,8 @@ def main() -> None:
         testlib.build(tests)
         stage(build_musl())
     out = BUILD / "lazyos" / "out"
-    out.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir(parents=True)
     commands = BUILD / "lazyos" / "commands.txt"
     commands.write_text("".join(command(t) + "\n" for t in tests), encoding="utf-8", newline="\n")
     run = [sys.executable, "tools/lazyvm/run.py", "--commands", str(commands), "--out", str(out),
