@@ -1,4 +1,4 @@
-# LazyVM plan, part 2: S8-S13 and LazyOS items
+# LazyVM plan, part 2: S8-S14 and LazyOS items
 
 Continues [`plan.md`](plan.md), which has the work-item format, the status
 table and S0-S7. The same rules apply ([`../AGENTS.md`](../AGENTS.md)).
@@ -169,6 +169,26 @@ Needs: S12 go.
       `os.lazy.audio.v1` (read LazyOS `docs/agents/hardware.md`, sound); on
       Windows through WASAPI. `javax.sound.midi` stays out.
       Check: `tests/sound/WavInfo` (format parsing, diffed with the oracle); on LazyOS, LazyOS's `tools/sound/run.py`-style recording check of a played tone.
+
+## S14. Proposed: javac 8 on LazyVM
+
+Goal: a LazyOS machine compiles Java sources with javac 8 running on LazyVM.
+Proposed in [`compiler.md`](compiler.md); not confirmed. It needs the D6
+proposal for the `javax` compiler packages and `java.util.regex`.
+Needs: S8, S11.
+
+- [ ] S14-01 Run javac 8 (`tools.jar` from a local JDK 8, given by
+      `LAZYVM_JAVAC8_TOOLS`; this repo does not carry it) on LazyVM with
+      `-bootclasspath dist/lazyrt.jar`, and fill what it is missing in `lazyrt`,
+      from the Javadoc. First rerun the `compiler.md` probe on the whole
+      `tests/java` tree on the oracle JVM; if javac uses an internal class, stop
+      and report.
+      Files: `java/lazyrt/javax/{lang/model,tools,annotation/processing}`,
+      `java/lazyrt/java/util/regex`, `tools/javac_on_lazyvm.py`.
+      Check: `tools/javac_on_lazyvm.py` compiles every `tests/java` source with javac 8 on LazyVM and on the oracle JVM, and the class files are byte-identical, on both.
+
+Gate: on LazyOS, `lazyvm -cp tools.jar com.sun.tools.javac.Main` compiles
+`samples/notes` and the result runs, with a screenshot.
 
 ## LazyOS-side work items
 
