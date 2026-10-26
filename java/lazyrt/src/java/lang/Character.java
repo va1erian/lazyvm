@@ -258,13 +258,18 @@ public final class Character implements java.io.Serializable, Comparable<Charact
     }
 
     public static int codePointAt(char[] a, int index) {
-        return codePointAt(a, index, a.length);
+        return codePointAtUnchecked(a, index, a.length);
     }
 
     public static int codePointAt(char[] a, int index, int limit) {
         if (index >= limit || index < 0 || limit > a.length) {
             throw new IndexOutOfBoundsException();
         }
+        return codePointAtUnchecked(a, index, limit);
+    }
+
+    // The two-argument form reports a bad index through the array access itself.
+    private static int codePointAtUnchecked(char[] a, int index, int limit) {
         char high = a[index];
         if (isHighSurrogate(high) && index + 1 < limit && isLowSurrogate(a[index + 1])) {
             return toCodePoint(high, a[index + 1]);

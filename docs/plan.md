@@ -281,6 +281,13 @@ Goal: the everyday `java.util` and `java.io` surface from
       `java.nio.file` (`Path`, `Paths`, `Files` read, write, copy, move,
       delete, list, walk and basic attributes, plus `DirectoryStream`).
       Check: `tests/java/nio/Buffers`, `FilesWalk` (both).
+- [ ] S5-08 Unicode tables: `tools/unicode.py` generates Rust tables from
+      the Unicode 6.2 `UnicodeData.txt` (Java 8's version; Unicode license)
+      for general categories, simple case mappings and digit values, and the
+      `Character` natives use them instead of Rust's `char` properties (which
+      differ for U+0130, U+1F80, combining marks and non-ASCII digits).
+      Check: `tests/java/lang/CharacterTables` (a per-property checksum over
+      every code point, diffed with the oracle).
 - [ ] S5-07 References: `WeakReference`, `SoftReference` (cleared on memory
       pressure), `ReferenceQueue`, and finalization not supported (documented:
       `finalize` is never called).

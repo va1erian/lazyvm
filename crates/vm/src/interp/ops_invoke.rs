@@ -13,6 +13,11 @@ impl Vm {
         };
         match op {
             0xb6 => {
+                // The constant's tag must fit the instruction, so the
+                // resolution cache (keyed by index) is never reused across kinds.
+                if self.is_interface_ref(from, index)? {
+                    return Err(VmError::verify("invokevirtual of an InterfaceMethodref"));
+                }
                 let resolved = self.resolve_method(from, index, false)?;
                 if self.method(resolved).is_static() {
                     return Err(incompatible("Expecting non-static method", resolved, self));
@@ -40,6 +45,9 @@ impl Vm {
                 self.call(resolved, 3)
             }
             0xb9 => {
+                if !self.is_interface_ref(from, index)? {
+                    return Err(VmError::verify("invokeinterface of a Methodref"));
+                }
                 let resolved = self.resolve_method(from, index, true)?;
                 if self.method(resolved).is_static() {
                     return Err(incompatible("Expecting non-static method", resolved, self));
@@ -120,11 +128,24 @@ impl Vm {
         let start = from_class
             .super_class
             .ok_or_else(|| VmError::Internal("no superclass".into()))?;
-        let found = self
-            .find_in_class(start, &name, &desc, true)
-            .filter(|&f| !self.method(f).is_abstract())
-            .ok_or_else(|| VmError::exception("java/lang/AbstractMethodError", name.to_string()))?;
-        Ok(found)
+        // JVMS 6.5 invokespecial: the first *instance* method up the chain.
+        let mut cur = Some(start);
+        while let Some(c) = cur {
+            if let Some(index) = self.class(c).find_method(&name, &desc) {
+                let found = MethodRef { class: c, index };
+                if !self.method(found).is_static() {
+                    if self.method(found).is_abstract() {
+                        break;
+                    }
+                    return Ok(found);
+                }
+            }
+            cur = self.class(c).super_class;
+        }
+        Err(VmError::exception(
+            "java/lang/AbstractMethodError",
+            name.to_string(),
+        ))
     }
 
     /// Calls `m` with its arguments from the top of the operand stack.

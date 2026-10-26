@@ -98,12 +98,39 @@ impl Vm {
         {
             return Some((class, i));
         }
+        let mut visited = Vec::new();
         for &iface in &c.interfaces {
-            if let Some(found) = self.lookup_field(iface, name, desc) {
+            if let Some(found) = self.interface_field(iface, name, desc, &mut visited) {
                 return Some(found);
             }
         }
         c.super_class.and_then(|s| self.lookup_field(s, name, desc))
+    }
+
+    /// Depth-first over superinterfaces, visiting each interface once so a
+    /// diamond-shaped hierarchy cannot make the search exponential.
+    fn interface_field(
+        &self,
+        iface: ClassId,
+        name: &str,
+        desc: &str,
+        visited: &mut Vec<ClassId>,
+    ) -> Option<(ClassId, usize)> {
+        if visited.contains(&iface) {
+            return None;
+        }
+        visited.push(iface);
+        let c = self.class(iface);
+        if let Some(i) = c
+            .fields
+            .iter()
+            .position(|f| &*f.name == name && &*f.descriptor == desc)
+        {
+            return Some((iface, i));
+        }
+        c.interfaces
+            .iter()
+            .find_map(|&s| self.interface_field(s, name, desc, visited))
     }
 
     /// Resolves a `Methodref` (`interface` false) or `InterfaceMethodref`.
@@ -191,8 +218,7 @@ impl Vm {
     /// JVMS 5.4.3.3: the superinterface methods of `class` with this name and
     /// descriptor that no other candidate's interface overrides.
     pub fn maximally_specific(&self, class: ClassId, name: &str, desc: &str) -> Vec<MethodRef> {
-        let mut ifaces = Vec::new();
-        self.all_interfaces(class, &mut ifaces);
+        let ifaces = self.class(class).all_interfaces.clone();
         let candidates: Vec<MethodRef> = ifaces
             .iter()
             .filter_map(|&i| self.find_in_class(i, name, desc, false))
@@ -207,19 +233,6 @@ impl Vm {
                     .any(|o| o.class != m.class && self.implements(o.class, m.class))
             })
             .collect()
-    }
-
-    fn all_interfaces(&self, class: ClassId, out: &mut Vec<ClassId>) {
-        let mut cur = Some(class);
-        while let Some(c) = cur {
-            for &i in &self.class(c).interfaces {
-                if !out.contains(&i) {
-                    out.push(i);
-                    self.all_interfaces(i, out);
-                }
-            }
-            cur = self.class(c).super_class;
-        }
     }
 
     /// JVMS 5.4.6: the method `invokevirtual`/`invokeinterface` runs for a

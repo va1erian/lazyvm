@@ -12,6 +12,8 @@ use vm::{ClassPath, Value, Vm, VmError};
 
 /// The exit status for an internal VM failure, as in `sysexits.h`.
 const EXIT_INTERNAL: u8 = 70;
+/// Reserved, not committed, by the OS until used.
+const VM_STACK_BYTES: usize = 256 << 20;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -33,7 +35,17 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let code = run(launch);
+    // Loading, initialization and calls from natives recurse on the Rust
+    // stack (bounded by `Options::max_nesting`); give the VM room for that.
+    let vm_thread = std::thread::Builder::new()
+        .name("main".into())
+        .stack_size(VM_STACK_BYTES)
+        .spawn(move || run(launch));
+    let code = match vm_thread.map(|t| t.join()) {
+        Ok(Ok(code)) => code,
+        Ok(Err(_)) => internal("the VM thread panicked"),
+        Err(e) => internal(&format!("cannot start the VM thread: {e}")),
+    };
     let _ = platform::flush(platform::Stream::Out);
     let _ = platform::flush(platform::Stream::Err);
     code

@@ -299,6 +299,9 @@ public final class Long extends Number implements Comparable<Long> {
     }
 
     public static long remainderUnsigned(long dividend, long divisor) {
+        if (divisor == 0) {
+            throw new ArithmeticException("BigInteger divide by zero");
+        }
         return dividend - divideUnsigned(dividend, divisor) * divisor;
     }
 

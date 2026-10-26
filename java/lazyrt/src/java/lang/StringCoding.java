@@ -13,7 +13,7 @@ final class StringCoding {
 
     private static int charset(String name) throws UnsupportedEncodingException {
         if (name == null) {
-            throw new NullPointerException("charsetName");
+            throw new NullPointerException();
         }
         if (name.equalsIgnoreCase("UTF-8") || name.equalsIgnoreCase("UTF8")) {
             return UTF8;
@@ -40,6 +40,9 @@ final class StringCoding {
 
     static char[] decode(byte[] b, int off, int len, String charsetName)
             throws UnsupportedEncodingException {
+        if (charsetName == null) {
+            throw new NullPointerException("charsetName");
+        }
         int cs = charset(charsetName);
         return cs == UTF8 ? decodeUtf8(b, off, len) : decodeSingle(b, off, len, cs == LATIN1);
     }

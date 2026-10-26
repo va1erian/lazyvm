@@ -38,57 +38,44 @@ fn arraycopy(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let dst_pos = int(args, 3)?;
     let len = int(args, 4)?;
     let (src_class, dst_class) = (vm.heap.class_of(src)?, vm.heap.class_of(dst)?);
-    let (src_comp, dst_comp) = match (&vm.class(src_class).kind, &vm.class(dst_class).kind) {
-        (ClassKind::Array { component: s, .. }, ClassKind::Array { component: d, .. }) => (*s, *d),
-        (ClassKind::Array { .. }, _) => return Err(not_array(vm, "destination", dst_class)),
-        _ => return Err(not_array(vm, "source", src_class)),
+    // Java 8 gives these exceptions no message. The Javadoc's order: a type
+    // mismatch is ArrayStoreException before any range is checked.
+    let (
+        ClassKind::Array {
+            component: src_comp,
+            ..
+        },
+        ClassKind::Array {
+            component: dst_comp,
+            ..
+        },
+    ) = (
+        vm.class(src_class).kind.clone(),
+        vm.class(dst_class).kind.clone(),
+    )
+    else {
+        return Err(VmError::bare(ARRAY_STORE));
     };
+    let prim = |c| matches!(vm.class(c).kind, ClassKind::Primitive(_));
+    let primitive = prim(src_comp) || prim(dst_comp);
+    if primitive && src_comp != dst_comp {
+        return Err(VmError::bare(ARRAY_STORE));
+    }
     let src_len = vm.heap.array(src)?.len();
     let dst_len = vm.heap.array(dst)?.len();
-    check_range("source", src_pos, len, src_len)?;
-    check_range("destination", dst_pos, len, dst_len)?;
+    if !in_range(src_pos, len, src_len) || !in_range(dst_pos, len, dst_len) {
+        return Err(VmError::bare("java/lang/ArrayIndexOutOfBoundsException"));
+    }
     let (s, d, n) = (src_pos as usize, dst_pos as usize, len as usize);
-    let prim = |c| matches!(vm.class(c).kind, ClassKind::Primitive(_));
-    if prim(src_comp) || prim(dst_comp) {
-        if src_comp != dst_comp {
-            let msg = format!(
-                "arraycopy: type mismatch: can not copy {}[] into {}[]",
-                vm.class(src_comp).java_name(),
-                vm.class(dst_comp).java_name()
-            );
-            return Err(VmError::exception(ARRAY_STORE, msg));
-        }
+    if primitive {
         copy_primitive(vm, src, dst, s, d, n)?;
         return ret_void();
     }
     copy_refs(vm, src, dst, dst_comp, s, d, n)
 }
 
-fn not_array(vm: &Vm, which: &str, class: vm::ClassId) -> VmError {
-    let msg = format!(
-        "arraycopy: {which} type {} is not an array",
-        vm.class(class).java_name()
-    );
-    VmError::exception(ARRAY_STORE, msg)
-}
-
-fn check_range(which: &str, pos: i32, len: i32, array_len: usize) -> VmResult<()> {
-    let oob = |msg: String| VmError::exception("java/lang/ArrayIndexOutOfBoundsException", msg);
-    if pos < 0 {
-        return Err(oob(format!(
-            "arraycopy: {which} index {pos} out of bounds for length {array_len}"
-        )));
-    }
-    if len < 0 {
-        return Err(oob(format!("arraycopy: length {len} is negative")));
-    }
-    let end = i64::from(pos) + i64::from(len);
-    if end > array_len as i64 {
-        return Err(oob(format!(
-            "arraycopy: last {which} index {end} out of bounds for length {array_len}"
-        )));
-    }
-    Ok(())
+fn in_range(pos: i32, len: i32, array_len: usize) -> bool {
+    pos >= 0 && len >= 0 && i64::from(pos) + i64::from(len) <= array_len as i64
 }
 
 /// Copies through a temporary, so overlapping ranges in one array work.
@@ -136,12 +123,7 @@ fn copy_refs(
         if let Some(r) = item {
             let c = vm.heap.class_of(r)?;
             if !vm.is_assignable(c, dst_comp) {
-                let msg = format!(
-                    "arraycopy: element type mismatch: can not cast one of the elements of {}[] to the type of the destination array, {}",
-                    vm.class(c).java_name(),
-                    vm.class(dst_comp).java_name()
-                );
-                return Err(VmError::exception(ARRAY_STORE, msg));
+                return Err(VmError::bare(ARRAY_STORE));
             }
         }
         if let Array::Ref(b) = vm.heap.array_mut(dst)? {

@@ -55,9 +55,16 @@ impl Vm {
             let f = self.native_for(m)?;
             return f(self, args);
         }
+        // Each nested run uses Rust stack; bound it like Java frames.
+        if self.nesting >= self.options.max_nesting {
+            return Err(VmError::bare("java/lang/StackOverflowError"));
+        }
         let base = self.frames.len();
         self.push_frame(m, args)?;
-        self.run(base)
+        self.nesting += 1;
+        let result = self.run(base);
+        self.nesting -= 1;
+        result
     }
 
     pub(crate) fn push_frame(&mut self, m: MethodRef, args: &[Value]) -> VmResult<()> {
@@ -79,15 +86,39 @@ impl Vm {
             );
             return Err(VmError::exception("java/lang/AbstractMethodError", msg));
         };
+        // Locals and stack are not heap objects, so they get their own budget.
+        let slots =
+            usize::from(code.max_locals.max(method.arg_slots)) + usize::from(code.max_stack);
+        if self.frame_slots + slots > self.options.max_frame_slots {
+            return Err(VmError::bare("java/lang/StackOverflowError"));
+        }
         let frame = Frame::new(m, code, method.arg_slots, args)?;
+        self.frame_slots += slots;
         self.frames.push(frame);
         Ok(())
+    }
+
+    pub(crate) fn pop_frame(&mut self) {
+        if let Some(f) = self.frames.pop() {
+            self.frame_slots -= f.locals.len() + usize::from(f.code.max_stack);
+        }
     }
 
     /// Runs until the frame count drops to `base`, returning the value of the
     /// frame that returned last. An exception that escapes every frame above
     /// `base` is returned as `VmError::Throw`.
     pub(crate) fn run(&mut self, base: usize) -> VmResult<Option<Value>> {
+        let result = self.run_loop(base);
+        if result.is_err() {
+            // Whatever ended the loop, no frame above `base` may outlive it.
+            while self.frames.len() > base {
+                self.pop_frame();
+            }
+        }
+        result
+    }
+
+    fn run_loop(&mut self, base: usize) -> VmResult<Option<Value>> {
         loop {
             if self.heap.wants_gc() {
                 self.collect_garbage();
@@ -95,7 +126,7 @@ impl Vm {
             let outcome = match self.step() {
                 Ok(Flow::Next) => continue,
                 Ok(Flow::Return(v)) => {
-                    self.frames.pop();
+                    self.pop_frame();
                     if self.frames.len() <= base {
                         return Ok(v);
                     }
@@ -137,20 +168,33 @@ impl Vm {
         result
     }
 
-    fn unwind_rooted(&mut self, ex: Ref, base: usize) -> VmResult<()> {
-        let ex_class = self.heap.class_of(ex)?;
+    /// The root at `slot` is replaced when a catch type fails to resolve:
+    /// that error becomes the exception, and the search goes on with the
+    /// next handler, so the failing entry is not tried again (JVMS 5.4.3).
+    fn unwind_rooted(&mut self, mut ex: Ref, base: usize) -> VmResult<()> {
+        let slot = self.roots.len() - 1;
         while self.frames.len() > base {
             let (class, pc, code) = {
                 let f = self.top()?;
                 (f.class, f.pc, f.code.clone())
             };
-            for h in &code.handlers {
+            let mut i = 0;
+            while let Some(h) = code.handlers.get(i) {
+                i += 1;
                 if pc < usize::from(h.start_pc) || pc >= usize::from(h.end_pc) {
                     continue;
                 }
-                let catches = h.catch_type == 0 || {
-                    let catch = self.resolve_class(class, h.catch_type)?;
-                    self.is_assignable(ex_class, catch)
+                let catches = match h.catch_type {
+                    0 => true,
+                    index => match self.resolve_class(class, index) {
+                        Ok(catch) => self.is_assignable(self.heap.class_of(ex)?, catch),
+                        Err(e) if e.is_catchable() => {
+                            ex = self.materialize(e)?;
+                            self.roots[slot] = ex;
+                            continue;
+                        }
+                        Err(e) => return Err(e),
+                    },
                 };
                 if catches {
                     let f = self.top()?;
@@ -160,7 +204,7 @@ impl Vm {
                     return Ok(());
                 }
             }
-            self.frames.pop();
+            self.pop_frame();
         }
         Err(VmError::Throw(ex))
     }

@@ -1,0 +1,51 @@
+requireNonNull: java.lang.NullPointerException | null
+requireNonNull msg: java.lang.NullPointerException | boom
+initCause twice: java.lang.IllegalStateException | Can't overwrite cause with java.lang.Error: c
+initCause twice (cause ctor): java.lang.IllegalStateException | Can't overwrite cause with java.lang.Error: c
+initCause self: java.lang.IllegalArgumentException | Self-causation not permitted
+addSuppressed null: java.lang.NullPointerException | Cannot suppress a null exception.
+addSuppressed self: java.lang.IllegalArgumentException | Self-suppression not permitted
+copyOf neg: java.lang.NegativeArraySizeException | null
+copyOf null: java.lang.NullPointerException | null
+copyOfRange from>to: java.lang.IllegalArgumentException | 3 > 1
+copyOfRange from<0: java.lang.ArrayIndexOutOfBoundsException | null
+copyOfRange from>len: java.lang.ArrayIndexOutOfBoundsException | null
+fill from>to: java.lang.IllegalArgumentException | fromIndex(3) > toIndex(1)
+fill from<0: java.lang.ArrayIndexOutOfBoundsException | Array index out of range: -1
+fill to>len: java.lang.ArrayIndexOutOfBoundsException | Array index out of range: 6
+fill Object from>to: java.lang.IllegalArgumentException | fromIndex(3) > toIndex(1)
+fill Object to>len: java.lang.ArrayIndexOutOfBoundsException | Array index out of range: 6
+forName no.Such: java.lang.ClassNotFoundException | no.Such
+forName slashes: java.lang.ClassNotFoundException | java/lang/String
+forName empty: java.lang.ClassNotFoundException | 
+forName null: java.lang.NullPointerException | null
+CCE
+Class.cast: java.lang.ClassCastException | Cannot cast java.lang.Integer to java.lang.String
+Enum.compareTo: java.lang.ClassCastException | null
+Thread.sleep -1: java.lang.IllegalArgumentException | timeout value is negative
+setPriority 11: java.lang.IllegalArgumentException | null
+setPriority 0: java.lang.IllegalArgumentException | null
+Object.wait -1: java.lang.IllegalArgumentException | timeout value is negative
+getProperty null: java.lang.NullPointerException | key can't be null
+getProperty empty: java.lang.IllegalArgumentException | key can't be empty
+getProperty def null: java.lang.NullPointerException | key can't be null
+array neg: java.lang.NegativeArraySizeException | null
+array idx: java.lang.ArrayIndexOutOfBoundsException | 2
+array idx -1: java.lang.ArrayIndexOutOfBoundsException | -1
+array store: java.lang.ArrayStoreException | java.lang.Integer
+arraycopy bad: java.lang.ArrayIndexOutOfBoundsException | null
+arraycopy neg: java.lang.ArrayIndexOutOfBoundsException | null
+arraycopy null: java.lang.NullPointerException | null
+arraycopy type: java.lang.ArrayStoreException | null
+arraycopy not array: java.lang.ArrayStoreException | null
+npe invoke: java.lang.NullPointerException | null
+cce cast: java.lang.ClassCastException | java.lang.String cannot be cast to java.lang.Integer
+null
+Throwable(null cause): ok
+java.lang.Error: e
+Throwable(cause) msg: ok
+java.lang.IllegalStateException: m java.lang.Error
+Throwable toString: ok
+checkError: true
+checkError ok: false
+done

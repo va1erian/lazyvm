@@ -13,10 +13,10 @@ hello[2] = 108
 hello[3] = 108
 hello[4] = 111
 hello
-store oob: Index 3 out of bounds for length 3
-load oob: Index -1 out of bounds for length 3
-long oob: java.lang.ArrayIndexOutOfBoundsException Index 100 out of bounds for length 3
-java.lang.NegativeArraySizeException: -1
+store oob: 3
+load oob: -1
+long oob: java.lang.ArrayIndexOutOfBoundsException 100
+java.lang.NegativeArraySizeException: null
 null length: NPE
 null store: NPE
 empty length 0

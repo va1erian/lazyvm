@@ -175,9 +175,19 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
 
 - **Differential tests:** a test is a Java class under `tests/java/<area>/`
   whose stdout is the result. `tools/golden.py --bless` runs it on the oracle
-  JVM (`LAZYVM_ORACLE_JAVA`, Temurin 8 preferred, JDK 25 accepted) and writes
-  `<Name>.out` next to it. `tools/test.py` runs every test on LazyVM and diffs
-  against the `.out`. Goldens are checked in, so CI needs no oracle.
+  JVM and writes `<Name>.out` next to it. `tools/test.py` runs every test on
+  LazyVM and diffs against the `.out`. Goldens are checked in, so CI needs no
+  oracle.
+- **The oracle is Java 8** (Temurin 8, `LAZYVM_ORACLE_JAVA`; installed on the
+  owner's machine at `%USERPROFILE%\.jdks\temurin-1.8.0_504`). LazyVM matches
+  Java 8's observable behaviour, exception messages included.
+- **One deliberate exception:** `Double.toString` and `Float.toString`
+  follow their Javadoc ("as many, but only as many, more digits as are
+  needed to uniquely distinguish"). Java 8 sometimes prints an extra digit
+  (`1.23456792E8` for `123456789f`), a bug fixed in JDK 19, and LazyVM does
+  not copy it. A test whose output depends on this declares `// ORACLE: modern`
+  and is blessed on JDK 19 or newer (`LAZYVM_ORACLE_JAVA_MODERN`, else `java`
+  on `PATH`).
 - `lazy.*` tests have hand-written `.out` files and run on LazyVM only.
 - Rust unit tests cover the class-file parser, the verifier and the heap. A
   fuzz target (`cargo fuzz`) covers the parser and the verifier from S8.

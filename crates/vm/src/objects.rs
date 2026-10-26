@@ -25,10 +25,7 @@ impl Vm {
             )));
         };
         if len < 0 {
-            return Err(VmError::exception(
-                "java/lang/NegativeArraySizeException",
-                len.to_string(),
-            ));
+            return Err(VmError::bare("java/lang/NegativeArraySizeException"));
         }
         let len = len as usize;
         if len > MAX_ARRAY {

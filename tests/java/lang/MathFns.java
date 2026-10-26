@@ -1,3 +1,4 @@
+// ORACLE: modern
 package lang;
 
 public class MathFns {

@@ -1,0 +1,171 @@
+package lang;
+
+public class ErrorsBuilder {
+    interface Case { void run() throws Throwable; }
+
+    static void t(String label, Case c) {
+        try {
+            c.run();
+            System.out.println(label + ": ok");
+        } catch (Throwable e) {
+            System.out.println(label + ": " + e.getClass().getName() + " | " + e.getMessage());
+        }
+    }
+
+    static StringBuilder nb() { return new StringBuilder("abc"); }
+    static StringBuffer nf() { return new StringBuffer("abc"); }
+
+    public static void main(String[] args) {
+        System.out.println("-- StringBuilder");
+        t("charAt -1", new Case(){public void run(){ nb().charAt(-1); }});
+        t("charAt len", new Case(){public void run(){ nb().charAt(3); }});
+        t("setCharAt -1", new Case(){public void run(){ nb().setCharAt(-1, 'x'); }});
+        t("setCharAt len", new Case(){public void run(){ nb().setCharAt(3, 'x'); }});
+        t("deleteCharAt -1", new Case(){public void run(){ nb().deleteCharAt(-1); }});
+        t("deleteCharAt len", new Case(){public void run(){ nb().deleteCharAt(3); }});
+        t("delete -1,1", new Case(){public void run(){ nb().delete(-1, 1); }});
+        t("delete 4,5", new Case(){public void run(){ nb().delete(4, 5); }});
+        t("delete 2,1", new Case(){public void run(){ nb().delete(2, 1); }});
+        t("delete 1,99", new Case(){public void run(){ nb().delete(1, 99); }});
+        t("replace -1,1", new Case(){public void run(){ nb().replace(-1, 1, "x"); }});
+        t("replace 4,5", new Case(){public void run(){ nb().replace(4, 5, "x"); }});
+        t("replace 2,1", new Case(){public void run(){ nb().replace(2, 1, "x"); }});
+        t("replace null", new Case(){public void run(){ nb().replace(0, 1, null); }});
+        t("insert str -1", new Case(){public void run(){ nb().insert(-1, "x"); }});
+        t("insert str 4", new Case(){public void run(){ nb().insert(4, "x"); }});
+        t("insert Object 4", new Case(){public void run(){ nb().insert(4, (Object) "x"); }});
+        t("insert char[] 4", new Case(){public void run(){ nb().insert(4, new char[1]); }});
+        t("insert char[] null", new Case(){public void run(){ nb().insert(0, (char[]) null); }});
+        t("insert char[] range", new Case(){public void run(){ nb().insert(0, new char[2], 1, 5); }});
+        t("insert char[] range off", new Case(){public void run(){ nb().insert(0, new char[2], -1, 1); }});
+        t("insert char[] range len", new Case(){public void run(){ nb().insert(0, new char[2], 0, -1); }});
+        t("insert char[] range at", new Case(){public void run(){ nb().insert(9, new char[2], 0, 1); }});
+        t("insert CS 4", new Case(){public void run(){ nb().insert(4, (CharSequence) "x"); }});
+        t("insert CS range", new Case(){public void run(){ nb().insert(0, (CharSequence) "ab", 0, 5); }});
+        t("insert CS range2", new Case(){public void run(){ nb().insert(0, (CharSequence) "ab", 2, 1); }});
+        t("insert CS range3", new Case(){public void run(){ nb().insert(0, (CharSequence) "ab", -1, 1); }});
+        t("insert CS range at", new Case(){public void run(){ nb().insert(9, (CharSequence) "ab", 0, 1); }});
+        t("insert boolean", new Case(){public void run(){ nb().insert(4, true); }});
+        t("insert char", new Case(){public void run(){ nb().insert(-2, 'c'); }});
+        t("insert int", new Case(){public void run(){ nb().insert(4, 1); }});
+        t("insert long", new Case(){public void run(){ nb().insert(4, 1L); }});
+        t("insert float", new Case(){public void run(){ nb().insert(4, 1f); }});
+        t("insert double", new Case(){public void run(){ nb().insert(4, 1d); }});
+        t("substring -1", new Case(){public void run(){ nb().substring(-1); }});
+        t("substring 4", new Case(){public void run(){ nb().substring(4); }});
+        t("substring -1,1", new Case(){public void run(){ nb().substring(-1, 1); }});
+        t("substring 0,4", new Case(){public void run(){ nb().substring(0, 4); }});
+        t("substring 2,1", new Case(){public void run(){ nb().substring(2, 1); }});
+        t("subSequence 0,4", new Case(){public void run(){ nb().subSequence(0, 4); }});
+        t("subSequence -1,1", new Case(){public void run(){ nb().subSequence(-1, 1); }});
+        t("subSequence 2,1", new Case(){public void run(){ nb().subSequence(2, 1); }});
+        t("getChars srcBegin<0", new Case(){public void run(){ nb().getChars(-1, 2, new char[5], 0); }});
+        t("getChars srcEnd>len", new Case(){public void run(){ nb().getChars(0, 4, new char[5], 0); }});
+        t("getChars begin>end", new Case(){public void run(){ nb().getChars(2, 1, new char[5], 0); }});
+        t("getChars dstBegin<0", new Case(){public void run(){ nb().getChars(0, 2, new char[5], -1); }});
+        t("getChars dst small", new Case(){public void run(){ nb().getChars(0, 3, new char[2], 0); }});
+        t("getChars dst offset", new Case(){public void run(){ nb().getChars(0, 3, new char[5], 3); }});
+        t("getChars dst null", new Case(){public void run(){ nb().getChars(0, 3, null, 0); }});
+        t("setLength -1", new Case(){public void run(){ nb().setLength(-1); }});
+        t("codePointAt -1", new Case(){public void run(){ nb().codePointAt(-1); }});
+        t("codePointAt len", new Case(){public void run(){ nb().codePointAt(3); }});
+        t("codePointBefore 0", new Case(){public void run(){ nb().codePointBefore(0); }});
+        t("codePointBefore 4", new Case(){public void run(){ nb().codePointBefore(4); }});
+        t("codePointCount -1,1", new Case(){public void run(){ nb().codePointCount(-1, 1); }});
+        t("codePointCount 0,4", new Case(){public void run(){ nb().codePointCount(0, 4); }});
+        t("codePointCount 2,1", new Case(){public void run(){ nb().codePointCount(2, 1); }});
+        t("appendCodePoint -1", new Case(){public void run(){ nb().appendCodePoint(-1); }});
+        t("appendCodePoint big", new Case(){public void run(){ nb().appendCodePoint(0x110000); }});
+        t("append char[] off<0", new Case(){public void run(){ nb().append(new char[3], -1, 1); }});
+        t("append char[] len<0", new Case(){public void run(){ nb().append(new char[3], 0, -1); }});
+        t("append char[] range", new Case(){public void run(){ nb().append(new char[3], 2, 2); }});
+        t("append char[] null", new Case(){public void run(){ nb().append((char[]) null); }});
+        t("append CS start<0", new Case(){public void run(){ nb().append((CharSequence) "abc", -1, 1); }});
+        t("append CS end>len", new Case(){public void run(){ nb().append((CharSequence) "abc", 0, 4); }});
+        t("append CS start>end", new Case(){public void run(){ nb().append((CharSequence) "abc", 2, 1); }});
+        t("append null CS range", new Case(){public void run(){ System.out.println(nb().append((CharSequence) null, 0, 2)); }});
+        t("append null CS bad", new Case(){public void run(){ nb().append((CharSequence) null, 0, 5); }});
+        t("ensureCapacity -5", new Case(){public void run(){ nb().ensureCapacity(-5); }});
+        t("new -1", new Case(){public void run(){ new StringBuilder(-1); }});
+        t("new null String", new Case(){public void run(){ new StringBuilder((String) null); }});
+        t("new null CS", new Case(){public void run(){ new StringBuilder((CharSequence) null); }});
+        t("indexOf null", new Case(){public void run(){ nb().indexOf(null); }});
+        t("lastIndexOf null", new Case(){public void run(){ nb().lastIndexOf(null); }});
+        System.out.println("-- StringBuffer");
+        t("charAt -1", new Case(){public void run(){ nf().charAt(-1); }});
+        t("charAt len", new Case(){public void run(){ nf().charAt(3); }});
+        t("setCharAt -1", new Case(){public void run(){ nf().setCharAt(-1, 'x'); }});
+        t("setCharAt len", new Case(){public void run(){ nf().setCharAt(3, 'x'); }});
+        t("deleteCharAt -1", new Case(){public void run(){ nf().deleteCharAt(-1); }});
+        t("deleteCharAt len", new Case(){public void run(){ nf().deleteCharAt(3); }});
+        t("delete -1,1", new Case(){public void run(){ nf().delete(-1, 1); }});
+        t("delete 4,5", new Case(){public void run(){ nf().delete(4, 5); }});
+        t("delete 2,1", new Case(){public void run(){ nf().delete(2, 1); }});
+        t("delete 1,99", new Case(){public void run(){ nf().delete(1, 99); }});
+        t("replace -1,1", new Case(){public void run(){ nf().replace(-1, 1, "x"); }});
+        t("replace 4,5", new Case(){public void run(){ nf().replace(4, 5, "x"); }});
+        t("replace 2,1", new Case(){public void run(){ nf().replace(2, 1, "x"); }});
+        t("replace null", new Case(){public void run(){ nf().replace(0, 1, null); }});
+        t("insert str -1", new Case(){public void run(){ nf().insert(-1, "x"); }});
+        t("insert str 4", new Case(){public void run(){ nf().insert(4, "x"); }});
+        t("insert Object 4", new Case(){public void run(){ nf().insert(4, (Object) "x"); }});
+        t("insert char[] 4", new Case(){public void run(){ nf().insert(4, new char[1]); }});
+        t("insert char[] null", new Case(){public void run(){ nf().insert(0, (char[]) null); }});
+        t("insert char[] range", new Case(){public void run(){ nf().insert(0, new char[2], 1, 5); }});
+        t("insert char[] range off", new Case(){public void run(){ nf().insert(0, new char[2], -1, 1); }});
+        t("insert char[] range len", new Case(){public void run(){ nf().insert(0, new char[2], 0, -1); }});
+        t("insert char[] range at", new Case(){public void run(){ nf().insert(9, new char[2], 0, 1); }});
+        t("insert CS 4", new Case(){public void run(){ nf().insert(4, (CharSequence) "x"); }});
+        t("insert CS range", new Case(){public void run(){ nf().insert(0, (CharSequence) "ab", 0, 5); }});
+        t("insert CS range2", new Case(){public void run(){ nf().insert(0, (CharSequence) "ab", 2, 1); }});
+        t("insert CS range3", new Case(){public void run(){ nf().insert(0, (CharSequence) "ab", -1, 1); }});
+        t("insert CS range at", new Case(){public void run(){ nf().insert(9, (CharSequence) "ab", 0, 1); }});
+        t("insert boolean", new Case(){public void run(){ nf().insert(4, true); }});
+        t("insert char", new Case(){public void run(){ nf().insert(-2, 'c'); }});
+        t("insert int", new Case(){public void run(){ nf().insert(4, 1); }});
+        t("insert long", new Case(){public void run(){ nf().insert(4, 1L); }});
+        t("insert float", new Case(){public void run(){ nf().insert(4, 1f); }});
+        t("insert double", new Case(){public void run(){ nf().insert(4, 1d); }});
+        t("substring -1", new Case(){public void run(){ nf().substring(-1); }});
+        t("substring 4", new Case(){public void run(){ nf().substring(4); }});
+        t("substring -1,1", new Case(){public void run(){ nf().substring(-1, 1); }});
+        t("substring 0,4", new Case(){public void run(){ nf().substring(0, 4); }});
+        t("substring 2,1", new Case(){public void run(){ nf().substring(2, 1); }});
+        t("subSequence 0,4", new Case(){public void run(){ nf().subSequence(0, 4); }});
+        t("subSequence -1,1", new Case(){public void run(){ nf().subSequence(-1, 1); }});
+        t("subSequence 2,1", new Case(){public void run(){ nf().subSequence(2, 1); }});
+        t("getChars srcBegin<0", new Case(){public void run(){ nf().getChars(-1, 2, new char[5], 0); }});
+        t("getChars srcEnd>len", new Case(){public void run(){ nf().getChars(0, 4, new char[5], 0); }});
+        t("getChars begin>end", new Case(){public void run(){ nf().getChars(2, 1, new char[5], 0); }});
+        t("getChars dstBegin<0", new Case(){public void run(){ nf().getChars(0, 2, new char[5], -1); }});
+        t("getChars dst small", new Case(){public void run(){ nf().getChars(0, 3, new char[2], 0); }});
+        t("getChars dst offset", new Case(){public void run(){ nf().getChars(0, 3, new char[5], 3); }});
+        t("getChars dst null", new Case(){public void run(){ nf().getChars(0, 3, null, 0); }});
+        t("setLength -1", new Case(){public void run(){ nf().setLength(-1); }});
+        t("codePointAt -1", new Case(){public void run(){ nf().codePointAt(-1); }});
+        t("codePointAt len", new Case(){public void run(){ nf().codePointAt(3); }});
+        t("codePointBefore 0", new Case(){public void run(){ nf().codePointBefore(0); }});
+        t("codePointBefore 4", new Case(){public void run(){ nf().codePointBefore(4); }});
+        t("codePointCount -1,1", new Case(){public void run(){ nf().codePointCount(-1, 1); }});
+        t("codePointCount 0,4", new Case(){public void run(){ nf().codePointCount(0, 4); }});
+        t("codePointCount 2,1", new Case(){public void run(){ nf().codePointCount(2, 1); }});
+        t("appendCodePoint -1", new Case(){public void run(){ nf().appendCodePoint(-1); }});
+        t("appendCodePoint big", new Case(){public void run(){ nf().appendCodePoint(0x110000); }});
+        t("append char[] off<0", new Case(){public void run(){ nf().append(new char[3], -1, 1); }});
+        t("append char[] len<0", new Case(){public void run(){ nf().append(new char[3], 0, -1); }});
+        t("append char[] range", new Case(){public void run(){ nf().append(new char[3], 2, 2); }});
+        t("append char[] null", new Case(){public void run(){ nf().append((char[]) null); }});
+        t("append CS start<0", new Case(){public void run(){ nf().append((CharSequence) "abc", -1, 1); }});
+        t("append CS end>len", new Case(){public void run(){ nf().append((CharSequence) "abc", 0, 4); }});
+        t("append CS start>end", new Case(){public void run(){ nf().append((CharSequence) "abc", 2, 1); }});
+        t("append null CS range", new Case(){public void run(){ System.out.println(nf().append((CharSequence) null, 0, 2)); }});
+        t("append null CS bad", new Case(){public void run(){ nf().append((CharSequence) null, 0, 5); }});
+        t("ensureCapacity -5", new Case(){public void run(){ nf().ensureCapacity(-5); }});
+        t("new -1", new Case(){public void run(){ new StringBuffer(-1); }});
+        t("new null String", new Case(){public void run(){ new StringBuffer((String) null); }});
+        t("new null CS", new Case(){public void run(){ new StringBuffer((CharSequence) null); }});
+        t("indexOf null", new Case(){public void run(){ nf().indexOf(null); }});
+        t("lastIndexOf null", new Case(){public void run(){ nf().lastIndexOf(null); }});
+        System.out.println("done");
+    }
+}

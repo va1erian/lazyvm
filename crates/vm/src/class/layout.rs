@@ -55,6 +55,7 @@ pub(super) fn build(
         access: cf.access,
         super_class,
         interfaces,
+        all_interfaces: Box::new([]),
         file: Some(Arc::new(cf)),
         fields,
         methods,

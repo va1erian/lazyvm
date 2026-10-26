@@ -34,6 +34,10 @@ pub fn register(vm: &mut Vm) {
         Ok(Some(Value::Float(match v {
             Parsed::Decimal(text) => text.parse::<f32>().map_err(|_| nfe(&s))?,
             Parsed::Value(x) => x as f32,
+            Parsed::Hex { negative, value } => {
+                let x = crate::hexfloat::to_f32(value);
+                if negative { -x } else { x }
+            }
         })))
     });
     vm.register_native(DOUBLE, "parseDouble", "(Ljava/lang/String;)D", |vm, a| {
@@ -42,6 +46,10 @@ pub fn register(vm: &mut Vm) {
         Ok(Some(Value::Double(match v {
             Parsed::Decimal(text) => text.parse::<f64>().map_err(|_| nfe(&s))?,
             Parsed::Value(x) => x,
+            Parsed::Hex { negative, value } => {
+                let x = crate::hexfloat::to_f64(value);
+                if negative { -x } else { x }
+            }
         })))
     });
 }
@@ -130,6 +138,10 @@ enum Parsed {
     /// A validated decimal literal for Rust's correctly rounding parser.
     Decimal(String),
     Value(f64),
+    Hex {
+        negative: bool,
+        value: crate::hexfloat::Exact,
+    },
 }
 
 fn nfe(s: &str) -> VmError {
@@ -162,8 +174,11 @@ fn parse(input: &str) -> VmResult<Parsed> {
     }
     let body = body.strip_suffix(['f', 'F', 'd', 'D']).unwrap_or(body);
     if let Some(hex) = body.strip_prefix("0x").or_else(|| body.strip_prefix("0X")) {
-        return parse_hex(hex)
-            .map(|x| Parsed::Value(signed(x)))
+        return crate::hexfloat::parse(hex)
+            .map(|value| Parsed::Hex {
+                negative: neg,
+                value,
+            })
             .ok_or_else(|| nfe(input));
     }
     if !is_decimal(body) {
@@ -205,37 +220,6 @@ fn count_digits(b: &[u8], i: &mut usize) -> usize {
         *i += 1;
     }
     *i - start
-}
-
-/// A hex significand with a mandatory binary exponent: `1.8p1`. Rounding is
-/// exact except possibly in the subnormal range.
-fn parse_hex(s: &str) -> Option<f64> {
-    let (sig, exp) = s.split_once(['p', 'P'])?;
-    let exp: i64 = exp.strip_prefix('+').unwrap_or(exp).parse().ok()?;
-    let (int, frac) = sig.split_once('.').unwrap_or((sig, ""));
-    if int.is_empty() && frac.is_empty() {
-        return None;
-    }
-    let mut mantissa: u128 = 0;
-    let mut scale: i64 = 0;
-    let mut sticky = false;
-    for (i, c) in int.chars().chain(frac.chars()).enumerate() {
-        let d = c.to_digit(16)?;
-        if mantissa >> 120 == 0 {
-            mantissa = mantissa * 16 + u128::from(d);
-            if i >= int.len() {
-                scale -= 4;
-            }
-        } else {
-            sticky |= d != 0;
-            if i < int.len() {
-                scale += 4;
-            }
-        }
-    }
-    let mantissa = mantissa | u128::from(sticky);
-    let e = exp.checked_add(scale)?.clamp(-2000, 2000) as i32;
-    Some(mantissa as f64 * 2f64.powi(e.max(-1022)) * 2f64.powi((e + 1022).min(0)))
 }
 
 #[cfg(test)]
@@ -300,6 +284,9 @@ mod tests {
         ] {
             assert!(parse(bad).is_err(), "{bad}");
         }
-        assert!(matches!(parse("0x1.8p1"), Ok(Parsed::Value(x)) if x == 3.0));
+        assert!(matches!(
+            parse("-0x1.8p1"),
+            Ok(Parsed::Hex { negative: true, .. })
+        ));
     }
 }

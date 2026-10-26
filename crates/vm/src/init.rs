@@ -37,14 +37,14 @@ impl Vm {
     fn initialize_steps(&mut self, class: ClassId) -> VmResult<()> {
         let c = self.class(class);
         if !c.is_interface() {
-            // Step 7: the superclass, then superinterfaces with default methods.
+            // Step 7: the superclass, then every superinterface (direct or
+            // not) that declares a default method, in the JVMS order.
             let mut supers: Vec<ClassId> = c.super_class.into_iter().collect();
-            supers.extend(
-                c.interfaces
-                    .iter()
-                    .copied()
-                    .filter(|&i| self.declares_defaults(i)),
-            );
+            let mut ifaces = Vec::new();
+            for &i in &c.interfaces.clone() {
+                self.enumerate_superinterfaces(i, &mut ifaces);
+            }
+            supers.extend(ifaces.into_iter().filter(|&i| self.declares_defaults(i)));
             for s in supers {
                 self.initialize(s)?;
             }
@@ -62,6 +62,20 @@ impl Vm {
                 Err(self.wrap_in_initializer_error(ex))
             }
             Err(e) => Err(e),
+        }
+    }
+
+    /// JVMS 5.5 step 7: recurse on an interface's superinterfaces in order
+    /// before the interface itself; each interface appears once.
+    fn enumerate_superinterfaces(&self, iface: ClassId, out: &mut Vec<ClassId>) {
+        if out.contains(&iface) {
+            return;
+        }
+        for &s in &self.class(iface).interfaces {
+            self.enumerate_superinterfaces(s, out);
+        }
+        if !out.contains(&iface) {
+            out.push(iface);
         }
     }
 
@@ -91,12 +105,7 @@ impl Vm {
                 Some(Constant::Float(x)) => Value::Float(*x),
                 Some(Constant::Double(x)) => Value::Double(*x),
                 Some(Constant::String(s)) => {
-                    let units: Vec<u16> = file
-                        .pool
-                        .utf8(*s)
-                        .map_err(VmError::verify)?
-                        .encode_utf16()
-                        .collect();
+                    let units = file.pool.utf16(*s).map_err(VmError::verify)?;
                     Value::Ref(Some(self.intern_utf16(&units)?))
                 }
                 other => {

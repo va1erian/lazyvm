@@ -22,10 +22,11 @@ fn matches(op_kind: u8, a: &Array) -> bool {
     )
 }
 
-pub(crate) fn out_of_bounds(index: i32, len: usize) -> VmError {
+/// Java 8's message is the index alone.
+pub(crate) fn out_of_bounds(index: i32, _len: usize) -> VmError {
     VmError::exception(
         "java/lang/ArrayIndexOutOfBoundsException",
-        format!("Index {index} out of bounds for length {len}"),
+        index.to_string(),
     )
 }
 
@@ -73,15 +74,16 @@ impl Vm {
         let ClassKind::Array { component, element } = self.class(class).kind else {
             return Err(VmError::verify("array store into a non-array"));
         };
-        if kind == 4 {
-            self.check_array_store(component, value)?;
-        }
-        let a = self.heap.array_mut(array)?;
+        // JVMS 6.5 aastore: the bounds check comes before the store check.
+        let a = self.heap.array(array)?;
         if !matches(kind, a) {
             return Err(VmError::verify("array store of the wrong type"));
         }
         let i = check_index(index, a.len())?;
-        a.store(i, value, element == b'Z')
+        if kind == 4 {
+            self.check_array_store(component, value)?;
+        }
+        self.heap.array_mut(array)?.store(i, value, element == b'Z')
     }
 
     /// `aastore` requires the value to be assignable to the component type.

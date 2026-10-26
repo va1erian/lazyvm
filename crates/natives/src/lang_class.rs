@@ -103,12 +103,32 @@ fn get_component_type(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
 
 /// Class modifiers as `Class.getModifiers` reports them: no `ACC_SUPER`.
 fn get_modifiers(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let access = vm.class(this_class(vm, args)?).access & !classfile_super();
-    ret_int(i32::from(access))
+    ret_int(i32::from(modifiers(vm, this_class(vm, args)?)))
 }
 
-const fn classfile_super() -> u16 {
-    0x0020
+const ACC_SUPER: u16 = 0x0020;
+const VISIBILITY: u16 = 0x0007;
+const FINAL_ABSTRACT: u16 = 0x0410;
+
+/// `Class.getModifiers`: nested classes take their flags from
+/// `InnerClasses`; arrays take the component's visibility, final and abstract;
+/// `ACC_SUPER` is never reported.
+fn modifiers(vm: &Vm, class: ClassId) -> u16 {
+    let c = vm.class(class);
+    match c.kind {
+        ClassKind::Array { component, .. } => {
+            (modifiers(vm, component) & VISIBILITY) | FINAL_ABSTRACT
+        }
+        ClassKind::Primitive(_) => c.access,
+        ClassKind::Instance => {
+            let flags = c
+                .file
+                .as_ref()
+                .and_then(|f| f.inner_class_flags())
+                .unwrap_or(c.access);
+            flags & !ACC_SUPER
+        }
+    }
 }
 
 fn get_primitive_class(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

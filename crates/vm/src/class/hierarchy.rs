@@ -19,18 +19,10 @@ impl Vm {
     /// Whether `class` implements interface `iface`, directly or through a
     /// superclass or superinterface.
     pub fn implements(&self, class: ClassId, iface: ClassId) -> bool {
-        let mut cur = Some(class);
-        while let Some(c) = cur {
-            let k = self.class(c);
-            if k.interfaces
-                .iter()
-                .any(|&i| i == iface || self.implements(i, iface))
-            {
-                return true;
-            }
-            cur = k.super_class;
-        }
-        false
+        self.class(class)
+            .all_interfaces
+            .binary_search(&iface)
+            .is_ok()
     }
 
     /// Whether a value of class `from` can be assigned to type `to`.

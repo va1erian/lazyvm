@@ -87,8 +87,10 @@ fn is_java_whitespace(c: char) -> bool {
         )
 }
 
-/// Simple (one-to-one) case mapping; a code point whose mapping is not a
-/// single code point is returned unchanged, as Java does.
+/// Case mapping from Rust's *full* mappings: when the full mapping is one
+/// code point it equals Java's simple mapping; otherwise the code point is
+/// returned unchanged, which differs from Java for a few characters (U+0130,
+/// U+1F80 and others). The generated Unicode 6.2 tables of S5 replace this.
 fn map_case(cp: i32, upper: bool) -> i32 {
     let Some(c) = code_point(cp) else { return cp };
     let mut mapped: Vec<char> = if upper {

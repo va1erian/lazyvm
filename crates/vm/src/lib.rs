@@ -31,6 +31,10 @@ pub struct Options {
     pub heap_limit: usize,
     /// Java frames per thread before `StackOverflowError`.
     pub max_frames: usize,
+    /// Local and operand stack slots across all frames of a thread.
+    pub max_frame_slots: usize,
+    /// Nested calls from Rust into Java (each uses native stack).
+    pub max_nesting: u32,
     pub trace_interp: bool,
     pub verbose_class: bool,
 }
@@ -40,6 +44,8 @@ impl Default for Options {
         Options {
             heap_limit: 256 << 20,
             max_frames: 4096,
+            max_frame_slots: 4 << 20,
+            max_nesting: 1024,
             trace_interp: false,
             verbose_class: false,
         }
@@ -78,6 +84,10 @@ pub struct Vm {
     pub wk: WellKnown,
     /// Depth of nested `throw_new` calls, to stop runaway exception creation.
     pub(crate) creating_exception: u32,
+    /// Slots used by `frames`, checked against `Options::max_frame_slots`.
+    pub(crate) frame_slots: usize,
+    /// Current nesting of `invoke` from Rust.
+    pub(crate) nesting: u32,
 }
 
 impl Vm {
@@ -97,6 +107,8 @@ impl Vm {
             options,
             wk: WellKnown::default(),
             creating_exception: 0,
+            frame_slots: 0,
+            nesting: 0,
         }
     }
 

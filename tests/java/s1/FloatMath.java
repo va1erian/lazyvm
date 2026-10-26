@@ -1,3 +1,4 @@
+// ORACLE: modern
 package s1;
 
 public class FloatMath {

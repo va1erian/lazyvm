@@ -56,6 +56,9 @@ pub struct MemberRef {
 #[derive(Clone, Debug, Default)]
 pub struct ConstantPool {
     entries: Vec<Constant>,
+    /// The exact UTF-16 of Utf8 entries holding unpaired surrogates, which
+    /// their Rust `str` form cannot represent.
+    exact_utf16: std::collections::HashMap<u16, Arc<[u16]>>,
 }
 
 impl ConstantPool {
@@ -65,9 +68,14 @@ impl ConstantPool {
             return Err(r.error("constant_pool_count is 0"));
         }
         let mut entries = Vec::with_capacity(usize::from(count));
+        let mut exact_utf16 = std::collections::HashMap::new();
         entries.push(Constant::Unusable);
         while entries.len() < usize::from(count) {
-            let entry = parse_entry(r)?;
+            let mut exact = None;
+            let entry = parse_entry(r, &mut exact)?;
+            if let Some(units) = exact {
+                exact_utf16.insert(entries.len() as u16, units);
+            }
             let wide = matches!(entry, Constant::Long(_) | Constant::Double(_));
             entries.push(entry);
             if wide {
@@ -77,7 +85,10 @@ impl ConstantPool {
                 entries.push(Constant::Unusable);
             }
         }
-        let pool = ConstantPool { entries };
+        let pool = ConstantPool {
+            entries,
+            exact_utf16,
+        };
         pool.validate()
             .map_err(|msg| FormatError::new(r.pos(), msg))?;
         Ok(pool)
@@ -103,6 +114,15 @@ impl ConstantPool {
     }
 
     /// The internal name (`java/lang/String`, `[I`) of a `Class` constant.
+    /// The UTF-16 contents of a Utf8 entry, exact even for unpaired
+    /// surrogates; what a `String` constant must hold.
+    pub fn utf16(&self, index: u16) -> Result<Vec<u16>, String> {
+        if let Some(units) = self.exact_utf16.get(&index) {
+            return Ok(units.to_vec());
+        }
+        Ok(self.utf8(index)?.encode_utf16().collect())
+    }
+
     pub fn class_name(&self, index: u16) -> Result<&Arc<str>, String> {
         match self.get(index) {
             Some(Constant::Class(name)) => self.utf8(*name),
@@ -201,13 +221,23 @@ impl ConstantPool {
     }
 }
 
-fn parse_entry(r: &mut Reader<'_>) -> Result<Constant, FormatError> {
+fn parse_entry(
+    r: &mut Reader<'_>,
+    exact: &mut Option<Arc<[u16]>>,
+) -> Result<Constant, FormatError> {
     let tag = r.u1()?;
     Ok(match tag {
         1 => {
             let len = usize::from(r.u2()?);
             let bytes = r.bytes(len)?;
-            Constant::Utf8(decode_mutf8(bytes).map_err(|e| r.error(e))?.into())
+            let units = decode_mutf8_utf16(bytes).map_err(|e| r.error(e))?;
+            let text: String = char::decode_utf16(units.iter().copied())
+                .map(|c| c.unwrap_or(char::REPLACEMENT_CHARACTER))
+                .collect();
+            if text.encode_utf16().ne(units.iter().copied()) {
+                *exact = Some(units.into());
+            }
+            Constant::Utf8(text.into())
         }
         3 => Constant::Integer(r.u4()? as i32),
         4 => Constant::Float(f32::from_bits(r.u4()?)),

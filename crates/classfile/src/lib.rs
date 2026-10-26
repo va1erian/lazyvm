@@ -154,6 +154,30 @@ impl ClassFile {
         self.access & ACC_INTERFACE != 0
     }
 
+    /// The access flags `InnerClasses` gives this class, when it is a nested
+    /// class (they carry `private`, `protected` and `static`, which the class
+    /// file's own flags cannot).
+    pub fn inner_class_flags(&self) -> Option<u16> {
+        let attr = self
+            .attributes
+            .iter()
+            .find(|a| &*a.name == "InnerClasses")?;
+        let mut r = Reader::new(&attr.data);
+        let count = r.u2().ok()?;
+        for _ in 0..count {
+            let (inner, _outer, _name, flags) =
+                (r.u2().ok()?, r.u2().ok()?, r.u2().ok()?, r.u2().ok()?);
+            if self
+                .pool
+                .class_name(inner)
+                .is_ok_and(|n| *n == self.this_class)
+            {
+                return Some(flags);
+            }
+        }
+        None
+    }
+
     pub fn method(&self, name: &str, descriptor: &str) -> Option<&Member> {
         self.methods
             .iter()

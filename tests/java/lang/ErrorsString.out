@@ -1,0 +1,79 @@
+charAt -1: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+charAt len: java.lang.StringIndexOutOfBoundsException | String index out of range: 3
+codePointAt -1: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+codePointAt len: java.lang.StringIndexOutOfBoundsException | String index out of range: 3
+codePointBefore 0: java.lang.StringIndexOutOfBoundsException | String index out of range: 0
+codePointBefore 4: java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+codePointCount -1,1: java.lang.IndexOutOfBoundsException | null
+codePointCount 0,4: java.lang.IndexOutOfBoundsException | null
+codePointCount 2,1: java.lang.IndexOutOfBoundsException | null
+substring -1: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+substring 4: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+substring -1,1: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+substring 0,4: java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+substring 2,1: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+subSequence 0,4: java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+subSequence 2,1: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+subSequence -1,1: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+getChars begin<0: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+getChars end>len: java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+getChars begin>end: java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+getChars dst<0: java.lang.ArrayIndexOutOfBoundsException | null
+getChars dst small: java.lang.ArrayIndexOutOfBoundsException | null
+getChars dst off: java.lang.ArrayIndexOutOfBoundsException | null
+getChars null: java.lang.NullPointerException | null
+getBytes bad cs: java.io.UnsupportedEncodingException | nope
+getBytes null cs: java.lang.NullPointerException | null
+new String(byte[],cs) bad: java.io.UnsupportedEncodingException | nope
+new String(byte[],cs) null: java.lang.NullPointerException | charsetName
+new String(char[]) null: java.lang.NullPointerException | null
+new String(String) null: java.lang.NullPointerException | null
+new String(char[],-1,1): java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+new String(char[],0,-1): java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+new String(char[],2,2): java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+new String(char[],4,0): java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+new String(byte[],-1,1): java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+new String(byte[],0,-1): java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+new String(byte[],2,2): java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+new String(int[],-1,1): java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+new String(int[],0,-1): java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+new String(int[],2,2): java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+new String(int[]) cp -1: java.lang.IllegalArgumentException | -1
+new String(int[]) cp big: java.lang.IllegalArgumentException | 1114112
+valueOf(char[],-1,1): java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+valueOf(char[],2,2): java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+valueOf(char[],0,-1): java.lang.StringIndexOutOfBoundsException | String index out of range: -1
+valueOf(char[]) null: java.lang.NullPointerException | null
+copyValueOf(char[],2,2): java.lang.StringIndexOutOfBoundsException | String index out of range: 4
+false
+regionMatches -1: ok
+false
+regionMatches big: ok
+false
+regionMatches other: ok
+false
+regionMatches ic: ok
+regionMatches null: java.lang.NullPointerException | null
+compareTo null: java.lang.NullPointerException | null
+compareToIgnoreCase null: java.lang.NullPointerException | null
+concat null: java.lang.NullPointerException | null
+false
+equals null: ok
+contains null: java.lang.NullPointerException | null
+startsWith null: java.lang.NullPointerException | null
+endsWith null: java.lang.NullPointerException | null
+indexOf(String) null: java.lang.NullPointerException | null
+lastIndexOf(String) null: java.lang.NullPointerException | null
+replace null: java.lang.NullPointerException | null
+1 1
+indexOf from -5: ok
+-1 -1
+indexOf from 99: ok
+-1 -1
+lastIndexOf from -1: ok
+offsetByCodePoints -1: java.lang.IndexOutOfBoundsException | null
+offsetByCodePoints 4: java.lang.IndexOutOfBoundsException | null
+offsetByCodePoints +9: java.lang.IndexOutOfBoundsException | null
+offsetByCodePoints -9: java.lang.IndexOutOfBoundsException | null
+join null: java.lang.NullPointerException | null
+done

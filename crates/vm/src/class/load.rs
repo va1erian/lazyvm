@@ -9,6 +9,8 @@ use crate::{Vm, VmError, VmResult};
 
 const NO_CLASS_DEF: &str = "java/lang/NoClassDefFoundError";
 const INCOMPATIBLE: &str = "java/lang/IncompatibleClassChangeError";
+/// Superclass and superinterface chains longer than this are refused.
+const MAX_LOAD_DEPTH: usize = 2048;
 
 impl Vm {
     /// Returns the class with this internal name, loading and linking it
@@ -47,13 +49,22 @@ impl Vm {
         if self.loading.iter().any(|n| &**n == name) {
             return Err(VmError::exception("java/lang/ClassCircularityError", name));
         }
+        // Loading recurses through superclasses on the Rust stack.
+        if self.loading.len() >= MAX_LOAD_DEPTH {
+            return Err(VmError::exception(
+                "java/lang/StackOverflowError",
+                format!("class hierarchy deeper than {MAX_LOAD_DEPTH}: {name}"),
+            ));
+        }
         self.loading.push(name.into());
         let supers = self.load_supers(&cf);
         self.loading.pop();
         let (super_class, interfaces) = supers?;
         let id = self.next_id()?;
         let super_template = super_class.map(|s| self.class(s).instance_template.clone());
-        let class = layout::build(id, cf, super_class, interfaces, super_template.as_deref())?;
+        let all = self.interface_closure(super_class, &interfaces);
+        let mut class = layout::build(id, cf, super_class, interfaces, super_template.as_deref())?;
+        class.all_interfaces = all;
         Ok(self.insert(class))
     }
 
@@ -156,6 +167,24 @@ impl Vm {
         }))
     }
 
+    /// The sorted set of all superinterfaces of a class with these supers.
+    fn interface_closure(
+        &self,
+        super_class: Option<ClassId>,
+        direct: &[ClassId],
+    ) -> Box<[ClassId]> {
+        let mut all: Vec<ClassId> = super_class
+            .map(|s| self.class(s).all_interfaces.to_vec())
+            .unwrap_or_default();
+        for &i in direct {
+            all.push(i);
+            all.extend_from_slice(&self.class(i).all_interfaces);
+        }
+        all.sort_unstable();
+        all.dedup();
+        all.into()
+    }
+
     fn next_id(&self) -> VmResult<ClassId> {
         u32::try_from(self.classes.len())
             .map(ClassId)
@@ -186,6 +215,7 @@ fn synthetic(
         kind,
         access: 0,
         super_class,
+        all_interfaces: sorted(&interfaces),
         interfaces,
         file: None,
         fields: Vec::new(),
@@ -196,6 +226,13 @@ fn synthetic(
         mirror: None,
         cp_cache: Vec::new(),
     }
+}
+
+fn sorted(ids: &[ClassId]) -> Box<[ClassId]> {
+    let mut v = ids.to_vec();
+    v.sort_unstable();
+    v.dedup();
+    v.into()
 }
 
 /// `ACC_INTERFACE` without `ACC_ABSTRACT` is malformed (JVMS 4.1).

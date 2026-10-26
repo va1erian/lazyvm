@@ -78,8 +78,7 @@ impl Vm {
                 {
                     Value::Ref(Some(*r))
                 } else {
-                    let text = file.pool.utf8(*s).map_err(VmError::verify)?;
-                    let units: Vec<u16> = text.encode_utf16().collect();
+                    let units = file.pool.utf16(*s).map_err(VmError::verify)?;
                     let r = self.intern_utf16(&units)?;
                     if let Some(slot) = self.class_mut(class).cp_cache.get_mut(usize::from(index)) {
                         *slot = Some(Resolved::String(r));
@@ -213,13 +212,49 @@ impl Vm {
 
     fn alloc_array(&mut self, class: ClassId, len: usize) -> VmResult<()> {
         let count = self.top()?.peek(0)?.int()?;
-        self.ensure_room(usize::try_from(count).unwrap_or(0).saturating_mul(8))?;
+        let bytes = usize::try_from(count)
+            .unwrap_or(0)
+            .saturating_mul(self.element_bytes(class));
+        self.ensure_room(bytes)?;
         let count = self.top()?.pop_int()?;
         let r = self.new_array(class, count)?;
         let f = self.top()?;
         f.push(Value::Ref(Some(r)))?;
         f.advance(len);
         Ok(())
+    }
+
+    /// The element size of array class `class`.
+    fn element_bytes(&self, class: ClassId) -> usize {
+        match self.class(class).kind {
+            ClassKind::Array { element, .. } => {
+                crate::heap::array::ElemKind::from_descriptor(element).bytes()
+            }
+            _ => 8,
+        }
+    }
+
+    /// Bytes a `multianewarray` will allocate: each level's arrays (header
+    /// plus elements), stopping at the first zero count, which allocates
+    /// nothing below it.
+    fn multi_array_bytes(&self, class: ClassId, counts: &[i32]) -> usize {
+        let mut bytes = 0usize;
+        let mut arrays = 1usize;
+        let mut level = class;
+        for &n in counts {
+            let n = n as usize;
+            bytes = bytes.saturating_add(
+                arrays.saturating_mul(16 + n.saturating_mul(self.element_bytes(level))),
+            );
+            arrays = arrays.saturating_mul(n);
+            if arrays == 0 {
+                break;
+            }
+            if let ClassKind::Array { component, .. } = self.class(level).kind {
+                level = component;
+            }
+        }
+        bytes
     }
 
     fn op_multianewarray(&mut self) -> VmResult<()> {
@@ -242,16 +277,11 @@ impl Vm {
         for d in 0..dims {
             counts.push(self.top()?.peek(dims - 1 - d)?.int()?);
         }
-        if let Some(&n) = counts.iter().find(|&&n| n < 0) {
-            return Err(VmError::exception(
-                "java/lang/NegativeArraySizeException",
-                n.to_string(),
-            ));
+        if counts.iter().any(|&n| n < 0) {
+            return Err(VmError::bare("java/lang/NegativeArraySizeException"));
         }
-        let total = counts
-            .iter()
-            .fold(1usize, |acc, &n| acc.saturating_mul(n.max(1) as usize));
-        self.ensure_room(total.saturating_mul(8))?;
+        let bytes = self.multi_array_bytes(class, &counts);
+        self.ensure_room(bytes)?;
         let r = self.multi_array(class, &counts)?;
         let f = self.top()?;
         f.stack.truncate(f.stack.len() - dims);

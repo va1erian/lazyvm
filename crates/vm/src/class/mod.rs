@@ -104,6 +104,9 @@ pub struct Class {
     pub access: u16,
     pub super_class: Option<ClassId>,
     pub interfaces: Vec<ClassId>,
+    /// Every superinterface, direct or inherited, sorted and deduplicated:
+    /// computed once at link time so subtype checks are a binary search.
+    pub all_interfaces: Box<[ClassId]>,
     pub file: Option<Arc<ClassFile>>,
     pub fields: Vec<Field>,
     pub methods: Vec<Method>,

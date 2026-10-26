@@ -5,6 +5,7 @@
 //! Java side is not trusted to be correct.
 
 mod floats;
+mod hexfloat;
 mod internal;
 mod lang_char;
 mod lang_class;
