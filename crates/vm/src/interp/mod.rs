@@ -176,40 +176,51 @@ impl Vm {
         result
     }
 
-    /// A catch type that fails to resolve ends the search in that frame,
-    /// as HotSpot does: its resolution error becomes the exception (the root
-    /// at `slot` is replaced) and unwinding continues in the caller.
+    /// A catch type that fails to resolve makes its resolution error the
+    /// exception, thrown as if at that handler's entry: the search goes on in
+    /// the same frame from `handler_pc`, then in the callers (what Java 8
+    /// does, observed with `-Xverify:none`). The root at `slot` follows `ex`.
     fn unwind_rooted(&mut self, mut ex: Ref, base: usize) -> VmResult<()> {
         let slot = self.roots.len() - 1;
-        'frames: while self.frames.len() > base {
-            let (class, pc, code) = {
+        while self.frames.len() > base {
+            let (class, mut pc, code) = {
                 let f = self.top()?;
                 (f.class, f.pc, f.code.clone())
             };
-            for h in &code.handlers {
-                if pc < usize::from(h.start_pc) || pc >= usize::from(h.end_pc) {
-                    continue;
+            // Each failed resolution moves `pc`; a table whose entries keep
+            // pointing into each other must not loop forever.
+            let mut retries = code.handlers.len();
+            'search: loop {
+                for h in &code.handlers {
+                    if pc < usize::from(h.start_pc) || pc >= usize::from(h.end_pc) {
+                        continue;
+                    }
+                    let catches = match h.catch_type {
+                        0 => true,
+                        index => match self.resolve_class(class, index) {
+                            Ok(catch) => self.is_assignable(self.heap.class_of(ex)?, catch),
+                            Err(e) if e.is_catchable() => {
+                                ex = self.materialize(e)?;
+                                self.roots[slot] = ex;
+                                if retries == 0 {
+                                    break 'search;
+                                }
+                                retries -= 1;
+                                pc = usize::from(h.handler_pc);
+                                continue 'search;
+                            }
+                            Err(e) => return Err(e),
+                        },
+                    };
+                    if catches {
+                        let f = self.top()?;
+                        f.stack.clear();
+                        f.stack.push(Value::Ref(Some(ex)));
+                        f.pc = usize::from(h.handler_pc);
+                        return Ok(());
+                    }
                 }
-                let catches = match h.catch_type {
-                    0 => true,
-                    index => match self.resolve_class(class, index) {
-                        Ok(catch) => self.is_assignable(self.heap.class_of(ex)?, catch),
-                        Err(e) if e.is_catchable() => {
-                            ex = self.materialize(e)?;
-                            self.roots[slot] = ex;
-                            self.pop_frame();
-                            continue 'frames;
-                        }
-                        Err(e) => return Err(e),
-                    },
-                };
-                if catches {
-                    let f = self.top()?;
-                    f.stack.clear();
-                    f.stack.push(Value::Ref(Some(ex)));
-                    f.pc = usize::from(h.handler_pc);
-                    return Ok(());
-                }
+                break;
             }
             self.pop_frame();
         }
