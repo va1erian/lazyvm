@@ -36,6 +36,12 @@ jobs:
         run: python tools/javac.py --selftest
       - name: differential suite
         run: python tools/test.py
+      - name: differential suite from jars
+        run: python tools/test.py --jar
+      - name: launcher (-jar, manifests, jar errors)
+        run: python tools/launcher_test.py
+      - name: SDK layout
+        run: python tools/sdk.py
       - name: musl build
         run: cargo build --release --locked -p launcher --target x86_64-unknown-linux-musl
 

@@ -10,17 +10,30 @@ fn jar() -> Jar {
 #[test]
 fn reads_stored_and_deflated_entries() {
     let jar = jar();
-    assert_eq!(jar.read("Sample.class").ok().flatten().as_deref(), Some(CLASS));
-    assert_eq!(jar.read("stored.txt").ok().flatten().as_deref(), Some(&b"stored entry\n"[..]));
+    assert_eq!(
+        jar.read("Sample.class").ok().flatten().as_deref(),
+        Some(CLASS)
+    );
+    assert_eq!(
+        jar.read("stored.txt").ok().flatten().as_deref(),
+        Some(&b"stored entry\n"[..])
+    );
     assert!(jar.read("missing").is_ok_and(|e| e.is_none()));
 }
 
 #[test]
 fn parses_the_manifest() {
     let jar = jar();
-    let text = jar.read("META-INF/MANIFEST.MF").ok().flatten().unwrap_or_default();
-    let attrs = manifest_attributes(&String::from_utf8_lossy(&text));
-    let main = attrs.iter().find(|(k, _)| k == "Main-Class").map(|(_, v)| v.as_str());
+    let text = jar
+        .read("META-INF/MANIFEST.MF")
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let attrs = manifest_attributes(&String::from_utf8_lossy(&text)).unwrap_or_default();
+    let main = attrs
+        .iter()
+        .find(|(k, _)| k == "Main-Class")
+        .map(|(_, v)| v.as_str());
     assert_eq!(main, Some("app.VeryLongPackageName.Main"));
 }
 

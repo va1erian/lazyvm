@@ -97,6 +97,8 @@ overloads are Java and call these.
 - `public static native void gc()`
 - `public static native long freeMemory()`, `totalMemory()`, `maxMemory()`
 - `public static native int availableProcessors()`
+- `public static native byte[] getResource(String name)` (null when absent)
+- `public static native boolean isBootClass(Class<?> c)`
 - Java, called by the VM: `static void uncaught(Throwable t)` prints
   `Exception in thread "main" ` and the stack trace to `System.err`.
 

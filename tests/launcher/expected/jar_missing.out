@@ -1,0 +1,3 @@
+--- stderr ---
+Error: Unable to access jarfile build/launcher/missing.jar
+--- exit 1 ---

@@ -1,0 +1,3 @@
+cp=build/launcher/order_a.jar;build/launcher/order_c.jar;build/launcher/app.jar;build/launcher/lib.jar
+r.txt: from b
+hello, probe

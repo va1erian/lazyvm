@@ -1,0 +1,3 @@
+cp=build/launcher/chain.jar
+r.txt: from chain1
+hello, probe

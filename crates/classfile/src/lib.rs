@@ -9,6 +9,7 @@
 mod attr;
 mod cpool;
 pub mod descriptor;
+pub mod jar;
 mod reader;
 
 use std::fmt;

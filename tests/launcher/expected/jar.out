@@ -1,0 +1,6 @@
+hello, jar
+args=3
+[x]
+[y z]
+[]
+evil: java.lang.SecurityException: Prohibited package name: java.lang

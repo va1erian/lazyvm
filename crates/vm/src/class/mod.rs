@@ -117,6 +117,8 @@ pub struct Class {
     pub mirror: Option<Ref>,
     /// Resolved constant pool entries, indexed like the pool.
     pub cp_cache: Vec<Option<Resolved>>,
+    /// Loaded from the boot class path (`Class.getClassLoader` is null).
+    pub from_boot: bool,
 }
 
 impl Class {
