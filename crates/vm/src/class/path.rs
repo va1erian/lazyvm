@@ -117,16 +117,14 @@ fn open_all(paths: &[PathBuf], follow_manifests: bool) -> Vec<Entry> {
         };
         if follow_manifests {
             let base = p.parent().unwrap_or(Path::new("."));
-            let children: Vec<PathBuf> = manifest_class_path(&jar)
+            let mut children: Vec<PathBuf> = manifest_class_path(&jar)
                 .iter()
                 .map(|e| lexical(&base.join(e)))
                 .collect();
-            for child in children.into_iter().rev() {
-                if pushed < MAX_ENTRIES {
-                    pushed += 1;
-                    stack.push(child);
-                }
-            }
+            // Past the cap, the leading entries are the ones kept.
+            children.truncate(MAX_ENTRIES.saturating_sub(pushed));
+            pushed += children.len();
+            stack.extend(children.into_iter().rev());
         }
         out.push(Entry::Jar(Arc::new(jar)));
     }
@@ -173,12 +171,10 @@ fn lexical(p: &Path) -> PathBuf {
             {
                 out.pop();
             }
-            // `..` at the root stays at the root.
+            // `..` at the root stays at the root (`C:..` is not the root:
+            // it is the parent of drive C's current directory, so it stays).
             Component::ParentDir
-                if matches!(
-                    out.components().next_back(),
-                    Some(Component::RootDir | Component::Prefix(_))
-                ) => {}
+                if matches!(out.components().next_back(), Some(Component::RootDir)) => {}
             other => out.push(other.as_os_str()),
         }
     }
