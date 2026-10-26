@@ -1,0 +1,12 @@
+first ! java.lang.ExceptionInInitializerError / java.lang.RuntimeException
+second ! java.lang.NoClassDefFoundError : Could not initialize class s4.ReflectEdges$Boom
+new ! java.lang.NoClassDefFoundError : Could not initialize class s4.ReflectEdges$Boom
+My$Enum ! java.lang.IllegalArgumentException : No enum constant s4.My$Enum.Z
+Inner ! java.lang.IllegalArgumentException : No enum constant s4.ReflectEdges.Inner.Z
+s4.My$Enum s4.ReflectEdges.Inner int[] s4.ReflectEdges.Inner[]
+null null
+@s4.ReflectEdges$WithLambda(v=5, names=[a], c=class java.lang.String) 5 1 java.lang.String
+equals ! java.lang.annotation.AnnotationFormatError : Malformed method on an annotation type
+equals self ! java.lang.annotation.AnnotationFormatError : Malformed method on an annotation type
+const
+done

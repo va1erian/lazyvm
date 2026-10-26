@@ -1,0 +1,69 @@
+[I 3
+[Ljava.lang.String; 2 true
+[J 0
+[[I true
+[[[I 2 3 4 0
+[[Ljava.lang.String; true null
+[[I 0
+[C
+negative -> java.lang.NegativeArraySizeException: null
+negative dim -> java.lang.NegativeArraySizeException: null
+void -> java.lang.IllegalArgumentException: null
+empty dims -> java.lang.IllegalArgumentException: null
+null type -> java.lang.NullPointerException: null
+get -> 20 (Integer)
+getInt -> 30 (Integer)
+getLong from int -> 10 (Long)
+getDouble from int -> 10.0 (Double)
+getShort from int -> java.lang.IllegalArgumentException: argument type mismatch
+getBoolean from int -> java.lang.IllegalArgumentException: argument type mismatch
+get out of range -> java.lang.ArrayIndexOutOfBoundsException: null
+get negative -> java.lang.ArrayIndexOutOfBoundsException: null
+get non-array -> java.lang.IllegalArgumentException: Argument is not an array
+get null -> java.lang.NullPointerException: null
+getLength non-array -> java.lang.IllegalArgumentException: Argument is not an array
+getLength null -> java.lang.NullPointerException: null
+getInt object array -> java.lang.IllegalArgumentException: Argument is not an array
+set -> 99 (Integer)
+set short -> 5 (Integer)
+set char -> 65 (Integer)
+set long -> java.lang.IllegalArgumentException: argument type mismatch
+set string -> java.lang.IllegalArgumentException: argument type mismatch
+set null prim -> java.lang.IllegalArgumentException: null
+setInt -> 7 (Integer)
+setByte -> -2 (Integer)
+setLong on int -> java.lang.IllegalArgumentException: argument type mismatch
+setInt on object -> java.lang.IllegalArgumentException: Argument is not an array
+set out of range -> java.lang.ArrayIndexOutOfBoundsException: null
+setInt long[] -> 3 (Long)
+setChar long[] -> 122 (Long)
+setLong double[] -> 4.0 (Double)
+setFloat double[] -> 1.5 (Double)
+setLong float[] -> 4.0 (Float)
+setDouble float[] -> java.lang.IllegalArgumentException: argument type mismatch
+setChar char[] -> k (Character)
+setInt char[] -> java.lang.IllegalArgumentException: argument type mismatch
+setBoolean -> true (Boolean)
+setInt boolean[] -> java.lang.IllegalArgumentException: argument type mismatch
+setByte short[] -> 9 (Short)
+getByte byte[] -> 0 (Byte)
+getChar char[] -> k (Character)
+getFloat long[] -> 3.0 (Float)
+getInt long[] -> java.lang.IllegalArgumentException: argument type mismatch
+getDouble float[] -> 4.0 (Double)
+set string[] -> a (String)
+set string[] wrong -> java.lang.IllegalArgumentException: array element type mismatch
+set string[] null -> null
+set Number[] -> 3 (Integer)
+set Number[] wrong -> java.lang.IllegalArgumentException: array element type mismatch
+get Number[] -> 3 (Integer)
+set int[][] -> 1 (Integer)
+set int[][] wrong -> java.lang.IllegalArgumentException: array element type mismatch
+[Ljava.lang.String; [a, b, c, null, null]
+[Ljava.lang.String; [a, b]
+[Ljava.lang.Object; [a, b, c]
+[Ljava.lang.Number; [1, 2, null]
+[Ljava.lang.String; [b, c, null]
+[Ljava.lang.Object; [1, null]
+ArrayStoreException
+done

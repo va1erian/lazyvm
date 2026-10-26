@@ -64,18 +64,32 @@ public class Arrays {
         return copy;
     }
 
-    /**
-     * Only plain Object[] arrays can be copied for now: building an array of the
-     * original's runtime type needs java.lang.reflect.Array, which arrives in S4.
-     */
     @SuppressWarnings("unchecked")
     public static <T> T[] copyOf(T[] original, int newLength) {
-        if (original.getClass() != Object[].class) {
-            throw new UnsupportedOperationException("Arrays.copyOf of typed arrays arrives in S4");
-        }
-        Object[] copy = new Object[newLength];
+        return (T[]) copyOf(original, newLength, original.getClass());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T, U> T[] copyOf(U[] original, int newLength, Class<? extends T[]> newType) {
+        T[] copy = (T[]) java.lang.reflect.Array.newInstance(newType.getComponentType(), newLength);
         System.arraycopy(original, 0, copy, 0, Math.min(original.length, newLength));
-        return (T[]) copy;
+        return copy;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T[] copyOfRange(T[] original, int from, int to) {
+        return (T[]) copyOfRange(original, from, to, original.getClass());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T, U> T[] copyOfRange(U[] original, int from, int to, Class<? extends T[]> newType) {
+        int newLength = to - from;
+        if (newLength < 0) {
+            throw new IllegalArgumentException(from + " > " + to);
+        }
+        T[] copy = (T[]) java.lang.reflect.Array.newInstance(newType.getComponentType(), newLength);
+        System.arraycopy(original, from, copy, 0, Math.min(original.length - from, newLength));
+        return copy;
     }
 
     public static char[] copyOfRange(char[] original, int from, int to) {

@@ -46,6 +46,8 @@ The VM reads and writes these fields by name. Keep their names and types.
 - `public native int getModifiers()`
 - `static native Class<?> getPrimitiveClass(String name)` (`"int"`, `"void"`, ...)
 - `private static native Class<?> forName0(String name, boolean initialize) throws ClassNotFoundException`
+- `public native boolean desiredAssertionStatus()` (`-ea`, application classes only)
+- `private native T[] getEnumConstants0()` (calls the enum's static `values()`)
 
 ### `java.lang.System`
 - `public static native void arraycopy(Object src, int srcPos, Object dest, int destPos, int length)`
@@ -110,3 +112,9 @@ overloads are Java and call these.
 
 Bounds are checked in Java before the native is called; the VM checks them
 again and throws `IndexOutOfBoundsException` rather than trusting them.
+
+## Known differences from Java 8
+
+- A `NoClassDefFoundError` for a class missing from the class path has no
+  cause; Java 8's carries a `ClassNotFoundException` from its class loader.
+  Tests print only the error's class and message.

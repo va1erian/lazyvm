@@ -42,7 +42,12 @@ impl Vm {
         self.by_name.get(name).copied()
     }
 
-    fn define_class(&mut self, name: &str, bytes: &[u8], boot: bool) -> VmResult<ClassId> {
+    pub(crate) fn define_class(
+        &mut self,
+        name: &str,
+        bytes: &[u8],
+        boot: bool,
+    ) -> VmResult<ClassId> {
         let cf = ClassFile::parse(bytes).map_err(|e| {
             let class = if e.message.starts_with("unsupported class file version") {
                 "java/lang/UnsupportedClassVersionError"

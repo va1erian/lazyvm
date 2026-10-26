@@ -1,0 +1,89 @@
+add -> 3 (Integer)
+add widen -> 98 (Integer)
+add long -> java.lang.IllegalArgumentException: argument type mismatch
+add double -> java.lang.IllegalArgumentException: argument type mismatch
+add null arg -> java.lang.IllegalArgumentException: null
+add few -> java.lang.IllegalArgumentException: wrong number of arguments
+add none -> java.lang.IllegalArgumentException: wrong number of arguments
+add many -> java.lang.IllegalArgumentException: wrong number of arguments
+add null recv -> java.lang.NullPointerException: null
+add wrong recv -> java.lang.IllegalArgumentException: object is not an instance of declaring class
+add string -> java.lang.IllegalArgumentException: argument type mismatch
+mul int -> 12 (Long)
+mul ignored recv -> 6 (Long)
+half int -> 2.5 (Double)
+half float -> 1.5 (Double)
+half long -> 4.5 (Double)
+join -> a5 (String)
+join nulls -> nullnull (String)
+join mismatch -> java.lang.IllegalArgumentException: argument type mismatch
+false
+true
+secret -> 40 (Integer)
+boom -> ITE cause=java.io.IOException: io same=true msg=null
+rte -> ITE cause=java.lang.IllegalStateException: bad same=true msg=null
+err -> ITE cause=java.lang.AssertionError: err same=true msg=null
+sum array -> 6 (Integer)
+sum spread -> java.lang.IllegalArgumentException: wrong number of arguments
+nothing -> null
+nothing null array -> null
+ch -> q (Character)
+byte -> 7 (Byte)
+byte from int -> java.lang.IllegalArgumentException: argument type mismatch
+z -> false (Boolean)
+dispatch class -> woof (String)
+dispatch iface -> woof (String)
+default method -> woofwoof (String)
+default via Dog -> ...... (String)
+Object.toString -> Dog! (String)
+abstract ctor -> java.lang.InstantiationException: null
+Pt -> Pt(1,2) (Pt)
+Pt widen -> Pt(3,97) (Pt)
+Pt few -> java.lang.IllegalArgumentException: wrong number of arguments
+Pt type -> java.lang.IllegalArgumentException: argument type mismatch
+Pt private -> Pt(4,0) (Pt)
+Pt throws -> ITE cause=java.lang.IllegalStateException: no pt same=true msg=null
+Class.newInstance throws -> java.lang.IllegalStateException: no pt
+Class.newInstance ok -> Dog! (Dog)
+private s4.ReflectInvoke$Pt(java.lang.String) | s4.ReflectInvoke$Pt | 1 | true
+set i -> 5 (Integer)
+setInt i -> 6 (Integer)
+set i short -> 7 (Integer)
+set i char -> 97 (Integer)
+set i long -> java.lang.IllegalArgumentException: Can not set int field s4.ReflectInvoke$Fields.i to java.lang.Long
+setByte i -> 3 (Long)
+setBoolean i -> java.lang.IllegalArgumentException: Can not set int field s4.ReflectInvoke$Fields.i to (boolean)true
+getBoolean i -> java.lang.IllegalArgumentException: Attempt to get int field "s4.ReflectInvoke$Fields.i" with illegal data type conversion to boolean
+getShort i -> java.lang.IllegalArgumentException: Attempt to get int field "s4.ReflectInvoke$Fields.i" with illegal data type conversion to short
+get i double -> 3.0 (Double)
+set l int -> 8 (Long)
+setLong l -> 1048576.0 (Float)
+getInt l -> java.lang.IllegalArgumentException: Attempt to get long field "s4.ReflectInvoke$Fields.l" with illegal data type conversion to int
+setShort s -> 9 (Integer)
+setInt s -> java.lang.IllegalArgumentException: Can not set short field s4.ReflectInvoke$Fields.s to (int)9
+set b -> 1 (Byte)
+setChar c -> x (Character)
+setByte c -> java.lang.IllegalArgumentException: Can not set char field s4.ReflectInvoke$Fields.c to (byte)1
+set z -> true (Boolean)
+set z int -> java.lang.IllegalArgumentException: Can not set boolean field s4.ReflectInvoke$Fields.z to java.lang.Integer
+setInt f -> 3.0 (Float)
+setLong f -> 4.0 (Double)
+setDouble f -> java.lang.IllegalArgumentException: Can not set float field s4.ReflectInvoke$Fields.f to (double)1.5
+setFloat d -> 2.5 (Double)
+set str -> hi (String)
+set str int -> java.lang.IllegalArgumentException: Can not set java.lang.String field s4.ReflectInvoke$Fields.str to java.lang.Integer
+set str null -> null
+setInt str -> java.lang.IllegalArgumentException: Can not set java.lang.String field s4.ReflectInvoke$Fields.str to (int)1
+getInt str -> java.lang.IllegalArgumentException: Attempt to get java.lang.String field "s4.ReflectInvoke$Fields.str" with illegal data type conversion to int
+set o -> 12 (Integer)
+set i null -> java.lang.IllegalArgumentException: Can not set int field s4.ReflectInvoke$Fields.i to null value
+static -> 22 (Integer)
+instance null recv -> java.lang.NullPointerException: null
+instance wrong recv -> java.lang.IllegalArgumentException: Can not set int field s4.ReflectInvoke$Fields.i to java.lang.String
+final set -> java.lang.IllegalAccessException: Can not set final int field s4.ReflectInvoke$Fields.fin to java.lang.Integer
+final set accessible -> 2 (Integer)
+static final set -> java.lang.IllegalAccessException: Can not set static final int field s4.ReflectInvoke$Fields.SFIN to java.lang.Integer
+static final setInt null -> java.lang.IllegalAccessException: Can not set static final int field s4.ReflectInvoke$Fields.SFIN to (int)1
+private -> 40 (Integer)
+public int s4.ReflectInvoke$Fields.i | public static final int s4.ReflectInvoke$Fields.SFIN | private int s4.ReflectInvoke$Fields.hidden | int | false
+done

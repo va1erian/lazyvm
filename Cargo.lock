@@ -44,6 +44,7 @@ dependencies = [
 name = "natives"
 version = "0.1.0"
 dependencies = [
+ "classfile",
  "libm",
  "platform",
  "vm",

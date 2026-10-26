@@ -1,0 +1,73 @@
+s4.ReflectBasics$Square | Square | public static final
+abstract static | abstract static interface
+s4.ReflectBasics$Base | s4.ReflectBasics | true
+2 Shape Named
+null false
+true false true false false
+true [I int[] int true
+declared fields (2)
+  private static final java.lang.String s4.ReflectBasics$Square.TAG
+  public final double s4.ReflectBasics$Square.side
+declared methods (5)
+  public double s4.ReflectBasics$Square.area()
+  public java.lang.String s4.ReflectBasics$Square.name()
+  public static synchronized int s4.ReflectBasics$Square.sum(int,int)
+  public void s4.ReflectBasics$Square.many(int,long[],java.lang.String[]) throws java.io.IOException,java.lang.IllegalStateException
+  static void s4.ReflectBasics$Square.util()
+declared constructors (3)
+  protected s4.ReflectBasics$Square(int,java.lang.String)
+  public s4.ReflectBasics$Square(double)
+  s4.ReflectBasics$Square()
+public constructors (1)
+  public s4.ReflectBasics$Square(double)
+public fields (3)
+  public final double s4.ReflectBasics$Square.side
+  public static final java.lang.String s4.ReflectBasics$Shape.NAME
+  public static int s4.ReflectBasics$Base.count
+public methods (5)
+  public default java.lang.String s4.ReflectBasics$Shape.label()
+  public double s4.ReflectBasics$Square.area()
+  public java.lang.String s4.ReflectBasics$Square.name()
+  public static synchronized int s4.ReflectBasics$Square.sum(int,int)
+  public void s4.ReflectBasics$Square.many(int,long[],java.lang.String[]) throws java.io.IOException,java.lang.IllegalStateException
+base declared methods (3)
+  private void s4.ReflectBasics$Base.hidden()
+  public abstract java.lang.String s4.ReflectBasics$Base.name()
+  public java.lang.String s4.ReflectBasics$Base.describe()
+shape methods (2)
+  public abstract double s4.ReflectBasics$Shape.area()
+  public default java.lang.String s4.ReflectBasics$Shape.label()
+shape fields (1)
+  public static final java.lang.String s4.ReflectBasics$Shape.NAME
+getField side -> public final double s4.ReflectBasics$Square.side
+getField NAME -> public static final java.lang.String s4.ReflectBasics$Shape.NAME
+getField count -> Base
+getField TAG threw java.lang.NoSuchFieldException: TAG
+getDeclaredField TAG -> private static final java.lang.String s4.ReflectBasics$Square.TAG
+getDeclaredField id threw java.lang.NoSuchFieldException: id
+getMethod area -> public double s4.ReflectBasics$Square.area()
+getMethod label -> Shape
+getMethod many -> public void s4.ReflectBasics$Square.many(int,long[],java.lang.String[]) throws java.io.IOException,java.lang.IllegalStateException
+getMethod many bad threw java.lang.NoSuchMethodException: s4.ReflectBasics$Square.many(int, [J)
+getMethod util threw java.lang.NoSuchMethodException: s4.ReflectBasics$Square.util()
+getMethod hidden threw java.lang.NoSuchMethodException: s4.ReflectBasics$Square.hidden()
+getDeclaredMethod hidden -> private void s4.ReflectBasics$Base.hidden()
+getDeclaredMethod util -> static void s4.ReflectBasics$Square.util()
+getDeclaredMethod describe -> public java.lang.String s4.ReflectBasics$Square.describe()
+getConstructor double -> public s4.ReflectBasics$Square(double)
+getConstructor none threw java.lang.NoSuchMethodException: s4.ReflectBasics$Square.<init>()
+getDeclaredConstructor none -> s4.ReflectBasics$Square()
+getDeclaredConstructor int,String -> protected s4.ReflectBasics$Square(int,java.lang.String)
+getDeclaredConstructor String threw java.lang.NoSuchMethodException: s4.ReflectBasics$Square.<init>(java.lang.String)
+getMethod null threw java.lang.NullPointerException: null
+newInstance -> 1.0
+interface newInstance threw java.lang.InstantiationException: s4.ReflectBasics$Shape
+void 3 true 2 many Square
+[int, class [J, class [Ljava.lang.String;]
+[int arg0, long[] arg1, java.lang.String... arg2]
+arg0 true String[]
+true true false
+true
+public static synchronized | true true false | public private static final transient volatile native strictfp interface | [] truetrue
+true false false public default java.lang.String s4.ReflectBasics$Shape.label()
+done

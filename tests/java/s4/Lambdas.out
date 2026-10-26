@@ -1,0 +1,20 @@
+plain
+1,2,c,4,5,6.5,7.25,true,str,9
+8 42949672960 3.625 false
+void lambda str
+127
+this:T2
+static-init / inst-init T2
+3628800
+hi bob
+FGG
+anon
+serializable run
+true
+marker run
+true false
+3.5
+7
+anon-in-lambda
+caught java.lang.StringIndexOutOfBoundsException
+done

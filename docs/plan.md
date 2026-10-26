@@ -38,7 +38,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S1 | One class | done |
 | S2 | Objects, exceptions, strings, GC | done |
 | S3 | Class path, jars, launcher, IntelliJ | in progress |
-| S4 | Language completeness: lambdas, annotations, reflection | not started |
+| S4 | Language completeness: lambdas, annotations, reflection | in progress |
 | S5 | Core library | not started |
 | S6 | Threads, concurrency, `CompletionStage`, the event loop | not started |
 | S7 | Networking | not started |
@@ -217,35 +217,35 @@ Gate: the template app runs from IntelliJ's Run button on Windows and through
 Goal: everything javac 8 can emit runs, and annotations and reflection are
 good enough for `lazy.msg` (S10).
 
-- [ ] S4-01 `invokedynamic` with `LambdaMetafactory` (`metafactory` and
+- [x] S4-01 `invokedynamic` with `LambdaMetafactory` (`metafactory` and
       `altMetafactory`, including the serializable and marker flags, which are
       ignored with a note). The bootstrap is recognised by its owner and name;
       the VM generates a hidden class implementing the functional interface,
       with bridges for `altMetafactory`, and one call site object per `indy`
       instruction. Other bootstrap methods throw `BootstrapMethodError`.
       Check: `tests/java/s4/Lambdas`, `MethodRefs` (static, bound, unbound, constructor), `Capture`.
-- [ ] S4-02 Language support classes: `Enum` (`values`, `valueOf`, `ordinal`,
+- [x] S4-02 Language support classes: `Enum` (`values`, `valueOf`, `ordinal`,
       `EnumMap`, `EnumSet`), string `switch`, `Iterable` for-each, varargs,
       try-with-resources (`addSuppressed`), and `assert` (`-ea`).
       Check: `tests/java/s4/Enums`, `StringSwitch`, `TryWithResources`, `Asserts`.
-- [ ] S4-03 `java.util.function` (all interfaces) and the default methods on
+- [x] S4-03 `java.util.function` (all interfaces) and the default methods on
       `Comparator`, `Iterable` and `Map` that use them.
       Check: `tests/java/util/FunctionalBasics`, `Comparators`.
-- [ ] S4-04 Reflection core ([`decisions.md`](decisions.md) D6): `Class`
+- [x] S4-04 Reflection core ([`decisions.md`](decisions.md) D6): `Class`
       metadata, `getDeclared*`/`get*` for methods, fields and constructors
       (public filtering per the Javadoc), `Method.invoke` with boxing and
       `InvocationTargetException`, `Field` access, `Modifier`, and
       `Class.forName` with initialization. No access-checking beyond
       `setAccessible` bookkeeping.
       Check: `tests/java/s4/ReflectBasics`, `ReflectInvoke`.
-- [ ] S4-05 Runtime annotations: parse `RuntimeVisible*Annotations` and
+- [x] S4-05 Runtime annotations: parse `RuntimeVisible*Annotations` and
       `AnnotationDefault`, generate annotation implementation classes (equals,
       hashCode and `toString` as in the Javadoc), and implement
       `getAnnotation`, `getAnnotations`, `isAnnotationPresent` and
       `getParameterAnnotations`. Includes `@Retention`, `@Target`, `@Inherited`,
       `@Repeatable` lookup and `@FunctionalInterface`.
       Check: `tests/java/s4/Annotations` (nested, arrays, enums, class values, defaults), `InheritedAnnotations`.
-- [ ] S4-06 Generic signatures: `getGenericSuperclass`,
+- [x] S4-06 Generic signatures: `getGenericSuperclass`,
       `getGenericInterfaces`, `Method.getGenericReturnType`, and
       `ParameterizedType` / `TypeVariable` / `WildcardType`, all parsed from
       `Signature` attributes. They are needed by `lazy.msg` codecs.

@@ -4,6 +4,7 @@
 //! their arguments again even when the Java side already did, because the
 //! Java side is not trusted to be correct.
 
+mod boxing;
 mod floats;
 mod hexfloat;
 mod internal;
@@ -13,6 +14,8 @@ mod lang_object;
 mod lang_system;
 mod lang_throwable;
 mod math;
+mod reflect;
+mod reflect_access;
 
 use vm::{Ref, Value, Vm, VmError, VmResult};
 
@@ -26,6 +29,8 @@ pub fn register_all(vm: &mut Vm) {
     floats::register(vm);
     lang_char::register(vm);
     internal::register(vm);
+    reflect::register(vm);
+    reflect_access::register(vm);
 }
 
 fn arg(args: &[Value], i: usize) -> VmResult<Value> {
