@@ -17,6 +17,58 @@ public final class Character implements java.io.Serializable, Comparable<Charact
     public static final int SIZE = 16;
     public static final int BYTES = 2;
 
+    public static final byte UNASSIGNED = 0;
+    public static final byte UPPERCASE_LETTER = 1;
+    public static final byte LOWERCASE_LETTER = 2;
+    public static final byte TITLECASE_LETTER = 3;
+    public static final byte MODIFIER_LETTER = 4;
+    public static final byte OTHER_LETTER = 5;
+    public static final byte NON_SPACING_MARK = 6;
+    public static final byte ENCLOSING_MARK = 7;
+    public static final byte COMBINING_SPACING_MARK = 8;
+    public static final byte DECIMAL_DIGIT_NUMBER = 9;
+    public static final byte LETTER_NUMBER = 10;
+    public static final byte OTHER_NUMBER = 11;
+    public static final byte SPACE_SEPARATOR = 12;
+    public static final byte LINE_SEPARATOR = 13;
+    public static final byte PARAGRAPH_SEPARATOR = 14;
+    public static final byte CONTROL = 15;
+    public static final byte FORMAT = 16;
+    public static final byte PRIVATE_USE = 18;
+    public static final byte SURROGATE = 19;
+    public static final byte DASH_PUNCTUATION = 20;
+    public static final byte START_PUNCTUATION = 21;
+    public static final byte END_PUNCTUATION = 22;
+    public static final byte CONNECTOR_PUNCTUATION = 23;
+    public static final byte OTHER_PUNCTUATION = 24;
+    public static final byte MATH_SYMBOL = 25;
+    public static final byte CURRENCY_SYMBOL = 26;
+    public static final byte MODIFIER_SYMBOL = 27;
+    public static final byte OTHER_SYMBOL = 28;
+    public static final byte INITIAL_QUOTE_PUNCTUATION = 29;
+    public static final byte FINAL_QUOTE_PUNCTUATION = 30;
+
+    public static final byte DIRECTIONALITY_UNDEFINED = -1;
+    public static final byte DIRECTIONALITY_LEFT_TO_RIGHT = 0;
+    public static final byte DIRECTIONALITY_RIGHT_TO_LEFT = 1;
+    public static final byte DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC = 2;
+    public static final byte DIRECTIONALITY_EUROPEAN_NUMBER = 3;
+    public static final byte DIRECTIONALITY_EUROPEAN_NUMBER_SEPARATOR = 4;
+    public static final byte DIRECTIONALITY_EUROPEAN_NUMBER_TERMINATOR = 5;
+    public static final byte DIRECTIONALITY_ARABIC_NUMBER = 6;
+    public static final byte DIRECTIONALITY_COMMON_NUMBER_SEPARATOR = 7;
+    public static final byte DIRECTIONALITY_NONSPACING_MARK = 8;
+    public static final byte DIRECTIONALITY_BOUNDARY_NEUTRAL = 9;
+    public static final byte DIRECTIONALITY_PARAGRAPH_SEPARATOR = 10;
+    public static final byte DIRECTIONALITY_SEGMENT_SEPARATOR = 11;
+    public static final byte DIRECTIONALITY_WHITESPACE = 12;
+    public static final byte DIRECTIONALITY_OTHER_NEUTRALS = 13;
+    public static final byte DIRECTIONALITY_LEFT_TO_RIGHT_EMBEDDING = 14;
+    public static final byte DIRECTIONALITY_LEFT_TO_RIGHT_OVERRIDE = 15;
+    public static final byte DIRECTIONALITY_RIGHT_TO_LEFT_EMBEDDING = 16;
+    public static final byte DIRECTIONALITY_RIGHT_TO_LEFT_OVERRIDE = 17;
+    public static final byte DIRECTIONALITY_POP_DIRECTIONAL_FORMAT = 18;
+
     @SuppressWarnings("unchecked")
     public static final Class<Character> TYPE = (Class<Character>) Class.getPrimitiveClass("char");
 
@@ -101,6 +153,32 @@ public final class Character implements java.io.Serializable, Comparable<Charact
 
     public static native int toLowerCase(int codePoint);
 
+    public static native boolean isTitleCase(int codePoint);
+
+    public static native boolean isMirrored(int codePoint);
+
+    public static native boolean isIdeographic(int codePoint);
+
+    public static native boolean isDefined(int codePoint);
+
+    public static native boolean isIdentifierIgnorable(int codePoint);
+
+    public static native boolean isJavaIdentifierStart(int codePoint);
+
+    public static native boolean isJavaIdentifierPart(int codePoint);
+
+    public static native boolean isUnicodeIdentifierStart(int codePoint);
+
+    public static native boolean isUnicodeIdentifierPart(int codePoint);
+
+    public static native int toTitleCase(int codePoint);
+
+    public static native int getType(int codePoint);
+
+    public static native int getNumericValue(int codePoint);
+
+    public static native byte getDirectionality(int codePoint);
+
     public static native int digit(int codePoint, int radix);
 
     public static boolean isLetter(char ch) {
@@ -143,25 +221,73 @@ public final class Character implements java.io.Serializable, Comparable<Charact
         return digit((int) ch, radix);
     }
 
+    public static boolean isTitleCase(char ch) {
+        return isTitleCase((int) ch);
+    }
+
+    public static boolean isMirrored(char ch) {
+        return isMirrored((int) ch);
+    }
+
+    public static boolean isDefined(char ch) {
+        return isDefined((int) ch);
+    }
+
+    public static boolean isIdentifierIgnorable(char ch) {
+        return isIdentifierIgnorable((int) ch);
+    }
+
+    public static boolean isJavaIdentifierStart(char ch) {
+        return isJavaIdentifierStart((int) ch);
+    }
+
+    public static boolean isJavaIdentifierPart(char ch) {
+        return isJavaIdentifierPart((int) ch);
+    }
+
+    public static boolean isUnicodeIdentifierStart(char ch) {
+        return isUnicodeIdentifierStart((int) ch);
+    }
+
+    public static boolean isUnicodeIdentifierPart(char ch) {
+        return isUnicodeIdentifierPart((int) ch);
+    }
+
+    public static char toTitleCase(char ch) {
+        return (char) toTitleCase((int) ch);
+    }
+
+    public static int getType(char ch) {
+        return getType((int) ch);
+    }
+
+    public static byte getDirectionality(char ch) {
+        return getDirectionality((int) ch);
+    }
+
+    /** @deprecated replaced by isJavaIdentifierStart(char) */
+    @Deprecated
+    public static boolean isJavaLetter(char ch) {
+        return isJavaIdentifierStart((int) ch);
+    }
+
+    /** @deprecated replaced by isJavaIdentifierPart(char) */
+    @Deprecated
+    public static boolean isJavaLetterOrDigit(char ch) {
+        return isJavaIdentifierPart((int) ch);
+    }
+
+    /** @deprecated replaced by isWhitespace(char) */
+    @Deprecated
+    public static boolean isSpace(char ch) {
+        return ch <= 0x20 && ((1L << ch) & 0x100003600L) != 0;
+    }
+
     public static char forDigit(int digit, int radix) {
         if (radix < MIN_RADIX || radix > MAX_RADIX || digit < 0 || digit >= radix) {
             return '\0';
         }
         return (char) (digit < 10 ? '0' + digit : 'a' + digit - 10);
-    }
-
-    /** Numeric value for ASCII digits and letters only; -1 for anything else. */
-    public static int getNumericValue(int codePoint) {
-        if (codePoint >= '0' && codePoint <= '9') {
-            return codePoint - '0';
-        }
-        if (codePoint >= 'a' && codePoint <= 'z') {
-            return codePoint - 'a' + 10;
-        }
-        if (codePoint >= 'A' && codePoint <= 'Z') {
-            return codePoint - 'A' + 10;
-        }
-        return -1;
     }
 
     public static int getNumericValue(char ch) {
