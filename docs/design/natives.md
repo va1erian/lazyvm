@@ -107,13 +107,17 @@ cannot do. The default locale is the root locale: no Turkish or Lithuanian rules
   `index` of the multi-code-point mapping of `cp` (`ß` to `SS`, `ŉ`, the
   ligatures, the Greek iota-subscript forms; `İ` to `i` U+0307 in lower case),
   or -1 when there is none or `index` is past its end
-- `static native int context(int cp)`: 1 if the final-sigma check counts `cp`
-  as cased, 2 if it skips it
-The final sigma follows the oracle's observed behaviour: the sigma is final
-after a cased letter, skipping the skipped characters, and before no cased
-letter. Two quirks of Java 8 are reproduced: before the sigma, a supplementary
-letter counts only at the start of the string, and after it U+0345 counts as
-cased. `CaseMapping` compares every code point in these contexts.
+- `static native int step(int state, int cp, boolean after)` and
+  `static native int mask(int which)`: the two small automata that decide
+  whether a capital sigma lowercases to the final form (see `unicode.rs`)
+The oracle's final-sigma rule depends on the neighbours and is not Unicode's:
+only a few characters are skipped between the cased letter and the sigma, a
+digit after a cased letter keeps the context, U+0345 behaves differently
+after a digit, and so on. `tools/unicode.py` learns it by probing the oracle
+(8 states before the sigma, 6 after it, 17 classes of code point) and checks
+it on 20,000 random strings; `CaseMapping` repeats the check on the VM.
+`toUpperCase` returns a new string for U+0130 even though it maps to itself,
+like the oracle.
 
 ### `java.lang.Thread`
 - `public static native void sleep(long millis) throws InterruptedException`

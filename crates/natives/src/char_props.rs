@@ -125,13 +125,3 @@ pub fn digit(t: &Tables, cp: i32, radix: i32) -> i32 {
         -1
     }
 }
-
-const SIGMA_CASED: u8 = 64;
-const SIGMA_SKIPPED: u8 = 128;
-
-/// How `String.toLowerCase` sees `cp` when it looks for the context of a
-/// final sigma: 1 cased, 2 skipped (neither cased nor decisive).
-pub fn sigma_context(t: &Tables, cp: i32) -> i32 {
-    let flags = t.flags(cp);
-    i32::from(flags & SIGMA_CASED != 0) | (i32::from(flags & SIGMA_SKIPPED != 0) << 1)
-}

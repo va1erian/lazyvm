@@ -10,9 +10,8 @@
 //! run table  directionality + 1 (0 = undefined)
 //! run table  flags: 1 mirrored, 2 ideographic, 4 alphabetic beyond letters
 //!            and Nl, 8 lowercase beyond Ll, 16 uppercase beyond Lu, 32 Java
-//!            identifier excluded although the category allows it, 64 cased
-//!            letter and 128 skipped when `String.toLowerCase` looks for the
-//!            context of a final sigma
+//!            identifier excluded although the category allows it
+//! sigma      final-sigma automata, see below
 //! sparse map upper, lower, title  (value = code point + zz-decoded offset)
 //! sparse map digit value in radix 36, numeric value  (absolute, default -1)
 //! multi map  special upper case mappings, special lower case mappings
@@ -24,6 +23,14 @@
 //! zz first, [zz step])`: the bracketed fields exist only when `n > 1`, `gap`
 //! is the distance from the end of the previous entry, and element `i` of an
 //! entry is code point `start + i*stride` with value `first + i*step`.
+//! The sigma section is `nb na before_accept after_final after_terminal
+//! nclasses`, then per class `nb + na` raw bytes (where each of the `nb`
+//! states of the automaton that reads the text before a sigma, then each of
+//! the `na` states of the one that reads the text after it, moves on that
+//! character), then a run table giving the class of every code point. The
+//! three masks are bit sets of states: the before-states in which a sigma is
+//! preceded by a cased letter, the after-states in which it is not blocked by
+//! a following one, and the after-states that nothing leaves.
 //! A multi map is `count` then entries `(distance from the previous code
 //! point, n, n code points)` with `2 <= n <= 3`, in ascending order.
 //! Code points outside the tables (including negative ones) have category 0,
@@ -45,7 +52,9 @@ pub(crate) struct Runs {
 
 impl Runs {
     fn get(&self, cp: i32) -> u8 {
-        let Ok(cp) = u32::try_from(cp) else { return 0 };
+        let Some(cp) = u32::try_from(cp).ok().filter(|&c| c < 0x11_0000) else {
+            return 0;
+        };
         match self.starts.partition_point(|&s| s <= cp) {
             0 => 0,
             n => self.values[n - 1],
@@ -93,10 +102,20 @@ pub(crate) struct Multi {
     pub chars: [u32; 3],
 }
 
+/// The final-sigma automata (module documentation).
+pub(crate) struct Sigma {
+    pub nb: usize,
+    pub na: usize,
+    pub masks: [u32; 3],
+    pub columns: Vec<u8>,
+    pub class: Runs,
+}
+
 pub struct Tables {
     pub(crate) category: Runs,
     pub(crate) direction: Runs,
     pub(crate) flags: Runs,
+    pub(crate) sigma: Sigma,
     pub(crate) upper: Sparse,
     pub(crate) lower: Sparse,
     pub(crate) title: Sparse,
@@ -137,6 +156,28 @@ impl Tables {
     /// The value of `cp` as a digit in radix 36, or -1.
     pub fn digit36(&self, cp: i32) -> i32 {
         self.digit.get(cp).unwrap_or(-1)
+    }
+
+    /// The state the final-sigma automaton moves to on reading `cp`: before the sigma when
+    /// `after` is false, after it otherwise.
+    pub fn sigma_step(&self, state: i32, cp: i32, after: bool) -> i32 {
+        let g = &self.sigma;
+        let (width, base) = if after { (g.na, g.nb) } else { (g.nb, 0) };
+        let class = usize::from(g.class.get(cp));
+        let state = usize::try_from(state).ok().filter(|&s| s < width);
+        // Validated at load: every class has nb + na bytes, each below its automaton's width.
+        let at = state.map(|s| class * (g.nb + g.na) + base + s);
+        at.and_then(|i| g.columns.get(i))
+            .map_or(0, |&s| i32::from(s))
+    }
+
+    /// Which states count: 0 before-states preceded by a cased letter, 1 after-states that do
+    /// not block a final sigma, 2 after-states nothing leaves.
+    pub fn sigma_mask(&self, which: i32) -> i32 {
+        usize::try_from(which)
+            .ok()
+            .and_then(|i| self.sigma.masks.get(i))
+            .map_or(0, |&m| m as i32)
     }
 
     /// The multi-code-point mapping of `cp` in `String.toUpperCase` or `toLowerCase`.
@@ -189,6 +230,13 @@ mod tests {
         assert_eq!(t.special(0xDF, true), Some(&[0x53, 0x53][..]));
         assert_eq!(t.special(0xDF, false), None);
         assert_eq!(t.special(-5, true), None);
+        // A cased letter before a sigma accepts; a space after it ends the context.
+        let after_a = t.sigma_step(0, 'A' as i32, false);
+        assert_ne!(t.sigma_mask(0) >> after_a & 1, 0);
+        assert_eq!(t.sigma_mask(0) >> t.sigma_step(0, ' ' as i32, false) & 1, 0);
+        assert_eq!(t.sigma_step(99, 'A' as i32, true), 0);
+        assert_eq!(t.sigma_mask(7), 0);
+        assert_eq!(t.category(0x11_0000), 0);
     }
 
     #[test]

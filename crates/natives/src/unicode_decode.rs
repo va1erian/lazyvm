@@ -3,7 +3,7 @@
 //! Every length and value read from the data is checked, so a damaged file
 //! yields an error string and never a panic or an unbounded allocation.
 
-use crate::unicode::{Entry, Multi, Runs, Sparse, Tables};
+use crate::unicode::{Entry, Multi, Runs, Sigma, Sparse, Tables};
 
 const LIMIT: u64 = 0x11_0000;
 const VERSION: u16 = 1;
@@ -171,6 +171,44 @@ fn multi(r: &mut Reader) -> Result<Vec<Multi>, String> {
     Ok(out)
 }
 
+fn sigma(r: &mut Reader) -> Result<Sigma, String> {
+    let nb = r.small()? as usize;
+    let na = r.small()? as usize;
+    if nb > 32 || na > 32 || nb == 0 || na == 0 {
+        return Err("bad automaton size".into());
+    }
+    let mut masks = [0u32; 3];
+    for (slot, width) in masks.iter_mut().zip([nb, na, na]) {
+        let mask = u32::try_from(r.varint()?).map_err(|_| "state mask out of range")?;
+        if width < 32 && mask >> width != 0 {
+            return Err("state mask out of range".into());
+        }
+        *slot = mask;
+    }
+    let classes = r.count()?;
+    if classes == 0 || classes > 255 {
+        return Err("bad number of sigma classes".into());
+    }
+    let mut columns = Vec::with_capacity(classes * (nb + na));
+    for _ in 0..classes {
+        for i in 0..nb + na {
+            let state = usize::from(r.byte()?);
+            if state >= if i < nb { nb } else { na } {
+                return Err("sigma state out of range".into());
+            }
+            columns.push(state as u8);
+        }
+    }
+    let class = runs(r, (classes - 1) as u8)?;
+    Ok(Sigma {
+        nb,
+        na,
+        masks,
+        columns,
+        class,
+    })
+}
+
 pub(crate) fn parse(data: &[u8]) -> Result<Tables, String> {
     let body_len = data.len().checked_sub(4).ok_or("too short")?;
     let (body, sum) = data.split_at(body_len);
@@ -191,6 +229,7 @@ pub(crate) fn parse(data: &[u8]) -> Result<Tables, String> {
         category: runs(&mut r, 30)?,
         direction: runs(&mut r, 19)?,
         flags: runs(&mut r, 255)?,
+        sigma: sigma(&mut r)?,
         upper: sparse(&mut r, true)?,
         lower: sparse(&mut r, true)?,
         title: sparse(&mut r, true)?,
