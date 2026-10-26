@@ -1,10 +1,14 @@
 //! Where class files and resources come from: the boot and application
 //! class paths, each a list of directories and jars.
 
-use std::path::{Path, PathBuf};
+use std::collections::HashSet;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
-use classfile::jar::Jar;
+use classfile::jar::{Jar, manifest_attributes};
+
+/// The most entries the application path may grow to through `Class-Path`.
+const MAX_ENTRIES: usize = 4096;
 
 #[derive(Clone, Debug)]
 pub enum Entry {
@@ -28,11 +32,12 @@ pub struct Found {
 
 impl ClassPath {
     /// Builds both paths. Missing, unreadable and corrupt entries are
-    /// skipped, as `java` skips them.
+    /// skipped, as `java` skips them. Application jars bring in the jars
+    /// their manifest's `Class-Path` names, transitively, each once.
     pub fn open(boot: &[PathBuf], app: &[PathBuf]) -> ClassPath {
         ClassPath {
-            boot: open_all(boot),
-            app: open_all(app),
+            boot: open_all(boot, false),
+            app: open_all(app, true),
         }
     }
 
@@ -81,7 +86,8 @@ fn normalize(name: &str) -> Option<String> {
     let mut parts: Vec<&str> = Vec::new();
     for seg in name.split('/') {
         match seg {
-            "." => {}
+            // `a//b` is `a/b`, as Java resolves it in a directory.
+            "" | "." => {}
             ".." => {
                 parts.pop()?;
             }
@@ -91,23 +97,89 @@ fn normalize(name: &str) -> Option<String> {
     Some(parts.join("/"))
 }
 
-fn open_all(paths: &[PathBuf]) -> Vec<Entry> {
+fn open_all(paths: &[PathBuf], follow_manifests: bool) -> Vec<Entry> {
+    let mut queue: Vec<PathBuf> = paths.iter().map(|p| lexical(p)).collect();
+    let mut seen = HashSet::new();
     let mut out = Vec::new();
-    for p in paths {
+    let mut i = 0;
+    while let Some(p) = queue.get(i).cloned() {
+        i += 1;
+        if !seen.insert(p.clone()) {
+            continue;
+        }
         if p.is_dir() {
-            out.push(Entry::Dir(p.clone()));
-        } else if let Some(jar) = std::fs::read(p).ok().and_then(|d| Jar::open(d).ok()) {
-            out.push(Entry::Jar(Arc::new(jar)));
+            out.push(Entry::Dir(p));
+            continue;
+        }
+        let Some(jar) = std::fs::read(&p).ok().and_then(|d| Jar::open(d).ok()) else {
+            continue;
+        };
+        if follow_manifests {
+            let base = p.parent().unwrap_or(Path::new("."));
+            for entry in manifest_class_path(&jar) {
+                if queue.len() < MAX_ENTRIES {
+                    queue.push(lexical(&base.join(entry)));
+                }
+            }
+        }
+        out.push(Entry::Jar(Arc::new(jar)));
+    }
+    out
+}
+
+/// A jar's `Class-Path` entries: relative URLs only (no scheme), `%20`
+/// decoded. A missing or malformed manifest contributes nothing.
+fn manifest_class_path(jar: &Jar) -> Vec<String> {
+    let Some(text) = jar.read("META-INF/MANIFEST.MF").ok().flatten() else {
+        return Vec::new();
+    };
+    let Ok(attrs) = manifest_attributes(&String::from_utf8_lossy(&text)) else {
+        return Vec::new();
+    };
+    attrs
+        .iter()
+        .filter(|(k, _)| k.eq_ignore_ascii_case("Class-Path"))
+        .flat_map(|(_, v)| v.split_whitespace())
+        .filter(|e| !e.contains(':'))
+        .map(|e| e.replace("%20", " "))
+        .collect()
+}
+
+/// `p` with `.` and `..` resolved by name, so one jar reached by two
+/// spellings is opened once.
+fn lexical(p: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for c in p.components() {
+        match c {
+            Component::CurDir => {}
+            Component::ParentDir
+                if matches!(out.components().next_back(), Some(Component::Normal(_))) =>
+            {
+                out.pop();
+            }
+            other => out.push(other.as_os_str()),
         }
     }
     out
 }
 
-/// A file's bytes, or nothing for a directory (Java gives an empty stream).
+/// A file's bytes, or for a directory its entry names, one per line, as
+/// Java's directory resources read (sorted here, so the output is stable).
 fn read_resource(dir: &Path, rel: &str) -> Option<Vec<u8>> {
     let path = dir.join(rel);
     if path.is_dir() {
-        return Some(Vec::new());
+        let mut names: Vec<String> = std::fs::read_dir(&path)
+            .ok()?
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        return Some(
+            names
+                .iter()
+                .flat_map(|n| format!("{n}\n").into_bytes())
+                .collect(),
+        );
     }
     read_in(dir, rel)
 }

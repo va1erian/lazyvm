@@ -90,7 +90,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 classpath = Some(split_path(v));
             }
             "-version" | "--version" => return Ok(Command::Version),
-            "-showversion" | "--show-version" => show_version = true,
+            "-showversion" => show_version = true,
             // IDEs probe a JDK with this; LazyVM's properties need a VM, so
             // only the version is reported.
             _ if a.starts_with("-XshowSettings") => {}

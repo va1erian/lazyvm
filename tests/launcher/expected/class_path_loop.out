@@ -1,0 +1,3 @@
+hello, jar
+args=0
+evil: java.lang.SecurityException: Prohibited package name: java.lang
