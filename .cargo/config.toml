@@ -1,0 +1,6 @@
+# The musl build (the LazyOS binary) links with the toolchain's bundled
+# rust-lld and self-contained musl, so it builds on Windows with no extra
+# linker installed, the same way LazyOS builds xui-app.
+[target.x86_64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = ["-C", "linker-flavor=ld.lld", "-C", "target-feature=+crt-static"]

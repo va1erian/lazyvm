@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.98.0"
+          components: clippy, rustfmt
+          targets: x86_64-unknown-linux-musl
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "25"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: fmt
+        run: cargo fmt --all --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: unit tests
+        run: cargo test --workspace --locked
+      - name: rules
+        run: python tools/check_rules.py
+      - name: licenses
+        run: python tools/licenses.py
+      - name: javac
+        run: python tools/javac.py --selftest
+      - name: differential suite
+        run: python tools/test.py
+      - name: musl build
+        run: cargo build --release --locked -p launcher --target x86_64-unknown-linux-musl
+
+  linux-musl:
+    # The LazyOS binary is static musl; this job runs the whole suite with it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.98.0"
+          targets: x86_64-unknown-linux-musl
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "25"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: musl build
+        run: cargo build --release --locked -p launcher --target x86_64-unknown-linux-musl
+      - name: differential suite (musl binary)
+        run: python tools/test.py --exe target/x86_64-unknown-linux-musl/release/lazyvm --build-java-only

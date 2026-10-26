@@ -1,0 +1,19 @@
+[package]
+name = "launcher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "lazyvm"
+path = "src/main.rs"
+
+[dependencies]
+vm = { path = "../vm" }
+natives = { path = "../natives" }
+platform = { path = "../platform" }

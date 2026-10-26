@@ -1,6 +1,21 @@
-[package]
-name = "lazyvm"
+[workspace]
+resolver = "3"
+members = ["crates/classfile", "crates/platform", "crates/vm", "crates/natives", "crates/launcher"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/va1erian/lazyvm"
+rust-version = "1.98"
 
-[dependencies]
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "deny"
+unwrap_used = "warn"
+
+[profile.release]
+debug = 1
+panic = "unwind"
