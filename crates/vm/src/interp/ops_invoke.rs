@@ -74,7 +74,8 @@ impl Vm {
                 if f.u1(3)? != 0 || f.u1(4)? != 0 {
                     return Err(VmError::verify("invokedynamic operand bytes must be zero"));
                 }
-                let factory = self.link_lambda(from, index)?;
+                let site = (f.method.index, f.pc);
+                let factory = self.link_lambda(from, index, site)?;
                 self.call(factory, 5)
             }
         }

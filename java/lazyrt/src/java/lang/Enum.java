@@ -64,7 +64,7 @@ public abstract class Enum<E extends Enum<E>> implements Comparable<E>, Serializ
             }
         }
         throw new IllegalArgumentException(
-                "No enum constant " + enumType.getName().replace('$', '.') + "." + name);
+                "No enum constant " + enumType.getCanonicalName() + "." + name);
     }
 
     protected final void finalize() {

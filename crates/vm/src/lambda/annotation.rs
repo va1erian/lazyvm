@@ -26,7 +26,8 @@ impl Vm {
                 msg,
             ));
         }
-        let name = format!("{}$$Annotation", a.name);
+        // `-` cannot appear in a Java class name, so no user class collides.
+        let name = format!("{}-Annotation", a.name);
         if let Some(c) = self.loaded_class(&name) {
             return Ok(c);
         }
@@ -106,7 +107,7 @@ fn element_method(
     a.op_u2(0x11, index);
     let value = a.pool.method_ref(class, "value", "(I)Ljava/lang/Object;");
     a.op_u2(0xb6, value);
-    a.adapt(&FieldType::Object("java/lang/Object".into()), &ret)?;
+    a.adapt(&FieldType::Object("java/lang/Object".into()), &ret, true)?;
     a.ret(Some(&ret));
     Ok(MethodDef {
         access: ACC_PUBLIC,

@@ -120,6 +120,7 @@ public final class Constructor<T> extends Executable {
             throw new IllegalArgumentException("Cannot reflectively create enum objects");
         }
         Object[] converted = Method.convertArguments(parameterTypes, initargs);
+        Convert.initialize(clazz);
         try {
             return (T) newInstance0(this, converted);
         } catch (Throwable t) {

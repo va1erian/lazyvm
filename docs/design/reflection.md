@@ -97,3 +97,14 @@ Names and values are in the order of the annotation type's
 `getDeclaredMethods()`, which is class-file order. Java builds the values,
 filling in defaults from `AnnotationDefault`, and constructs the generated
 class through `Constructor.newInstance`.
+
+## Known differences from Java 8
+
+- `Annotation.toString` lists members in Java 8's order (members with
+  defaults in hash order, then the others in pair order; `HashOrder`), but
+  when two member names fall in the same hash bucket Java 8's order is not
+  reproducible: it is the same for every declaration order tried, so it
+  depends on JVM internals. LazyVM keeps declaration order for ties.
+- A `Class` or enum element whose class cannot be loaded throws
+  `TypeNotPresentException` when the element is read, as in Java 8; an array
+  element with one missing class is missing as a whole.

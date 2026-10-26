@@ -152,6 +152,9 @@ public final class Method extends Executable {
             }
         }
         Object[] converted = convertArguments(parameterTypes, args);
+        if (Modifier.isStatic(modifiers)) {
+            Convert.initialize(clazz);
+        }
         try {
             return invoke0(this, obj, converted);
         } catch (Throwable t) {

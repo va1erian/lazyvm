@@ -22,6 +22,9 @@ public abstract class AnnotationBase implements Annotation {
 
     /** The stored value of member `i`; arrays are copied so callers cannot change the annotation. */
     protected final Object value(int i) {
+        if (values[i] instanceof MissingType) {
+            throw ((MissingType) values[i]).error;
+        }
         return AnnotationValues.copy(values[i]);
     }
 
@@ -30,13 +33,16 @@ public abstract class AnnotationBase implements Annotation {
     }
 
     public boolean equals(Object o) {
+        Method[] members = AnnotationParser.elements(type);
+        if (members.length != type.getDeclaredMethods().length) {
+            throw new java.lang.annotation.AnnotationFormatError("Malformed method on an annotation type");
+        }
         if (o == this) {
             return true;
         }
         if (!type.isInstance(o)) {
             return false;
         }
-        Method[] members = type.getDeclaredMethods();
         for (int i = 0; i < values.length; i++) {
             if (!AnnotationValues.equal(values[i], memberOf(o, members, i))) {
                 return false;

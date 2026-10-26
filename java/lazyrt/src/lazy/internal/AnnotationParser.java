@@ -108,7 +108,7 @@ public final class AnnotationParser {
             }
             return null;
         }
-        Method[] members = type.getDeclaredMethods();
+        Method[] members = elements(type);
         Object[] values = new Object[members.length];
         Buf explicitOrder = new Buf();
         for (int i = 0; i < pairs; i++) {
@@ -122,6 +122,19 @@ public final class AnnotationParser {
             }
         }
         return create(type, members, values, explicitOrder);
+    }
+
+    /** The elements of an annotation type: its abstract instance methods, in class-file order. */
+    static Method[] elements(Class<?> type) {
+        Method[] all = type.getDeclaredMethods();
+        Buf out = new Buf();
+        for (int i = 0; i < all.length; i++) {
+            int mods = all[i].getModifiers();
+            if ((mods & java.lang.reflect.Modifier.ABSTRACT) != 0 && (mods & java.lang.reflect.Modifier.STATIC) == 0) {
+                out.add(all[i]);
+            }
+        }
+        return (Method[]) out.toArray(Method.class);
     }
 
     private static int indexOf(Method[] members, String name) {
@@ -169,10 +182,11 @@ public final class AnnotationParser {
                 values[i] = d;
             }
         }
-        // The reference JVM lists members whose hash buckets collide in the reverse of declaration order.
+        // Colliding hash buckets list in an order the reference JVM derives from symbol addresses;
+        // experiments show no rule, so ties keep declaration order.
         Buf defaultNames = new Buf();
         Buf defaultIndexes = new Buf();
-        for (int i = members.length - 1; i >= 0; i--) {
+        for (int i = 0; i < members.length; i++) {
             if (hasDefault[i]) {
                 defaultNames.add(names[i]);
                 defaultIndexes.add(Integer.valueOf(i));
@@ -236,7 +250,7 @@ public final class AnnotationParser {
             case 'D': return Double.valueOf(VM.poolDouble(holder, u2()));
             case 's': return utf8();
             case 'e': return enumConstant();
-            case 'c': return classOf(utf8());
+            case 'c': return missingOr(utf8());
             case '@': return annotation();
             case '[': return array(expected);
             default: throw new AnnotationFormatError("Unknown element value tag " + tag);
@@ -245,8 +259,24 @@ public final class AnnotationParser {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Object enumConstant() {
-        Class type = classOf(utf8());
-        return Enum.valueOf(type, utf8());
+        String descriptor = utf8();
+        String constant = utf8();
+        Class type;
+        try {
+            type = classOf(descriptor);
+        } catch (TypeNotPresentException e) {
+            return new MissingType(e);
+        }
+        return Enum.valueOf(type, constant);
+    }
+
+    /** A class value, or a placeholder that throws when the element is read, as the reference JVM does. */
+    private Object missingOr(String descriptor) {
+        try {
+            return classOf(descriptor);
+        } catch (TypeNotPresentException e) {
+            return new MissingType(e);
+        }
     }
 
     private Object array(Class<?> expected) {
@@ -254,7 +284,14 @@ public final class AnnotationParser {
         Class<?> component = expected != null && expected.isArray() ? expected.getComponentType() : Object.class;
         Object out = Array.newInstance(component, n);
         for (int i = 0; i < n; i++) {
-            Array.set(out, i, value(component));
+            Object v = value(component);
+            if (v instanceof MissingType) {
+                for (int rest = i + 1; rest < n; rest++) {
+                    skipValue();
+                }
+                return v;
+            }
+            Array.set(out, i, v);
         }
         return out;
     }

@@ -77,4 +77,13 @@ final class Convert {
         }
         return v == null || t.isInstance(v) ? v : FAIL;
     }
+
+    /** Runs the class initializer outside the wrapped call, so its failure is not an InvocationTargetException. */
+    static void initialize(Class<?> c) {
+        try {
+            Class.forName(c.getName(), true, c.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            throw new NoClassDefFoundError(c.getName());
+        }
+    }
 }

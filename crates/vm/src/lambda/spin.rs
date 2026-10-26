@@ -1,4 +1,7 @@
 //! Writing the class file of a lambda class from its [`Spec`].
+//!
+//! Generated member names contain `-`, which Java source cannot, so they
+//! never collide with the functional interface's own methods or fields.
 
 use std::sync::Arc;
 
@@ -9,7 +12,9 @@ use classfile::{ACC_FINAL, ACC_PRIVATE, ACC_PUBLIC, ACC_STATIC, ACC_SUPER, ACC_S
 use super::Spec;
 use super::asm::Asm;
 
-pub const FACTORY: &str = "get$Lambda";
+pub const FACTORY: &str = "lambda-factory";
+/// The one instance of a lambda class that captures nothing.
+const INSTANCE: &str = "lambda-instance";
 const OBJECT: &str = "java/lang/Object";
 
 /// Method handle kinds (JVMS 4.4.8) a lambda implementation can have.
@@ -21,7 +26,7 @@ const REF_INVOKE_INTERFACE: u8 = 9;
 
 pub fn class_file(spec: &Spec) -> Result<Vec<u8>, String> {
     let mut pool = Pool::default();
-    let fields: Vec<FieldDef> = spec
+    let mut fields: Vec<FieldDef> = spec
         .captured
         .iter()
         .enumerate()
@@ -31,7 +36,19 @@ pub fn class_file(spec: &Spec) -> Result<Vec<u8>, String> {
             descriptor: t.descriptor(),
         })
         .collect();
-    let mut methods = vec![constructor(spec, &mut pool), factory(spec, &mut pool)];
+    let mut methods = vec![constructor(spec, &mut pool)];
+    if spec.captured.is_empty() {
+        // A non-capturing lambda evaluates to the same object every time.
+        fields.push(FieldDef {
+            access: ACC_PRIVATE | ACC_STATIC | ACC_FINAL,
+            name: INSTANCE.into(),
+            descriptor: own(spec),
+        });
+        methods.push(singleton_init(spec, &mut pool));
+        methods.push(singleton_factory(spec, &mut pool));
+    } else {
+        methods.push(factory(spec, &mut pool));
+    }
     methods.push(forward(spec, &spec.sam_desc, &mut pool)?);
     for bridge in &spec.bridges {
         methods.push(forward(spec, bridge, &mut pool)?);
@@ -50,7 +67,11 @@ pub fn class_file(spec: &Spec) -> Result<Vec<u8>, String> {
 }
 
 fn field(i: usize) -> String {
-    format!("cap${i}")
+    format!("capture-{i}")
+}
+
+fn own(spec: &Spec) -> String {
+    format!("L{};", spec.class_name)
 }
 
 fn captured_desc(spec: &Spec) -> String {
@@ -91,7 +112,7 @@ fn constructor(spec: &Spec, pool: &mut Pool) -> MethodDef {
     }
 }
 
-/// `static get$Lambda(captured...)`: the call site's entry point.
+/// `static factory(captured...)`: the call site's entry point.
 fn factory(spec: &Spec, pool: &mut Pool) -> MethodDef {
     let mut a = Asm {
         code: Vec::new(),
@@ -119,6 +140,64 @@ fn factory(spec: &Spec, pool: &mut Pool) -> MethodDef {
         max_stack: 2 + slots(&spec.captured),
         max_locals: slots(&spec.captured),
         code: a.code,
+    }
+}
+
+/// `<clinit>`: creates the single instance of a non-capturing lambda.
+fn singleton_init(spec: &Spec, pool: &mut Pool) -> MethodDef {
+    let mut a = Asm {
+        code: Vec::new(),
+        pool,
+    };
+    let this = a.pool.class(&spec.class_name);
+    a.op_u2(0xbb, this);
+    a.op(0x59);
+    let init = a.pool.method_ref(&spec.class_name, "<init>", "()V");
+    a.op_u2(0xb7, init);
+    let f = a.pool.field_ref(&spec.class_name, INSTANCE, &own(spec));
+    a.op_u2(0xb3, f);
+    a.ret(None);
+    MethodDef {
+        access: ACC_STATIC,
+        name: "<clinit>".into(),
+        descriptor: "()V".into(),
+        max_stack: 2,
+        max_locals: 0,
+        code: a.code,
+    }
+}
+
+/// The factory of a non-capturing lambda: returns the single instance.
+fn singleton_factory(spec: &Spec, pool: &mut Pool) -> MethodDef {
+    let mut a = Asm {
+        code: Vec::new(),
+        pool,
+    };
+    let f = a.pool.field_ref(&spec.class_name, INSTANCE, &own(spec));
+    a.op_u2(0xb2, f);
+    a.op(0xb0);
+    MethodDef {
+        access: ACC_STATIC,
+        name: FACTORY.into(),
+        descriptor: format!("()L{};", spec.interface),
+        max_stack: 1,
+        max_locals: 0,
+        code: a.code,
+    }
+}
+
+/// Captured values reach the implementation unconverted (only a reference
+/// may be cast), as `LambdaMetafactory` requires; anything else is a
+/// linkage error.
+fn check_captured(captured: &FieldType, param: &FieldType) -> Result<(), String> {
+    if captured == param || (captured.is_reference() && param.is_reference()) {
+        Ok(())
+    } else {
+        Err(format!(
+            "captured {} cannot be passed as {}",
+            captured.descriptor(),
+            param.descriptor()
+        ))
     }
 }
 
@@ -155,18 +234,20 @@ fn forward(spec: &Spec, desc: &str, pool: &mut Pool) -> Result<MethodDef, String
         a.op(0x59);
     }
     for (i, t) in spec.captured.iter().enumerate() {
+        check_captured(t, &params[i])?;
         a.op(0x2a);
         let f = a
             .pool
             .field_ref(&spec.class_name, &field(i), &t.descriptor());
         a.op_u2(0xb4, f);
+        a.adapt(t, &params[i], false)?;
     }
     let mut slot = 1;
     for (j, u) in entry.params.iter().enumerate() {
         a.load(u, slot);
         slot += u.slots();
-        a.adapt(u, &spec.instantiated.params[j])?;
-        a.adapt(&spec.instantiated.params[j], &params[n + j])?;
+        a.adapt(u, &spec.instantiated.params[j], false)?;
+        a.adapt(&spec.instantiated.params[j], &params[n + j], false)?;
     }
     invoke(&mut a, spec, &target)?;
     let produced = if spec.impl_kind == REF_NEW_INVOKE_SPECIAL {
@@ -179,8 +260,8 @@ fn forward(spec: &Spec, desc: &str, pool: &mut Pool) -> Result<MethodDef, String
         (None, None) => {}
         (Some(r), Some(t)) => {
             let middle = spec.instantiated.ret.clone().unwrap_or_else(|| r.clone());
-            a.adapt(t, &middle)?;
-            a.adapt(&middle, r)?;
+            a.adapt(t, &middle, true)?;
+            a.adapt(&middle, r, true)?;
         }
         (Some(_), None) => return Err(format!("{} returns void", spec.impl_ref.name)),
     }

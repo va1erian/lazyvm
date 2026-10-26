@@ -84,7 +84,7 @@ pub struct Vm {
     pub(crate) natives: HashMap<String, NativeFn>,
     pub(crate) select_cache: HashMap<(ClassId, MethodRef), MethodRef>,
     /// Linked lambda call sites: (caller, InvokeDynamic index) to factory.
-    pub(crate) lambda_sites: HashMap<(ClassId, u16), MethodRef>,
+    pub(crate) lambda_sites: HashMap<(ClassId, u16, usize), MethodRef>,
     /// Numbers generated lambda class names.
     pub(crate) lambda_count: u64,
     pub properties: BTreeMap<String, String>,

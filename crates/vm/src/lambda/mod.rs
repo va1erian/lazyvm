@@ -43,10 +43,56 @@ pub(crate) fn error(msg: impl Into<String>) -> VmError {
 }
 
 impl Vm {
+    /// A call site that cannot be linked: `BootstrapMethodError` caused by a
+    /// `LambdaConversionException`, as Java 8 reports it.
+    fn link_error(&mut self, msg: &str) -> VmError {
+        let cause = match self.throw_new("java/lang/invoke/LambdaConversionException", Some(msg)) {
+            Ok(c) => c,
+            Err(e) => return e,
+        };
+        let built = self.with_root(cause, |vm| -> VmResult<crate::Ref> {
+            let class = vm.load_class("java/lang/BootstrapMethodError")?;
+            vm.initialize(class)?;
+            let ctor = vm
+                .find_in_class(
+                    class,
+                    "<init>",
+                    "(Ljava/lang/String;Ljava/lang/Throwable;)V",
+                    false,
+                )
+                .ok_or_else(|| {
+                    VmError::Internal("BootstrapMethodError(String, Throwable) missing".into())
+                })?;
+            let text = vm.new_string(msg)?;
+            let obj = vm.new_object(class)?;
+            vm.invoke(
+                ctor,
+                &[
+                    crate::Value::Ref(Some(obj)),
+                    crate::Value::Ref(Some(text)),
+                    crate::Value::Ref(Some(cause)),
+                ],
+            )?;
+            Ok(obj)
+        });
+        match built {
+            Ok(obj) => VmError::Throw(obj),
+            Err(e) => e,
+        }
+    }
+
     /// The static factory of the lambda class for call site `index` of
     /// `caller`'s pool, generating and loading the class the first time.
-    pub(crate) fn link_lambda(&mut self, caller: ClassId, index: u16) -> VmResult<MethodRef> {
-        if let Some(&m) = self.lambda_sites.get(&(caller, index)) {
+    /// `site` is the instruction (method index and pc): each
+    /// `invokedynamic` instruction is its own call site (JVMS 6.5).
+    pub(crate) fn link_lambda(
+        &mut self,
+        caller: ClassId,
+        index: u16,
+        site: (u16, usize),
+    ) -> VmResult<MethodRef> {
+        let key = (caller, site.0, site.1);
+        if let Some(&m) = self.lambda_sites.get(&key) {
             return Ok(m);
         }
         let file = self
@@ -54,10 +100,20 @@ impl Vm {
             .file
             .clone()
             .ok_or_else(|| error("no constant pool"))?;
-        self.lambda_count += 1;
-        let name = format!("{}$$Lambda${}", self.class(caller).name, self.lambda_count);
-        let spec = read_spec(&file, index, name).map_err(error)?;
-        let bytes = spin::class_file(&spec).map_err(error)?;
+        // `-` cannot appear in a Java class name, so no user class collides.
+        let name = loop {
+            self.lambda_count += 1;
+            let name = format!("{}-Lambda-{}", self.class(caller).name, self.lambda_count);
+            if self.loaded_class(&name).is_none() && self.classpath.find_class(&name).is_none() {
+                break name;
+            }
+        };
+        let linked = read_spec(&file, index, name)
+            .and_then(|spec| spin::class_file(&spec).map(|b| (spec, b)));
+        let (spec, bytes) = match linked {
+            Ok(l) => l,
+            Err(msg) => return Err(self.link_error(&msg)),
+        };
         let boot = self.class(caller).from_boot;
         let class = self.define_class(&spec.class_name, &bytes, boot)?;
         self.initialize(class)?;
@@ -77,7 +133,7 @@ impl Vm {
             class,
             index: method,
         };
-        self.lambda_sites.insert((caller, index), factory);
+        self.lambda_sites.insert(key, factory);
         Ok(factory)
     }
 }
@@ -158,7 +214,13 @@ fn read_spec(file: &Arc<ClassFile>, index: u16, class_name: String) -> Result<Sp
         }
     }
     extra_interfaces.retain(|i| *i != *interface);
-    extra_interfaces.dedup();
+    let mut unique = Vec::new();
+    for i in extra_interfaces {
+        if !unique.contains(&i) {
+            unique.push(i);
+        }
+    }
+    let extra_interfaces = unique;
     bridges.retain(|b| *b != sam_desc);
     Ok(Spec {
         class_name,

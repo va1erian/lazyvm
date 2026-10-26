@@ -109,8 +109,12 @@ impl Asm<'_> {
         self.op_u2(0xc0, c);
     }
 
-    /// Converts the value on top of the stack from `from` to `to`.
-    pub fn adapt(&mut self, from: &FieldType, to: &FieldType) -> Result<(), String> {
+    /// Converts the value on top of the stack from `from` to `to`, by the
+    /// `LambdaMetafactory` Javadoc's table. `ret` selects the rules for a
+    /// return value, which are looser for reference to primitive: any
+    /// reference is cast to the base wrapper (`Number`, `Boolean`,
+    /// `Character`) and unboxed, where an argument must already be a wrapper.
+    pub fn adapt(&mut self, from: &FieldType, to: &FieldType, ret: bool) -> Result<(), String> {
         if from == to {
             return Ok(());
         }
@@ -129,18 +133,17 @@ impl Asm<'_> {
                     FieldType::Object(n) => unwrapped(n),
                     _ => None,
                 };
-                match source {
-                    Some(p) => {
+                match (source, ret) {
+                    (Some(p), _) => {
                         self.unbox(&p);
                         self.widen(&p, to)
                     }
-                    None => {
-                        let (w, _) = wrapper(to).ok_or("no wrapper")?;
-                        let c = self.pool.class(w);
-                        self.op_u2(0xc0, c);
-                        self.unbox(to);
-                        Ok(())
-                    }
+                    (None, true) => self.unbox_any(to),
+                    (None, false) => Err(format!(
+                        "cannot convert argument type {} to {}",
+                        from.descriptor(),
+                        to.descriptor()
+                    )),
                 }
             }
             (false, false) => {
@@ -150,6 +153,24 @@ impl Asm<'_> {
                 Ok(())
             }
         }
+    }
+
+    /// A returned reference to primitive `to`: cast to the base wrapper and
+    /// call its `xxxValue()`, so a `Short` or `Long` result of a generic
+    /// method still yields an `int`.
+    fn unbox_any(&mut self, to: &FieldType) -> Result<(), String> {
+        let base = match to {
+            FieldType::Boolean => "java/lang/Boolean",
+            FieldType::Char => "java/lang/Character",
+            _ => "java/lang/Number",
+        };
+        let c = self.pool.class(base);
+        self.op_u2(0xc0, c);
+        let (_, method) = wrapper(to).ok_or("not primitive")?;
+        let desc = format!("(){}", to.descriptor());
+        let m = self.pool.method_ref(base, method, &desc);
+        self.op_u2(0xb6, m);
+        Ok(())
     }
 
     /// Primitive widening (JLS 5.1.2); narrowing, and anything involving
