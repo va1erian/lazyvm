@@ -1,0 +1,28 @@
+package lazy.internal;
+
+/** Services the VM provides to the class library. */
+public final class VM {
+    private VM() {
+    }
+
+    public static native String getProperty(String key);
+
+    public static native void exit(int status);
+
+    public static native void gc();
+
+    public static native long freeMemory();
+
+    public static native long totalMemory();
+
+    public static native long maxMemory();
+
+    public static native int availableProcessors();
+
+    /** Called by the VM when an exception escapes the main thread. */
+    static void uncaught(Throwable t) {
+        System.err.print("Exception in thread \"" + Thread.currentThread().getName() + "\" ");
+        t.printStackTrace(System.err);
+        System.err.flush();
+    }
+}

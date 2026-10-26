@@ -1,0 +1,25 @@
+Shape() describe=Rect[shape,null,0x0]
+Shape(String) rect
+Rect(int) w=5 h=3
+Rect[rect,rect-field,5x3] area=15.0
+Shape[rect]
+fields: rect-field 4 rect 0
+via Shape: rect 0 Rect[rect,rect-field,5x3]
+rect+shape-secret
+--
+Shape() describe=Rect[shape,null,0x0]
+Shape(String) rect
+Rect(int) w=2 h=3
+Square(int)
+Rect[rect,rect-field,2x3] area=6.5
+area 6.5
+--
+Counter(int) 10
+Counter()
+Sub() n=10
+Shape() describe=Anon[shape]
+Shape(String) anon
+Anon[anon] area=1.5
+s2.Inheritance$Shape
+s2.Inheritance$Square s2.Inheritance$Rect
+done

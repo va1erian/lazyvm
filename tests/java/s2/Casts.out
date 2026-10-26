@@ -1,0 +1,59 @@
+dog instanceof Dog = true
+dog instanceof Puppy = false
+puppy instanceof Dog = true
+puppy instanceof Pet = true
+cat instanceof Pet = false
+cat instanceof Animal = true
+rock instanceof Animal = false
+rock instanceof Object = true
+null instanceof Object = false
+null instanceof Dog = false
+Dog ok true
+Dog ok true
+CCE java.lang.ClassCastException
+Dog ok false
+Pet ok true
+CCE java.lang.ClassCastException
+Animal ok true
+CCE java.lang.ClassCastException
+CCE java.lang.ClassCastException
+CCE java.lang.ClassCastException
+String[] instanceof Object[] = true
+String[] instanceof String[] = true
+Object[] instanceof String[] = false
+int[] instanceof Object = true
+int[] instanceof Object[] = false
+int[] instanceof long[] = false
+Object[] instanceof Cloneable = true
+Object[] instanceof Serializable = true
+int[] instanceof Cloneable = true
+int[] instanceof Serializable = true
+Dog[][] instanceof Object[] = true
+Dog[][] instanceof Dog[] = false
+Dog[][] instanceof Dog[][] = true
+Dog[][] instanceof Animal[][] = true
+Puppy[] instanceof Dog[] = true
+Puppy[] instanceof Pet[] = true
+Puppy[] instanceof Cat[] = false
+Puppy[] instanceof Serializable = true
+String[] ok true
+CCE java.lang.ClassCastException
+Object[] ok true
+CCE java.lang.ClassCastException
+int[] ok true
+CCE java.lang.ClassCastException
+ArrayStoreException: java.lang.Integer
+fine
+ArrayStoreException Cat into Dog[]
+true
+null store ok
+5 instanceof Integer = true
+5 instanceof Number = true
+5 instanceof Comparable = true
+5 instanceof Long = false
+CCE java.lang.ClassCastException
+[I [Ljava.lang.String; [[Ls2.Casts$Dog;
+true false
+true false
+true
+done

@@ -1,0 +1,16 @@
+hello
+hello, world
+42
+-7
+3.5
+2.5
+true
+x
+tab	here
+quote " and backslash \
+unicode é 中
+
+no newline; 1
+done
+--- stderr ---
+to stderr

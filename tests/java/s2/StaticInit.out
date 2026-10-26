@@ -1,0 +1,49 @@
+main start
+CONST 42 const-string
+constants did not init Lazy
+  [Lazy.NONCONST init]
+  [Lazy.clinit]
+plain 5
+NONCONST 19
+-- subclass init
+  [Base.field init]
+  [Base.clinit]
+  [Derived.field init]
+  [Derived.clinit]
+  [Derived.dtouch]
+  [Base.touch]
+-- class literal does not init
+class literal ok true
+-- call
+  [ByCall.clinit]
+  [ByCall.m]
+  [ByCall.m]
+-- write
+  [ByWrite.clinit]
+v 3
+-- new
+  [ByNew.clinit]
+  [ByNew()]
+  [ByNew()]
+-- array does not init
+array length 2
+-- interface
+  [Iface.VALUE init]
+  [Impl.clinit]
+Impl made
+VALUE 16
+  [Impl2.clinit]
+Impl2 made, NV not read
+  [NoDefault.NV init]
+NV 17
+-- cycle
+  [First.a]
+  [Second.c]
+  [Second.clinit]
+  [First.clinit b=19]
+b 19
+-- failing initializer
+  [Fails.clinit]
+EIIE cause java.lang.IllegalStateException: clinit failed
+NoClassDefFoundError on retry
+done

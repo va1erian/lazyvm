@@ -35,8 +35,8 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | Stage | Name | State |
 |---|---|---|
 | S0 | Workspace and harness | done |
-| S1 | One class | not started |
-| S2 | Objects, exceptions, strings, GC | not started |
+| S1 | One class | done |
+| S2 | Objects, exceptions, strings, GC | done |
 | S3 | Class path, jars, launcher, IntelliJ | not started |
 | S4 | Language completeness: lambdas, annotations, reflection | not started |
 | S5 | Core library | not started |
@@ -93,7 +93,7 @@ Goal: `java -cp out Hello` prints `Hello` and runs integer loops, using only
 static methods in one class. There are no objects except arrays and
 `String` constants.
 
-- [ ] S1-01 Class file parser (JVMS 4.1-4.7): magic, versions 45-52, constant
+- [x] S1-01 Class file parser (JVMS 4.1-4.7): magic, versions 45-52, constant
       pool (all 14 Java 8 tags, with indices checked), fields, methods, `Code`,
       `LineNumberTable`, `SourceFile`, `StackMapTable` (kept raw), `BootstrapMethods`,
       `Signature`, `Exceptions`, and annotation attributes kept raw. Unknown
@@ -101,7 +101,7 @@ static methods in one class. There are no objects except arrays and
       value with the offset, and never panics.
       Files: `crates/classfile/src/*.rs`.
       Check: `cargo test -p classfile` with fixtures compiled by `javac.py`; a proptest feeding truncated and mutated fixtures never panics.
-- [ ] S1-02 Interpreter core: frames, the operand stack and locals as tagged
+- [x] S1-02 Interpreter core: frames, the operand stack and locals as tagged
       slots, and every opcode for `int`, `long`, `float`, `double`, locals,
       stack, comparison, branches, `tableswitch`/`lookupswitch`,
       `invokestatic` within the class, `ireturn`… Arithmetic follows JVMS 2.8
@@ -109,17 +109,18 @@ static methods in one class. There are no objects except arrays and
       saturation.
       Files: `crates/vm/src/interp/*.rs`.
       Check: `tests/java/s1/IntMath`, `LongMath`, `FloatMath`, `Switches`.
-- [ ] S1-03 Primitive arrays: `newarray`, `*aload`, `*astore`, `arraylength`,
+- [x] S1-03 Primitive arrays: `newarray`, `*aload`, `*astore`, `arraylength`,
       and bounds checks that print the oracle's message as an uncaught error
       (real exceptions arrive in S2).
       Check: `tests/java/s1/Arrays1`, `Sieve`.
-- [ ] S1-04 Bootstrap intrinsics: `System.out.println` for `int`, `long`,
+- [x] S1-04 Bootstrap intrinsics: `System.out.println` for `int`, `long`,
       `double`, `char`, `boolean` and `String` constants, and `String`
       concatenation as javac 8 emits it (`StringBuilder` calls), all
       intrinsified until S2 provides the real classes. This scaffolding is
-      deleted in S2-05.
+      deleted in S2-05. (Done differently: the first `lazyrt` slice landed
+      with S1, so no intrinsics were ever written.)
       Check: `tests/java/s1/Hello`, `Concat`.
-- [ ] S1-05 Launcher v0: `lazyvm -cp <dir> <Main> [args]`, plus
+- [x] S1-05 Launcher v0: `lazyvm -cp <dir> <Main> [args]`, plus
       `-Xtrace:interp` printing one line per executed instruction.
       Files: `crates/launcher/src/main.rs`.
       Check: `tests/java/s1/Args` passes on Windows; the musl binary runs `Hello` under Linux or WSL.
@@ -130,31 +131,31 @@ Gate: `tools/test.py --filter s1` all `PASS`.
 
 Goal: ordinary object-oriented single-threaded programs run, with a real `java.lang` core.
 
-- [ ] S2-01 Heap and object model: object header (class pointer, hash and lock
+- [x] S2-01 Heap and object model: object header (class pointer, hash and lock
       word), field layout per class, arrays of references, `Handle`/handle
       scopes, and a mark-compact collector with roots from frames, statics,
       handles and interned strings. `-Xmx` sizing applies, and running out of
       memory raises `OutOfMemoryError`.
       Files: `crates/vm/src/heap/*.rs`.
       Check: `cargo test -p vm heap::` (a stress test allocating 100x the heap); `tests/java/s2/GcChurn`.
-- [ ] S2-02 Class loading and linking for one class path (JVMS 5): loading,
+- [x] S2-02 Class loading and linking for one class path (JVMS 5): loading,
       superclass and interface resolution, preparation, `<clinit>` with the
       JVMS 5.5 initialization rules (single-threaded for now), and field and
       method resolution, including the default-method selection of JVMS 5.4.3.3.
       Check: `tests/java/s2/Inheritance`, `Interfaces`, `DefaultMethods`, `StaticInit`.
-- [ ] S2-03 Invocation and objects: `new`, `getfield`/`putfield`,
+- [x] S2-03 Invocation and objects: `new`, `getfield`/`putfield`,
       `invokevirtual`, `invokespecial`, `invokeinterface` (vtables and itables),
       `checkcast`, `instanceof`, `anewarray`, `multianewarray`, `athrow`,
       `monitorenter`/`monitorexit` (no-op until S6), and the null and bounds
       checks.
       Check: `tests/java/s2/Dispatch`, `Casts`, `MultiArrays`.
-- [ ] S2-04 Exceptions: exception tables, unwinding, `finally`, the VM's own
+- [x] S2-04 Exceptions: exception tables, unwinding, `finally`, the VM's own
       exceptions (`NullPointerException`, `ArithmeticException`,
       `ArrayIndexOutOfBounds…`, `ClassCast…`, `NegativeArraySize…`),
       `Throwable.printStackTrace` with file:line from `LineNumberTable`, and
       uncaught exceptions printed in HotSpot's format with exit code 1.
       Check: `tests/java/s2/Exceptions`, `Finally`, `StackTraces` (goldens compare the trace lines).
-- [ ] S2-05 `lazyrt` bootstrap: `tools/lazyrt.py` builds `java/lazyrt` against
+- [x] S2-05 `lazyrt` bootstrap: `tools/lazyrt.py` builds `java/lazyrt` against
       itself into `dist/lazyrt.jar`. The first classes are `Object`, `String`
       (UTF-16 `char[]`, `hashCode`, `equals`, `intern`), `StringBuilder`,
       `System` (`out`, `err`, `arraycopy`, `currentTimeMillis`, `nanoTime`,
@@ -163,7 +164,7 @@ Goal: ordinary object-oriented single-threaded programs run, with a real `java.l
       the throwable hierarchy. The S1 intrinsics are deleted.
       Files: `java/lazyrt/src/java/lang/*.java`, `crates/natives/src/java_lang/*.rs`.
       Check: all S1 and S2 tests still pass with no intrinsics; `tests/java/lang/StringBasics`, `Boxing`, `MathFns`.
-- [ ] S2-06 `Object` natives: `hashCode` (identity, stable across GC),
+- [x] S2-06 `Object` natives: `hashCode` (identity, stable across GC),
       `getClass`, `clone` (arrays and `Cloneable`), `toString`, plus string
       constant interning.
       Check: `tests/java/lang/Identity`, `CloneArrays`.

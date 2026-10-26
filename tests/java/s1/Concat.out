@@ -1,0 +1,39 @@
+byte -5
+short 1234
+char q
+int -42
+long 1234567890123
+float 3.25
+double -0.5
+boolean true false
+null string null
+null object null
+nullnull
+qq
+226
+114
+q1
+r
+195c
+cab
+3345
+x3
+98
+b
+ab
+max 2147483647 min -2147483648
+lmax 9223372036854775807 lmin -9223372036854775808
+neg zero -0.0 -0.0
+nan NaN Infinity
+01234
+01234z1.5nulltrue
+aaa
+-5 1234 q -42 1234567890123 3.25 -0.5 true null null str obj
+60
+98b1.0100
+>>0010.1b89<<
+xyzyz
+abc-1def
+LLlo
+xyz3.0true
+done

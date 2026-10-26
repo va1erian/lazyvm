@@ -1,0 +1,31 @@
+(1,2) (1,2) (2,1)
+a.equals(b) true
+a == b false
+a.equals(c) false
+a.equals(null) false
+a.equals(string) false
+hash 33 33 63
+Objects.equals true false true false false
+Objects.hashCode 33 0
+Objects.toString (1,2) null dflt
+Named{x,1} Named{null,1}
+true false true
+Objects.hash(1,2,3) = 30817
+Objects.hash() = 1
+Objects.hash(null) = 0
+Objects.hash("x",1) = 4682
+n1.hashCode == n2.hashCode true
+n3.hashCode 962
+Plain equals self true
+Plain equals other false
+Plain hash stable true
+Plain toString shape true
+W<(1,2)> W<null> W<W<s>>
+elem (1,2) false true
+elem s false true
+elem 3 false true
+elem null true false
+requireNonNull: null
+requireNonNull: must not be null
+fine
+done

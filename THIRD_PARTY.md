@@ -6,3 +6,4 @@ license outside the allowed list (`docs/decisions.md` D2).
 
 | Crate | License | Used by | Why |
 |---|---|---|---|
+| `libm` | MIT | natives | `StrictMath`: a port of musl libm (fdlibm lineage), identical results on Windows and LazyOS |

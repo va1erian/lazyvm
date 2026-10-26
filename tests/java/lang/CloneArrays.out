@@ -1,0 +1,17 @@
+2 20 true 3 [I
+9223372036854775807
+1.5
+true false
+3 x 1 null true
+shared rows: 99 true
+independent slots: 2 1
+deep copy: 4 -1
+[[I
+[Ljava.lang.String; true
+Point(5,100) Point(6,100) true true true
+Point(1,1) deep | Point(1,7) copy lang.CloneArrays$Deep
+lang.CloneArrays$Deep
+CloneNotSupportedException java.lang.CloneNotSupportedException lang.CloneArrays$NotCloneable
+CloneNotSupportedException again
+true true
+done

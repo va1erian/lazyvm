@@ -1,0 +1,92 @@
+Integer 127 = true
+Integer 128 = false
+Integer -128 = true
+Integer -129 = false
+Integer equals 128 = true
+valueOf same = true
+new Integer differs = false
+Long 127 = true
+Long 128 = false
+Long equals Integer = false true
+Short 100 = true
+Short 1000 = false
+Byte any = true
+Character a = true
+Character 0x1234 = false
+Character 127/128 = true false
+Boolean = true true false false
+Double identity = false
+Double equals = true true false
+unboxing null: NullPointerException
+boxed sum = 10
+boxed class = java.lang.Integer
+char box class = java.lang.Character java.lang.Float
+unbox widen = 127
+parseInt("123",10) = 123
+parseInt("-123",10) = -123
+parseInt("+7",10) = 7
+parseInt("ff",16) = 255
+parseInt("-FF",16) = -255
+parseInt("1010",2) = 10
+parseInt("zz",36) = 1295
+parseInt("2147483647",10) = 2147483647
+parseInt("2147483648",10) NFE: For input string: "2147483648"
+parseInt("-2147483648",10) = -2147483648
+parseInt("abc",10) NFE: For input string: "abc"
+parseInt("",10) NFE: For input string: ""
+parseInt("12 ",10) NFE: For input string: "12 "
+parseInt("-",10) NFE: For input string: "-"
+parseInt("12",2) NFE
+parseInt("99",8) NFE
+parseLong("9223372036854775807",10) = 9223372036854775807
+parseLong("-9223372036854775808",10) = -9223372036854775808
+parseLong("9223372036854775808",10) NFE: For input string: "9223372036854775808"
+parseLong("ff",16) = 255
+parseLong("12L",10) NFE: For input string: "12L"
+parseLong("xyz",10) NFE: For input string: "xyz"
+toHexString(255) = ff
+toHexString(-1) = ffffffff
+toHexString(MIN) = 80000000
+toBinaryString(5) = 101
+toBinaryString(-8) = 11111111111111111111111111111000
+toOctalString(64) = 100
+toOctalString(-1) = 37777777777
+Long.toHexString(-1) = ffffffffffffffff
+Long.toBinaryString(-2) = 1111111111111111111111111111111111111111111111111111111111111110
+Long.toOctalString(-1) = 1777777777777777777777
+Integer.toString(255,16) = ff
+Integer.toString(-255,2) = -11111111
+Integer.toString(35,36) = z
+MIN toString = -2147483648 -9223372036854775808
+MIN toString radix = -80000000 -10000000000000000000000000000000
+MAX = 2147483647 9223372036854775807 -32768 127
+compare = -1 1 0 -1 -1
+signum = -1 0 1
+bitCount = 0 8 32 64
+reverse = 80000000 1e6a2c48
+reverseBytes = 78563412
+highestOneBit = 64 0 -2147483648
+lowestOneBit = 32 0
+nlz = 31 32 0 63
+ntz = 3 32 64
+rotate = 3 80000000
+hashCodes = -7 1 1231 1237 97 1073217536 1069547520
+isDigit = true false
+isLetter = true true false
+isLetterOrDigit = false true
+isUpper/isLower = true false true
+isWhitespace = true true false
+toUpperCase = AZ1
+toLowerCase = az!
+digit = 7 15 -1 35
+forDigit = b 5
+getNumericValue = 8 10
+Double.compare = 1 -1 -1 1 0
+Double.valueOf = 1.5
+Double.parseDouble = 1000.0 -0.0025 7.0 NaN -Infinity 0.5
+Float.parseFloat = 3.25 100.0
+parseDouble(abc): For input string: "abc"
+bits = 3ff0000000000000 3f800000 2.0 3.1415927
+MIN_VALUE etc = 4.9E-324 3.4028235E38 true
+intValue etc = 3 44 705032704 7.0
+done
