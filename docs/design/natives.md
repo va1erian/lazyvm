@@ -112,3 +112,9 @@ overloads are Java and call these.
 
 Bounds are checked in Java before the native is called; the VM checks them
 again and throws `IndexOutOfBoundsException` rather than trusting them.
+
+## Known differences from Java 8
+
+- A `NoClassDefFoundError` for a class missing from the class path has no
+  cause; Java 8's carries a `ClassNotFoundException` from its class loader.
+  Tests print only the error's class and message.

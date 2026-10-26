@@ -119,8 +119,9 @@ public final class Constructor<T> extends Executable {
         if (clazz.isEnum()) {
             throw new IllegalArgumentException("Cannot reflectively create enum objects");
         }
-        Object[] converted = Method.convertArguments(parameterTypes, initargs);
+        // Java 8 initializes the class before it looks at the arguments.
         Convert.initialize(clazz);
+        Object[] converted = Method.convertArguments(parameterTypes, initargs);
         try {
             return (T) newInstance0(this, converted);
         } catch (Throwable t) {

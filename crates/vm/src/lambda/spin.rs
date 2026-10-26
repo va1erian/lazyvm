@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use classfile::descriptor::{FieldType, parse_method};
+use classfile::descriptor::{FieldType, MethodDescriptor, parse_method};
 use classfile::writer::{ClassDef, FieldDef, MethodDef, Pool, write};
 use classfile::{ACC_FINAL, ACC_PRIVATE, ACC_PUBLIC, ACC_STATIC, ACC_SUPER, ACC_SYNTHETIC};
 
@@ -186,6 +186,30 @@ fn singleton_factory(spec: &Spec, pool: &mut Pool) -> MethodDef {
     }
 }
 
+/// The implementation's parameters as the call passes them: the receiver
+/// first for instance methods, then the declared parameters.
+pub(super) fn impl_params(spec: &Spec, target: &MethodDescriptor) -> Vec<FieldType> {
+    let has_receiver = matches!(
+        spec.impl_kind,
+        REF_INVOKE_VIRTUAL | REF_INVOKE_SPECIAL | REF_INVOKE_INTERFACE
+    );
+    let mut params = Vec::with_capacity(target.params.len() + 1);
+    if has_receiver {
+        params.push(FieldType::Object(Arc::clone(&spec.impl_ref.class)));
+    }
+    params.extend(target.params.iter().cloned());
+    params
+}
+
+/// The type the implementation produces: the new object for a constructor.
+pub(super) fn impl_result(spec: &Spec, target: &MethodDescriptor) -> Option<FieldType> {
+    if spec.impl_kind == REF_NEW_INVOKE_SPECIAL {
+        Some(FieldType::Object(Arc::clone(&spec.impl_ref.class)))
+    } else {
+        target.ret.clone()
+    }
+}
+
 /// Captured values reach the implementation unconverted (only a reference
 /// may be cast), as `LambdaMetafactory` requires; anything else is a
 /// linkage error.
@@ -207,16 +231,7 @@ fn check_captured(captured: &FieldType, param: &FieldType) -> Result<(), String>
 fn forward(spec: &Spec, desc: &str, pool: &mut Pool) -> Result<MethodDef, String> {
     let entry = parse_method(desc)?;
     let target = parse_method(&spec.impl_ref.descriptor)?;
-    let owner = FieldType::Object(Arc::clone(&spec.impl_ref.class));
-    let has_receiver = matches!(
-        spec.impl_kind,
-        REF_INVOKE_VIRTUAL | REF_INVOKE_SPECIAL | REF_INVOKE_INTERFACE
-    );
-    let mut params: Vec<FieldType> = Vec::new();
-    if has_receiver {
-        params.push(owner.clone());
-    }
-    params.extend(target.params.iter().cloned());
+    let params = impl_params(spec, &target);
     let (n, m) = (spec.captured.len(), entry.params.len());
     if params.len() != n + m || spec.instantiated.params.len() != m {
         return Err(format!(
@@ -250,18 +265,21 @@ fn forward(spec: &Spec, desc: &str, pool: &mut Pool) -> Result<MethodDef, String
         a.adapt(&spec.instantiated.params[j], &params[n + j], false)?;
     }
     invoke(&mut a, spec, &target)?;
-    let produced = if spec.impl_kind == REF_NEW_INVOKE_SPECIAL {
-        Some(owner)
-    } else {
-        target.ret.clone()
-    };
+    let produced = impl_result(spec, &target);
     match (&entry.ret, &produced) {
         (None, Some(t)) => a.pop(t),
         (None, None) => {}
         (Some(r), Some(t)) => {
+            // A reference result is not cast to the instantiated type (Java
+            // 8 does not, so heap pollution passes through); a primitive one
+            // is converted through it.
             let middle = spec.instantiated.ret.clone().unwrap_or_else(|| r.clone());
-            a.adapt(t, &middle, true)?;
-            a.adapt(&middle, r, true)?;
+            if middle.is_reference() {
+                a.adapt(t, r, true)?;
+            } else {
+                a.adapt(t, &middle, true)?;
+                a.adapt(&middle, r, true)?;
+            }
         }
         (Some(_), None) => return Err(format!("{} returns void", spec.impl_ref.name)),
     }

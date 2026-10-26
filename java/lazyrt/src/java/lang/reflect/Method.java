@@ -151,10 +151,11 @@ public final class Method extends Executable {
                 throw new IllegalArgumentException("object is not an instance of declaring class");
             }
         }
-        Object[] converted = convertArguments(parameterTypes, args);
+        // Java 8 initializes the class before it looks at the arguments.
         if (Modifier.isStatic(modifiers)) {
             Convert.initialize(clazz);
         }
+        Object[] converted = convertArguments(parameterTypes, args);
         try {
             return invoke0(this, obj, converted);
         } catch (Throwable t) {

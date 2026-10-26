@@ -8,6 +8,7 @@
 
 mod annotation;
 mod asm;
+mod check;
 mod spin;
 
 use std::sync::Arc;
@@ -46,10 +47,25 @@ impl Vm {
     /// A call site that cannot be linked: `BootstrapMethodError` caused by a
     /// `LambdaConversionException`, as Java 8 reports it.
     fn link_error(&mut self, msg: &str) -> VmError {
-        let cause = match self.throw_new("java/lang/invoke/LambdaConversionException", Some(msg)) {
-            Ok(c) => c,
-            Err(e) => return e,
-        };
+        match self.throw_new("java/lang/invoke/LambdaConversionException", Some(msg)) {
+            Ok(cause) => self.bootstrap_error(msg, cause),
+            Err(e) => e,
+        }
+    }
+
+    /// Wraps a failure of linking (a class that cannot be loaded, say) in
+    /// `BootstrapMethodError`, as Java 8 does.
+    fn wrap_link_failure(&mut self, e: VmError) -> VmError {
+        if !e.is_catchable() {
+            return e;
+        }
+        match self.materialize(e) {
+            Ok(cause) => self.bootstrap_error("call site initialization exception", cause),
+            Err(e) => e,
+        }
+    }
+
+    fn bootstrap_error(&mut self, msg: &str, cause: crate::Ref) -> VmError {
         let built = self.with_root(cause, |vm| -> VmResult<crate::Ref> {
             let class = vm.load_class("java/lang/BootstrapMethodError")?;
             vm.initialize(class)?;
@@ -65,14 +81,12 @@ impl Vm {
                 })?;
             let text = vm.new_string(msg)?;
             let obj = vm.new_object(class)?;
-            vm.invoke(
-                ctor,
-                &[
-                    crate::Value::Ref(Some(obj)),
-                    crate::Value::Ref(Some(text)),
-                    crate::Value::Ref(Some(cause)),
-                ],
-            )?;
+            let args = [
+                crate::Value::Ref(Some(obj)),
+                crate::Value::Ref(Some(text)),
+                crate::Value::Ref(Some(cause)),
+            ];
+            vm.invoke(ctor, &args)?;
             Ok(obj)
         });
         match built {
@@ -114,9 +128,22 @@ impl Vm {
             Ok(l) => l,
             Err(msg) => return Err(self.link_error(&msg)),
         };
+        match self.check_lambda_types(&spec) {
+            Ok(Ok(())) => {}
+            Ok(Err(msg)) => return Err(self.link_error(&msg)),
+            Err(e) => return Err(self.wrap_link_failure(e)),
+        }
         let boot = self.class(caller).from_boot;
-        let class = self.define_class(&spec.class_name, &bytes, boot)?;
+        let class = match self.define_class(&spec.class_name, &bytes, boot) {
+            Ok(c) => c,
+            Err(e) => return Err(self.wrap_link_failure(e)),
+        };
         self.initialize(class)?;
+        // Initializing the interface can run code that links this same site;
+        // the first link to finish wins, as in Java 8.
+        if let Some(&m) = self.lambda_sites.get(&key) {
+            return Ok(m);
+        }
         let factory_desc = format!(
             "({}){}",
             spec.captured
