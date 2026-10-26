@@ -10,6 +10,7 @@ Java 8 class files live here and nowhere else. The javac comes from
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import tempfile
@@ -31,8 +32,7 @@ def compile(sources: list[Path], out: Path, bootclasspath: Path | None = None,
     if bootclasspath is not None:
         cmd += ["-bootclasspath", str(bootclasspath)]
     if classpath:
-        cmd += ["-cp", ";".join(map(str, classpath)) if sys.platform == "win32"
-                else ":".join(map(str, classpath))]
+        cmd += ["-cp", os.pathsep.join(map(str, classpath))]
     if sourcepath is not None:
         cmd += ["-sourcepath", str(sourcepath)]
     # An argument file keeps long source lists under the Windows command limit.

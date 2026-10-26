@@ -19,7 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import testlib  # noqa: E402
 from common import die, find_tool  # noqa: E402
 
-ORACLE_FLAGS = ["-XX:-ShowCodeDetailsInExceptionMessages", "-Xshare:auto",
+# IgnoreUnrecognizedVMOptions lets JDK 8, which has no helpful NPE messages, accept the flag.
+ORACLE_FLAGS = ["-XX:+IgnoreUnrecognizedVMOptions", "-XX:-ShowCodeDetailsInExceptionMessages",
                 "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8"]
 
 
@@ -38,6 +39,8 @@ def main() -> None:
     java = find_tool("LAZYVM_ORACLE_JAVA", "java")
     for test in tests:
         result = testlib.run([java, *ORACLE_FLAGS], test)
+        if result.startswith(testlib.TIMEOUT_MARK):
+            die(f"{test.name} timed out on the oracle; not blessed")
         test.golden.write_text(result, encoding="utf-8", newline="\n")
         print(f"blessed {test.name}")
 

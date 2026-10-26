@@ -22,9 +22,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import javac  # noqa: E402
 import lazyrt  # noqa: E402
-from common import LAZYRT_CLASSES, TESTS_CLASSES, TESTS_SRC, java_sources  # noqa: E402
+from common import LAZYRT_CLASSES, TESTS_CLASSES, TESTS_SRC, die, java_sources  # noqa: E402
 
 DEFAULT_TIMEOUT = 60
+TIMEOUT_MARK = "--- timeout"
 
 
 @dataclass
@@ -50,7 +51,9 @@ class Test:
 
 
 def parse_test(source: Path) -> Test:
-    rel = source.relative_to(TESTS_SRC).with_suffix("")
+    if not source.is_relative_to(TESTS_SRC):
+        die(f"{source} is not under {TESTS_SRC}")
+    rel =source.relative_to(TESTS_SRC).with_suffix("")
     test = Test(source, ".".join(rel.parts))
     for line in source.read_text(encoding="utf-8").splitlines():
         if not line.startswith("//"):
@@ -61,6 +64,8 @@ def parse_test(source: Path) -> Test:
         elif key == "VMARGS":
             test.vm_args = value.split()
         elif key == "TIMEOUT":
+            if not value.strip().isdigit():
+                die(f"{source}: TIMEOUT must be whole seconds, got {value.strip()!r}")
             test.timeout = int(value)
     return test
 
@@ -83,13 +88,21 @@ def build(tests: list[Test], rebuild_lazyrt: bool = True) -> None:
                   bootclasspath=LAZYRT_CLASSES, sourcepath=TESTS_SRC)
 
 
+def close_line(text: str) -> str:
+    """End `text` on a line boundary so the next marker starts its own line."""
+    if not text or text.endswith("\n"):
+        return text
+    return text + "\n--- no newline at end ---\n"
+
+
 def transcript(stdout: str, stderr: str, code: int) -> str:
     """The comparable result of one run, with line endings normalized."""
     out = stdout.replace("\r\n", "\n")
     err = stderr.replace("\r\n", "\n")
     if err:
-        out += "--- stderr ---\n" + err
+        out = close_line(out) + "--- stderr ---\n" + err
     if code != 0:
+        out = close_line(out)
         out += f"--- exit {code} ---\n"
     return out
 
@@ -101,6 +114,6 @@ def run(cmd: list[str], test: Test) -> str:
                                test.main_class, *test.args],
                               capture_output=True, timeout=test.timeout)
     except subprocess.TimeoutExpired:
-        return f"--- timeout after {test.timeout} s ---\n"
+        return f"{TIMEOUT_MARK} after {test.timeout} s ---\n"
     return transcript(done.stdout.decode("utf-8", "replace"),
                       done.stderr.decode("utf-8", "replace"), done.returncode)
