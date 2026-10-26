@@ -37,7 +37,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S0 | Workspace and harness | done |
 | S1 | One class | done |
 | S2 | Objects, exceptions, strings, GC | done |
-| S3 | Class path, jars, launcher, IntelliJ | not started |
+| S3 | Class path, jars, launcher, IntelliJ | in progress |
 | S4 | Language completeness: lambdas, annotations, reflection | not started |
 | S5 | Core library | not started |
 | S6 | Threads, concurrency, `CompletionStage`, the event loop | not started |
@@ -176,23 +176,28 @@ Gate: a 300-line text-adventure test (`tests/java/s2/Adventure`) passes on Windo
 Goal: an app built by IntelliJ runs from the Run button on Windows, and the
 same jar runs on LazyOS.
 
-- [ ] S3-01 Class path: directories and jars (zip with stored and deflate
+- [x] S3-01 Class path: directories and jars (zip with stored and deflate
       entries, via the `miniz_oxide` crate), boot class path = `lazyrt.jar`,
       application class path from `-cp`, and `Class.getResourceAsStream` /
       `ClassLoader.getSystemResource`.
       Check: `tests/java/s3/Resources` (run from a jar).
-- [ ] S3-02 `-jar`: `META-INF/MANIFEST.MF` `Main-Class` and `Class-Path`.
+- [x] S3-02 `-jar`: `META-INF/MANIFEST.MF` `Main-Class` and `Class-Path`.
       Check: `tools/test.py --jar` runs every S1-S3 test from a jar.
-- [ ] S3-03 Launcher options as IntelliJ passes them
+- [x] S3-03 Launcher options as IntelliJ passes them
       ([`decisions.md`](decisions.md) D3): `-D` into `System.getProperty`,
       `-Xmx`/`-Xss`, `-verbose:class`, `-version` (prints `lazyvm` plus the
       class library version and never claims "java"), and the IntelliJ extras
       ignored.
       Check: `tests/launcher/intellij_cmdline.txt` (a real captured IntelliJ command line) runs `Hello`.
+      (Done as a launcher unit test with IntelliJ's documented options until
+      the owner captures a real command line; `tools/launcher_test.py`
+      covers `-jar`, manifests and jar errors against Java 8.)
 - [ ] S3-04 Fake JDK home: `tools/sdk.py` builds `dist/lazyvm-sdk/`
       ([`decisions.md`](decisions.md) D3).
       Check: `docs/intellij.md` walks through registering the SDK and running the template; an owner-run manual check is recorded in the PR with a screenshot (agents cannot drive IntelliJ).
-- [ ] S3-05 App template: `templates/app/` with an IntelliJ project, a
+      (Agent part done: `tools/sdk.py`, the launcher's IDE options and
+      `-version`, `docs/intellij.md`. Waiting on the owner's IDE check.)
+- [x] S3-05 App template: `templates/app/` with an IntelliJ project, a
       Gradle file and a `Main.java`.
       Check: `gradle -p templates/app jar` produces a jar that `lazyvm -jar` runs.
 - [ ] S3-06 LazyOS run: `lazyvm-lazyos` platform v0 (console, files, clock)
