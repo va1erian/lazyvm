@@ -173,22 +173,26 @@ Needs: S12 go.
 ## S14. Proposed: javac 8 on LazyVM
 
 Goal: a LazyOS machine compiles Java sources with javac 8 running on LazyVM.
-Proposed in [`compiler.md`](compiler.md); not confirmed. It needs the D6
-proposal for the `javax` compiler packages and `java.util.regex`.
-Needs: S8, S11.
+Proposed in [`compiler.md`](compiler.md); the owner has not confirmed it. It
+needs the D6 "Compiler support" row confirmed.
 
-- [ ] S14-01 Run javac 8 (`tools.jar` from a local JDK 8, given by
-      `LAZYVM_JAVAC8_TOOLS`; this repo does not carry it) on LazyVM with
-      `-bootclasspath dist/lazyrt.jar`, and fill what it is missing in `lazyrt`,
-      from the Javadoc. First rerun the `compiler.md` probe on the whole
-      `tests/java` tree on the oracle JVM; if javac uses an internal class, stop
+- [ ] S14-01 Run javac 8 on LazyVM and fill what it is missing in `lazyrt`,
+      from the Javadoc. `tools.jar` comes from a local JDK 8 named by
+      `LAZYVM_JAVAC8_TOOLS`; this repo does not carry it, and
+      `tools/lazyos_test.py` stages it into the test image only. Both runs use
+      `-bootclasspath dist/lazyrt.jar -cp dist/lazy-api.jar`. First rerun the
+      [`compiler.md`](compiler.md) probe on the whole `tests` tree on the
+      oracle JVM; if javac loads an internal class beyond the baseline, stop
       and report.
-      Files: `java/lazyrt/javax/{lang/model,tools,annotation/processing}`,
-      `java/lazyrt/java/util/regex`, `tools/javac_on_lazyvm.py`.
-      Check: `tools/javac_on_lazyvm.py` compiles every `tests/java` source with javac 8 on LazyVM and on the oracle JVM, and the class files are byte-identical, on both.
+      Files: `java/lazyrt/src/javax/{lang/model,tools,annotation/processing}`,
+      `java/lazyrt/src/java/{util/zip,util/jar,text,net}` as far as the
+      probe shows, `tools/javac_on_lazyvm.py`.
+      Check: `tools/javac_on_lazyvm.py` makes reference class files for every `tests` source with javac 8 on the oracle JVM (Windows), then compiles the same sources with javac 8 on LazyVM, on Windows and on LazyOS through `tools/lazyos_test.py`, and the class files are byte-identical to the reference.
+      Needs: S8, S11.
 
-Gate: on LazyOS, `lazyvm -cp tools.jar com.sun.tools.javac.Main` compiles
-`samples/notes` and the result runs, with a screenshot.
+Gate: on LazyOS, `lazyvm -cp tools.jar com.sun.tools.javac.Main
+-bootclasspath lazyrt.jar -d out Showcase.java` compiles
+`tests/java/s4/Showcase`, and `lazyvm -cp out Showcase` prints its golden.
 
 ## LazyOS-side work items
 

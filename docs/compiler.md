@@ -104,11 +104,13 @@ same JVM were then subtracted.
 | Loaded from | Classes |
 |---|---|
 | `tools.jar` (javac itself) | 884 |
+| `rt.jar` and locale data, also loaded by the hello baseline | 414 |
 | `rt.jar` and locale data, beyond the baseline | 327 |
 | total | 1,625 |
 
-Every `sun.*` class in the 327 is explained by the class library's own
-implementation, not by a direct call from javac:
+No `sun.*` class in the 327 points at a direct call from javac. The likely
+cause of each, inferred from the load order only (not checked, and the S14
+rerun is the real test):
 
 - `sun.misc.URLClassPath`, `JarIndex`, `FileURLMapper`,
   `sun.security.util.SignatureFileVerifier`: the application class loader
@@ -141,13 +143,12 @@ The SE 8 API it used beyond the baseline, by area:
 
 - Subtracting the baseline also hides any internal class the JVM loads at
   startup (`sun.misc.Unsafe`, `sun.misc.SharedSecrets` and the like). A direct
-  use of one by javac would not show here. `jdeps -jdkinternals tools.jar`
-  would settle it, but it analyses the JDK's own class files, which is close
-  to what rule 1 forbids, so it is the owner's call. The alternative is to
-  wait until LazyVM runs the jar: an unknown class is then a
+  use of one by javac would not show here. Tools that analyse the JDK's own
+  class files (`jdeps` on `tools.jar` or `rt.jar`) are out under shared
+  rule 1. The test is running the jar on LazyVM: an unknown class is then a
   `NoClassDefFoundError` naming it.
 - One source file, no annotation processors, no `-sourcepath`, no
-  `-bootclasspath`. The S14 item reruns the probe on the whole test tree with
+  `-bootclasspath`. S14-01 reruns the probe on the whole test tree with
   `-bootclasspath dist/lazyrt.jar`, which is how javac would run on LazyVM.
 
 ## 4. Recommendation
@@ -162,13 +163,17 @@ The SE 8 API it used beyond the baseline, by area:
 
 ## 5. Class library changes B needs
 
-These are proposed in [`decisions.md`](decisions.md) D6 and are not confirmed:
+The "Compiler support" row of [`decisions.md`](decisions.md) D6 proposes
+these, as far as javac 8 uses them. It is not confirmed.
 
 - `javax.lang.model` (all subpackages), `javax.tools` and
-  `javax.annotation.processing`, to the extent javac 8 uses them. All three
-  are in the Java SE 8 API, so shared rule 2 allows them; D6's "other javax.*"
-  row is what excludes them today.
-- `java.util.regex`, which no stage of D6 lists yet.
+  `javax.annotation.processing`. All three are in the Java SE 8 API, so
+  shared rule 2 allows them; D6's "other javax.*" in the "Out" row is what
+  excludes them today.
+- `java.util.zip` and `java.util.jar` as public API: javac opens the
+  `-bootclasspath` jar through them. S3-01 reads jars inside the VM, which
+  javac cannot use.
 - `ResourceBundle` with locale fallback, `ServiceLoader`, `MessageFormat`,
-  `URLClassLoader` and `java.lang.Package`, as far as the probe shows javac
-  uses them.
+  `URLClassLoader` and `java.lang.Package`.
+
+`java.util.regex` is needed too, but S5-03 already plans it.

@@ -48,7 +48,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S11 | Streams, `java.time`, logging, JDWP | not started |
 | S12 | Explore: AWT on xui | not started |
 | S13 | Explore: Swing and media | not started |
-| S14 | Proposed: javac 8 on LazyVM | proposed |
+| S14 | Proposed: javac 8 on LazyVM | not started |
 
 ## S0. Workspace and harness
 
