@@ -100,4 +100,5 @@ addAll: true false [1, 2, 3] false true
 addAll null: !java.lang.NullPointerException
 disjoint: true false false true true
 reverseOrder: [c, b, a] 1 -1 1 -1
+singletonList sort: [1]
 done

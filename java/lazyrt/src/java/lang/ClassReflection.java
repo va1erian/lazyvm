@@ -6,7 +6,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import lazy.internal.Buf;
+import java.util.ArrayList;
 
 /** The member lookups and inheritance walks behind Class's reflection methods. */
 final class ClassReflection {
@@ -16,13 +16,13 @@ final class ClassReflection {
     // ---- public members, including inherited ones ----------------------
 
     static Method[] publicMethods(Class<?> c) {
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         gatherMethods(c, out, true);
-        return (Method[]) out.toArray(Method.class);
+        return out.toArray(new Method[0]);
     }
 
     /** Collects c's public methods, then those of its superclass chain and superinterfaces. */
-    private static void gatherMethods(Class<?> c, Buf out, boolean top) {
+    private static void gatherMethods(Class<?> c, ArrayList<Object> out, boolean top) {
         Method[] declared = c.declaredMethods(true);
         for (int i = 0; i < declared.length; i++) {
             // Static interface methods are not inherited (Class.getMethods Javadoc).
@@ -41,7 +41,7 @@ final class ClassReflection {
     }
 
     /** Adds m unless a method with the same signature and return type is there already (a more specific owner wins). */
-    private static void addMethod(Buf out, Method m) {
+    private static void addMethod(ArrayList<Object> out, Method m) {
         for (int i = 0; i < out.size(); i++) {
             Method e = (Method) out.get(i);
             if (sameSignature(e, m.getName(), m.getParameterTypes()) && e.getReturnType() == m.getReturnType()) {
@@ -56,12 +56,12 @@ final class ClassReflection {
     }
 
     static Field[] publicFields(Class<?> c) {
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         gatherFields(c, out);
-        return (Field[]) out.toArray(Field.class);
+        return out.toArray(new Field[0]);
     }
 
-    private static void gatherFields(Class<?> c, Buf out) {
+    private static void gatherFields(Class<?> c, ArrayList<Object> out) {
         Field[] declared = c.declaredFields(true);
         for (int i = 0; i < declared.length; i++) {
             out.add(declared[i]);
@@ -188,7 +188,7 @@ final class ClassReflection {
     /** Declared annotations plus the @Inherited ones of the superclass, inherited ones listed first. */
     static Annotation[] withInherited(Class<?> c, Annotation[] declared) {
         Class<?> sup = c.getSuperclass();
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         if (sup != null) {
             Annotation[] parent = sup.getAnnotations();
             for (int i = 0; i < parent.length; i++) {
@@ -205,10 +205,10 @@ final class ClassReflection {
                 out.add(declared[i]);
             }
         }
-        return (Annotation[]) out.toArray(Annotation.class);
+        return out.toArray(new Annotation[0]);
     }
 
-    private static int indexOfType(Buf list, Class<?> type) {
+    private static int indexOfType(ArrayList<Object> list, Class<?> type) {
         for (int i = 0; i < list.size(); i++) {
             if (((Annotation) list.get(i)).annotationType() == type) {
                 return i;

@@ -37,4 +37,5 @@ then one more: [0, 35, 5, 1000, 40, 10, 45, 15, 50, 20, 55, 25, 60, 30]
 13 merge, then a compute that adds nothing: [0, 35, 5, 40, 10, 45, 15, 50, 20, 55, 25, 60, 30]
 then putIfAbsent of a present key: [0, 35, 5, 40, 10, 45, 15, 50, 20, 55, 25, 60, 30]
 then a put: [0, 35, 5, 40, 10, 45, 15, 2000, 50, 20, 55, 25, 60, 30]
+doubled threshold 0: [0, 128, 1, 129]
 done

@@ -127,6 +127,8 @@ public class Lists {
         t("self", () -> { List<Object> s = new ArrayList<>(); s.add(s); s.add(1); return s; });
         t("nulls", () -> { List<Object> s = new ArrayList<>(); s.add(null); s.add(null); return s + " " + s.indexOf(null) + " " + s.lastIndexOf(null) + " " + s.remove(null) + " " + s; });
         t("growth", () -> { List<Integer> g = new ArrayList<>(); for (int i = 0; i < 1000; i++) g.add(i); long s = 0; for (int x : g) s += x; return g.size() + " " + s; });
+        t("AbstractList listIterator bad", () -> new AbstractList<Integer>() { public Integer get(int i) { return i; } public int size() { return 3; } }.listIterator(5));
+        t("HashSet toArray bad type", () -> new HashSet<Integer>(list(1)).toArray(new String[0]));
         System.out.println("done");
     }
 }

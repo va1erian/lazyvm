@@ -78,6 +78,10 @@ public class HashCapacity {
         System.out.println("then putIfAbsent of a present key: " + mf.keySet());
         mf.put(2000, 0);
         System.out.println("then a put: " + mf.keySet());
+        // a threshold that doubles to 0 is computed again from the load factor
+        Map<Integer, Integer> z = new HashMap<>(16, 0.05f);
+        for (int k : new int[]{0, 1, 128, 129}) z.put(k, k);
+        System.out.println("doubled threshold 0: " + z.keySet());
         System.out.println("done");
     }
 }

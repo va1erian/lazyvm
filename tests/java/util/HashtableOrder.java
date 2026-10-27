@@ -78,6 +78,19 @@ public class HashtableOrder {
         try { ei.next(); r = "ok"; } catch (ConcurrentModificationException x) { r = "CME"; } catch (NoSuchElementException x) { r = "end"; }
         System.out.println("iterator of an empty table after a put: " + r + " " + ei.hasNext() + " " + ee.hasMoreElements());
         System.out.println("empty hashCode " + new Hashtable<String, String>().hashCode());
+        Hashtable<Integer, Integer> h2 = new Hashtable<>();
+        h2.put(1, 10); h2.put(2, 20); h2.put(3, 30);
+        Enumeration<Integer> en = h2.keys();
+        while (en.hasMoreElements()) en.nextElement();
+        String m1, m2, m3;
+        try { en.nextElement(); m1 = "none"; } catch (NoSuchElementException x) { m1 = x.getMessage(); }
+        try { h2.keySet().iterator().remove(); m2 = "none"; } catch (IllegalStateException x) { m2 = x.getMessage(); }
+        try { ((Iterator<?>) h2.keys()).remove(); m3 = "none"; } catch (UnsupportedOperationException x) { m3 = "UnsupportedOperationException"; }
+        Map.Entry<Integer, Integer> held1 = null, held2 = null;
+        for (Map.Entry<Integer, Integer> x : h2.entrySet()) { if (x.getKey() == 1) held1 = x; if (x.getKey() == 2) held2 = x; }
+        h2.remove(1);
+        for (Iterator<Integer> it2 = h2.keySet().iterator(); it2.hasNext();) if (it2.next() == 2) it2.remove();
+        System.out.println("enumerator: " + m1 + " | " + m2 + " | " + m3 + " | held after remove(k) " + held1.getKey() + "=" + held1.getValue() + ", after iterator remove " + held2);
         System.out.println("done");
     }
 }

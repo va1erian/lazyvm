@@ -24,9 +24,10 @@ access) order; their tables never show. Pinned by: HashOrder (all lines), HashCa
 **H2.** `new HashMap()` has no table until the first insertion, which makes 16 buckets with resize
 threshold 12. `new HashMap(c, lf)` and `new HashMap(c)` (lf 0.75) make, at the first insertion, a
 table of the smallest power of two ≥ `c` (1 for `c` = 0), threshold `(int)(n * lf)` in float.
-Growing doubles `n`. The new threshold is twice the old one when the old `n` was ≥ 16, otherwise
-`(int)(newN * lf)` in float; it is never recomputed from `lf` after that point. The table never
-shrinks. Pinned by: HashCapacity ("new HashMap(c)", "cap … lf …"), HashOrder ("cap", "lf").
+Growing doubles `n`. The new threshold is twice the old one when the old `n` was ≥ 16 and the
+doubled value is not 0, otherwise `(int)(newN * lf)` in float; apart from that it is never
+recomputed from `lf`. The table never shrinks. Pinned by: HashCapacity ("new HashMap(c)", "cap … lf
+…", "doubled threshold 0"), HashOrder ("cap", "lf").
 
 **H3.** The table grows (a) after `put`, `putIfAbsent`, `putAll` (per entry) or `HashSet.add` adds a
 new key and the size is then greater than the threshold; (b) at the *start* of `computeIfAbsent`,
@@ -61,8 +62,8 @@ HashTreeRules.
 3. `a.getClass().getName().compareTo(b.getClass().getName())` if ≠ 0;
 4. otherwise `System.identityHashCode(a) <= System.identityHashCode(b)` counts as "before".
 
-A key that orders before a node goes to its left. Lookups find keys by hash and `equals` and never
-change the bin.
+A key that orders before a node goes to its left. Lookups never change the bin (which `compareTo`
+calls they make is left free, section 12).
 
 `C` qualifies when `C` is `String`, or `C` itself directly declares the interface `Comparable<C>`
 with exactly `C` as type argument. A raw `Comparable`, `Comparable<Object>`, `Comparable` of a
@@ -144,6 +145,14 @@ is empty yields nothing and never throws, even after later puts. Pinned by: Hash
 whose hash is already being computed returns 0 (no recursion), so self- and mutually referencing
 tables hash finitely. Empty: 0. Pinned by: HashtableOrder, SelfReference.
 
+**T5.** An enumeration or iterator of a table that was not empty throws
+`NoSuchElementException("Hashtable Enumerator")` past its end and
+`IllegalStateException("Hashtable Enumerator")` for `remove()` before `next()`; an enumeration
+cast to `Iterator` refuses `remove()` with `UnsupportedOperationException`. `remove(k)`,
+`remove(k, v)`, `keySet().remove` and `entrySet().remove` clear the removed entry's value, so an
+entry held from iteration then shows `null`; iterator removal, the compute family and `clear()` do
+not. Pinned by: HashtableOrder ("enumerator").
+
 ## 3. Vector, Stack and ArrayList sizes
 
 **V1.** `capacity()`: `new Vector()` and `new Stack()` 10; `new Vector(c)` `c`; `new Vector(coll)`
@@ -217,8 +226,17 @@ Pinned by: TreeMapCalls ("held entries …").
 **M3.** `new TreeMap(sortedMap)`, `putAll(sortedMap)` into an empty map with an equal comparator,
 `new TreeSet(sortedSet)` and `addAll(sortedSet)` into an empty TreeSet with an equal comparator
 build the tree without comparisons: the middle element (index `(lo + hi) >>> 1`) is the root,
-recursively, and only the nodes of an incomplete bottom level are red. Other copies insert one at a
-time. Pinned by: TreeMapCalls (SortedMap, putAll and TreeSet lines).
+recursively, and only the nodes of an incomplete bottom level are red. `clone()` builds the same
+way. Other copies insert one at a time. Pinned by: TreeMapCalls (SortedMap, putAll, TreeSet and
+"clone" lines).
+
+**M4.** Range views (`subMap`, `headMap`, `tailMap`, `descendingMap`, their key sets and the
+TreeSet views on them) check a key against a bound with `compare(key, bound)`, and their
+navigation methods walk the tree as M1 does. A walk over a view first finds its start (the lowest
+node in range, or the highest when descending, then checks it against the other bound), then its
+fence: the first node past the far bound, found by ceiling (exclusive bound) or higher (inclusive),
+or by floor or lower when descending. `size()` counts by walking and counts again only after the
+map changed. Pinned by: TreeMapCalls ("subMap walk", "descending view").
 
 ## 7. Sorting objects
 
@@ -369,6 +387,13 @@ until `StackOverflowError`. `hashCode` recurses (StackOverflowError) for every L
 that contains itself, except Hashtable (T4) and IdentityHashMap (identity hashes).
 `Arrays.deepToString` prints `[...]`. Pinned by: SelfReference, Lists, Vectors, ArraysUtil.
 
+**X6.** `Collections.singletonMap` and `emptyMap` refuse `putIfAbsent`, `remove(k, v)`, both
+`replace` forms, `computeIfAbsent`, `computeIfPresent`, `compute` and `merge` with
+`UnsupportedOperationException` whatever the arguments; `replaceAll(f)` walks the entries (so
+`emptyMap().replaceAll(null)` throws `NullPointerException`). `singletonList(x).sort(c)` does
+nothing. Pinned by: MapDefaults ("singletonMap …", "emptyMap …"), CollectionsUtil ("singletonList
+sort").
+
 ## 11. Exception types and messages
 
 The common misuse cases throw these; "–" is a null message. Pinned by the tests named.
@@ -376,7 +401,7 @@ The common misuse cases throw these; "–" is a null message. Pinned by the test
 | Case | Exception: message | Test |
 |---|---|---|
 | ArrayList `get(-1)`; `get`/`set`/`add(i)`/`remove(i)`/`addAll(i)` out of range; LinkedList any bad index or `listIterator(i)` | `ArrayIndexOutOfBoundsException: -1`; `IndexOutOfBoundsException: Index: i, Size: n` | Lists, LinkedLists |
-| ArrayList/Vector `listIterator(i)` bad | `IndexOutOfBoundsException: Index: i` | Iterators |
+| ArrayList/Vector `listIterator(i)` bad; AbstractList's own | `IndexOutOfBoundsException: Index: i`; `Index: i, Size: n` | Iterators, Lists |
 | `subList` bad bounds | `IndexOutOfBoundsException: fromIndex = -1` / `toIndex = 99`; `IllegalArgumentException: fromIndex(3) > toIndex(2)` | Lists |
 | Vector `get`/`set`/`remove(i)`/`addAll(i)` past the end, `removeElementAt(-1)`; `get(-1)`, `elementAt(-1)`, `setSize(-1)` | `ArrayIndexOutOfBoundsException: Array index out of range: i`; `ArrayIndexOutOfBoundsException: -1` | Vectors |
 | Vector `elementAt`/`setElementAt`/`removeElementAt` past the end; `insertElementAt`/`add(i)` past it; `lastIndexOf(o, i)` past it | `ArrayIndexOutOfBoundsException: 99 >= 9`; `… 99 > 9`; `IndexOutOfBoundsException: 99 >= 9` | Vectors |
@@ -391,7 +416,7 @@ The common misuse cases throw these; "–" is a null message. Pinned by the test
 | checked views | `ClassCastException: Attempt to insert class X element into collection with element type class Y` (`key into map with key type`, `value into map with value type`); null arguments `NullPointerException: c` / `type` | CheckedViews |
 | Collections misuse | `Source does not fit in dest`; `List length = -2`; `Index: 2, Size: 2`; `Index: 0` (emptyList); `Map is non-empty` | CollectionsUtil |
 | Arrays ranges | `IllegalArgumentException: fromIndex(5) > toIndex(2)`; `ArrayIndexOutOfBoundsException: Array index out of range: -1`; `copyOfRange`: `IllegalArgumentException: 3 > 1`, `ArrayIndexOutOfBoundsException` –; `copyOf(a, -1)` `NegativeArraySizeException` –; `asList(…).get(3)` `ArrayIndexOutOfBoundsException: 3` | Sorting, ArraysUtil, Lists |
-| store of a wrong type | `ArrayStoreException: java.lang.Integer` (fill, LinkedList.toArray); ArrayList/PriorityQueue `toArray(T[])`: `ArrayStoreException` – | ArraysUtil, LinkedLists, Lists, PriorityQueues |
+| store of a wrong type | `ArrayStoreException: java.lang.Integer` (fill, LinkedList.toArray, and AbstractCollection's `toArray(T[])`, so HashSet, TreeSet and the views); ArrayList/PriorityQueue `toArray(T[])`: `ArrayStoreException` – | ArraysUtil, LinkedLists, Lists, PriorityQueues |
 | Random bound; sort contract | `IllegalArgumentException: bound must be positive`; `… Comparison method violates its general contract!` | RandomSeeding, Sorting, SortCalls |
 
 ## 12. Not observable: the implementation may choose
@@ -399,9 +424,13 @@ The common misuse cases throw these; "–" is a null message. Pinned by the test
 ArrayList capacity and LinkedHashMap/LinkedHashSet table sizes; the maximum table and array sizes;
 the primitive sort algorithms (only the sorted result shows); the merge sort's temporary storage and
 run-stack size; IdentityHashMap's order (IdentityMaps sorts its output); the seed of `new Random()`
-and the hidden Random of `Collections.shuffle(l)`; how a HashMap or TreeMap finds an existing key
-beyond the `equals` and `compareTo` calls above; and identity hash codes themselves (only H6's use
-of them is fixed).
+and the hidden Random of `Collections.shuffle(l)`; and identity hash codes themselves (only H6's
+use of them is fixed).
+
+Observable but left free: which `compareTo` calls a HashMap makes to find an existing key in a
+tree bin. The oracle's lookups call it on keys of the bin (a key that logs its calls sees them),
+and so do its compute-family insertions before they insert; this specification pins only the
+calls of H6 to H8 insertion, and LazyVM finds keys by hash and `equals` alone.
 
 ## 13. API to provide
 

@@ -39,7 +39,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S2 | Objects, exceptions, strings, GC | done |
 | S3 | Class path, jars, launcher, IntelliJ | in progress |
 | S4 | Language completeness: lambdas, annotations, reflection | in progress |
-| S5 | Core library | not started |
+| S5 | Core library | in progress |
 | S6 | Threads, concurrency, `CompletionStage`, the event loop | not started |
 | S7 | Networking | not started |
 | S8 | Verifier and hardening | not started |
@@ -260,24 +260,38 @@ Gate: `tests/java/s4/Showcase` (a small event bus built with lambdas and an
 Goal: the everyday `java.util` and `java.io` surface from
 [`decisions.md`](decisions.md) D6, with oracle-matched output.
 
-- [ ] S5-01 Collections I: `ArrayList`, `LinkedList`, `ArrayDeque`,
-      `Collections`, `Arrays` (sort: dual-pivot quicksort for primitives,
-      TimSort for objects, so stability and exceptions match the Javadoc),
-      and the iterator and `ConcurrentModificationException` behaviour.
-      Check: `tests/java/util/Lists`, `Sorting`, `Iterators`.
-- [ ] S5-02 Collections II: `HashMap`/`LinkedHashMap`/`HashSet` (the Java 8
-      hash spreading and table growth, so iteration order matches the oracle),
-      `TreeMap`/`TreeSet` (red-black), `PriorityQueue`, `IdentityHashMap`,
-      `WeakHashMap` (after S5-07 lands), `Map` default methods.
-      Check: `tests/java/util/HashOrder`, `TreeMaps`, `MapDefaults`.
+- [x] S5-01 Collections I: the collection interfaces and abstract classes,
+      `ArrayList`, `LinkedList`, `Vector`/`Stack`, `ArrayDeque`, `Collections`
+      (algorithms, factories, unmodifiable, synchronized and checked views) and
+      `Arrays` (objects sort with the merge sort of
+      [`design/collections.md`](design/collections.md) 7.S1, so compare calls,
+      stability and exceptions match the oracle; primitives sort by key), with
+      the iterator and `ConcurrentModificationException` behaviour of that
+      specification. Written clean-room from the Javadoc and that spec.
+      Check: `tests/java/util/Lists`, `Sorting`, `Iterators` (and the rest of
+      `tests/java/util`) on both.
+- [x] S5-02 Collections II: `HashMap`/`LinkedHashMap`/`HashSet`/`LinkedHashSet`
+      (the Java 8 hash spreading, table growth and tree bins, so iteration
+      order matches the oracle), `TreeMap`/`TreeSet` (red-black, with range
+      views), `Hashtable`, `PriorityQueue`, `IdentityHashMap`, `EnumMap`/
+      `EnumSet`, the `Map` default methods and `Random`, to the same
+      specification.
+      Check: `tests/java/util/HashOrder`, `TreeMaps`, `MapDefaults` (and the
+      rest of `tests/java/util`) on both.
+- [ ] S5-02a `WeakHashMap` (needs S5-07): the `java.util` map whose keys are
+      held through `WeakReference`, with entries expunged through a
+      `ReferenceQueue`, behaviour specified in `design/collections.md` like
+      the other maps.
+      Check: `tests/java/util/WeakMaps` (both).
 - [ ] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
       Javadoc except `%t` dates, which come with S11), `Double.toString`
       (the shortest form its Javadoc asks for, D9), `Integer.parseInt` and friends,
-      `StringJoiner`, `String.split`, and `java.util.regex` (`Pattern` and
+      `StringJoiner`, `String.split` (literal patterns exist since S5-01;
+      regular expressions come with this item), and `java.util.regex` (`Pattern` and
       `Matcher` backtracking engine, Java syntax subset documented in
       `docs/regex.md`).
       Check: `tests/java/util/FormatAll`, `DoubleToString` (100k random values against the oracle), `Regex`.
-- [ ] S5-04 Utilities: `Optional*`, `Objects`, `Random` (the exact LCG),
+- [ ] S5-04 Utilities: `Optional*`, `Objects`, `Random` (the exact LCG, done with S5-02),
       `Scanner`, `Properties`, `UUID`, `Base64`, `BitSet`, `StringTokenizer`.
       Check: `tests/java/util/Utilities`, `RandomSeq`.
 - [ ] S5-05 `java.io`: byte and char streams, `Buffered*`, `InputStreamReader`

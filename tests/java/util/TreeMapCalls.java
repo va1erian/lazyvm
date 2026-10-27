@@ -113,6 +113,24 @@ public class TreeMapCalls {
             if (e.getKey() == 4 || e.getKey() == 6) it.remove();
         }
         System.out.println("iterator removal of inner nodes: " + seen + "-> " + r);
+        @SuppressWarnings("unchecked") TreeMap<Integer, Integer> cc = (TreeMap<Integer, Integer>) sorted(7).clone();
+        System.out.println("clone [" + take() + "]: " + probe(cc, 0, 60));
+        NavigableMap<Integer, Integer> sub = sorted(10).subMap(25, true, 65, false);
+        log.setLength(0);
+        StringBuilder walked = new StringBuilder();
+        for (int k : sub.keySet()) walked.append(k).append(' ');
+        String walk = take();
+        int n1 = sub.size();
+        String size1 = take();
+        sub.size();
+        String size2 = take();
+        sub.put(35, 0);
+        log.setLength(0);
+        sub.size();
+        System.out.println("subMap walk [" + walk + "] " + walked + "| size " + n1 + " [" + size1 + "] again [" + size2 + "] after a put [" + take() + "]");
+        NavigableMap<Integer, Integer> desc = sorted(10).descendingMap().headMap(45, true);
+        log.setLength(0);
+        System.out.println("descending view " + desc + " [" + take() + "]");
         System.out.println("done");
     }
 }

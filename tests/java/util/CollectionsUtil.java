@@ -113,6 +113,7 @@ public class CollectionsUtil {
         t("addAll null", () -> Collections.addAll(null, 1));
         t("disjoint", () -> Collections.disjoint(Arrays.asList(1, 2), Arrays.asList(3, 4)) + " " + Collections.disjoint(Arrays.asList(1, 2), Arrays.asList(2, 4)) + " " + Collections.disjoint(new HashSet<Integer>(Arrays.asList(1)), Arrays.asList(1)) + " " + Collections.disjoint(Arrays.asList(1), new ArrayList<Integer>()) + " " + Collections.disjoint(new ArrayList<Integer>(), new ArrayList<Integer>()));
         t("reverseOrder", () -> { List<String> l = new ArrayList<>(Arrays.asList("b", "c", "a")); Collections.sort(l, Collections.reverseOrder()); Comparator<String> c = Collections.reverseOrder(String.CASE_INSENSITIVE_ORDER); return l + " " + c.compare("a", "B") + " " + Collections.reverseOrder(c).compare("a", "B") + " " + Collections.reverseOrder(null).compare("a", "b") + " " + Collections.<String>reverseOrder().reversed().compare("a", "b"); });
+        t("singletonList sort", () -> { List<Integer> one = Collections.singletonList(1); one.sort(null); return one; });
         System.out.println("done");
     }
 }

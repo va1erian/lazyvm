@@ -366,6 +366,14 @@ public final class String implements java.io.Serializable, Comparable<String>, C
         return indexOf(s.toString()) >= 0;
     }
 
+    public String[] split(String regex, int limit) {
+        return StringSearch.split(this, regex, limit);
+    }
+
+    public String[] split(String regex) {
+        return split(regex, 0);
+    }
+
     public String toLowerCase() {
         return convertCase(false);
     }
