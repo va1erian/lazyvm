@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::io::{self, IsTerminal, Read, Seek, SeekFrom, Write};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 /// How `open` opens a file (the `mode` argument of the native).
@@ -28,16 +28,10 @@ impl Mode {
     }
 }
 
-/// An open file; `device` marks one with no length or position (NUL).
-struct Handle {
-    file: File,
-    device: bool,
-}
-
 #[derive(Default)]
 struct Table {
     next: i64,
-    open: HashMap<i64, Handle>,
+    open: HashMap<i64, File>,
 }
 
 fn table() -> MutexGuard<'static, Table> {
@@ -74,8 +68,7 @@ pub fn open(path: &std::path::Path, mode: Mode, shared_delete: bool) -> io::Resu
     }
     let file = o.open(path)?;
     // A device such as NUL has no metadata; only a directory is refused.
-    let meta = file.metadata();
-    if meta.as_ref().is_ok_and(|m| m.is_dir()) {
+    if file.metadata().is_ok_and(|m| m.is_dir()) {
         return Err(io::Error::new(
             io::ErrorKind::IsADirectory,
             if cfg!(windows) {
@@ -88,8 +81,7 @@ pub fn open(path: &std::path::Path, mode: Mode, shared_delete: bool) -> io::Resu
     let mut t = table();
     let h = t.next;
     t.next += 1;
-    let device = meta.map_or(true, |m| !m.is_file());
-    t.open.insert(h, Handle { file, device });
+    t.open.insert(h, file);
     Ok(h)
 }
 
@@ -108,19 +100,7 @@ fn share_like_java(_: &mut OpenOptions) {}
 
 fn with<T>(h: i64, f: impl FnOnce(&mut File) -> io::Result<T>) -> io::Result<T> {
     let mut t = table();
-    let handle = t.open.get_mut(&h).ok_or_else(closed)?;
-    f(&mut handle.file)
-}
-
-/// Observed: a device (NUL) has length and position 0, and seeking or
-/// truncating it does nothing; `f` runs only for other files.
-fn positioned<T>(h: i64, device: T, f: impl FnOnce(&mut File) -> io::Result<T>) -> io::Result<T> {
-    let mut t = table();
-    let handle = t.open.get_mut(&h).ok_or_else(closed)?;
-    if handle.device {
-        return Ok(device);
-    }
-    f(&mut handle.file)
+    f(t.open.get_mut(&h).ok_or_else(closed)?)
 }
 
 pub fn read(h: i64, buf: &mut [u8]) -> io::Result<usize> {
@@ -131,30 +111,45 @@ pub fn write(h: i64, buf: &[u8]) -> io::Result<()> {
     with(h, |f| f.write_all(buf))
 }
 
+/// Position, seek and truncate are the OS's for every file, devices and
+/// volumes included: Windows keeps a position for NUL and consoles too.
 pub fn position(h: i64) -> io::Result<u64> {
-    positioned(h, 0, |f| f.stream_position())
+    with(h, |f| f.stream_position())
 }
 
 pub fn seek(h: i64, pos: u64) -> io::Result<()> {
-    positioned(h, (), |f| f.seek(SeekFrom::Start(pos)).map(|_| ()))
+    with(h, |f| f.seek(SeekFrom::Start(pos)).map(|_| ()))
 }
 
+/// Observed on Windows: NUL, whose metadata the OS refuses ("Incorrect
+/// function"), has length 0; a console, refused the same way, keeps the error.
 pub fn size(h: i64) -> io::Result<u64> {
-    positioned(h, 0, |f| f.metadata().map(|m| m.len()))
+    with(h, |f| match f.metadata() {
+        Ok(m) => Ok(m.len()),
+        Err(e) if cfg!(windows) && e.raw_os_error() == Some(1) && !f.is_terminal() => Ok(0),
+        Err(e) => Err(e),
+    })
 }
 
+/// Observed (Windows): the pointer moves to `len` first, so it stays there
+/// when the OS refuses the new length (NUL, a read-only handle); on success
+/// it goes back unless it was past the new end.
 pub fn truncate(h: i64, len: u64) -> io::Result<()> {
-    positioned(h, (), |f| f.set_len(len))
+    with(h, |f| {
+        let old = f.stream_position()?;
+        f.seek(SeekFrom::Start(len))?;
+        f.set_len(len)?;
+        if old < len {
+            f.seek(SeekFrom::Start(old))?;
+        }
+        Ok(())
+    })
 }
 
-/// Observed: on Windows `available` of a device is the OS's error for asking
-/// a device its size ("Incorrect function").
+/// Bytes from the position to the end. A device the OS gives no metadata
+/// for (NUL, a console on Windows) is the OS's error, as Java 8 reports it.
 pub fn available(h: i64) -> io::Result<u64> {
-    if cfg!(windows) && table().open.get(&h).is_some_and(|d| d.device) {
-        const ERROR_INVALID_FUNCTION: i32 = 1;
-        return Err(io::Error::from_raw_os_error(ERROR_INVALID_FUNCTION));
-    }
-    positioned(h, 0, |f| {
+    with(h, |f| {
         let pos = f.stream_position()?;
         Ok(f.metadata()?.len().saturating_sub(pos))
     })

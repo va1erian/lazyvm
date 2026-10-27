@@ -34,11 +34,6 @@ final class UnixPaths extends PathSyntax {
         return path.isEmpty() ? userDir : resolveFile(userDir, path);
     }
 
-    /** `.` and `..` go lexically before links are followed, so a missing part can hold them. */
-    public String precanonical(String absolute) throws IOException {
-        return collapseDots(absolute, 1, '/');
-    }
-
     public Parsed parsePath(String input) {
         if (input.indexOf('\u0000') >= 0) {
             throw new InvalidPathException(input, "Nul character not allowed");

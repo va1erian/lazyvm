@@ -43,6 +43,21 @@ of drive 'B'"))`; `resolve` of a drive-relative argument joins only an absolute 
 written (`c:\b` + `C:` → `c:\b\`), else the argument wins; for `relativize` a drive root and a UNC root are different
 types; a `/` in a glob matches the separator.
 
+**PW2.** Found by the third review: canonical forms (`File.getCanonicalPath`) on Windows. They drop the `\\?\` and
+`\\?\UNC\` (→ `\\`) prefixes and keep a UNC host and share as given. `.` and `..` are applied by name first; then a
+name before another loses one final dot (`nope.\x` → `nope\x`, `nope .\x` → `nope \x`, `nope. \x` kept) and the last
+name all its trailing dots and spaces. The part that exists is resolved by the OS, which reads `d2 \in` as `d2\in`; a
+name of only dots and spaces (`. .\x` → `. \x`) is not looked up, and it and the rest are appended as written. A last
+name `NUL` or `NUL:` (after trimming), even below a missing directory, is `\\.\NUL`. No canonical form
+(`IOException`): a wildcard; a name before another ending in two dots once `..` is applied (`"Bad pathname"`:
+`nope..\x`, `d2..\in`, ` ...\x`; `nope..\..\x` is fine); a `:` in a name whose parent is an existing directory, a
+share's root included (`"The filename, directory name, or volume label syntax is incorrect"`: `f2:x`, `f2::$DATA`,
+`d2::$INDEX_ALLOCATION\in`, `C:\a:b`), while below a missing directory or a file it stays (`nope\a:b`, `f2\a:b`). On
+Unix the existing part is resolved as written, so `/t/link/../x` is the `x` beside the link's target, the file the
+path opens. `Path.toRealPath` opens the path with every name's trailing dots and spaces ignored (`d2..\in` resolves)
+and reports one it cannot resolve with this trimming but no "Bad pathname" (`nope..\x` stays); NUL in an existing
+directory is its own real path. [CanonWin; NioEdges: toRealPath of a missing path]
+
 **U1.** `java.net.URI` (the part file names need; S7-02 adds the rest) parses left to right, so the leftmost bad
 component is reported: scheme (`"Expected scheme name"` for a leading `:`, `"Illegal character in scheme name"`),
 `"Expected scheme-specific part"` for nothing (or only a fragment) after it, then the opaque part, or `//` and the
@@ -54,8 +69,19 @@ letters, digits and inner `-` whose last label starts with a letter when there a
 literal with an optional zone); else, if its chars allow, a registry name with no host and port -1; chars legal for
 neither → `"Illegal character in authority"` at its start. `parseServerAuthority` and the four-argument constructor
 (which brackets an IPv6 host) require a server authority and report its error (`"Expected hostname"`, `"Illegal
-character in hostname/user info/port number"`, `"Malformed port number"`, the IPv6 messages). `getAuthority` decodes
-escapes except inside a literal. [UriText: authority…, ctor host check]
+character in hostname/user info/port number"`, `"Malformed port number"`, the IPv6 messages). `getAuthority`,
+`getSchemeSpecificPart`, `getQuery` and `getFragment` decode escapes except inside `[...]`. Found by the third review:
+a char after a host name is reported before a last label that starts with a digit (`a.1b!` at the `!`); a zone after
+`%` is one or more ASCII letters and digits, checked after the address (`"scope id expected"` with index -1 when
+empty, else `"Illegal character in scope id"` at the char). IPv6 literals (rules derived from about 170,000 probed
+ones, `lazy.internal.UriHosts`): groups of 1 to 4 hex digits (`"IPv6 hexadecimal digit sequence too long"` at the
+group), at most one `::`; after a single `:` a non-hex char is `"Expected digits for an IPv6 address"` (a second `::`
+after the first: `"Expected hex digits or IPv4 address"`); an IPv4 address must end the literal in digits and dots,
+else `"Expected IPv4 address"` (after `::`: `"Expected hex digits or IPv4 address"`) at its start, and then each
+number is at most 255 (leading zeros allowed) with `"Malformed IPv4 address"` at the first misplaced char; a literal
+that starts with one is `"Malformed IPv6 address"`; more than eight groups are `"IPv6 address too long"`, eight with
+`::` `"Malformed IPv6 address"`, fewer without `"IPv6 address too short"`. [UriText: authority…, ctor host check,
+decoded…]
 
 **U3.** `equals` and `hashCode`: scheme and host ignoring case, user info, port, path, query, fragment and other
 parts by raw form with escapes' hex digits ignoring case; a registry authority as a whole. `compareTo`: scheme
@@ -125,8 +151,9 @@ is NSFE; a source open in `java.io` is the sharing violation). `ATOMIC_MOVE` is 
 same-file check first (a missing source is `"source -> target"`; a case-only one renames), and a directory in the way
 (not inside the source) → AccessDenied. `copy` into a parent that is a file → NSFE. On Windows `CREATE_NEW` onto a
 directory → AccessDenied. `toRealPath` reports a missing path absolute and normalized; on Windows one below a file is
-`FileSystemException(path, null, "The directory name is invalid.\r\n")`. `available()` of a `Files` stream is size
-minus position, so `readAllBytes(NUL)` is empty. [NioEdges: move into a missing directory…; FilePathsWin: NUL…]
+`FileSystemException(path, null, "The directory name is invalid.\r\n")` (PW2 has the rest of `toRealPath`).
+`available()` of a `Files` stream is size minus position, so `readAllBytes(NUL)` is empty. [NioEdges: move into a
+missing directory…; FilePathsWin: NUL…]
 
 ## 3. Known differences
 
@@ -140,24 +167,31 @@ Where LazyVM knowingly differs from the oracle; the reviewer's probes show each 
 - The `dos` attribute view is not provided (`UnsupportedOperationException("View 'dos' not available")`).
 - The index and pattern of the `PatternSyntaxException` for an empty glob class (nio-file.md P4).
 - An array too large for LazyVM's heap is `"Java heap space"` where the oracle's larger default heap allocates it
-  (from `Integer.MAX_VALUE - 1` elements both say `"Requested array size exceeds VM limit"`).
+  (from `Integer.MAX_VALUE - 1` elements, in any dimension of `multianewarray` too, both say `"Requested array size
+  exceeds VM limit"`).
 - NUL through `java.nio.file`: `Files.write` and `newOutputStream` succeed (the oracle: `"Incorrect function."`), and
   `Files.size` is `NoSuchFileException` (the oracle: `"The parameter is incorrect."`).
 - Windows junctions are symbolic links to LazyVM (the oracle: not a link, "other").
 - `Files.delete` of a read-only file that another handle holds is `AccessDeniedException` (the oracle reports the
   sharing violation first).
 - Canonical forms: a `<` or `>` in a name is not matched as a wildcard (the oracle's `C:\<` can come back as a real
-  directory), and some names of dots that the oracle refuses with `"Invalid argument"` are `"Bad pathname"`.
+  directory), and some names of dots that the oracle refuses with `"Invalid argument"` are `"Bad pathname"`. A mapped
+  network drive resolves to its share (`Z:\x` → `\\server\share\x`; the oracle keeps the drive) and a `:` below its
+  root follows PW2's rule (the oracle keeps the name); `\\.\C:\x` is `C:\x` (the oracle keeps the prefix);
+  `toRealPath` of `NUL.` is the NUL path (the oracle: `"The parameter is incorrect."`).
+- `URI.toASCIIString` of a lone surrogate escapes it as `%3F`; the oracle throws `NullPointerException`.
 - `getFileAttributeView` and the attribute view classes are not provided (out of scope with the non-basic views).
 - The length of a directory is what the file system reports (0 on NTFS, often 4096 on Linux).
 - On Unix, file names are bytes: a string becomes its generalized UTF-8, so a lone surrogate is its own name and
   comes back from a listing (LazyOS's file system, which takes UTF-8 names only, refuses it: "No such file or
-  directory"); bytes that are not of that form (made by another program) read as U+FFFD.
+  directory"); bytes that are not of that form (made by another program, a pair spelled as two three-byte
+  surrogates too) read as U+FFFD.
 - Stack traces show LazyVM's line numbers and frames.
 - How often a wrapped stream is called is matched only where a rule above pins it; LazyVM has no finalizers, so an
   unreferenced stream is not closed; a file open in `java.io` cannot be deleted on Windows (nio streams allow it).
 - Speed: LazyVM's interpreter runs about 15–30 times slower than the oracle with `-Xint`; bulk buffer copies and
-  file copies are close to it.
+  file copies are close to it. `getCanonicalPath` costs what the OS lookups cost, about the oracle's speed with its
+  canonical cache off (`-Dsun.io.useCanonCaches=false`); the oracle caches results by default, LazyVM does not.
 
 ## 4. API to provide
 

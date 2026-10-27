@@ -363,8 +363,9 @@ abstract class AbstractStringBuilder implements Appendable, CharSequence {
         return indexOf(str, 0);
     }
 
+    // Searched in place: copying the whole buffer per call made repeated searches quadratic.
     public int indexOf(String str, int fromIndex) {
-        return toString().indexOf(str, fromIndex);
+        return StringSearch.indexOf(value, count, str.toCharArray(), fromIndex);
     }
 
     public int lastIndexOf(String str) {
@@ -372,7 +373,7 @@ abstract class AbstractStringBuilder implements Appendable, CharSequence {
     }
 
     public int lastIndexOf(String str, int fromIndex) {
-        return toString().lastIndexOf(str, fromIndex);
+        return StringSearch.lastIndexOf(value, count, str.toCharArray(), fromIndex);
     }
 
     public AbstractStringBuilder reverse() {

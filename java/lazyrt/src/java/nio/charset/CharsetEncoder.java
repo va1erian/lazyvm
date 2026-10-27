@@ -205,8 +205,9 @@ public abstract class CharsetEncoder {
         return out;
     }
 
+    // Observed: unlike canEncode(CharSequence), this neither checks nor changes the coder's state.
     public boolean canEncode(char c) {
-        return canEncode(CharBuffer.wrap(new char[] {c}));
+        return trial(CharBuffer.wrap(new char[] {c}));
     }
 
     // Javadoc: a trial encoding with REPORT, refused while an encoding is in progress
@@ -215,14 +216,20 @@ public abstract class CharsetEncoder {
         if (state == CharsetDecoder.CODING || state == CharsetDecoder.CODING_END) {
             throw CharsetDecoder.badState(state, CharsetDecoder.CODING);
         }
-        CharsetEncoder e = charset.newEncoder();
         try {
-            e.encode(CharBuffer.wrap(cs));
+            return trial(CharBuffer.wrap(cs));
+        } finally {
+            reset();
+        }
+    }
+
+    /** Whether a fresh REPORT encoder of this charset encodes all of `in`. */
+    private boolean trial(CharBuffer in) {
+        try {
+            charset.newEncoder().encode(in);
             return true;
         } catch (CharacterCodingException x) {
             return false;
-        } finally {
-            reset();
         }
     }
 }

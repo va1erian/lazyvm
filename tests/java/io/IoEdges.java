@@ -126,6 +126,7 @@ public class IoEdges {
         d.mkdir();
         t("dir setLastModified", () -> d.setLastModified(1000000000000L) + " " + d.lastModified());
         t("file setLastModified", () -> new File(root, "F").setLastModified(1234567890000L) + " " + new File(root, "F").lastModified());
+        t("toURI of the empty path ends with /", () -> new File("").toURI().toString().endsWith("/"));
         t("toURI brackets", () -> { String u = new File(root, "u[v]").toURI().getRawPath(); return u.substring(u.lastIndexOf('/')); });
         t("toURI nbsp and line separator", () -> { String u = new File(root, "a b c").toURI().getRawPath(); return u.substring(u.lastIndexOf('/')); });
         t("lone surrogate names", IoEdges::lone);

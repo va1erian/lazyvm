@@ -243,13 +243,17 @@ impl Vm {
 
     /// Bytes a `multianewarray` will allocate: each level's arrays (header
     /// plus elements), stopping at the first zero count, which allocates
-    /// nothing below it.
-    fn multi_array_bytes(&self, class: ClassId, counts: &[i32]) -> usize {
+    /// nothing below it. A level past the VM limit is that error, before any
+    /// lack of room (as `newarray`).
+    fn multi_array_bytes(&self, class: ClassId, counts: &[i32]) -> VmResult<usize> {
         let mut bytes = 0usize;
         let mut arrays = 1usize;
         let mut level = class;
         for &n in counts {
             let n = n as usize;
+            if n > crate::objects::MAX_ARRAY {
+                return Err(crate::objects::array_limit());
+            }
             bytes = bytes.saturating_add(
                 arrays.saturating_mul(16 + n.saturating_mul(self.element_bytes(level))),
             );
@@ -261,7 +265,7 @@ impl Vm {
                 level = component;
             }
         }
-        bytes
+        Ok(bytes)
     }
 
     fn op_multianewarray(&mut self) -> VmResult<()> {
@@ -287,7 +291,7 @@ impl Vm {
         if counts.iter().any(|&n| n < 0) {
             return Err(VmError::bare("java/lang/NegativeArraySizeException"));
         }
-        let bytes = self.multi_array_bytes(class, &counts);
+        let bytes = self.multi_array_bytes(class, &counts)?;
         self.ensure_room(bytes)?;
         let r = self.multi_array(class, &counts)?;
         let f = self.top()?;

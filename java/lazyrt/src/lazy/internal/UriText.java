@@ -92,7 +92,8 @@ public final class UriText {
         return to;
     }
 
-    private static boolean hex(char c) {
+    /** An ASCII hex digit. */
+    static boolean hex(char c) {
         return Character.digit(c, 16) >= 0 && c < 0x80;
     }
 

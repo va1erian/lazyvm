@@ -79,8 +79,13 @@ fn open(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     match files::open(&path, mode, shared_delete) {
         Ok(h) => Ok(Some(Value::Long(h))),
         Err(e) => {
-            let msg = format!("{} ({})", path.display(), files::os_text(&e, true));
-            Err(VmError::exception("java/io/FileNotFoundException", msg))
+            let reason = format!(" ({})", files::os_text(&e, true));
+            Err(path_exception(
+                vm,
+                "java/io/FileNotFoundException",
+                &path,
+                &reason,
+            ))
         }
     }
 }
@@ -146,7 +151,7 @@ fn register_paths(vm: &mut Vm) {
                 Ok(()) => ret_bool(true),
                 // Another volume: the caller copies instead.
                 Err(e) if e.kind() == std::io::ErrorKind::CrossesDevices => ret_bool(false),
-                Err(e) => Err(path_error(&e, &from)),
+                Err(e) => Err(path_error(vm, &e, &from)),
             }
         },
     );
@@ -174,10 +179,18 @@ fn register_paths(vm: &mut Vm) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         crate::canonical::canonicalize,
     );
-    vm.register_native(FS, "tempDir", "()Ljava/lang/String;", |vm, _| {
-        let dir = std::env::temp_dir();
-        ret_ref(Some(vm.new_string_os(dir.as_os_str())?))
-    });
+    vm.register_native(
+        FS,
+        "realPath",
+        "(Ljava/lang/String;)Ljava/lang/String;",
+        crate::canonical::real_path,
+    );
+    vm.register_native(
+        FS,
+        "lexical",
+        "(Ljava/lang/String;)Ljava/lang/String;",
+        crate::canonical::lexical,
+    );
 }
 
 /// Deletes a file or an empty directory. Failures are the java.nio.file
@@ -195,20 +208,31 @@ fn delete(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     });
     match result {
         Ok(()) => ret_void(),
-        Err(e) => Err(path_error(&e, p)),
+        Err(e) => Err(path_error(vm, &e, p)),
     }
 }
 
 /// The java.nio.file exception for an OS error on `path`: no such file,
 /// access denied, not empty, or an IOException with the OS's text.
-fn path_error(e: &std::io::Error, path: &Path) -> VmError {
+fn path_error(vm: &mut Vm, e: &std::io::Error, path: &Path) -> VmError {
     let class = match e.kind() {
         std::io::ErrorKind::NotFound => "java/nio/file/NoSuchFileException",
         std::io::ErrorKind::PermissionDenied => "java/nio/file/AccessDeniedException",
         std::io::ErrorKind::DirectoryNotEmpty => "java/nio/file/DirectoryNotEmptyException",
         _ => return io_exception(files::os_text(e, false)),
     };
-    VmError::exception(class, path.display().to_string())
+    path_exception(vm, class, path, "")
+}
+
+/// The exception `class` whose message is `path` exactly as the Java string
+/// the caller passed (`vm::wtf` gives it back unchanged), then `suffix`.
+fn path_exception(vm: &mut Vm, class: &'static str, path: &Path, suffix: &str) -> VmError {
+    let mut message = vm::wtf::to_units(path.as_os_str());
+    message.extend(suffix.encode_utf16());
+    match vm.throw_new_utf16(class, Some(&message)) {
+        Ok(r) => VmError::Throw(r),
+        Err(e) => e,
+    }
 }
 
 fn list(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

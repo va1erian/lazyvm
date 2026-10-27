@@ -133,7 +133,6 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public String getCanonicalPath() throws IOException {
-        SYNTAX.checkGiven(path);
         return SYNTAX.canonical(getAbsolutePath());
     }
 

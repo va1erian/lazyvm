@@ -105,9 +105,10 @@ final class FileOps {
         check(options, "Unsupported copy option", StandardCopyOption.REPLACE_EXISTING,
                 StandardCopyOption.ATOMIC_MOVE, LinkOption.NOFOLLOW_LINKS);
         boolean atomic = has(options, StandardCopyOption.ATOMIC_MOVE);
-        // Observed: ATOMIC_MOVE is the rename alone (a case-only one renames), and replaces
-        // no directory.
-        if (atomic && FileAccess.isDirectory(target) && FileAccess.exists(source)
+        // Observed on Windows: ATOMIC_MOVE is the rename alone (a case-only one renames), and
+        // replaces no directory. Elsewhere, with no oracle, the OS's rename decides.
+        boolean windows = "\\".equals(target.getFileSystem().getSeparator());
+        if (atomic && windows && FileAccess.isDirectory(target) && FileAccess.exists(source)
                 && !target.toAbsolutePath().normalize().startsWith(source.toAbsolutePath().normalize())) {
             throw new AccessDeniedException(source.toString(), target.toString(), null);
         }

@@ -33,6 +33,8 @@ latin1 encode on arrays, full then unmappable: OVERFLOW in=2 out=2
 latin1 encode on arrays, room then unmappable: UNMAPPABLE[1] in=2 out=2
 canEncode after a failed encode: !java.lang.IllegalStateException: Current state = CODING_END, new state = CODING
 canEncode after an encode: true UNDERFLOW
+canEncode(char) while coding: true false UNDERFLOW
+canEncode(char) after flush: true false UNDERFLOW Current state = FLUSHED, new state = CODING_END
 replace in place, heap: -574769440
 replace until the output is full: OVERFLOW in=2 ?a
 ascii encode, full then unmappable: UNMAPPABLE[1] in=2 out=2
@@ -70,6 +72,8 @@ newInputStream null option: !java.lang.NullPointerException
 newOutputStream copy option: !java.lang.UnsupportedOperationException
 copy stream atomic: !java.lang.UnsupportedOperationException: ATOMIC_MOVE not supported
 copy null option: !java.lang.NullPointerException
+copy below a file: !java.nio.file.NoSuchFileException: <T>/f -> <T>/f/x
+toRealPath of a missing path: true
 toUri nbsp and line separator: /a%C2%A0b%E2%80%A8c
 toUri brackets: /u%5Bv%5D
 left []

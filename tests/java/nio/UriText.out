@@ -101,3 +101,42 @@ http://h:80/ vs http://h:81/: equals=false hash=false compare=-1
 mailto:a vs file:/a: equals=false hash=false compare=1
 http://u%41@h/ vs http://u%41@H/: equals=true hash=true compare=0
 x:/a?Q vs x:/a?q: equals=false hash=false compare=-1
+x:a vs x:/a: equals=false hash=false compare=1
+x:/a vs x:a: equals=false hash=false compare=-1
+decoded http://[::1%25eth0]/?a[%41]=%41#x[%41]%41 -> ssp=//[::1%25eth0]/?a[%41]=A query=a[%41]=A frag=x[%41]A
+decoded s:a[%41]%41 -> ssp=a[%41]A query=null frag=null
+decoded http://h/?]%41[%41 -> ssp=//h/?]A[%41 query=]A[%41 frag=null
+authority [1:] -> ! Expected digits for an IPv6 address at 10
+authority [12345::] -> ! IPv6 hexadecimal digit sequence too long at 8
+authority [1::2::3] -> ! Expected hex digits or IPv4 address at 13
+authority [1.2.3.4] -> ! Malformed IPv6 address at 8
+authority [1:2:3:4:5:6.::7:8] -> ! Expected IPv4 address at 18
+authority [::1:] -> ! Expected digits for an IPv6 address at 12
+authority [::1.2,.3.4] -> ! Expected hex digits or IPv4 address at 10
+authority [::ffff:1.2.3] -> ! Malformed IPv4 address at 20
+authority [::1.2.3.4.5] -> ! Malformed IPv4 address at 17
+authority [::0255.255] -> ! Malformed IPv4 address at 18
+authority [::1.2.3.256] -> ! Malformed IPv4 address at 16
+authority [1:2:3:4:5:6:7:8::] -> ! Malformed IPv6 address at 8
+authority [1:2:3:4:5:6::7:8] -> ! Malformed IPv6 address at 8
+authority [1::2:3:4:5:6:7:8:9] -> ! IPv6 address too long at 8
+authority [::.] -> ! Malformed IPv4 address at 10
+authority [::e.1] -> ! Expected hex digits or IPv4 address at 10
+authority [1:e.1] -> ! Expected IPv4 address at 10
+authority [1:1.:] -> ! Expected IPv4 address at 10
+authority [:1::] -> ! Malformed IPv6 address at 8
+authority [::1%] -> ! scope id expected at -1
+authority [::1%=] -> ! Illegal character in scope id at 12
+authority [::1%_x] -> ! Illegal character in scope id at 12
+authority [::1%e.x] -> ! Illegal character in scope id at 13
+authority [::1%%41] -> ! Illegal character in scope id at 12
+authority [::1%e%20x] -> ! Illegal character in scope id at 13
+authority [::%41] -> auth=[::%41] decoded=[::%41] user=null host=[::%41] port=-1
+authority [::1%25] -> auth=[::1%25] decoded=[::1%25] user=null host=[::1%25] port=-1
+authority [1:2%x] -> ! IPv6 address too short at 8
+authority [::1.2.3.4%] -> ! scope id expected at -1
+authority a.1b!:80 -> auth=a.1b!:80 decoded=a.1b!:80 user=null host=null port=-1 (server: Illegal character in hostname at 11)
+authority a.1! -> auth=a.1! decoded=a.1! user=null host=null port=-1 (server: Illegal character in hostname at 10)
+authority 1.1!:8 -> auth=1.1!:8 decoded=1.1!:8 user=null host=null port=-1 (server: Illegal character in hostname at 10)
+authority a.1-! -> auth=a.1-! decoded=a.1-! user=null host=null port=-1 (server: Illegal character in hostname at 10)
+authority a.1a -> auth=a.1a decoded=a.1a user=null host=null port=-1 (server: Illegal character in hostname at 9)

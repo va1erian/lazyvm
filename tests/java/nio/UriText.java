@@ -94,5 +94,17 @@ public class UriText {
         same("mailto:a", "file:/a");
         same("http://u%41@h/", "http://u%41@H/");
         same("x:/a?Q", "x:/a?q");
+        same("x:a", "x:/a");
+        same("x:/a", "x:a");
+        for (String s : new String[] {"http://[::1%25eth0]/?a[%41]=%41#x[%41]%41", "s:a[%41]%41", "http://h/?]%41[%41"}) {
+            URI u = new URI(s);
+            System.out.println("decoded " + s + " -> ssp=" + u.getSchemeSpecificPart() + " query=" + u.getQuery() + " frag=" + u.getFragment());
+        }
+        String[] v6 = {"[1:]", "[12345::]", "[1::2::3]", "[1.2.3.4]", "[1:2:3:4:5:6.::7:8]", "[::1:]", "[::1.2,.3.4]", "[::ffff:1.2.3]",
+            "[::1.2.3.4.5]", "[::0255.255]", "[::1.2.3.256]", "[1:2:3:4:5:6:7:8::]", "[1:2:3:4:5:6::7:8]", "[1::2:3:4:5:6:7:8:9]", "[::.]",
+            "[::e.1]", "[1:e.1]", "[1:1.:]", "[:1::]", "[::1%]", "[::1%=]", "[::1%_x]", "[::1%e.x]", "[::1%%41]", "[::1%e%20x]",
+            "[::%41]", "[::1%25]", "[1:2%x]", "[::1.2.3.4%]"};
+        for (String a : v6) authority(a);
+        for (String a : new String[] {"a.1b!:80", "a.1!", "1.1!:8", "a.1-!", "a.1a"}) authority(a);
     }
 }

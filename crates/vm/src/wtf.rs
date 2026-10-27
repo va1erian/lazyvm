@@ -5,6 +5,9 @@
 //! UTF-8 (WTF-8), where a lone surrogate is its own three-byte form, so every
 //! string maps to its own name and a listing gives the same string back.
 //! Bytes that are not WTF-8 (a name another program made) read as U+FFFD.
+//! A high surrogate's three-byte form followed by a low one's is not WTF-8
+//! either (that pair has its four-byte form), so no two names that a string
+//! can come from both decode to it.
 
 use std::ffi::{OsStr, OsString};
 
@@ -80,7 +83,7 @@ pub fn decode(bytes: &[u8]) -> Vec<u16> {
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
-        match form(&bytes[i..]) {
+        match form(&bytes[i..]).filter(|&(cp, n)| !split_pair(cp, &bytes[i + n..])) {
             Some((cp, n)) => {
                 if cp >= 0x10000 {
                     let v = cp - 0x10000;
@@ -97,6 +100,13 @@ pub fn decode(bytes: &[u8]) -> Vec<u16> {
         }
     }
     out
+}
+
+/// Whether `cp`, a high surrogate, is followed by a low surrogate's
+/// three-byte form: the CESU-8 spelling of a pair, which `encode` never makes.
+fn split_pair(cp: u32, rest: &[u8]) -> bool {
+    (0xD800..0xDC00).contains(&cp)
+        && form(rest).is_some_and(|(low, _)| (0xDC00..0xE000).contains(&low))
 }
 
 /// The code point and length of the shortest-form sequence at the start.
@@ -136,6 +146,58 @@ mod tests {
             assert_eq!(decode(&encode(&units)), units);
         }
         assert_ne!(encode(&[0x78, 0xD800]), encode(&[0x78, 0xFFFD]));
+    }
+
+    #[test]
+    fn a_split_pair_is_not_the_pair() {
+        let four = [0x78, 0xF0, 0x90, 0x80, 0x80];
+        let cesu = [0x78, 0xED, 0xA0, 0x80, 0xED, 0xB0, 0x80];
+        assert_eq!(decode(&four), vec![0x78, 0xD800, 0xDC00]);
+        assert_eq!(decode(&cesu), vec![0x78, 0xFFFD, 0xFFFD, 0xFFFD, 0xDC00]);
+    }
+
+    /// Bytes that decode without U+FFFD are the encoding of what they decode
+    /// to, so no two such names decode to the same string.
+    fn check_bytes(b: &[u8]) {
+        let units = decode(b);
+        assert!(units.contains(&0xFFFD) || encode(&units) == b, "{b:02X?}");
+    }
+
+    #[test]
+    fn short_byte_sequences_decode_uniquely() {
+        for x in 0..=0xFF_FFFFu32 {
+            let [_, a, b, c] = x.to_be_bytes();
+            check_bytes(&[a, b, c]);
+        }
+        // Six bytes around the surrogate forms, where three-byte forms pair up.
+        let forms: Vec<[u8; 3]> = [0xD7FFu32, 0xD800, 0xDB80, 0xDBFF, 0xDC00, 0xDFFF, 0xE000]
+            .iter()
+            .map(|&cp| {
+                let mut v = Vec::new();
+                push(&mut v, cp);
+                [v[0], v[1], v[2]]
+            })
+            .collect();
+        for a in &forms {
+            for b in &forms {
+                check_bytes(&[a[0], a[1], a[2], b[0], b[1], b[2]]);
+            }
+        }
+    }
+
+    #[test]
+    fn every_string_of_one_or_two_units_round_trips() {
+        let edges = [
+            0, 0x7F, 0x80, 0x7FF, 0x800, 0xD7FF, 0xD800, 0xDBFF, 0xDC00, 0xDFFF, 0xE000, 0xFFFD,
+            0xFFFF,
+        ];
+        for u in 0..=0xFFFFu16 {
+            assert_eq!(decode(&encode(&[u])), vec![u]);
+            for &v in &edges {
+                assert_eq!(decode(&encode(&[u, v])), vec![u, v]);
+                assert_eq!(decode(&encode(&[v, u])), vec![v, u]);
+            }
+        }
     }
 
     #[test]

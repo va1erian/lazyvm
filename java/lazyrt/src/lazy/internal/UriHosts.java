@@ -20,10 +20,6 @@ final class UriHosts {
         return UriParser.alpha(c) || UriParser.digit(c);
     }
 
-    private static boolean hex(char c) {
-        return Character.digit(c, 16) >= 0 && c < 0x80;
-    }
-
     /** An IPv4 address at `p` ending at `q` or a ':', or -1. */
     private static int ipv4(String s, int p, int q) {
         int i = p;
@@ -48,6 +44,7 @@ final class UriHosts {
     /**
      * Observed: labels of letters, digits and inner '-', joined by '.', with an
      * optional final '.'; with more than one label the last starts with a letter.
+     * It ends at `q` or a ':' (the port).
      */
     static int hostname(String s, int p, int q) throws URISyntaxException {
         int v4 = ipv4(s, p, q);
@@ -77,6 +74,10 @@ final class UriHosts {
             }
             break;
         }
+        // Observed: a char after the name is reported before the last label's first char.
+        if (i < q && s.charAt(i) != ':') {
+            throw fail(s, "Illegal character in hostname", i);
+        }
         if (labels > 1 && !UriParser.alpha(s.charAt(last))) {
             throw fail(s, "Illegal character in hostname", last);
         }
@@ -93,65 +94,147 @@ final class UriHosts {
             throw fail(s, "Expected closing bracket for IPv6 address", close);
         }
         int zone = s.indexOf('%', p + 1);
-        address(s, p + 1, zone >= 0 && zone < close ? zone : close);
+        int end = zone >= 0 && zone < close ? zone : close;
+        new Ipv6(s, p + 1, end).address();
+        if (end < close) {
+            scope(s, zone, close);
+        }
         return close + 1;
     }
 
-    private static void address(String s, int a, int b) throws URISyntaxException {
-        char first = s.charAt(a);
-        if (!hex(first) && first != ':') {
-            throw fail(s, "Malformed IPv6 address", a);
+    /** Observed: a zone (scope id) is one or more ASCII letters and digits, checked after the address. */
+    private static void scope(String s, int zone, int close) throws URISyntaxException {
+        if (zone + 1 == close) {
+            throw fail(s, "scope id expected", -1);
         }
-        int groups = 0;
-        boolean compressed = false;
-        int i = a;
-        if (s.startsWith("::", i)) {
-            compressed = true;
-            i += 2;
-        } else if (first == ':') {
-            throw fail(s, "Malformed IPv6 address", a);
-        }
-        while (i < b) {
-            int j = i;
-            while (j < b && hex(s.charAt(j)) && j - i < 4) {
-                j++;
+        for (int i = zone + 1; i < close; i++) {
+            if (!alnum(s.charAt(i))) {
+                throw fail(s, "Illegal character in scope id", i);
             }
-            if (j < b && s.charAt(j) == '.') {
-                if (ipv4(s, i, b) != b) {
-                    throw fail(s, "Malformed IPv4 address", i);
+        }
+    }
+
+    /**
+     * An IPv6 address in `s[a, b)`: groups of 1 to 4 hex digits joined by ':',
+     * at most one "::", and optionally an IPv4 address last. The rules below
+     * reproduce the oracle's messages and indexes; they were derived from about
+     * 170,000 probed literals (the "second part" is what follows a "::").
+     */
+    private static final class Ipv6 {
+        private final String s;
+        private final int a;
+        private final int b;
+        private int groups;
+
+        Ipv6(String s, int a, int b) {
+            this.s = s;
+            this.a = a;
+            this.b = b;
+        }
+
+        void address() throws URISyntaxException {
+            int p = a;
+            boolean compressed = false;
+            if (!s.startsWith("::", p)) {
+                p = sequence(p, false);
+            }
+            if (p < b && s.startsWith("::", p)) {
+                compressed = true;
+                p += 2;
+                if (p < b) {
+                    p = sequence(p, true);
                 }
-                groups += 2;
-                break;
             }
-            if (j == i) {
-                throw fail(s, "Expected hex digits or IPv4 address", i);
-            }
-            groups++;
-            i = j;
-            if (i == b) {
-                break;
-            }
-            if (s.charAt(i) != ':') {
+            if (p < b) {
                 throw fail(s, "Malformed IPv6 address", a);
             }
-            if (i + 1 < b && s.charAt(i + 1) == ':') {
-                if (compressed) {
-                    throw fail(s, "Malformed IPv6 address", a);
+            if (groups > 8) {
+                throw fail(s, "IPv6 address too long", a);
+            }
+            if (compressed && groups == 8) {
+                throw fail(s, "Malformed IPv6 address", a);
+            }
+            if (!compressed && groups < 8) {
+                throw fail(s, "IPv6 address too short", a);
+            }
+        }
+
+        /** Groups joined by single ':' from `p`; in the first part it stops before a "::". */
+        private int sequence(int p, boolean second) throws URISyntaxException {
+            while (true) {
+                p = group(p, second);
+                if (p >= b || s.charAt(p) != ':' || (!second && s.startsWith("::", p))) {
+                    return p;
                 }
-                compressed = true;
-                i += 2;
-            } else {
-                i++;
-                if (i == b) {
-                    throw fail(s, "Expected hex digits or IPv4 address", i);
+                p++;
+                if (p >= b || !UriText.hex(s.charAt(p))) {
+                    boolean colon = p < b && s.charAt(p) == ':';
+                    throw fail(s, colon ? "Expected hex digits or IPv4 address" : "Expected digits for an IPv6 address", p);
                 }
             }
         }
-        if (groups > 8 || (compressed && groups > 7)) {
-            throw fail(s, "IPv6 address too long", a);
+
+        /** One group, or the IPv4 address that ends the literal, at `p`. */
+        private int group(int p, boolean second) throws URISyntaxException {
+            int q = p;
+            while (q < b && UriText.hex(s.charAt(q))) {
+                q++;
+            }
+            if (q < b && s.charAt(q) == '.') {
+                if (p == a) {
+                    throw fail(s, "Malformed IPv6 address", a);
+                }
+                return ipv4(p, second);
+            }
+            if (q == p) {
+                if (!second) {
+                    throw fail(s, "Malformed IPv6 address", a);
+                }
+                return ipv4(p, true);
+            }
+            if (q - p > 4) {
+                throw fail(s, "IPv6 hexadecimal digit sequence too long", p);
+            }
+            groups++;
+            return q;
         }
-        if (!compressed && groups < 8) {
-            throw fail(s, "IPv6 address too short", a);
+
+        /**
+         * Observed: an IPv4 address must run to the end in digits and dots, else the message
+         * is about what was expected at `p`; then each of its four numbers is at most 255
+         * (leading zeros allowed) and the first misplaced char is reported.
+         */
+        private int ipv4(int p, boolean second) throws URISyntaxException {
+            int r = p;
+            while (r < b && (UriParser.digit(s.charAt(r)) || s.charAt(r) == '.')) {
+                r++;
+            }
+            if (r < b) {
+                throw fail(s, second ? "Expected hex digits or IPv4 address" : "Expected IPv4 address", p);
+            }
+            int i = p;
+            for (int part = 0; part < 4; part++) {
+                if (part > 0) {
+                    if (i >= b || s.charAt(i) != '.') {
+                        throw fail(s, "Malformed IPv4 address", i);
+                    }
+                    i++;
+                }
+                int start = i;
+                int value = 0;
+                while (i < b && UriParser.digit(s.charAt(i))) {
+                    value = Math.min(256, value * 10 + (s.charAt(i) - '0'));
+                    i++;
+                }
+                if (i == start || value > 255) {
+                    throw fail(s, "Malformed IPv4 address", start);
+                }
+            }
+            if (i < b) {
+                throw fail(s, "Malformed IPv4 address", i);
+            }
+            groups += 2;
+            return i;
         }
     }
 }

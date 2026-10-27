@@ -253,24 +253,19 @@ final class DefaultPath implements Path {
         return new DefaultPath(fs, abs, p.root, p.names);
     }
 
-    // Observed: a missing path is reported absolute and normalized; on Windows one below a
-    // file is "The directory name is invalid." (with the OS's line break).
+    // Observed: the OS resolves the path as written (on Unix a ".." after a link leaves its
+    // target); one it cannot resolve is reported absolute, "." and ".." applied by name and,
+    // on Windows, its names trimmed (lazy.internal.FileSystem.lexical), with the OS's reason
+    // when it is not simply missing ("The directory name is invalid." below a file).
     public Path toRealPath(LinkOption... options) throws IOException {
-        Path abs = toAbsolutePath().normalize();
-        String name = abs.toString();
-        if (lazy.internal.FileSystem.attributes(name) == 0) {
-            for (Path p = abs.getParent(); p != null; p = p.getParent()) {
-                int bits = lazy.internal.FileSystem.attributes(p.toString());
-                if (bits != 0) {
-                    if ((bits & lazy.internal.FileSystem.DIRECTORY) == 0 && SYNTAX.ignoresCase()) {
-                        throw new FileSystemException(name, null, "The directory name is invalid.\r\n");
-                    }
-                    break;
-                }
-            }
-            throw new NoSuchFileException(name);
+        String abs = toAbsolutePath().toString();
+        try {
+            return parse(fs, SYNTAX.real(abs));
+        } catch (NoSuchFileException e) {
+            throw new NoSuchFileException(lazy.internal.FileSystem.lexical(abs));
+        } catch (IOException e) {
+            throw new FileSystemException(lazy.internal.FileSystem.lexical(abs), null, e.getMessage());
         }
-        return parse(fs, SYNTAX.canonical(name));
     }
 
     public File toFile() {

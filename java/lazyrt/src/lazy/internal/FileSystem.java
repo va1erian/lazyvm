@@ -86,10 +86,14 @@ public final class FileSystem {
 
     public static native String canonicalize(String path) throws IOException;
 
+    /** The OS's real path of an existing file; missing → NoSuchFileException, else IOException(reason). */
+    public static native String realPath(String path) throws IOException;
+
+    /** An absolute path as toRealPath reports one it cannot resolve (files.md). */
+    public static native String lexical(String path);
+
     public static native boolean setReadOnly(String path);
 
     /** Grants or takes away read (4), write (2) or execute (1) access, for the owner or all. */
     public static native boolean setAccess(String path, int access, boolean enable, boolean ownerOnly);
-
-    public static native String tempDir();
 }

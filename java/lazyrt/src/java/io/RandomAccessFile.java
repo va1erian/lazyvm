@@ -97,12 +97,9 @@ public class RandomAccessFile implements DataOutput, DataInput, Closeable {
         return FileSystem.size(handle);
     }
 
-    // Spec FS4: shrinking pulls the pointer back to the new end.
+    // Spec FS4: shrinking pulls the pointer back to the new end (the native moves it, files.md).
     public void setLength(long newLength) throws IOException {
         FileSystem.truncate(handle, newLength);
-        if (getFilePointer() > newLength) {
-            seek(newLength);
-        }
     }
 
     public void close() throws IOException {

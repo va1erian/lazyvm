@@ -23,6 +23,7 @@ temp prefix with a separator: abcN.t
 temp suffix climbing out: !java.io.IOException: Unable to create temporary file, <T>/abcN/..
 dir setLastModified: true 1000000000000
 file setLastModified: true 1234567890000
+toURI of the empty path ends with /: true
 toURI brackets: /u%5Bv%5D
 toURI nbsp and line separator: /a%C2%A0b%E2%80%A8c
 lone surrogate names: no aliasing

@@ -50,8 +50,12 @@ public abstract class PathSyntax {
     /** The absolute form of a normalized File path, `userDir` being the current directory. */
     public abstract String absoluteFile(String path, String userDir);
 
-    /** Before the native canonicalization: checks and lexical clean-up the platform needs. */
-    public abstract String precanonical(String absolute) throws java.io.IOException;
+    /**
+     * Before the native canonicalization: the platform's checks of the whole path. The names
+     * themselves ("." and "..", trimming) are the native's (files.md, canonicalize).
+     */
+    void precanonical(String absolute) throws java.io.IOException {
+    }
 
     /** After the native canonicalization: the platform's final touches. */
     String postcanonical(String absolute, String canonical) {
@@ -59,13 +63,14 @@ public abstract class PathSyntax {
     }
 
     /** The canonical form of an absolute path: checks, the native, then the platform's touches. */
-    /** File.getCanonicalPath's checks of the path as given, before it is made absolute. */
-    public void checkGiven(String path) throws java.io.IOException {
+    public String canonical(String absolute) throws java.io.IOException {
+        precanonical(absolute);
+        return postcanonical(absolute, FileSystem.canonicalize(absolute));
     }
 
-    public String canonical(String absolute) throws java.io.IOException {
-        String checked = precanonical(absolute);
-        return postcanonical(checked, FileSystem.canonicalize(checked));
+    /** Path.toRealPath of an absolute path: the OS's real path, with the platform's touches. */
+    public String real(String absolute) throws java.io.IOException {
+        return postcanonical(absolute, FileSystem.realPath(absolute));
     }
 
     // ---- java.nio.file ----
@@ -135,28 +140,6 @@ public abstract class PathSyntax {
         }
         if (sb.length() > from && sb.charAt(sb.length() - 1) == sep) {
             sb.setLength(sb.length() - 1);
-        }
-        return sb.toString();
-    }
-
-    /** Resolves "." and ".." names of an absolute path after its `prefix` root, lexically. */
-    static String collapseDots(String abs, int prefix, char sep) {
-        List<String> out = new ArrayList<>();
-        for (String n : split(abs, prefix, sep)) {
-            if (n.equals("..")) {
-                if (!out.isEmpty()) {
-                    out.remove(out.size() - 1);
-                }
-            } else if (!n.equals(".")) {
-                out.add(n);
-            }
-        }
-        StringBuilder sb = new StringBuilder(abs.substring(0, prefix));
-        for (int i = 0; i < out.size(); i++) {
-            if (i > 0 || (sb.length() > 0 && sb.charAt(sb.length() - 1) != sep)) {
-                sb.append(sep);
-            }
-            sb.append(out.get(i));
         }
         return sb.toString();
     }

@@ -103,14 +103,19 @@ final class StringSearch {
     }
 
     static int indexOf(char[] v, char[] s, int from) {
+        return indexOf(v, v.length, s, from);
+    }
+
+    /** The first match of `s` in `v[0, len)` from `from`: a builder searches its used part in place. */
+    static int indexOf(char[] v, int len, char[] s, int from) {
         if (from < 0) {
             from = 0;
         }
         if (s.length == 0) {
-            return Math.min(from, v.length);
+            return Math.min(from, len);
         }
-        for (int i = from; i <= v.length - s.length; i++) {
-            if (matchesAt(v, s, i)) {
+        for (int i = from; i <= len - s.length; i++) {
+            if (matchesAt(v, len, s, i)) {
                 return i;
             }
         }
@@ -118,8 +123,12 @@ final class StringSearch {
     }
 
     static int lastIndexOf(char[] v, char[] s, int from) {
-        for (int i = Math.min(from, v.length - s.length); i >= 0; i--) {
-            if (matchesAt(v, s, i)) {
+        return lastIndexOf(v, v.length, s, from);
+    }
+
+    static int lastIndexOf(char[] v, int len, char[] s, int from) {
+        for (int i = Math.min(from, len - s.length); i >= 0; i--) {
+            if (matchesAt(v, len, s, i)) {
                 return i;
             }
         }
@@ -127,7 +136,11 @@ final class StringSearch {
     }
 
     static boolean matchesAt(char[] v, char[] s, int at) {
-        if (at < 0 || at > v.length - s.length) {
+        return matchesAt(v, v.length, s, at);
+    }
+
+    private static boolean matchesAt(char[] v, int len, char[] s, int at) {
+        if (at < 0 || at > len - s.length) {
             return false;
         }
         for (int i = 0; i < s.length; i++) {

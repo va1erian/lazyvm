@@ -7,8 +7,12 @@ current directory, which is `user.dir`), converted exactly (`vm::wtf`): on
 Windows the UTF-16 units as they are, lone surrogates included; on Unix
 their generalized UTF-8, so a lone surrogate is its own three-byte form.
 Names the OS gives back (listings, canonical forms) convert the other way;
-bytes that are not of that form read as U+FFFD. Distinct strings never name
-the same file. On LazyOS the same calls go through the Linux ABI.
+bytes that are not of that form read as U+FFFD, a surrogate pair spelled as
+two three-byte forms (CESU-8) included, so two different names never read
+as the same string. Distinct strings never name the same file. Messages that
+name a file (`FileNotFoundException`, `NoSuchFileException`) hold the path
+exactly as the caller's string, lone surrogates too; so do `user.dir` and
+`java.io.tmpdir`. On LazyOS the same calls go through the Linux ABI.
 
 Open files are numbered handles in a process-wide table
 (`platform::files`), like descriptors. A handle that is never closed stays
@@ -24,9 +28,7 @@ error number (`The system cannot find the file specified` on Windows,
 `No such file or directory` on Linux). Where `java.nio.file` shows the
 reason itself (a `FileSystemException`'s reason), it is the full text as
 Java 8 gives it: on Windows with its period and the line break the OS
-message ends in (`...another process.
-
-`).
+message ends in (`...another process.` followed by `\r\n`).
 
 ## `lazy.internal.FileSystem` natives
 
@@ -47,8 +49,16 @@ Handles:
 - `static native long position(long h)`, `static native void seek(long h, long pos)`
 - `static native long size(long h)`, `static native void truncate(long h, long len)`
 - `static native int available(long h)`: bytes from the position to the end, capped at `Integer.MAX_VALUE`
-- A device (NUL: no length) has position and size 0, and seek and truncate do
-  nothing; on Windows its `available` is the OS error "Incorrect function".
+- Position, seek and truncate are the OS's for every handle, devices and
+  volumes included. `truncate` first moves the position to the new length,
+  so it stays there when the OS refuses the length (NUL, a read-only
+  handle), and on success moves back unless it was past the new end, the
+  order observed on Windows.
+- On Windows NUL, whose metadata the OS refuses, has size 0; its `available`
+  is the OS's error "Incorrect function", and a console (`CONOUT$`) gives
+  that error for its size as well. NUL keeps a position that only seeks and
+  truncates move: after `seek(10)` it is 10, `setLength(3)` fails with
+  "Incorrect function" and leaves 3, and `skipBytes(4)` then returns -3.
 - `static native void sync(long h)`
 - `static native void close(long h)`: closing twice is not an error.
 
@@ -75,10 +85,19 @@ Paths (no handle):
   (the caller copies); a failure is thrown as `delete`'s are.
 - `static native boolean mkdir(String path)`
 - `static native boolean createNew(String path)`: atomically creates an empty file; false if it exists
-- `static native String canonicalize(String path)`: of an absolute path:
-  `.`/`..` resolved by name, the longest existing part resolved by the OS
-  (links, on-disk case), the rest appended as written; Windows rules in
-  io.md F7.
+- `static native String canonicalize(String path)`: of an absolute path,
+  the longest existing part resolved by the OS (links, on-disk case), the
+  rest appended as written. On Windows `.`/`..` are applied by name first,
+  as the OS does, and names are trimmed and checked by nio-file.md PW2; on Unix the
+  OS resolves the existing part as written (a `..` after a link leaves the
+  link's target) and only the missing rest is resolved by name, so the
+  result names the file the path opens.
+- `static native String realPath(String path)`: the OS's real path of an
+  existing file (`Path.toRealPath`); missing → `NoSuchFileException`,
+  another failure → `IOException` whose message is the OS's reason.
+- `static native String lexical(String path)`: an absolute path as
+  `toRealPath` reports one it cannot resolve: `.`/`..` by name and, on
+  Windows, the trimming of nio-file.md PW2 without its "Bad pathname".
 - `static native boolean setReadOnly(String path)`: `setAccess(path, 2,
   false, …)`; on Windows false for a directory, as Java 8 reports.
 - `static native boolean setAccess(String path, int access, boolean enable, boolean ownerOnly)`:
@@ -86,7 +105,6 @@ Paths (no handle):
   owner or for everyone. Windows has only the read-only flag: write access
   maps to it, and read and execute access can be granted but not taken away
   (taking them away returns false), as Java 8 reports there.
-- `static native String tempDir()`
 
 Every argument value a caller can pass is checked: a bad one is an
 exception, never a VM abort. Bounds of `b`, `off`, `len` are checked again by every native

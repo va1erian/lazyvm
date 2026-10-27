@@ -171,9 +171,6 @@ public final class UriParser {
             }
         } else {
             p = UriHosts.hostname(s, p, q);
-            if (p < q && s.charAt(p) != ':') {
-                throw fail("Illegal character in hostname", p);
-            }
         }
         host = s.substring(h, p);
         if (p < q) {

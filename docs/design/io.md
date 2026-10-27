@@ -139,9 +139,10 @@ the encoder, not on an earlier flush. Built from a REPORT `CharsetEncoder`, a lo
 returned zero bytes")` from `InputStreamReader` (`BufferedReader` retries). After `close`, `read()` still returns a
 kept second char of a pair, `read(char[]…)` throws. `OutputStreamWriter.write(char[]…)` checks the closed state
 first; `write(String, off, len)`: `len < 0` → IOOBE, then `String.getChars` judges the range, then the closed
-state. `Writer.write(String)` uses its reused 1024-char array for up to 1024 chars. `CharsetEncoder.canEncode`
-during a coding, or after a convenience `encode` that failed, → `IllegalStateException("Current state = CODING_END,
-new state = CODING")`; it leaves the coder reset. [IoEdges: isr…, osw…, write…; NioEdges: canEncode…]
+state. `Writer.write(String)` uses its reused 1024-char array for up to 1024 chars. `CharsetEncoder.canEncode(
+CharSequence)` during a coding, or after a convenience `encode` that failed, → `IllegalStateException("Current state =
+CODING_END, new state = CODING")`; it leaves the coder reset. `canEncode(char)` neither checks nor changes the state
+(all six charsets: after a flush the coder stays flushed). [IoEdges: isr…, osw…, write…; NioEdges: canEncode…]
 
 **R5.** `PrintWriter(OutputStream)` buffers (a `BufferedWriter` over an `OutputStreamWriter`); `checkError()`
 flushes; auto-flush acts on `println` only. `PrintStream(OutputStream)` writes each `print` at once; `println(s)`
@@ -273,13 +274,9 @@ false. `getParentFile` keeps the parent string as it is (`\C:\` → `\C:`). `set
 microseconds; a time that does not fit → false; on Windows the first instant of 1601 leaves the time as it is and an
 earlier one is "The parameter is incorrect.". On Windows a directory's write access cannot change (`setReadOnly`,
 `setWritable` either way → false), and read and execute access can be granted (true, even for a missing file) but not
-taken. `toURI` escapes as nio-file.md P4 (`u[v]` → `u%5Bv%5D`). Canonical
-forms drop Windows' `\\?\` and `\\?\UNC\` (→ `\\`) prefixes and keep a UNC host and share as given; `.` and `..`
-are applied by name and the rest past what exists is appended as written; the last name loses trailing dots and
-spaces; `NUL` anywhere is `\\.\NUL`. No canonical form (`IOException`): a wildcard; outside a share, a `:` in the first
-name (`"The filename, directory name, or volume label syntax is incorrect"`); a name of three or more dots (and
-spaces) before another (`"Bad pathname"`). `toURI` of `""` ends with `/`. A lone surrogate never names the file of U+FFFD (on Windows it names its own).
-[IoEdges: temp…, renameTo…, … setLastModified, toURI…, lone surrogate names; FilePathsWin: NUL…, dir…, unc…]
+taken. `toURI` escapes as nio-file.md P4 (`u[v]` → `u%5Bv%5D`). `toURI` of `""` ends with `/`. A lone surrogate
+never names the file of U+FFFD (on Windows it names its own). [IoEdges: temp…, renameTo…, … setLastModified, toURI…,
+lone surrogate names; FilePathsWin: NUL…, dir…, unc…] Canonical and real paths: nio-file.md PW2.
 
 **W1.** Windows, pinned by FilePathsWin (table there): `/` and `\` are separators, normalised to `\`; two or more
 leading separators make an absolute UNC path (`///a` → `\\a`); `\a` and `C:a` are relative, `C:\` absolute; `C:` has

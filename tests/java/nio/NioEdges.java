@@ -136,6 +136,8 @@ public class NioEdges {
         t("latin1 encode on arrays, room then unmappable", () -> { CharBuffer in = CharBuffer.wrap(("ab" + (char) 0x20AC).toCharArray()); ByteBuffer out = ByteBuffer.allocate(3); return result(latin.newEncoder().encode(in, out, true), in, out); });
         t("canEncode after a failed encode", () -> { CharsetEncoder e = StandardCharsets.US_ASCII.newEncoder(); try { e.encode(CharBuffer.wrap("a" + (char) 0xE9)); } catch (CharacterCodingException x) { } return e.canEncode("a"); });
         t("canEncode after an encode", () -> { CharsetEncoder e = StandardCharsets.US_ASCII.newEncoder(); e.encode(CharBuffer.wrap("a")); return e.canEncode("a") + " " + e.encode(CharBuffer.allocate(0), ByteBuffer.allocate(1), true); });
+        t("canEncode(char) while coding", () -> { CharsetEncoder e = StandardCharsets.US_ASCII.newEncoder(); ByteBuffer out = ByteBuffer.allocate(8); e.encode(CharBuffer.wrap("ab"), out, false); return e.canEncode('a') + " " + e.canEncode((char) 0xE9) + " " + e.encode(CharBuffer.wrap("c"), out, true); });
+        t("canEncode(char) after flush", () -> { CharsetEncoder e = StandardCharsets.UTF_8.newEncoder(); ByteBuffer out = ByteBuffer.allocate(8); e.encode(CharBuffer.wrap("ab"), out, true); e.flush(out); String r = e.canEncode('a') + " " + e.canEncode((char) 0xD800) + " " + e.flush(out); try { e.encode(CharBuffer.wrap("z"), out, true); } catch (IllegalStateException x) { r += " " + x.getMessage(); } return r; });
         t("replace in place, heap", () -> { byte[] b = new byte[30]; for (int i = 0; i < 30; i++) b[i] = (byte) (i % 3 == 0 ? 0xC3 : i % 3 == 1 ? 'a' : 0xA9); return new String(b, StandardCharsets.UTF_8).hashCode(); });
         t("replace until the output is full", () -> { CharsetDecoder d = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPLACE).replaceWith("?"); CharBuffer out = CharBuffer.allocate(2); ByteBuffer in = ByteBuffer.wrap(new byte[] {(byte) 0xFF, 'a', (byte) 0xFF}); CoderResult r = d.decode(in, out, true); return r + " in=" + in.position() + " " + new String(out.array(), 0, out.position()); });
         t("ascii encode, full then unmappable", () -> { CharBuffer in = CharBuffer.wrap("ab€"); ByteBuffer out = ByteBuffer.allocate(2); return result(StandardCharsets.US_ASCII.newEncoder().encode(in, out, true), in, out); });
@@ -203,6 +205,8 @@ public class NioEdges {
         t("newOutputStream copy option", () -> Files.newOutputStream(f, new OpenOption() {}));
         t("copy stream atomic", () -> Files.copy(new ByteArrayInputStream(new byte[1]), root.resolve("g"), StandardCopyOption.ATOMIC_MOVE));
         t("copy null option", () -> Files.copy(f, root.resolve("g"), (CopyOption) null));
+        t("copy below a file", () -> Files.copy(f, f.resolve("x")));
+        t("toRealPath of a missing path", () -> { try { return Paths.get("nope1", "..", "nope2", ".", "x").toRealPath(); } catch (NoSuchFileException e) { return e.getFile().equals(Paths.get("nope2", "x").toAbsolutePath().toString()); } });
         t("toUri nbsp and line separator", () -> { String u = root.resolve("a b c").toUri().getRawPath(); return u.substring(u.lastIndexOf('/')); });
         t("toUri brackets", () -> { String u = root.resolve("u[v]").toUri().getRawPath(); return u.substring(u.lastIndexOf('/')); });
         for (Path p : new Path[] {f, d}) Files.deleteIfExists(p);

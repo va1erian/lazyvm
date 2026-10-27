@@ -51,7 +51,17 @@ public class FilePathsWin {
         {"a", "|", "a|"}, {"a", "||", "a"}, {"|", "||", ""}, {"||", "||", "|"}, {"C:|", "|", "C:|"}, {"a", "C:/", "a|C:|"},
     };
 
-    /** NUL is a device: it opens, takes writes, and has no length or position. */
+    /** The message setLength fails with, or "ok". */
+    static String setLength(RandomAccessFile r, long len) {
+        try {
+            r.setLength(len);
+            return "ok";
+        } catch (IOException e) {
+            return e.getMessage();
+        }
+    }
+
+    /** NUL is a device: it opens, takes writes, has length 0, and its pointer moves only by seek and setLength. */
     static void devices() throws IOException {
         try (FileOutputStream o = new FileOutputStream("NUL")) {
             o.write(new byte[10]);
@@ -59,7 +69,17 @@ public class FilePathsWin {
         try (RandomAccessFile r = new RandomAccessFile("NUL", "rw")) {
             r.write(1);
             check("NUL length and pointer", r.length() + " " + r.getFilePointer(), "0 0");
+            r.seek(10);
+            check("NUL pointer after seek", r.getFilePointer(), "10");
+            check("NUL setLength(3)", setLength(r, 3) + " " + r.getFilePointer(), "Incorrect function 3");
+            check("NUL skipBytes(4)", r.skipBytes(4) + " " + r.getFilePointer(), "-3 0");
         }
+        File ro = File.createTempFile("lazyio", ".ro");
+        try (RandomAccessFile r = new RandomAccessFile(ro, "r")) {
+            r.seek(10);
+            check("read-only setLength(20)", setLength(r, 20) + " " + r.getFilePointer(), "Access is denied 20");
+        }
+        check("cleanup read-only", ro.delete(), "true");
         try (FileInputStream in = new FileInputStream("NUL")) {
             check("NUL read", in.read(), "-1");
             try {

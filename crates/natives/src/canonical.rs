@@ -1,84 +1,291 @@
-//! `lazy.internal.FileSystem.canonicalize`: the canonical form of an
-//! absolute path, as `File.getCanonicalPath` shows it (docs/design/files.md).
+//! Canonical and real paths: `lazy.internal.FileSystem.canonicalize`
+//! (`File.getCanonicalPath`), `realPath` and `lexical` (`Path.toRealPath`),
+//! as docs/design/files.md and nio-file.md PW2 describe them.
 //!
-//! The path is worked on as Java's UTF-16 units: `.` and `..` are resolved
-//! by name, the longest part that exists is resolved by the OS (links,
-//! on-disk case), and the rest is appended as written. Observed on Windows:
-//! the last name loses its trailing dots and spaces (and goes if nothing is
-//! left, the separator staying), and a name ending in a dot or a space is
-//! not looked up, since the OS would read it as another name.
+//! Paths are worked on as Java's UTF-16 units. The part of the path that
+//! exists is resolved by the OS (links, on-disk case) and the rest is
+//! appended as written. On Windows `.` and `..` are applied by name first,
+//! as the OS itself does, and names lose trailing dots (and spaces) by the
+//! observed rules below. On Unix the OS resolves the existing part as
+//! written, so a `..` after a link leaves the link's target, and only the
+//! missing rest is resolved by name: the canonical path names the file the
+//! path opens.
 
 use std::path::MAIN_SEPARATOR;
 
+use platform::files;
 use vm::{Value, Vm, VmError, VmResult};
 
 use crate::{arg, ret_ref};
 
 const SEP: u16 = MAIN_SEPARATOR as u16;
 const WINDOWS: bool = cfg!(windows);
+const DOT: u16 = b'.' as u16;
+const SPACE: u16 = b' ' as u16;
+const COLON: u16 = b':' as u16;
+const SYNTAX: &str = "The filename, directory name, or volume label syntax is incorrect";
 
-pub(crate) fn canonicalize(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+fn path_units(vm: &Vm, args: &[Value]) -> VmResult<Vec<u16>> {
     let r = arg(args, 0)?.reference()?.ok_or_else(VmError::npe)?;
-    let path = vm.string_utf16(r)?;
-    let out = canonical(&path);
+    vm.string_utf16(r)
+}
+
+/// `canonicalize(String)`: the canonical form of an absolute path.
+pub(crate) fn canonicalize(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let path = path_units(vm, args)?;
+    let out = if WINDOWS {
+        windows_canonical(&path)
+    } else {
+        Ok(unix_canonical(&path))
+    };
+    match out {
+        Ok(out) => ret_ref(Some(vm.new_string_utf16(&out)?)),
+        Err(msg) => Err(VmError::exception("java/io/IOException", msg)),
+    }
+}
+
+/// `realPath(String)`: the OS's real path of an existing file. A missing
+/// one is a bare `NoSuchFileException`; another failure an `IOException`
+/// with the OS's reason as a FileSystemException shows it.
+pub(crate) fn real_path(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let path = path_units(vm, args)?;
+    let root = root_length(&path);
+    let opened = if WINDOWS {
+        let (names, trailing) = opened_names(&path, root);
+        let parent = &names[..names.len().saturating_sub(1)];
+        if names.last().is_some_and(|n| is_device(n)) && is_dir(&join(&path[..root], parent)) {
+            // Observed: NUL in an existing directory is its own real path.
+            return ret_ref(Some(vm.new_string_utf16(&joined(
+                &path[..root],
+                &names,
+                trailing,
+            ))?));
+        }
+        joined(&path[..root], &names, trailing)
+    } else {
+        path
+    };
+    match std::fs::canonicalize(vm::wtf::from_units(&opened)) {
+        Ok(real) => {
+            let real = without_verbatim(vm::wtf::to_units(real.as_os_str()));
+            ret_ref(Some(vm.new_string_utf16(&real)?))
+        }
+        Err(e) if missing(&e) && !below_file(&opened) => {
+            Err(VmError::bare("java/nio/file/NoSuchFileException"))
+        }
+        Err(e) if missing(&e) => {
+            // Observed on Windows: below a file it is the OS's "directory name is invalid".
+            const ERROR_DIRECTORY: i32 = 267;
+            let e = std::io::Error::from_raw_os_error(ERROR_DIRECTORY);
+            Err(VmError::exception(
+                "java/io/IOException",
+                files::os_text(&e, false),
+            ))
+        }
+        Err(e) => Err(VmError::exception(
+            "java/io/IOException",
+            files::os_text(&e, false),
+        )),
+    }
+}
+
+/// Whether the longest existing part of a missing path is a file (Windows).
+fn below_file(path: &[u16]) -> bool {
+    let root = root_length(path);
+    let (names, _) = resolved_names(path, root);
+    let k = existing(&path[..root], &names);
+    WINDOWS && k > 0 && !is_dir(&join(&path[..root], &names[..k]))
+}
+
+/// Whether the OS says the file is not there. On Windows only "file" and
+/// "path not found" are: an unreachable share keeps its own reason.
+fn missing(e: &std::io::Error) -> bool {
+    if WINDOWS {
+        matches!(e.raw_os_error(), Some(2 | 3))
+    } else {
+        e.kind() == std::io::ErrorKind::NotFound
+    }
+}
+
+/// Observed: Windows opens a path whose names end in dots or spaces as if
+/// they did not (`d2..\in` is `d2\in`), except names of only dots and spaces.
+fn opened_names(path: &[u16], root: usize) -> (Vec<Vec<u16>>, bool) {
+    let (mut names, trailing) = resolved_names(path, root);
+    for n in names.iter_mut().filter(|n| !dots_and_spaces(n)) {
+        while matches!(n.last(), Some(&DOT | &SPACE)) {
+            n.pop();
+        }
+    }
+    (names, trailing)
+}
+
+fn dots_and_spaces(name: &[u16]) -> bool {
+    name.iter().all(|&c| c == DOT || c == SPACE)
+}
+
+/// `lexical(String)`: an absolute path as `toRealPath` reports a file it
+/// cannot resolve: `.` and `..` applied by name, on Windows the names
+/// trimmed as for a canonical form (but a name ending in two dots kept).
+pub(crate) fn lexical(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let path = path_units(vm, args)?;
+    let root = root_length(&path);
+    let out = match names(&path, root, false) {
+        Ok((names, trailing)) => joined(&path[..root], &names, trailing),
+        Err(_) => path,
+    };
     ret_ref(Some(vm.new_string_utf16(&out)?))
 }
 
-fn canonical(path: &[u16]) -> Vec<u16> {
+/// The names after `root`, `.` and `..` applied, and whether a separator
+/// ends the result. On Windows (observed): a name before another loses one
+/// final dot, and one ending in two dots is "Bad pathname" when `strict`;
+/// the last name loses its trailing dots and spaces, and goes if nothing is
+/// left, the separator staying.
+fn names(path: &[u16], root: usize, strict: bool) -> Result<(Vec<Vec<u16>>, bool), &'static str> {
+    let (mut names, mut trailing) = resolved_names(path, root);
+    if !WINDOWS {
+        return Ok((names, trailing));
+    }
+    let last = names.len().saturating_sub(1);
+    for n in names.iter_mut().take(last) {
+        if n.ends_with(&[DOT, DOT]) {
+            if strict {
+                return Err("Bad pathname");
+            }
+        } else if n.last() == Some(&DOT) {
+            n.pop();
+        }
+    }
+    if let Some(n) = names.last_mut() {
+        while matches!(n.last(), Some(&DOT | &SPACE)) {
+            n.pop();
+        }
+        if n.is_empty() {
+            names.pop();
+            trailing = true;
+        }
+    }
+    Ok((names, trailing))
+}
+
+/// The names after `root` with `.` and `..` applied by name, and whether a
+/// separator ends the path: the one place either is resolved by name.
+fn resolved_names(path: &[u16], root: usize) -> (Vec<Vec<u16>>, bool) {
+    let mut names: Vec<Vec<u16>> = Vec::new();
+    for n in path[root..].split(|&c| c == SEP).filter(|n| !n.is_empty()) {
+        match n {
+            [DOT] => {}
+            [DOT, DOT] => {
+                names.pop();
+            }
+            _ => names.push(n.to_vec()),
+        }
+    }
+    (names, path.len() > root && path.last() == Some(&SEP))
+}
+
+fn windows_canonical(path: &[u16]) -> Result<Vec<u16>, &'static str> {
     let root_len = root_length(path);
     let root = &path[..root_len];
-    let mut names: Vec<&[u16]> = Vec::new();
-    for n in path[root_len..]
-        .split(|&c| c == SEP)
-        .filter(|n| !n.is_empty())
-    {
-        if n == units(".").as_slice() {
-            continue;
-        }
-        if n == units("..").as_slice() {
-            names.pop();
-            continue;
-        }
-        names.push(n);
-    }
-    let mut trailing = path.len() > root_len && path.last() == Some(&SEP);
-    let trimmed;
-    if let Some(last) = names.last().copied().filter(|_| WINDOWS) {
-        names.pop();
-        let keep = last.len()
-            - last
-                .iter()
-                .rev()
-                .take_while(|&&c| c == u16::from(b'.') || c == u16::from(b' '))
-                .count();
-        trimmed = last[..keep].to_vec();
-        if trimmed.is_empty() {
-            trailing = true;
-        } else {
-            names.push(&trimmed);
-        }
-    }
-    if let Some(device) = names.last().filter(|n| WINDOWS && is_device(n)) {
+    let (names, trailing) = names(path, root_len, true)?;
+    if let Some(device) = names.last().filter(|n| is_device(n)) {
         // Observed: NUL stands for the device wherever it is.
         let mut out = units(r"\\.\");
-        out.extend_from_slice(device);
-        return out;
+        out.extend_from_slice(&device[..3]);
+        return Ok(out);
     }
-    let mut k = names.len();
-    while k > 0 && !(lookable(names[k - 1]) && exists(&join(root, &names[..k]))) {
-        k -= 1;
+    // Observed: a name of only dots and spaces is not looked up (the OS
+    // would read `. ` as the directory itself), so it and the rest stay.
+    let lookable = names
+        .iter()
+        .position(|n| dots_and_spaces(n))
+        .unwrap_or(names.len());
+    let k = existing(root, &names[..lookable]);
+    // Observed: a ':' in a name the OS looks up (one whose parent is a
+    // directory) is a syntax error; below a missing parent it stays as written.
+    let colon = |n: &Vec<u16>| n.contains(&COLON);
+    if names[..k].iter().any(colon)
+        || names
+            .get(k)
+            .is_some_and(|n| colon(n) && is_dir(&join(root, &names[..k])))
+    {
+        return Err(SYNTAX);
     }
-    let base = join(root, &names[..k]);
-    let mut out = match std::fs::canonicalize(vm::wtf::from_units(&base)) {
-        Ok(c) => without_verbatim(vm::wtf::to_units(c.as_os_str())),
-        Err(_) => base,
-    };
+    Ok(resolved(root, &names, k, trailing))
+}
+
+fn unix_canonical(path: &[u16]) -> Vec<u16> {
+    let root_len = root_length(path);
+    let root = &path[..root_len];
+    let raw: Vec<Vec<u16>> = path[root_len..]
+        .split(|&c| c == SEP)
+        .filter(|n| !n.is_empty())
+        .map(<[u16]>::to_vec)
+        .collect();
+    let k = existing(root, &raw);
+    let mut out = os_real(join(root, &raw[..k]));
+    for n in &raw[k..] {
+        match n.as_slice() {
+            [DOT] => {}
+            [DOT, DOT] => {
+                let parent = out.iter().rposition(|&c| c == SEP).unwrap_or(0);
+                out.truncate(parent.max(root_len));
+            }
+            _ => {
+                if out.last() != Some(&SEP) {
+                    out.push(SEP);
+                }
+                out.extend_from_slice(n);
+            }
+        }
+    }
+    out
+}
+
+/// The OS's resolved form of the first `k` names, then the rest as written.
+fn resolved(root: &[u16], names: &[Vec<u16>], k: usize, trailing: bool) -> Vec<u16> {
+    let mut out = os_real(join(root, &names[..k]));
     for n in &names[k..] {
         if out.last() != Some(&SEP) {
             out.push(SEP);
         }
         out.extend_from_slice(n);
     }
+    if trailing && out.last() != Some(&SEP) {
+        out.push(SEP);
+    }
+    out
+}
+
+/// What the OS resolves an existing path to, or the path itself.
+fn os_real(base: Vec<u16>) -> Vec<u16> {
+    match std::fs::canonicalize(vm::wtf::from_units(&base)) {
+        Ok(c) => without_verbatim(vm::wtf::to_units(c.as_os_str())),
+        Err(_) => base,
+    }
+}
+
+/// How many leading names exist. The whole path is tried first (the usual
+/// case); else, since a missing directory has no existing descendants, a
+/// binary search keeps a deep missing path to a few lookups.
+fn existing(root: &[u16], names: &[Vec<u16>]) -> usize {
+    if exists(&join(root, names)) {
+        return names.len();
+    }
+    let (mut lo, mut hi) = (0, names.len());
+    while lo + 1 < hi {
+        let mid = (lo + hi) / 2;
+        if exists(&join(root, &names[..mid])) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    lo
+}
+
+fn joined(root: &[u16], names: &[Vec<u16>], trailing: bool) -> Vec<u16> {
+    let mut out = join(root, names);
     if trailing && out.last() != Some(&SEP) {
         out.push(SEP);
     }
@@ -106,21 +313,22 @@ fn root_length(path: &[u16]) -> usize {
     path.len().min(3)
 }
 
-/// Observed on Windows 11: of the DOS device names only NUL (any case)
-/// still names its device inside a directory (`dir\con` is a file name).
+/// Observed on Windows 11: of the DOS device names only NUL (any case, a
+/// ':' after it too) still names its device inside a directory.
 fn is_device(name: &[u16]) -> bool {
-    String::from_utf16_lossy(name).eq_ignore_ascii_case("NUL")
-}
-
-fn lookable(name: &[u16]) -> bool {
-    !WINDOWS || !matches!(name.last(), Some(&c) if c == u16::from(b'.') || c == u16::from(b' '))
+    let nul = |n: &[u16]| String::from_utf16_lossy(n).eq_ignore_ascii_case("NUL");
+    nul(name) || (name.len() == 4 && name[3] == COLON && nul(&name[..3]))
 }
 
 fn exists(units: &[u16]) -> bool {
     std::path::Path::new(&vm::wtf::from_units(units)).exists()
 }
 
-fn join(root: &[u16], names: &[&[u16]]) -> Vec<u16> {
+fn is_dir(units: &[u16]) -> bool {
+    std::path::Path::new(&vm::wtf::from_units(units)).is_dir()
+}
+
+fn join(root: &[u16], names: &[Vec<u16>]) -> Vec<u16> {
     let mut out = root.to_vec();
     for n in names {
         if out.last().is_some_and(|&c| c != SEP) {
@@ -153,25 +361,65 @@ mod tests {
         String::from_utf16_lossy(u)
     }
 
+    fn canonical(path: &str) -> Result<String, &'static str> {
+        let p = units(path);
+        if WINDOWS {
+            windows_canonical(&p).map(|u| text(&u))
+        } else {
+            Ok(text(&unix_canonical(&p)))
+        }
+    }
+
+    fn temp_base() -> String {
+        let real = std::fs::canonicalize(std::env::temp_dir()).expect("temp dir");
+        text(&without_verbatim(vm::wtf::to_units(real.as_os_str())))
+    }
+
     #[test]
     fn names_resolve_and_missing_rest_is_kept() {
-        let root = std::env::temp_dir();
-        let base = text(&without_verbatim(vm::wtf::to_units(
-            std::fs::canonicalize(&root).expect("temp dir").as_os_str(),
-        )));
+        let base = temp_base();
         let sep = MAIN_SEPARATOR;
         let input = format!("{base}{sep}nope{sep}.{sep}x{sep}..{sep}y");
-        assert_eq!(
-            text(&canonical(&units(&input))),
-            format!("{base}{sep}nope{sep}y")
-        );
+        assert_eq!(canonical(&input), Ok(format!("{base}{sep}nope{sep}y")));
     }
 
     #[cfg(windows)]
     #[test]
-    fn windows_trims_the_last_name_only() {
-        assert_eq!(text(&canonical(&units(r"C:\nope\ \x. "))), r"C:\nope\ \x");
-        assert_eq!(text(&canonical(&units(r"C:\nope\..."))), r"C:\nope\");
-        assert_eq!(text(&canonical(&units(r"C:\nope\b:x"))), r"C:\nope\b:x");
+    fn windows_trims_every_name() {
+        assert_eq!(canonical(r"C:\nope\ \x. "), Ok(r"C:\nope\ \x".into()));
+        assert_eq!(canonical(r"C:\nope\..."), Ok(r"C:\nope\".into()));
+        assert_eq!(canonical(r"C:\nope.\x"), Ok(r"C:\nope\x".into()));
+        assert_eq!(canonical(r"C:\nope .\x"), Ok(r"C:\nope \x".into()));
+        assert_eq!(canonical(r"C:\nope. \x"), Ok(r"C:\nope. \x".into()));
+        assert_eq!(canonical(r"C:\. .\x"), Ok(r"C:\. \x".into()));
+        assert_eq!(canonical(r"C:\nope..\x"), Err("Bad pathname"));
+        assert_eq!(canonical(r"C:\nope..\..\x"), Ok(r"C:\x".into()));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_colon_needs_a_directory_parent() {
+        assert_eq!(canonical(r"C:\nope\b:x"), Ok(r"C:\nope\b:x".into()));
+        assert_eq!(canonical(r"C:\b:x"), Err(SYNTAX));
+        assert_eq!(canonical(r"C:\Windows\NUL:"), Ok(r"\\.\NUL".into()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_dot_dot_after_a_link_leaves_its_target() {
+        let dir = format!("{}/lazyvm-canon-{}", temp_base(), std::process::id());
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(format!("{dir}/a/b")).expect("dirs");
+        std::fs::create_dir_all(format!("{dir}/t")).expect("dirs");
+        std::os::unix::fs::symlink(format!("{dir}/a/b"), format!("{dir}/t/link")).expect("link");
+        assert_eq!(
+            canonical(&format!("{dir}/t/link/../x")),
+            Ok(format!("{dir}/a/x"))
+        );
+        assert_eq!(
+            canonical(&format!("{dir}/t/nope/../x")),
+            Ok(format!("{dir}/t/x"))
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

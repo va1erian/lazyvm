@@ -104,7 +104,7 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String getSchemeSpecificPart() {
-        return UriText.decode(ssp);
+        return UriText.decode(ssp, true);
     }
 
     public String getRawAuthority() {
@@ -144,7 +144,7 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String getQuery() {
-        return UriText.decode(query);
+        return UriText.decode(query, true);
     }
 
     public String getRawFragment() {
@@ -152,7 +152,7 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String getFragment() {
-        return UriText.decode(fragment);
+        return UriText.decode(fragment, true);
     }
 
     public String toString() {

@@ -81,11 +81,15 @@ fn run(mut launch: Launch) -> ExitCode {
     let classpath = ClassPath::open(&launch.boot_classpath, &launch.classpath);
     let mut vm = Vm::new(classpath, launch.options.clone());
     natives::register_all(&mut vm);
-    vm.properties.extend(platform::default_properties());
-    let joined = std::env::join_paths(&user_classpath).map(|p| p.to_string_lossy().into_owned());
+    for (k, v) in platform::default_properties() {
+        vm.properties.insert(k, vm::wtf::to_units(&v));
+    }
+    let joined = std::env::join_paths(&user_classpath).unwrap_or_default();
     vm.properties
-        .insert("java.class.path".into(), joined.unwrap_or_default());
-    vm.properties.extend(launch.properties.clone());
+        .insert("java.class.path".into(), vm::wtf::to_units(&joined));
+    for (k, v) in &launch.properties {
+        vm.properties.insert(k.clone(), v.encode_utf16().collect());
+    }
     if let Err(e) = vm.boot() {
         eprintln!("lazyvm: cannot start: the class library is missing or broken ({e})");
         eprintln!("  boot class path: {:?}", launch.boot_classpath);
