@@ -125,7 +125,10 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         }
     }
 
-    /** Encodes `s` once and writes it with a single call to the underlying stream. */
+    /**
+     * Encodes `s` and hands it to this stream's own write(byte[],int,int),
+     * so a subclass overriding it sees all text, as observed on the oracle.
+     */
     private void writeText(String s) {
         if (refused()) {
             return;
@@ -142,14 +145,7 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
             }
         }
         byte[] bytes = s.getBytes();
-        try {
-            out.write(bytes, 0, bytes.length);
-            if (autoFlush && s.indexOf('\n') >= 0) {
-                out.flush();
-            }
-        } catch (IOException e) {
-            trouble = true;
-        }
+        write(bytes, 0, bytes.length);
     }
 
     public void print(boolean b) {
@@ -269,7 +265,7 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
 
     public PrintStream append(CharSequence csq, int start, int end) {
         CharSequence cs = (csq == null ? "null" : csq);
-        print(cs.subSequence(start, end).toString());
+        writeText(cs.subSequence(start, end).toString());
         return this;
     }
 
@@ -286,21 +282,17 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         return format(l, format, args);
     }
 
-    /** Formats into a buffer first, so the text reaches the stream in one write. */
+    /**
+     * Formats straight into this stream through append, so text before a
+     * bad specifier is already written when the exception is thrown.
+     */
     public PrintStream format(String format, Object... args) {
-        return formatted(new Formatter().format(format, args).toString());
+        new Formatter((Appendable) this).format(format, args);
+        return this;
     }
 
     public PrintStream format(Locale l, String format, Object... args) {
-        return formatted(new Formatter(l).format(format, args).toString());
-    }
-
-    /** With autoflush, formatted text is flushed even without a newline. */
-    private PrintStream formatted(String text) {
-        writeText(text);
-        if (autoFlush) {
-            flush();
-        }
+        new Formatter((Appendable) this, l).format(format, args);
         return this;
     }
 }

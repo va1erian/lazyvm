@@ -253,10 +253,15 @@ public class PrintWriter extends Writer {
     }
 
     public PrintWriter format(String format, Object... args) {
-        return format(Locale.getDefault(), format, args);
+        return formatIn(Locale.getDefault(), format, args);
     }
 
     public PrintWriter format(Locale l, String format, Object... args) {
+        return formatIn(l, format, args);
+    }
+
+    /** Shared by both format overloads, so neither calls the other overridable one. */
+    private PrintWriter formatIn(Locale l, String format, Object... args) {
         try {
             synchronized (lock) {
                 ensureOpen();

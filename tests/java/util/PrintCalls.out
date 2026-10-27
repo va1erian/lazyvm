@@ -1,0 +1,5 @@
+tee: [a][1][NL][y][5][!]
+printf partial: [1-] java.util.MissingFormatArgumentException
+trace println(Object): first T rest strings true
+PrintWriter format: formatLocale 
+done

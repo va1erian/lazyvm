@@ -182,7 +182,8 @@ public class Throwable implements Serializable {
             n--;
         }
         int common = trace.length - 1 - m;
-        s.line(prefix + caption + this);
+        // Observed on the oracle: the first line is the throwable itself.
+        s.line(prefix.isEmpty() && caption.isEmpty() ? this : prefix + caption + this);
         for (int i = 0; i <= m; i++) {
             s.line(prefix + "\tat " + trace[i]);
         }
@@ -209,11 +210,11 @@ public class Throwable implements Serializable {
             this.writer = writer;
         }
 
-        void line(String text) {
+        void line(Object text) {
             if (stream != null) {
-                stream.println((Object) text);
+                stream.println(text);
             } else {
-                writer.println((Object) text);
+                writer.println(text);
             }
         }
     }
