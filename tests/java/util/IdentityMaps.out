@@ -1,0 +1,25 @@
+null null 1 null 3
+3 2 null 4 true false true false
+[key, key, other] [2, 3, 4] [key=2, key=3, other=4]
+null 2 2 null [3, 4]
+4 9 true true 9 3
+3 false true
+iterator remove: 3 0 true
+40 40
+many: 780
+entry setValue: 1560
+values remove: 20
+entrySet contains/remove: true false true 19
+keySet remove: false true 1
+putAll/clone: 18 18 0 true false
+equals other maps: true true true
+forEach/replaceAll: 3 30
+forEach CME: CME after 1
+iterator CME: !java.util.ConcurrentModificationException
+iterator twice remove: !java.lang.IllegalStateException
+iterator end: !java.util.NoSuchElementException
+ctor negative: !java.lang.IllegalArgumentException: expectedMaxSize is negative: -1
+ctor zero: {a=1}
+ctor null: !java.lang.NullPointerException
+default Map methods: null null 1 11 -1 11 true 1
+done

@@ -1,0 +1,72 @@
+HashSet [1, 2, 3, 4, 5, 6] [4, 5, 6, 7, 8] 6 true false false
+true union [1, 2, 3, 4, 5, 6, 7, 8] false
+true inter [4, 5, 6] false
+true diff [1, 2, 3] false
+true false false true true 21
+false true true false [2, 3, 4, 5, 6, 9]
+[2, 3, 4, 5, 6, 9] [2, 3, 4, 5, 6, 9] [2, 3, 4, 5, 6, 9, null, null]
+true [3, 5, 9] false
+[] true 0
+HashSet removeAll null: !java.lang.NullPointerException
+HashSet addAll null: !java.lang.NullPointerException
+HashSet retainAll null: !java.lang.NullPointerException
+HashSet containsAll null: !java.lang.NullPointerException
+LinkedHashSet [1, 2, 3, 4, 5, 6] [4, 5, 6, 7, 8] 6 true false false
+true union [1, 2, 3, 4, 5, 6, 7, 8] false
+true inter [4, 5, 6] false
+true diff [1, 2, 3] false
+true false false true true 21
+false true true false [2, 3, 4, 5, 6, 9]
+[2, 3, 4, 5, 6, 9] [2, 3, 4, 5, 6, 9] [2, 3, 4, 5, 6, 9, null, null]
+true [3, 5, 9] false
+[] true 0
+LinkedHashSet removeAll null: !java.lang.NullPointerException
+LinkedHashSet addAll null: !java.lang.NullPointerException
+LinkedHashSet retainAll null: !java.lang.NullPointerException
+LinkedHashSet containsAll null: !java.lang.NullPointerException
+TreeSet [1, 2, 3, 4, 5, 6] [4, 5, 6, 7, 8] 6 true false false
+true union [1, 2, 3, 4, 5, 6, 7, 8] false
+true inter [4, 5, 6] false
+true diff [1, 2, 3] false
+true false false true true 21
+false true true false [2, 3, 4, 5, 6, 9]
+[2, 3, 4, 5, 6, 9] [2, 3, 4, 5, 6, 9] [2, 3, 4, 5, 6, 9, null, null]
+true [3, 5, 9] false
+[] true 0
+TreeSet removeAll null: !java.lang.NullPointerException
+TreeSet addAll null: !java.lang.NullPointerException
+TreeSet retainAll null: !java.lang.NullPointerException
+TreeSet containsAll null: !java.lang.NullPointerException
+HashSet null: [null, a, b] true
+LinkedHashSet null: [a, null, b]
+TreeSet null: !java.lang.NullPointerException
+TreeSet null contains: !java.lang.NullPointerException
+TreeSet null remove: !java.lang.NullPointerException
+TreeSet mixed: !java.lang.ClassCastException: java.lang.String cannot be cast to java.lang.Integer
+TreeSet object: !java.lang.ClassCastException: java.lang.Object cannot be cast to java.lang.Comparable
+TreeSet empty first: !java.util.NoSuchElementException
+TreeSet empty last: !java.util.NoSuchElementException
+TreeSet empty polls: null null null
+[10, 20, 30, 40, 50, 60, 70] 10 70 20 30 40 40 null null
+[10, 20] [10, 20, 30] [50, 60, 70] [60, 70] [20, 30, 40, 50] [30, 40, 50, 60] [70, 60, 50, 40, 30, 20, 10]
+[20, 25, 40, 50] [10, 20, 25, 40, 50, 60, 70] 4 20 50 [50, 40, 25, 20] [20, 25]
+view add out of range: !java.lang.IllegalArgumentException: key out of range
+view remove out of range: false false
+view bad subSet: !java.lang.IllegalArgumentException: fromKey out of range
+subSet reversed: !java.lang.IllegalArgumentException: fromKey > toKey
+view pollFirst: 20 50 [10, 25, 40, 60, 70]
+descending iterator: 70 60 40 25 10  [10, 25, 60, 70]
+iterator remove: [25, 60, 70]
+iterator CME: !java.util.ConcurrentModificationException
+comparator: [c, b, a, bb, aa, ccc] c [c, b, a] 1
+copy ctors: [3, 2, 1] [1, 2, 3] [1, 2, 3]
+clone: [-1, 25, 60, 70, 1025] [25, 60, 70, 1025]
+HashSet clone: [1, 2] [1, 2, 3]
+HashSet ctor bad: !java.lang.IllegalArgumentException: Illegal initial capacity: -1
+HashSet ctor lf: !java.lang.IllegalArgumentException: Illegal load factor: 0.0
+HashSet ctor null: !java.lang.NullPointerException
+self hash: [1] true
+equals mixed: true false
+set of lists: 2 true
+strings: [, Apple, Fig, apple, fig, pear] [a, b]
+done

@@ -1,0 +1,72 @@
+10 0 true
+20 11 [e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10] e0 e10 e3
+2 2 5 5 5 8 8 8 11 
+1 2 4 4 8 8 8 8 16 
+[add, e1, ins, e2, e3, e5, e6, e7, e8, e10] 7 -1 1 1 true false true
+get past end: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 99
+get neg: !java.lang.ArrayIndexOutOfBoundsException: -1
+elementAt past end: !java.lang.ArrayIndexOutOfBoundsException: 99 >= 9
+elementAt neg: !java.lang.ArrayIndexOutOfBoundsException: -1
+setElementAt past end: !java.lang.ArrayIndexOutOfBoundsException: 99 >= 9
+set past end: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 99
+remove past end: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 99
+removeElementAt past end: !java.lang.ArrayIndexOutOfBoundsException: 99 >= 9
+removeElementAt neg: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: -1
+insertElementAt past end: !java.lang.ArrayIndexOutOfBoundsException: 99 > 9
+add past end: !java.lang.ArrayIndexOutOfBoundsException: 99 > 9
+addAll@ bad: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 99
+lastIndexOf bad: !java.lang.IndexOutOfBoundsException: 99 >= 9
+first empty: !java.util.NoSuchElementException
+last empty: !java.util.NoSuchElementException
+ctor neg: !java.lang.IllegalArgumentException: Illegal Capacity: -1
+ctor null: !java.lang.NullPointerException
+listIterator bad: !java.lang.IndexOutOfBoundsException: Index: 99
+subList: [sub, e2, e3] sub
+setSize: [a, b, c, null, null] [a] 6
+setSize neg: !java.lang.ArrayIndexOutOfBoundsException: -1
+ensureCapacity/trimToSize: 50 1
+copyInto: [x, y, null, null]
+copyInto small: !java.lang.ArrayIndexOutOfBoundsException
+removeAllElements/clone: [] [a, b, c] true 126145
+toArray: [add, sub, e2, e3, e5, e6, e7, e8, e10]3920
+forEach/removeIf/replaceAll/sort: [2, 6, 10] 2610
+forEach CME: !java.util.ConcurrentModificationException
+elements: 1 2 3 
+elements end: !java.util.NoSuchElementException: Vector Enumeration
+equals: true 994
+true 1 2 3 [1, 2, 3] 3 1 3 -1
+3 2 [1] false 1 1
+pop empty: !java.util.EmptyStackException
+peek empty: !java.util.EmptyStackException
+stack list ops: [4, 5, 6] 4 2 3
+stack iteration order: abc cb
+{five=5, eight=8, six=6, two=2, one=1, seven=7, three=3, four=4}
+{three=3, six=6, seven=7, nine=9, one=1, five=5, four=4, two=2, eight=8}
+{three=3, six=6, ten=10, seven=7, nine=9, one=1, thirteen=13, five=5, four=4, twelve=12, eleven=11, two=2, eight=8}
+13 6 null true true false 6 1 null
+three six ten seven nine thirteen five four twelve eleven two eight | 3 66 10 7 9 13 5 4 12 11 2 8 
+[three, six, ten, seven, nine, thirteen, five, four, twelve, eleven, two, eight] [3, 66, 10, 7, 9, 13, 5, 4, 12, 11, 2, 8] [three=3, six=66, ten=10, seven=7, nine=9, thirteen=13, five=5, four=4, twelve=12, eleven=11, two=2, eight=8]
+{140=v20, 91=v13, 42=v6, 182=v26, 133=v19, 84=v12, 35=v5, 175=v25, 126=v18, 77=v11, 28=v4, 168=v24, 119=v17, 70=v10, 21=v3, 161=v23, 112=v16, 63=v9, 203=v29, 14=v2, 154=v22, 105=v15, 56=v8, 196=v28, 7=v1, 147=v21, 98=v14, 49=v7, 189=v27, 0=v0}
+{11=s, 10=s, 9=s, 8=s, 7=s, 6=s, 5=s, 4=s, 3=s, 2=s, 1=s, 0=s}
+{33=s, 30=s, 27=s, 24=s, 21=s, 18=s, 15=s, 12=s, 9=s, 6=s, 3=s, 0=s} true
+null key: !java.lang.NullPointerException
+null value: !java.lang.NullPointerException
+get null: !java.lang.NullPointerException
+contains null: !java.lang.NullPointerException
+containsKey null: !java.lang.NullPointerException
+remove null: !java.lang.NullPointerException
+ctor bad capacity: !java.lang.IllegalArgumentException: Illegal Capacity: -1
+ctor bad load: !java.lang.IllegalArgumentException: Illegal Load: 0.0
+ctor zero: {2=b, 1=a}
+putAll/copy: {2=y, 1=x}
+putAll null value: !java.lang.NullPointerException
+clone: 13 12 false
+keySet remove/retain: {119=v17, 175=v25, 49=v7, 105=v15, 161=v23, 35=v5, 91=v13, 147=v21, 203=v29, 77=v11, 133=v19, 189=v27, 63=v9}
+entry setValue: {1=b} 1=b true
+entry setValue null: !java.lang.NullPointerException
+hashCode/equals: true true true
+self reference: {me=(this Map)} 3480
+toString empty: {} false false
+capacity rules: 3 6 clone 2 addAll9 9 inc3 7 11 negInc 8 ensure5 8 8 17 setSize30 30 60 trim 0 1 2 zero 1 stack 10
+Dictionary: 2 1 false b a 1null1
+done

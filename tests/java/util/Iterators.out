@@ -1,0 +1,153 @@
+== ArrayList
+ArrayList remove during foreach (middle): !java.util.ConcurrentModificationException
+ArrayList remove during foreach (second last): [1, 2, 3, 5]
+ArrayList remove during foreach (last): !java.util.ConcurrentModificationException
+ArrayList add during foreach: !java.util.ConcurrentModificationException
+ArrayList set during foreach (no CME): [50, 2, 3, 4, 5]
+ArrayList iterator remove: [1, 3, 5]
+ArrayList remove without next: !java.lang.IllegalStateException
+ArrayList remove twice: !java.lang.IllegalStateException
+ArrayList next past end: !java.util.NoSuchElementException
+ArrayList hasNext after clear: true
+ArrayList next after clear: !java.util.ConcurrentModificationException
+ArrayList next after external add: !java.util.ConcurrentModificationException
+ArrayList forEachRemaining: 2345 false
+ArrayList forEachRemaining null: !java.lang.NullPointerException
+ArrayList forEachRemaining CME: !java.util.ConcurrentModificationException
+12210[1, 20, 3, 4, 5][1, 25, 20, 3, 4, 5]2[1, 25, 3, 4, 5]2[4]
+ArrayList set after remove: !java.lang.IllegalStateException
+ArrayList set after add: !java.lang.IllegalStateException
+ArrayList add then remove: !java.lang.IllegalStateException
+ArrayList set before next: !java.lang.IllegalStateException
+ArrayList previous at start: !java.util.NoSuchElementException
+ArrayList listIterator(size): false 5 4
+ArrayList listIterator(size+1): !java.lang.IndexOutOfBoundsException: Index: 6
+ArrayList listIterator(-1): !java.lang.IndexOutOfBoundsException: Index: -1
+ArrayList listIterator CME: !java.util.ConcurrentModificationException
+ArrayList listIterator add CME: !java.util.ConcurrentModificationException
+ArrayList subList iterator CME: !java.util.ConcurrentModificationException
+ArrayList subList iterator remove: [3, 4] [1, 3, 4, 5]
+ArrayList subList remove in foreach: !java.util.ConcurrentModificationException
+ArrayList subList foreach, remove sublist elem: [1, 3] [1, 3, 4, 5]
+ArrayList toArray while iterating: 5
+== LinkedList
+LinkedList remove during foreach (middle): !java.util.ConcurrentModificationException
+LinkedList remove during foreach (second last): [1, 2, 3, 5]
+LinkedList remove during foreach (last): [1, 2, 3, 4]
+LinkedList add during foreach: !java.util.ConcurrentModificationException
+LinkedList set during foreach (no CME): [50, 2, 3, 4, 5]
+LinkedList iterator remove: [1, 3, 5]
+LinkedList remove without next: !java.lang.IllegalStateException
+LinkedList remove twice: !java.lang.IllegalStateException
+LinkedList next past end: !java.util.NoSuchElementException
+LinkedList hasNext after clear: false
+LinkedList next after clear: !java.util.ConcurrentModificationException
+LinkedList next after external add: !java.util.ConcurrentModificationException
+LinkedList forEachRemaining: 2345 false
+LinkedList forEachRemaining null: !java.lang.NullPointerException
+LinkedList forEachRemaining CME: !java.util.ConcurrentModificationException
+12210[1, 20, 3, 4, 5][1, 25, 20, 3, 4, 5]2[1, 25, 3, 4, 5]2[4]
+LinkedList set after remove: !java.lang.IllegalStateException
+LinkedList set after add: !java.lang.IllegalStateException
+LinkedList add then remove: !java.lang.IllegalStateException
+LinkedList set before next: !java.lang.IllegalStateException
+LinkedList previous at start: !java.util.NoSuchElementException
+LinkedList listIterator(size): false 5 4
+LinkedList listIterator(size+1): !java.lang.IndexOutOfBoundsException: Index: 6, Size: 5
+LinkedList listIterator(-1): !java.lang.IndexOutOfBoundsException: Index: -1, Size: 5
+LinkedList listIterator CME: !java.util.ConcurrentModificationException
+LinkedList listIterator add CME: !java.util.ConcurrentModificationException
+LinkedList subList iterator CME: !java.util.ConcurrentModificationException
+LinkedList subList iterator remove: [3, 4] [1, 3, 4, 5]
+LinkedList subList remove in foreach: !java.util.ConcurrentModificationException
+LinkedList subList foreach, remove sublist elem: [1, 3] [1, 3, 4, 5]
+LinkedList toArray while iterating: 5
+== Vector
+Vector remove during foreach (middle): !java.util.ConcurrentModificationException
+Vector remove during foreach (second last): [1, 2, 3, 5]
+Vector remove during foreach (last): !java.util.ConcurrentModificationException
+Vector add during foreach: !java.util.ConcurrentModificationException
+Vector set during foreach (no CME): [50, 2, 3, 4, 5]
+Vector iterator remove: [1, 3, 5]
+Vector remove without next: !java.lang.IllegalStateException
+Vector remove twice: !java.lang.IllegalStateException
+Vector next past end: !java.util.NoSuchElementException
+Vector hasNext after clear: true
+Vector next after clear: !java.util.ConcurrentModificationException
+Vector next after external add: !java.util.ConcurrentModificationException
+Vector forEachRemaining: 2345 false
+Vector forEachRemaining null: !java.lang.NullPointerException
+Vector forEachRemaining CME: !java.util.ConcurrentModificationException
+12210[1, 20, 3, 4, 5][1, 25, 20, 3, 4, 5]2[1, 25, 3, 4, 5]2[4]
+Vector set after remove: !java.lang.IllegalStateException
+Vector set after add: !java.lang.IllegalStateException
+Vector add then remove: !java.lang.IllegalStateException
+Vector set before next: !java.lang.IllegalStateException
+Vector previous at start: !java.util.NoSuchElementException
+Vector listIterator(size): false 5 4
+Vector listIterator(size+1): !java.lang.IndexOutOfBoundsException: Index: 6
+Vector listIterator(-1): !java.lang.IndexOutOfBoundsException: Index: -1
+Vector listIterator CME: !java.util.ConcurrentModificationException
+Vector listIterator add CME: !java.util.ConcurrentModificationException
+Vector subList iterator CME: !java.util.ConcurrentModificationException
+Vector subList iterator remove: [3, 4] [1, 3, 4, 5]
+Vector subList remove in foreach: !java.util.ConcurrentModificationException
+Vector subList foreach, remove sublist elem: [1, 3] [1, 3, 4, 5]
+Vector toArray while iterating: 5
+== Stack
+Stack remove during foreach (middle): !java.util.ConcurrentModificationException
+Stack remove during foreach (second last): [1, 2, 3, 5]
+Stack remove during foreach (last): !java.util.ConcurrentModificationException
+Stack add during foreach: !java.util.ConcurrentModificationException
+Stack set during foreach (no CME): [50, 2, 3, 4, 5]
+Stack iterator remove: [1, 3, 5]
+Stack remove without next: !java.lang.IllegalStateException
+Stack remove twice: !java.lang.IllegalStateException
+Stack next past end: !java.util.NoSuchElementException
+Stack hasNext after clear: true
+Stack next after clear: !java.util.ConcurrentModificationException
+Stack next after external add: !java.util.ConcurrentModificationException
+Stack forEachRemaining: 2345 false
+Stack forEachRemaining null: !java.lang.NullPointerException
+Stack forEachRemaining CME: !java.util.ConcurrentModificationException
+12210[1, 20, 3, 4, 5][1, 25, 20, 3, 4, 5]2[1, 25, 3, 4, 5]2[4]
+Stack set after remove: !java.lang.IllegalStateException
+Stack set after add: !java.lang.IllegalStateException
+Stack add then remove: !java.lang.IllegalStateException
+Stack set before next: !java.lang.IllegalStateException
+Stack previous at start: !java.util.NoSuchElementException
+Stack listIterator(size): false 5 4
+Stack listIterator(size+1): !java.lang.IndexOutOfBoundsException: Index: 6
+Stack listIterator(-1): !java.lang.IndexOutOfBoundsException: Index: -1
+Stack listIterator CME: !java.util.ConcurrentModificationException
+Stack listIterator add CME: !java.util.ConcurrentModificationException
+Stack subList iterator CME: !java.util.ConcurrentModificationException
+Stack subList iterator remove: [3, 4] [1, 3, 4, 5]
+Stack subList remove in foreach: !java.util.ConcurrentModificationException
+Stack subList foreach, remove sublist elem: [1, 3] [1, 3, 4, 5]
+Stack toArray while iterating: 5
+== maps and sets
+HashMap put during keySet iteration: !java.util.ConcurrentModificationException
+HashMap put existing during iteration: 7
+HashMap remove during iteration: !java.util.ConcurrentModificationException
+HashMap iterator remove: {1=1, 3=3, 5=5, 7=7, 9=9}
+HashMap iterator remove twice: !java.lang.IllegalStateException
+HashMap iterator next past end: !java.util.NoSuchElementException
+HashMap values iterator: {2=20}
+HashSet add during iteration: !java.util.ConcurrentModificationException
+HashSet remove last during iteration: [1, 2]
+HashSet remove first during iteration: !java.util.ConcurrentModificationException
+TreeMap put during iteration: !java.util.ConcurrentModificationException
+TreeMap remove last during iteration: {1=1, 2=2}
+TreeMap remove middle during iteration: !java.util.ConcurrentModificationException
+TreeMap iterator remove two children: 12345678910 {2=2, 4=4, 6=6, 8=8, 10=10}
+TreeSet iterator remove: [3, 6, 9]
+LinkedHashMap remove during iteration: {1=1, 2=2}
+LinkedHashMap iterator remove: {0=0, 2=2, 4=4}
+Hashtable iterator: {4=4, 2=2, 0=0}
+Hashtable CME: !java.util.ConcurrentModificationException
+ArrayDeque iterator remove: [1, 3]
+PriorityQueue iterator remove: [1, 3, 5]
+Enumeration: 12
+Iterable foreach null: !java.lang.NullPointerException
+done

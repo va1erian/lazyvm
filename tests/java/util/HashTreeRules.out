@@ -1,0 +1,35 @@
+compute adds at the bin's front: K8 TA5 TA0 K1 K2 TB3 TA7 K9
+compute converts at 8 entries, in 64 buckets: K0 K9 K1 K2 K3 K5 K7 K8
+put converts at 9 entries: K3 K6 K1 K0 K2 K4 K7 K8
+put does not convert at 8: K8 K4 K3 K0 K5 K6 K7 K9
+class names ascending: TB1 TA0 TC7 K2 TC3 K9 TB4 K5 K6 K8
+iterator removal keeps a tree: K9 K2 K7 K0 K1 K3 K10 K4 K5
+iterator removal keeps the head: K5 TB4 TA8 TC0 TC1 K2 K3 K6
+shrink is not by count 6: K4 K0 K1 K3 K5 K6
+shrink needs root.left.left: K8 K7 K2 K0 K1 K3 K4 K5 K10
+shrink ignores root.right.right: K3 K5 K7 K0 K1 K9 K2 K6
+32 buckets are too few: K7 K4 K0 K1 K2 K5 K8 K10 K11 K13
+compute grows before adding: K3 1200 K9 K11 K2 1201 1202 1203 1204 1205 1206 1207
+a split half of 7 stays a tree: K2 K8 K5 K7 K9 K13 K14 1550 1551 1552 1553 1554 1555 1556 1557 1558 1559 1560 1561 1562 1563 1564 1565 1566 1567 1568 1569 1570 1571 1572 K4 K6 K10 K1 1100 1101 1102 1103 1104 1105 1106 1107 1108 1109 1110 1111 1112 1113 1150
+a split half of 6 becomes a list: TC1 TA2 TB4 K7 TC8 K9 TB12 1300 1301 1302 1303 1304 1305 1306 1450 1451 1452 1453 1454 1455 1456 1457 1458 TA0 K3 TC5 K11 K6 TC10 1100 1101 1102 1103 1104 1105 1106 1000 1001 1002 1003 1004 1005 1006 1007 1008 1009 1010 1011 1012 1013 1014
+an unsplit tree is kept: TC2 K13 TA4 TC5 TB6 K8 K16 1408 K17 TB1 1409 K10 TA15 1800 1801 1802 1803 1804 1805 1806 1807 1808 1809 1810 1811 1812 1850 1851 1852 1750 1751 1752 1753 1754 1755 1500 1756 1501 1502 1503 1504 1505 1506 1507 1508 1509 1510 1511 1512 1400 1401 1402 1403 1404 1405 1406 1407
+removal by map.remove: K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by map.remove(k, v): K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by keySet.remove: K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by entrySet.remove: K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by compute to null: K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by computeIfPresent to null: K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by merge to null: K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by iterator: K2 K0 K5 K1 K7 K3 K51 K4 K6 K50
+removal by keySet.removeIf: K2 K0 K5 K1 K7 K3 K51 K4 K6 K50
+removal by entrySet.removeIf: K2 K0 K5 K1 K7 K3 K51 K4 K6 K50
+removal by values.remove: K2 K0 K5 K1 K7 K3 K51 K4 K6 K50
+removal by keySet.retainAll: K2 K0 K5 K1 K7 K3 K51 K4 K6 K50
+removal by keySet.removeAll of 8 (map has 9): K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by entrySet.removeAll of 8: K1 K2 K5 K7 K3 K51 K0 K4 K6 K50
+removal by keySet.removeAll of 9 (map has 9): K2 K0 K5 K1 K7 K3 K51 K4 K6 K50
+removal by entrySet.removeAll of 9: K2 K0 K5 K1 K7 K3 K51 K4 K6 K50
+compareTo calls while filling one bin: Direct=47 Second=47 ObjCmp=0 ViaIface=0 Gen=0 Sub=0 Redeclare=0 Raw=0
+equal String hashes: [AaBBAaBB, AaAaBBBB, BBAaAaBB, BBAaBBBB, BBBBAaBB, BBBBBBBB, BBBBBBAa, BBBBAaAa, BBAaBBAa, AaAaAaBB, AaBBBBBB, AaBBBBAa, AaAaBBAa, BBAaAaAa, AaAaAaAa, AaBBAaAa]
+identity order consistent: true
+done

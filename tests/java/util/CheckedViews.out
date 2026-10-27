@@ -1,0 +1,46 @@
+list add: true true [1, null]
+list add bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String element into collection with element type class java.lang.Integer
+list add@ bad: !java.lang.ClassCastException: Attempt to insert class java.lang.Double element into collection with element type class java.lang.Integer
+list set bad: !java.lang.ClassCastException: Attempt to insert class java.lang.Character element into collection with element type class java.lang.Integer
+list addAll bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String element into collection with element type class java.lang.Integer
+list addAll@ bad: !java.lang.ClassCastException: Attempt to insert class java.lang.Long element into collection with element type class java.lang.Integer
+list unchanged: [1, null]
+list replaceAll bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String element into collection with element type class java.lang.Integer
+list listIterator: [9, 10, null] Attempt to insert class java.lang.String element into collection with element type class java.lang.Integer
+list subList: !java.lang.ClassCastException: Attempt to insert class java.lang.String element into collection with element type class java.lang.Integer
+list sort/equals: [1, 2, 3] true true false true
+set: [1, 2, 3] Attempt to insert class java.lang.String element into collection with element type class java.lang.Integer
+queue: [1, 2] 1 2
+collection: [1, 3] Attempt to insert class java.lang.Long element into collection with element type class java.lang.Integer
+sortedSet: [1, 3] 1 3 [1] Attempt to insert class java.lang.String element into collection with element type class java.lang.Integer
+navigableSet: 5 [9, 5, 1] [1, 5] 1 Attempt to insert class java.lang.String element into collection with element type class java.lang.Integer
+map put: null null {a=1, null=null}
+map put bad key: !java.lang.ClassCastException: Attempt to insert class java.lang.Integer key into map with key type class java.lang.String
+map put bad value: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+map putAll bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+map putIfAbsent bad: !java.lang.ClassCastException: Attempt to insert class java.lang.Double value into map with value type class java.lang.Integer
+map replace bad: !java.lang.ClassCastException: Attempt to insert class java.lang.Character value into map with value type class java.lang.Integer
+map replace3 bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+map replaceAll bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+map computeIfAbsent bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+map computeIfPresent bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+map compute bad: !java.lang.ClassCastException: Attempt to insert class java.lang.Long value into map with value type class java.lang.Integer
+map merge bad: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+map merge ok: 6 {a=6, null=null}
+map entry setValue: {a=7, null=null} Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+map entries toArray: 2 {a=8, null=null} true
+map views: [a, null] [8, null] true 2
+sortedMap: {a=1, b=2} a {a=1} Attempt to insert class java.lang.Integer key into map with key type class java.lang.String
+navigableMap: {a=1, b=2} a=1 a a=1 Attempt to insert class java.lang.String value into map with value type class java.lang.Integer | Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+null list: !java.lang.NullPointerException: c
+null type: !java.lang.NullPointerException: type
+null key type: !java.lang.NullPointerException
+wrong existing element: [already] already
+sync navigableSet: [5, 15, 25, 35] 5 15 25 null [5, 15][25, 35][5, 15, 25][15, 25][35, 25, 15, 5] 535[15, 25]
+sync navigableMap: {10=v1, 20=v2, 30=v3, 40=v4, 50=v5} 10 20=v2 40 {10=v1, 20=v2}{40=v4, 50=v5}{10=v1, 20=v2, 30=v3}{50=v5, 40=v4, 30=v3, 20=v2, 10=v1}[10, 20, 30, 40, 50][50, 40, 30, 20, 10] 10=v150=v5{20=v2, 30=v3, 40=v4}
+sync null: !java.lang.NullPointerException
+merge of an absent key is not type-checked: str 7 5 {x=str, 7=7, y=5}
+merge of a present key checks the result: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+computeIfAbsent checks: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+compute on absent checks: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+done

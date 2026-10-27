@@ -1,0 +1,56 @@
+[4, 8, 15, 16, 23, 42] 6 4 42 16 4 -1
+[1, 4, 8, 99, 15, 16, 23, 42, 100]
+get -1: !java.lang.IndexOutOfBoundsException: Index: -1, Size: 9
+get size: !java.lang.IndexOutOfBoundsException: Index: 9, Size: 9
+set bad: !java.lang.IndexOutOfBoundsException: Index: 50, Size: 9
+add bad: !java.lang.IndexOutOfBoundsException: Index: 50, Size: 9
+remove bad: !java.lang.IndexOutOfBoundsException: Index: 50, Size: 9
+remove obj: true [1, 4, 8, 15, 16, 23, 42, 100]
+remove obj missing: false
+set: 4 [1, 5, 8, 15, 16, 23, 42, 100]
+addAll: true [1, 5, 8, 15, 16, 23, 42, 100, 7, 7]
+addAll@mid: true [1, 5, 8, 6, 6, 6, 15, 16, 23, 42, 100, 7, 7]
+addAll@0: true [0, 1, 5, 8, 6, 6, 6, 15, 16, 23, 42, 100, 7, 7]
+addAll@end: true [0, 1, 5, 8, 6, 6, 6, 15, 16, 23, 42, 100, 7, 7, -1]
+addAll@bad: !java.lang.IndexOutOfBoundsException: Index: 99, Size: 15
+addAll empty: false
+removeAll: true [0, 1, 5, 8, 15, 16, 23, 42, 100, -1]
+retainAll: true [0, 5, 15, 100]
+contains: true false
+first/last: 0 100 [5, 15]
+removeFirstOccurrence: true true []
+empty getFirst: !java.util.NoSuchElementException
+empty getLast: !java.util.NoSuchElementException
+empty removeFirst: !java.util.NoSuchElementException
+empty removeLast: !java.util.NoSuchElementException
+empty element: !java.util.NoSuchElementException
+empty remove(): !java.util.NoSuchElementException
+empty pop: !java.util.NoSuchElementException
+empty peek/poll: null null null null null null
+0:1 2:2 3:3 3:4 5:5 6:6 6:7 8:8 9:9 -> [1, 10, 200, 4, 40, 500, 7, 70, 800]
+8=800 7=70 6=7 5=500 4=40 3=4 2=200 1=10 0=1 
+iter remove twice: !java.lang.IllegalStateException
+iter set before next: !java.lang.IllegalStateException
+iter set after add: !java.lang.IllegalStateException
+iter next end: !java.util.NoSuchElementException
+iter previous start: !java.util.NoSuchElementException
+listIterator bad: !java.lang.IndexOutOfBoundsException: Index: 3, Size: 2
+listIterator neg: !java.lang.IndexOutOfBoundsException: Index: -1, Size: 2
+4321 [1, 2, 4]
+CME iterator: !java.util.ConcurrentModificationException
+CME listIterator: !java.util.ConcurrentModificationException
+CME hasNext ok: true
+forEach CME: !java.util.ConcurrentModificationException
+subList: [30, 4, 5, 50] [1, 30, 4, 5, 50, 6] 4
+subList CME: !java.util.ConcurrentModificationException
+subList bad: !java.lang.IndexOutOfBoundsException: toIndex = 5
+sort: [1, 2, 5, 8]
+replaceAll/removeIf: [3, 9]
+clone: [1, 2] [1, 2, 3]
+equals: true false 30817
+toArray: [1, 2, 3][1, 2, 3, null, null]1
+toArray bad: !java.lang.ArrayStoreException: java.lang.Integer
+nulls: [p, null, null] 1 2 true true [p, null]
+ctor: !java.lang.NullPointerException
+large: 54945 1999 1000
+done

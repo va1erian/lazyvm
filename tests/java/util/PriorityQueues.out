@@ -1,0 +1,52 @@
+add 15 -> [15] peek 15
+add 3 -> [3, 15] peek 3
+add 9 -> [3, 15, 9] peek 3
+add 1 -> [1, 3, 9, 15] peek 1
+add 12 -> [1, 3, 9, 15, 12] peek 1
+add 7 -> [1, 3, 7, 15, 12, 9] peek 1
+add 20 -> [1, 3, 7, 15, 12, 9, 20] peek 1
+add 5 -> [1, 3, 7, 5, 12, 9, 20, 15] peek 1
+add 5 -> [1, 3, 7, 5, 12, 9, 20, 15, 5] peek 1
+add 18 -> [1, 3, 7, 5, 12, 9, 20, 15, 5, 18] peek 1
+add 2 -> [1, 2, 7, 5, 3, 9, 20, 15, 5, 18, 12] peek 1
+add 11 -> [1, 2, 7, 5, 3, 9, 20, 15, 5, 18, 12, 11] peek 1
+12 true false [1, 2, 7, 5, 3, 9, 20, 15, 5, 18, 12, 11] null
+true [1, 2, 7, 5, 3, 11, 20, 15, 5, 18, 12] false [1, 2, 7, 5, 3, 11, 20, 15, 5, 18, 12]
+1 2 [3, 5, 7, 5, 12, 11, 20, 15, 18]
+iterator remove: 3 5 5 7 15 18 20 12 11 | [5, 5, 7, 20, 11]
+iterator remove many: 0 1 3 2 4 11 5 8 10 9 15 14 18 19 7 6 16 17 13 12 | [1, 3, 11, 5, 9, 15, 19, 7, 17, 13] 1 3 5 7 9 11 13 15 17 19 
+iterator remove twice: !java.lang.IllegalStateException
+iterator CME: !java.util.ConcurrentModificationException
+iterator end: !java.util.NoSuchElementException
+drain: 5 7 11 20 105 
+poll empty: null null
+remove empty: !java.util.NoSuchElementException
+element empty: !java.util.NoSuchElementException
+null add: !java.lang.NullPointerException
+null offer: !java.lang.NullPointerException
+not comparable: true
+not comparable 2: !java.lang.ClassCastException: java.lang.String cannot be cast to java.lang.Integer
+[a, fig, date, kiwi, apple, banana, plum, pear, lime] a true
+a fig date kiwi lime pear plum apple banana 
+[9, 8, 7, 4, 1, 2] 9 8 7 4 2 1 
+[40, 1, 21, 12, 55, 8, 34, 19] 40 1 21 12 34 55 8 19 
+ctor bad capacity: !java.lang.IllegalArgumentException
+ctor neg capacity: !java.lang.IllegalArgumentException
+ctor null collection: !java.lang.NullPointerException
+ctor collection: [1, 3, 2, 5, 9, 8, 7]
+ctor collection null element: !java.lang.NullPointerException
+ctor single null: !java.lang.NullPointerException
+ctor sorted set: [5, 3, 1] true
+ctor priority queue: [5, 4, 3, 1] [5, 4, 3, 1] [5, 4, 3, 1]
+addAll self: !java.lang.IllegalArgumentException
+addAll null: !java.lang.NullPointerException
+equal elements: 042315
+toArray typed: [1, 3, 2][1, 3, 2, null, null]
+toArray bad type: !java.lang.ArrayStoreException
+clear: [] 0 null
+removeIf / forEach: 1 3 2 8 9 6 | true [1, 8, 2]
+removeAll / retainAll: true [1, 6, 2, 8] true [2, 8]
+compare calls: 3?5 8?3 1?5 1?3 9?3 2?8 2?1 7?2 | 3?2 7?2 7?8 | | <2> <3> 9?5 <5> <7> <9> => [2, 5, 7, 9]
+building calls: 1?3 2?6 7?2 1?8 4?1 4?3 1?2 9?1 3?8 9?3 9?4 | 9?9 4?9 7?9 7?4 1?7 1?4 8?7 8?9 2?7 2?4 2?1 6?7 6?2 6?4 3?7 3?2 3?4 | => [1, 3, 2, 4, 8, 7, 6, 9] [1, 3, 2, 4, 8, 7, 6, 9] [1, 2, 3, 4, 6, 7, 8, 9]
+large: 504678 true
+done

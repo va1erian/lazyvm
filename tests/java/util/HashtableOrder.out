@@ -1,0 +1,23 @@
+after 7: k6 k5 k2 k1 k0 k4 k3 | forEach k4 k3 k2 k1 k0 k6 k5
+after 8: k6 k5 k2 k1 k0 k4 k3 k7 | forEach k7 k4 k3 k2 k1 k0 k6 k5
+after 9: k6 k1 k4 k8 k0 k2 k3 k7 k5 | forEach k5 k7 k3 k2 k8 k0 k4 k1 k6
+after 10: k6 k9 k1 k4 k8 k0 k2 k3 k7 k5 | forEach k5 k7 k3 k2 k8 k0 k4 k9 k1 k6
+after 16: k11 k6 k9 k1 k4 k15 k10 k13 k12 k8 k0 k2 k3 k7 k14 k5 | forEach k14 k5 k7 k3 k2 k13 k12 k8 k0 k10 k15 k4 k9 k1 k6 k11
+compute family adds like put: k6 k2 k21 k23 k13 k11 k1 k5 k9 k4 k15 k10 k0 k12 k8 k20 k22 k7 k14 | forEach k14 k22 k7 k20 k8 k0 k12 k10 k15 k4 k5 k9 k1 k11 k13 k23 k21 k2 k6
+clone keeps the order: true
+copy of 12 (24 buckets): k110 k103 k106 k109 k102 k105 k108 k101 k111 k104 k107 k100 | forEach k100 k107 k104 k111 k101 k108 k105 k102 k109 k106 k103 k110
+copy of 3 (11 buckets): k202 k201 k200 | forEach k202 k201 k200
+putAll into 3 buckets: k104 k108 k103 k107 k111 k102 k106 k110 k101 k105 k109 k100 | forEach k100 k109 k105 k101 k110 k106 k102 k111 k107 k103 k108 k104
+Hashtable(0) with 6: k5 k4 k3 k2 k1 k0 | forEach k0 k1 k2 k3 k4 k5
+Hashtable(1) with 6: k5 k4 k3 k2 k1 k0 | forEach k0 k1 k2 k3 k4 k5
+Hashtable(2) with 6: k5 k4 k3 k2 k1 k0 | forEach k0 k1 k2 k3 k4 k5
+Hashtable(4) with 6: k5 k4 k3 k2 k1 k0 | forEach k0 k1 k2 k3 k4 k5
+Hashtable(5, 0.25) with 14: k13 k12 k11 k10 k9 k8 k7 k6 k5 k4 k3 k2 k1 k0 | forEach k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13
+Hashtable(5, 1.0) with 14: k7 k6 k13 k5 k12 k4 k11 k3 k10 k2 k9 k1 k8 k0 | forEach k0 k8 k1 k9 k2 k10 k3 k11 k4 k12 k5 k13 k6 k7
+Hashtable(5, 3.0) with 14: k13 k8 k3 k11 k6 k1 k9 k4 k12 k7 k2 k10 k5 k0 | forEach k10 k5 k0 k12 k7 k2 k9 k4 k11 k6 k1 k13 k8 k3
+self: {x=y, me=(this Map)} 3481 true
+cycle hash codes: 32 30
+cycle toString: StackOverflowError
+iterator of an empty table after a put: end false false
+empty hashCode 0
+done

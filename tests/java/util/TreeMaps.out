@@ -1,0 +1,59 @@
+{10=v10, 20=v20, 30=v30, 40=v40, 50=v50, 60=v60, 70=v70, 80=v80, 90=v90} 9 10 90 null
+5: null null 10 10 | null null 10=v10 10=v10
+10: null 10 10 20 | null 10=v10 10=v10 20=v20
+35: 30 30 40 40 | 30=v30 30=v30 40=v40 40=v40
+90: 80 90 90 null | 80=v80 90=v90 90=v90 null
+95: 90 90 null null | 90=v90 90=v90 null null
+10=v10 90=v90 v30 null true true
+{10=v10, 20=v20, 30=v30} {10=v10, 20=v20, 30=v30, 40=v40} {70=v70, 80=v80, 90=v90} {80=v80, 90=v90} {20=v20, 30=v30, 40=v40, 50=v50} {30=v30, 40=v40, 50=v50, 60=v60}
+{90=v90, 80=v80, 70=v70, 60=v60, 50=v50, 40=v40, 30=v30, 20=v20, 10=v10} [90, 80, 70, 60, 50, 40, 30, 20, 10] [10, 20, 30, 40, 50, 60, 70, 80, 90] [10, 20, 30, 40, 50, 60, 70, 80, 90] [v10, v20, v30, v40, v50, v60, v70, v80, v90]
+{20=v20, 30=v30, 40=v40, 50=v50, 60=v60} 5 20 60 60 20 null null
+{20=v20, 25=v25, 40=v40, 50=v50, 60=v60, 65=v65} {10=v10, 20=v20, 25=v25, 40=v40, 50=v50, 60=v60, 65=v65, 70=v70, 80=v80, 90=v90}
+sub put out of range: !java.lang.IllegalArgumentException: key out of range
+sub put low: !java.lang.IllegalArgumentException: key out of range
+sub get out of range: null false null
+sub of sub ok: {25=v25, 40=v40}
+sub of sub bad: !java.lang.IllegalArgumentException: fromKey out of range
+sub of sub bad hi: !java.lang.IllegalArgumentException: toKey out of range
+sub of sub bad lo: !java.lang.IllegalArgumentException: fromKey out of range
+subMap reversed: !java.lang.IllegalArgumentException: fromKey > toKey
+subMap equal: {} {20=v20} {}
+90 10 {90=v90, 80=v80, 70=v70, 65=v65} {60=v60, 50=v50, 40=v40, 25=v25, 20=v20, 10=v10} {80=v80, 70=v70, 65=v65, 60=v60, 50=v50} 65 50 65 65
+{10=v10, 20=v20, 25=v25, 40=v40, 50=v50, 60=v60, 65=v65, 70=v70, 80=v80, 90=v90} 1 [90, 80, 70, 65, 60, 50, 40, 25, 20, 10] [10, 20, 25, 40, 50, 60, 65, 70, 80, 90]
+desc subMap bad: !java.lang.IllegalArgumentException: fromKey > toKey
+desc put: null v55
+pollFirst: 10=v10 90=v90 9
+poll on sub: 20=v20 65=v65 {25=v25, 40=v40, 50=v50, 55=v55, 60=v60} {25=v25, 40=v40, 50=v50, 55=v55, 60=v60, 70=v70, 80=v80}
+poll empty: null null
+first empty: !java.util.NoSuchElementException
+last empty: !java.util.NoSuchElementException
+firstEntry empty: null null
+entry immutable: !java.lang.UnsupportedOperationException
+entry live in iteration: {25=v25!, 40=v40!, 50=v50!, 55=v55!, 60=v60!, 70=v70!, 80=v80!}
+null key: !java.lang.NullPointerException
+null get: !java.lang.NullPointerException
+null containsKey: !java.lang.NullPointerException
+null remove: !java.lang.NullPointerException
+not comparable: !java.lang.ClassCastException: java.lang.Object cannot be cast to java.lang.Comparable
+not comparable 2nd: !java.lang.ClassCastException: java.lang.String cannot be cast to java.lang.Integer
+null in comparator map: {null=2, a=3, b=1} 2 null
+reverse comparator: {c=2, b=1, a=3} {c=2} b {a=3, b=1, c=2}
+case insensitive: {Apple=2, BANANA=3} 3
+copy sorted: {b=2, a=1} {a=1, b=2}
+putAll: {1=v1, 3=v3, 5=v5}
+clone: {1=v1, 3=v3} {1=v1, 2=x, 3=v3}
+keySet ops: 25 80 40 55 [25, 40][50, 55, 60, 70, 80][25, 40, 50, 55][80, 70, 60, 55, 50, 40, 25]25 {40=v40!, 50=v50!, 55=v55!, 60=v60!, 70=v70!, 80=v80!}
+keySet remove: true false true {50=v50!, 55=v55!, 60=v60!, 70=v70!, 80=v80!}
+values remove: [v50!, v55!, v80!] {50=v50!, 55=v55!, 80=v80!}
+entrySet remove: true false true {55=v55!, 80=v80!}
+iterator remove: {3=v3, 6=v6, 9=v9}
+descending iterator remove: {1=v1, 2=v2, 4=v4, 5=v5, 7=v7, 8=v8, 10=v10}
+sub iterator remove: {1=v1, 2=v2, 4=v4, 6=v6, 8=v8, 9=v9, 10=v10}
+CME: !java.util.ConcurrentModificationException
+CME remove ok last: {1=v1, 2=v2}
+forEach CME: !java.util.ConcurrentModificationException
+sub size after change: 3 4 false
+empty views: {} [][][]{}{}true
+hashCode/equals: true 7416 3
+many: 1333 1 2002 -4950893248336494477
+done

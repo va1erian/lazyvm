@@ -1,0 +1,86 @@
+== ArrayDeque
+[-2, -1, 0, 1, 2, 3, 4, 5] 8 -2 5 -2 5 -2 -2
+-2 -1 5 0 4 1 [2, 3]
+[2, 3, 7, 8, 7, 9, 7] true false
+true [2, 3, 8, 7, 9, 7] true [2, 3, 8, 7, 9] true [2, 3, 8, 9] false
+9,8,3,2,2;3;8;9;
+[2, 3, 8, 9] [2, 3, 8, 9, null, null]
+[] true 0 null null null null null null
+ArrayDeque getFirst: !java.util.NoSuchElementException
+ArrayDeque getLast: !java.util.NoSuchElementException
+ArrayDeque removeFirst: !java.util.NoSuchElementException
+ArrayDeque removeLast: !java.util.NoSuchElementException
+ArrayDeque element: !java.util.NoSuchElementException
+ArrayDeque remove: !java.util.NoSuchElementException
+ArrayDeque pop: !java.util.NoSuchElementException
+[-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9] 20
+120 99 9
+78 42 [99, 96, 93, 90, 87, 84, 81, 78, 75, 72, 69, 66, 63, 60, 57, 54, 51, 48, 45, 42, 39, 36, 33, 30, 27, 24, 21, 18, 15, 12, 9, 6, 3, 0, -9, -6, -3, 0, 0, 3, 6, 9]
+[99, 93, 87, 81, 75, 69, 63, 57, 51, 45, 39, 33, 27, 21, 15, 9, 3, -9, -3, 3, 9]
+ArrayDeque iterator remove twice: !java.lang.IllegalStateException
+ArrayDeque iterator remove first: !java.lang.IllegalStateException
+ArrayDeque iterator end: !java.util.NoSuchElementException
+ArrayDeque removeIf: true [39, 33, 27, 21, 15, 9, 3, -9, -3, 3, 9]
+ArrayDeque forEach: 39 33 27 21 15 9 3 -9 -3 3 9 
+== LinkedList
+[-2, -1, 0, 1, 2, 3, 4, 5] 8 -2 5 -2 5 -2 -2
+-2 -1 5 0 4 1 [2, 3]
+[2, 3, 7, 8, 7, 9, 7] true false
+true [2, 3, 8, 7, 9, 7] true [2, 3, 8, 7, 9] true [2, 3, 8, 9] false
+9,8,3,2,2;3;8;9;
+[2, 3, 8, 9] [2, 3, 8, 9, null, null]
+[] true 0 null null null null null null
+LinkedList getFirst: !java.util.NoSuchElementException
+LinkedList getLast: !java.util.NoSuchElementException
+LinkedList removeFirst: !java.util.NoSuchElementException
+LinkedList removeLast: !java.util.NoSuchElementException
+LinkedList element: !java.util.NoSuchElementException
+LinkedList remove: !java.util.NoSuchElementException
+LinkedList pop: !java.util.NoSuchElementException
+[-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9] 20
+120 99 9
+78 42 [99, 96, 93, 90, 87, 84, 81, 78, 75, 72, 69, 66, 63, 60, 57, 54, 51, 48, 45, 42, 39, 36, 33, 30, 27, 24, 21, 18, 15, 12, 9, 6, 3, 0, -9, -6, -3, 0, 0, 3, 6, 9]
+[99, 93, 87, 81, 75, 69, 63, 57, 51, 45, 39, 33, 27, 21, 15, 9, 3, -9, -3, 3, 9]
+LinkedList iterator remove twice: !java.lang.IllegalStateException
+LinkedList iterator remove first: !java.lang.IllegalStateException
+LinkedList iterator end: !java.util.NoSuchElementException
+LinkedList removeIf: true [39, 33, 27, 21, 15, 9, 3, -9, -3, 3, 9]
+LinkedList forEach: 39 33 27 21 15 9 3 -9 -3 3 9 
+add null: !java.lang.NullPointerException
+addFirst null: !java.lang.NullPointerException
+offer null: !java.lang.NullPointerException
+push null: !java.lang.NullPointerException
+contains null: false false false false
+addAll null element: !java.lang.NullPointerException
+ctor null: !java.lang.NullPointerException
+ctor neg: 0
+ctor coll: [3, 2, 1]
+ctor big: 300 299
+clone: [1, 2] [1, 2, 3]
+iterator CME add: !java.util.ConcurrentModificationException
+iterator CME addFirst: 1
+iterator poll: !java.util.ConcurrentModificationException
+iterator pollLast: !java.util.ConcurrentModificationException
+descending CME: !java.util.ConcurrentModificationException
+iterator after clear: true
+iterator vs addFirst: |CME 0|CME 01|CME desc |5432109 desc 6|432109 desc 65|32109
+iterator vs addLast: |CME 0|CME 01|CME desc |6543210 desc 6|543210 desc 65|43210
+iterator vs pollFirst: |CME 0|123456 01|23456 desc |CME desc 6|CME desc 65|CME
+iterator vs pollLast: |CME 0|CME 01|CME desc |CME desc 6|543210 desc 65|43210
+iterator vs remove index 1: |CME 0|023456 01|23456 desc |CME desc 6|CME desc 65|CME
+iterator vs remove index 2: |CME 0|013456 01|13456 desc |CME desc 6|CME desc 65|CME
+iterator vs remove index 3 (tie): |CME 0|012456 01|12456 desc |CME desc 6|CME desc 65|CME
+iterator vs remove index 4: |CME 0|CME 01|CME desc |CME desc 6|653210 desc 65|53210
+iterator vs remove index 5: |CME 0|CME 01|CME desc |CME desc 6|643210 desc 65|43210
+iterator vs clear: |CME 0|CME 01|CME desc |CME desc 6|CME desc 65|CME
+forEachRemaining ignores additions: 23 [1, 2, 3, 7, 7]
+iterator removeIf: [1, 3]
+LinkedList null ok: [null, null, null] null null 2
+Queue view: 1 1 2 null null
+Queue remove empty: !java.util.NoSuchElementException
+Queue element empty: !java.util.NoSuchElementException
+Stack use: cba[a]
+lifo queue: [3, 2, 1] 3 2 2
+equals: false true false
+slots (size at which addFirst disturbs an iterator): (0)8 (1)8 (7)8 (8)16 (9)16 (15)16 (16)32 (17)32 (100)128 coll1=8 coll7=8 coll8=16 coll16=32 default 8/16 grown-then-drained 64
+done

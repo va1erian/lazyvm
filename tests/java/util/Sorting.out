@@ -1,0 +1,48 @@
+0 true 1 1 1 1 1 1 1 1
+1 true 6 385 941 -66 42837 -1037402081 -1069281249 37
+2 true 577 14871 -12471 -938 685318 1034617793 165192641 1733
+3 true 6123 399034 -538326 21933 37574089 -2061585313 525118559 37930
+7 true 1535970712 1019527104 -1443095954 1297954089 -2144675536 -1001837345 1165405407 -678824174
+8 true 1081881680 -641314097 -151235273 -1563554603 1384527105 2052321025 281564929 2095964100
+23 true -2055927241 -1137789048 -736303658 -722148126 682329842 -1060434209 1041626847 -2091558257
+24 true -1256775911 1314102385 -414247475 603035795 -1221558273 -673313535 -548563711 -1420886031
+25 true -93169133 -1385172346 1570036166 -1119062776 -589836173 781767455 -826664161 -1243078356
+100 true 458309456 1247189405 1694917660 477599015 -574409341 -860271743 2043323265 1838204746
+257 true 1756527966 693674291 -2240608 470770606 -2136007209 -1655381985 -451000289 -630104275
+1000 true -1327197605 1022617298 -837547153 -498393212 216985272 2085663489 536079105 709267725
+[-Infinity, -2.5, -4.9E-324, -0.0, -0.0, 0.0, 0.0, 4.9E-324, 3.5, Infinity, NaN, NaN]
+[-Infinity, -1.0, -0.0, -0.0, 0.0, 0.0, 1.0, Infinity, NaN, NaN]
+[-2147483648, -2147483648, -1, 0, 1, 2147483647, 2147483647][-9223372036854775808, -9223372036854775808, -1, 0, 1, 9223372036854775807, 9223372036854775807][-128, -128, -1, 0, 1, 127, 127]065973276865535
+[9, 8, 3, 4, 5, 6, 7, 2, 1, 0]
+[9.0, 6.0, 7.0, 8.0, 5.0][e, b, c, d, a]cdeba
+range bad: !java.lang.IllegalArgumentException: fromIndex(5) > toIndex(2)
+range neg: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: -1
+range past end: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 11
+range bad objects: !java.lang.IllegalArgumentException: fromIndex(2) > toIndex(1)
+range bad comparator: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 4
+null array: !java.lang.NullPointerException
+stable true 0.9 0.14 3.168 6.199
+4.8 0.9 6.10 6.16 6.17 6.25 6.39 6.40 6.46 6.51 6.53 5.18 5.28 5.30 5.47 5.48 5.54 4.12 4.22 4.23 4.24 4.31 4.33 4.35 4.55 4.59 3.11 3.37 3.42 3.45 3.52 3.58 2.19 2.34 2.38 2.43 2.44 2.49 1.13 1.29 1.32 1.41 1.57 0.14 0.15 0.20 0.21 0.26 0.27 0.36 0.50 0.56 2.60 2.61 
+0.9 6.10 6.16 6.17 6.25 6.39 6.40 6.46 6.51 6.53 3.11 3.37 
+6.10 0.191
+[Apple, Date, Elder, Fig, Kiwi, apple, banana, cherry, date, elder, fig, grape, kiwi, pear]
+[Apple, apple, banana, cherry, Date, date, elder, Elder, fig, Fig, grape, kiwi, Kiwi, pear]
+[fig, Fig, pear, kiwi, date, Kiwi, Date, grape, elder, apple, Elder, Apple, cherry, banana]
+[pear, kiwi, grape, fig, elder, date, cherry, banana, apple, Kiwi, Fig, Elder, Date, Apple]
+nulls in objects: !java.lang.NullPointerException
+nulls with comparator: [a, b, c, null, null]
+not comparable: !java.lang.ClassCastException: java.lang.Object cannot be cast to java.lang.Comparable
+mixed types: !java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String
+single element not comparable: fine
+empty: fine
+null comparator: [a, b]
+comparator throws: !java.lang.IllegalStateException: boom
+parallelSort: [1, 2, 3][a, b][2, 1][1.0, 2.0]
+sorted large strings: 0 1 241 666
+already sorted / reversed: 299 1 042
+comparison counts: 1 1 1 1 9 9 21 22 30 30 116 112 31 31 122 120 32 32 125 123 99 99 539 481 999 999 8683 5490 
+comparison sequence: 3?5 9?3 9?5 1?5 1?3 7?5 7?9 2?5 2?3 2?1 8?5 8?9 8?7 -> [1, 2, 3, 5, 7, 8, 9]
+inconsistent comparators: ok58 ok58 ok60 ok59 ok144 ok123 ok141 ok145 48@193 ok448 ok441 ok438 48@1148 48@238 ok1536 ok1520 
+violates contract message: ok
+list.sort violates: Comparison method violates its general contract!
+done
