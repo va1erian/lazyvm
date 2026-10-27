@@ -4,6 +4,8 @@
 //! ABI) share this code. Windows- or LazyOS-only parts (windows, Messenger)
 //! get their own crates in S9 (docs/decisions.md D10).
 
+pub mod files;
+
 use std::io::{self, Read, Write};
 use std::sync::OnceLock;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
