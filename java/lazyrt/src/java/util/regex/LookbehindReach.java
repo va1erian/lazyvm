@@ -28,8 +28,9 @@ package java.util.regex;
  * fixed and zero wide.
  * <li>A back reference is rejected.
  * <li>The matcher looks back from the shortest possible body to the reach, in
- * int arithmetic. A reach that wrapped to a small negative number therefore finds
- * nothing, which the oracle does too.
+ * int arithmetic. In char mode a reach that wrapped to a small negative number
+ * therefore finds nothing, as on the oracle; in code-point mode the floor is
+ * walked forward instead (GroupNodes.Look.behindByCodePoints, docs/regex.md).
  * </ul>
  */
 final class LookbehindReach {
@@ -44,12 +45,6 @@ final class LookbehindReach {
     private boolean ok = true;
 
     private LookbehindReach(Node body) {
-        this(body, 0);
-    }
-
-    /** Studies body as a stretch of its own that starts from the running total `from`. */
-    private LookbehindReach(Node body, int from) {
-        sum = from;
         study(body);
         this.max = carried + sum;
         this.valid = ok;
@@ -85,7 +80,14 @@ final class LookbehindReach {
         } else if (n instanceof GroupNodes.Group) {
             study(((GroupNodes.Group) n).body());
         } else if (n instanceof GroupNodes.Atomic) {
-            atomic(((GroupNodes.Atomic) n).body());
+            // Only a written (?>..) is a stretch of its own. The wrapper of a possessive repeat
+            // gives the same result studied inline, and inline costs fewer frames per level.
+            GroupNodes.Atomic a = (GroupNodes.Atomic) n;
+            if (a.written()) {
+                atomic(a.body());
+            } else {
+                study(a.body());
+            }
         } else if (n instanceof Repeat.CharRepeat) {
             charRepeat((Repeat.CharRepeat) n);
         } else if (n instanceof Repeat.Loop) {
@@ -137,9 +139,13 @@ final class LookbehindReach {
      * accepted, (?:(?:b|c)d+)(?>b+)? is not.
      */
     private void atomic(Node body) {
-        LookbehindReach inner = new LookbehindReach(body, sum);
-        sum = inner.max;
-        ok &= inner.valid;
+        // Studied in place, not through a nested instance, so a nesting level costs no more
+        // frames than before this rule (the depth reached before a stack overflow, docs/regex.md).
+        int outer = carried;
+        carried = 0;
+        study(body);
+        sum += carried;
+        carried = outer;
     }
 
     private void alternatives(Node[] branches) {

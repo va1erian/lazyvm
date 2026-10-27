@@ -266,6 +266,11 @@ final class GroupNodes {
             return body;
         }
 
+        /** True for a written (?>..), false for a possessive repeat's wrapper. */
+        boolean written() {
+            return group;
+        }
+
         Node link(Node after) {
             this.next = after;
             this.head = body.link(new Stop());

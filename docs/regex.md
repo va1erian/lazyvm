@@ -193,7 +193,7 @@ bodies with the oracle's verdicts and match counts).
 | a repeat of a group is rejected when the group has alternatives or a variable part; a lookaround in the group takes no width and is not a variable part | `(?:a\|b)+`, `(?:a\|b){2}`, `(?:a?b)+` rejected; `(?:a\|b)?`, `(?>a\|b)+`, `(?:(?=b)b){2}` ok |
 | a group of n chars repeated without an upper bound reaches n * 2147483647 in int arithmetic: an odd n gives a positive reach (accepted), an even n a negative one (rejected) | `(?:abc)+`, `(?:abcde)+` ok; `(?:ab)+`, `(?:abcd)+`, `(?:ab){2,}` rejected |
 | a back reference is rejected | `(a)\1` |
-| the matcher looks back from the shortest body to the reach, in int arithmetic | a reach that wrapped to a small negative number finds nothing: `(?<!_*\p{InBasicLatin}.+)` is true everywhere, `(?<=_*\p{InBasicLatin}.+)` never |
+| the matcher looks back from the shortest body to the reach, in int arithmetic | in char mode a reach that wrapped to a small negative number finds nothing (code-point mode walks its floor forward, above): `(?<!_*\p{InBasicLatin}.+)` is true everywhere, `(?<=_*\p{InBasicLatin}.+)` never |
 
 The atomic and `?` rows were checked against about 90000 probes on the
 oracle (prefixes whose total has already wrapped, alternation inside and around
@@ -204,7 +204,9 @@ Known differences: a `(..)` or `(?:..)` group (including `(?i:..)`) repeated by
 oracle behaves as if it added nothing, so `(?<=a(?:b+c)?)y` finds `y` in `abcy`
 here and not on the oracle, and `(?<=x*\S(?:b+c)?)y` finds it in `abcxy` only on
 the oracle; the verdicts agree. A possessive `?+` over such a group with an
-unbounded body, and a few deeper nestings of these rules, can also differ.
+unbounded body, and a few deeper nestings of these rules, can also differ: for
+example `(?<=x*(?:c|b+)?+)` and `(?<=a(?>(?:c|b+)?+)?)` are rejected here and
+accepted by the oracle.
 
 ## Errors
 
@@ -350,8 +352,11 @@ iterations) overflows, and so does a loop that recurses:
   at 300, 1000, 2000, 5000, 20000 and 200000 levels): here 2000 levels of any
   group kind compile, `(`, `(?=`, `(?!`, `(?<=` and `(?<!` fail at 5000, and
   `(?:`, `(?>`, `(?i:` and `(?:x|` compile at 200000. The oracle at its default
-  stack size (no `-Xss`) fails at 1000 for `(?:`, at 2000 for `(`, `(?<=`,
-  `(?<!`, `(?i:` and `(?:x|`, and at 5000 for `(?=`, `(?!` and `(?>`. Nested character
+  stack size (no `-Xss`) fails somewhere between 1000 and 5000 levels for every
+  group kind; the exact level depends on what already ran in the same JVM (two
+  runs of one probe disagreed for `(?:`, `(?<!` and `(?>`), so no finer figure is
+  given. Inside a lookbehind body, nesting fails earlier here than outside one
+  (about 400 to 1000 levels, depending on the shape). Nested character
   classes recurse: here 2000 levels compile and 5000 fail, on the oracle 5000
   compile and 20000 fail.
 - A class or alternation of ten thousand single characters is one sorted range
