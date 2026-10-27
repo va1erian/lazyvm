@@ -35,9 +35,16 @@ public abstract class Reference<T> {
         return enqueued;
     }
 
-    /** Puts this reference on its queue; false without a queue or if already queued. */
+    /**
+     * Puts this reference on its queue; false without a queue or if already
+     * queued. Java 8 also clears the referent here (observed on Temurin 8).
+     */
     public boolean enqueue() {
         ReferenceQueue<? super T> q = queue;
-        return q != null && q.push(this);
+        if (q == null || !q.push(this)) {
+            return false;
+        }
+        referent = null;
+        return true;
     }
 }

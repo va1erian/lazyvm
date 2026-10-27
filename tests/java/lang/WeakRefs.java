@@ -26,11 +26,18 @@ public class WeakRefs {
         System.out.println("enqueue after removal " + dropped.enqueue());
 
         WeakReference<Object> manual = new WeakReference<Object>(new Object(), q);
+        Object held = new Object();
+        WeakReference<Object> heldRef = new WeakReference<Object>(held, q);
+        System.out.println("enqueue clears the referent " + (heldRef.enqueue() && heldRef.get() == null) + " " + (held != null));
+        System.out.println("polled held " + (q.poll() == heldRef));
         System.out.println("manual enqueue " + manual.enqueue() + " again " + manual.enqueue());
         System.out.println("manual polled " + (q.poll() == manual));
         manual.clear();
         System.out.println("cleared " + (manual.get() == null));
 
+        WeakReference<Object> forever = new WeakReference<Object>(new Object(), q);
+        System.gc();
+        System.out.println("remove(Long.MAX_VALUE) " + (q.remove(Long.MAX_VALUE) == forever));
         PhantomReference<Object> phantom = new PhantomReference<Object>(new Object(), q);
         System.out.println("phantom get null " + (phantom.get() == null));
 

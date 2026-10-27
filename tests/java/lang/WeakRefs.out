@@ -3,9 +3,12 @@ after gc: kept true, dropped cleared true
 queued the dropped one true, enqueued now false
 queue empty true
 enqueue after removal false
+enqueue clears the referent true true
+polled held true
 manual enqueue true again false
 manual polled true
 cleared true
+remove(Long.MAX_VALUE) true
 phantom get null true
 soft survives gc true
 OOM after soft cleared true

@@ -82,35 +82,57 @@ impl Vm {
 
     /// Puts a cleared reference on its queue: the VM's half of
     /// `ReferenceQueue`, done here because no Java code may run during a
-    /// collection. The fields are the contract in `java.lang.ref.Reference`.
+    /// collection. The fields are the contract in `java.lang.ref.Reference`,
+    /// found on `Reference` and `ReferenceQueue` themselves so a subclass's
+    /// field of the same name is never touched.
     fn enqueue_cleared(&mut self, r: Ref) {
-        let Ok(Some(queue)) = self
-            .field_by_name(r, "queue", "Ljava/lang/ref/ReferenceQueue;")
-            .and_then(|v| v.reference())
-        else {
+        let Some(slots) = self.queue_slots() else {
+            return;
+        };
+        let Ok(Some(queue)) = self.get_field(r, slots.queue).and_then(|v| v.reference()) else {
             return;
         };
         if self
-            .field_by_name(r, "enqueued", "Z")
+            .get_field(r, slots.enqueued)
             .is_ok_and(|v| v == Value::Int(1))
         {
             return;
         }
-        let head = self
-            .field_by_name(queue, "head", "Ljava/lang/ref/Reference;")
-            .unwrap_or(Value::NULL);
+        let head = self.get_field(queue, slots.head).unwrap_or(Value::NULL);
         let length = self
-            .field_by_name(queue, "length", "I")
+            .get_field(queue, slots.length)
             .and_then(|v| v.int())
             .unwrap_or(0);
-        let _ = self.set_field_by_name(r, "next", "Ljava/lang/ref/Reference;", head);
-        let _ = self.set_field_by_name(r, "enqueued", "Z", Value::Int(1));
-        let _ = self.set_field_by_name(
-            queue,
-            "head",
-            "Ljava/lang/ref/Reference;",
-            Value::Ref(Some(r)),
-        );
-        let _ = self.set_field_by_name(queue, "length", "I", Value::Int(length.saturating_add(1)));
+        let _ = self.set_field(r, slots.next, head);
+        let _ = self.set_field(r, slots.enqueued, Value::Int(1));
+        let _ = self.set_field(queue, slots.head, Value::Ref(Some(r)));
+        let _ = self.set_field(queue, slots.length, Value::Int(length.saturating_add(1)));
     }
+
+    fn queue_slots(&self) -> Option<QueueSlots> {
+        let reference = self.loaded_class(REFERENCE)?;
+        let queue_class = self.loaded_class("java/lang/ref/ReferenceQueue")?;
+        Some(QueueSlots {
+            queue: self
+                .field_slot(reference, "queue", "Ljava/lang/ref/ReferenceQueue;")
+                .ok()?,
+            next: self
+                .field_slot(reference, "next", "Ljava/lang/ref/Reference;")
+                .ok()?,
+            enqueued: self.field_slot(reference, "enqueued", "Z").ok()?,
+            head: self
+                .field_slot(queue_class, "head", "Ljava/lang/ref/Reference;")
+                .ok()?,
+            length: self.field_slot(queue_class, "length", "I").ok()?,
+        })
+    }
+}
+
+/// Field slots of `Reference` and `ReferenceQueue` the collector writes.
+struct QueueSlots {
+    queue: u32,
+    next: u32,
+    enqueued: u32,
+    head: u32,
+    length: u32,
 }

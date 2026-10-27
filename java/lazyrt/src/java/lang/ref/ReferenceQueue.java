@@ -43,7 +43,9 @@ public class ReferenceQueue<T> {
         if (timeout < 0) {
             throw new IllegalArgumentException("Negative timeout value");
         }
-        long deadline = timeout == 0 ? Long.MAX_VALUE : System.currentTimeMillis() + timeout;
+        long now = System.currentTimeMillis();
+        // A timeout too large to add to the clock means no deadline.
+        long deadline = timeout == 0 || timeout > Long.MAX_VALUE - now ? Long.MAX_VALUE : now + timeout;
         while (true) {
             Reference<? extends T> r = poll();
             if (r != null || System.currentTimeMillis() >= deadline) {
