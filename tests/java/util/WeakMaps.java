@@ -83,6 +83,7 @@ public class WeakMaps {
         holders();
         iteratorsAndGc();
         walkAcrossGc();
+        detachedEntries();
         equality();
         entries();
         views();
@@ -258,6 +259,40 @@ public class WeakMaps {
         ei.next();
         System.out.println("W26 the end of a walk lets go of the last key " + ei.hasNext() + " " + settle(end, 0));
         t("W26 remove then", () -> { ei.remove(); System.out.print(end.size() + " | "); });
+    }
+
+    // Only statics hold these keys, so a test can drop them without a frame slot keeping them.
+    static Key detachedKey;
+    static Map.Entry<Key, String> detached;
+    static Iterator<Map.Entry<Key, String>> detacher;
+
+    static void hold(WeakHashMap<Key, String> m, int n) {
+        detachedKey = new Key(n);
+        m.put(detachedKey, "v" + n);
+        detacher = m.entrySet().iterator();
+        detached = detacher.next();
+    }
+
+    /** W27: an entry the map let go of keeps its value when its key is collected later. */
+    static void detachedEntries() throws Exception {
+        WeakHashMap<Key, String> m = new WeakHashMap<>();
+        for (String how : new String[]{"remove", "clear", "iterator remove"}) {
+            hold(m, how.length());
+            if (how.equals("remove")) m.remove(detachedKey);
+            if (how.equals("clear")) m.clear();
+            if (how.startsWith("iterator")) detacher.remove();
+            detacher = null;
+            detachedKey = null;
+            Map.Entry<Key, String> e = detached;
+            for (int i = 0; i < 400 && e.getKey() != null; i++) {
+                System.gc();
+                Thread.sleep(5);
+            }
+            // The map drops what the collector queued before it reports anything (W10).
+            int size = m.size();
+            System.out.println("W27 after " + how + " and the collector: size " + size + " key " + e.getKey()
+                    + " value " + e.getValue());
+        }
     }
 
     /** W15: lookups hash once and call the argument's equals on stored keys of the same hash. */

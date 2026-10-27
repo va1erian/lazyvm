@@ -235,6 +235,7 @@ Pinned by: WeakMapViews ("W23 …" lines), the fuzzer.
 | `entrySet().remove(e)`, same objects | `S.h` only |
 | stored entry `equals(o)` | key identity or `S.eq(otherKey)`, then value identity or `SV.eq(otherValue)` |
 | stored entry `hashCode()` | `S.h SV.h`; `toString` and `setValue` call nothing |
+| any lookup or removal by the `null` key, `entrySet().remove(null=v)` included | no calls: only the null key's own entry is considered, even when a stored key has hash code 0 and claims to equal `null` |
 
 `removeAll`, `retainAll` and `containsAll` on the views behave as `AbstractSet` and
 `AbstractCollection` do (collections.md 1.H11): they call the views' own `contains` and `remove`
@@ -257,6 +258,12 @@ on them. Once the walk has reported its end (W13), the iterator holds no key any
 `remove()` then removes the mapping of the `null` key if the map has one, and nothing otherwise,
 without an exception. Pinned by: WeakMapViews ("W26 …" lines), WeakMaps ("W26 …" lines).
 
+**W27.** *An entry the map let go of keeps its value.* W14 covers an entry the map drops because
+its key was cleared. An entry object the program still holds after the map removed it by other
+means (`remove`, `clear`, an iterator's `remove`) is unaffected when its key is cleared later:
+`getKey()` turns `null`, but `getValue()` still returns the value it had. Pinned by: WeakMaps
+("W27 after remove", "W27 after clear", "W27 after iterator remove").
+
 ## 7. Not observable: the implementation may choose
 
 - *The bucket of the null key.* The oracle stores `null` as a hidden placeholder object whose
@@ -267,8 +274,9 @@ without an exception. Pinned by: WeakMapViews ("W26 …" lines), WeakMaps ("W26 
   The natural design is entries that are `WeakReference`s registered with a `ReferenceQueue` the
   map polls at the start of each public method (and while growing); dropping entries during a
   growth is invisible because only the collector can cause it.
-- *Moving entries back.* Whether a skipped presize (W7) is never attempted or is attempted and
-  undone cannot be told apart, nor in which order buckets are walked while undoing it.
+- *How a skipped presize is skipped* (W7). Only the outcome can be seen: the table keeps its size
+  and every chain keeps its order. LazyVM simply does not grow; any other route to that same
+  outcome would be indistinguishable.
 - *Tables above 2^30 buckets* and capacities near `Integer.MAX_VALUE`: no test heap holds them.
   Clamp to 2^30 buckets, never fail with an overflow.
 - *Iteration while the collector clears keys* beyond W13 and W22: which of the not-yet-reached keys are

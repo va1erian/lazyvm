@@ -57,4 +57,7 @@ W23 made on an empty map false, made on a non-empty map true
 W23 after next at bucket 8, a key added at 12 false 8 false 2 true, after the end false false
 W23 chain successor removed true, cleared with a successor true, cleared without one false, then a key added ahead false
 W23 growth after 0 true, 6 true, 12 false
+W24 null probes get null false null false false false : 
+W24 entrySet.remove(null=x) false map {z=x} : 
+W24 with a null key too false true true map {z=x} : 
 done
