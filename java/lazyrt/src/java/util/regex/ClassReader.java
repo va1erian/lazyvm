@@ -37,7 +37,7 @@ class ClassReader extends PatternReader {
             cursor++;
             negating = true;
         }
-        CharClass acc = null;
+        Acc acc = new Acc();
         boolean first = true;
         while (true) {
             skipComments();
@@ -52,34 +52,76 @@ class ClassReader extends PatternReader {
             first = false;
             if (c == '[') {
                 cursor++;
-                CharClass nested = parseClass();
-                acc = acc == null ? nested : CharClass.or(acc, nested);
+                acc.add(Acc.UNION, parseClass());
             } else if (c == '&' && cursor + 1 < len && src.charAt(cursor + 1) == '&') {
                 cursor += 2;
                 CharClass rhs = parseRightSide();
-                if (rhs == null && acc == null) {
+                if (rhs == null && acc.isEmpty()) {
                     throw error("Bad class syntax");
                 }
                 if (rhs != null) {
-                    acc = acc == null ? rhs : CharClass.and(acc, rhs);
+                    acc.add(Acc.INTERSECT, rhs);
                 }
                 negating = false;
             } else {
                 CharClass item = item();
                 if (negating) {
-                    item = item.not();
-                    acc = acc == null ? item : CharClass.and(acc, item);
+                    acc.add(Acc.INTERSECT, item.not());
                 } else {
-                    acc = acc == null ? item : CharClass.or(acc, item);
+                    acc.add(Acc.UNION, item);
                 }
             }
         }
-        return acc == null ? CharClass.range(1, 0) : CharClass.cached(acc);
+        CharClass result = acc.build();
+        return result == null ? CharClass.range(1, 0) : CharClass.cached(result);
+    }
+
+    /**
+     * Collects the parts of a class. Consecutive unions (or intersections) go into one flat
+     * list, so a class of thousands of items is not a chain of thousands of nested objects.
+     */
+    private static final class Acc {
+        static final int UNION = 1;
+        static final int INTERSECT = 2;
+        private int mode;
+        private CharClass[] parts = new CharClass[8];
+        private int n;
+
+        boolean isEmpty() {
+            return n == 0;
+        }
+
+        void add(int newMode, CharClass c) {
+            if (n > 0 && mode != newMode) {
+                CharClass soFar = build();
+                parts = new CharClass[8];
+                n = 0;
+                push(soFar);
+            }
+            mode = newMode;
+            push(c);
+        }
+
+        private void push(CharClass c) {
+            if (n == parts.length) {
+                CharClass[] bigger = new CharClass[n * 2];
+                System.arraycopy(parts, 0, bigger, 0, n);
+                parts = bigger;
+            }
+            parts[n++] = c;
+        }
+
+        CharClass build() {
+            if (n == 0) {
+                return null;
+            }
+            return mode == UNION ? CharClass.anyOf(parts, n) : CharClass.allOf(parts, n);
+        }
     }
 
     /** The items after &&, up to the next '&' or the closing bracket; null when there are none. */
     private CharClass parseRightSide() {
-        CharClass rhs = null;
+        Acc rhs = new Acc();
         while (true) {
             skipComments();
             if (atEnd()) {
@@ -87,7 +129,7 @@ class ClassReader extends PatternReader {
             }
             int c = src.charAt(cursor);
             if (c == ']' || c == '&') {
-                return rhs;
+                return rhs.build();
             }
             CharClass item;
             if (c == '[') {
@@ -96,7 +138,7 @@ class ClassReader extends PatternReader {
             } else {
                 item = item();
             }
-            rhs = rhs == null ? item : CharClass.or(rhs, item);
+            rhs.add(Acc.UNION, item);
         }
     }
 

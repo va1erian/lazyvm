@@ -7,11 +7,18 @@ final class Anchor extends Node {
 
     private final int kind;
     private final boolean unix;
+    private final boolean wordClasses;
 
     /** `unix`: only \n ends a line (UNIX_LINES). */
     Anchor(int kind, boolean unix) {
+        this(kind, unix, false);
+    }
+
+    /** `wordClasses`: \b and \B use the Unicode meaning of \w (UNICODE_CHARACTER_CLASS). */
+    Anchor(int kind, boolean unix, boolean wordClasses) {
         this.kind = kind;
         this.unix = unix;
+        this.wordClasses = wordClasses;
     }
 
     /** True for ^ outside MULTILINE and \A, which can only match where a search starts. */
@@ -20,6 +27,11 @@ final class Anchor extends Node {
     }
 
     boolean match(Matcher m, int i) {
+        return holds(m, i) && next.match(m, i);
+    }
+
+    /** Whether the assertion is true at i, without continuing the match. */
+    boolean holds(Matcher m, int i) {
         boolean ok;
         switch (kind) {
             case BEGIN: ok = i == (m.anchoringBounds ? m.lo : 0); break;
@@ -31,7 +43,7 @@ final class Anchor extends Node {
             case NOT_WORD: ok = !wordBoundary(m, i); break;
             default: ok = i == m.oldLast; break;
         }
-        return ok && next.match(m, i);
+        return ok;
     }
 
     private boolean isTerminator(char c) {
@@ -106,39 +118,57 @@ final class Anchor extends Node {
         return true;
     }
 
-    private static boolean isWord(char c) {
-        return c == '_' || Character.isLetterOrDigit(c);
-    }
+    private static final CharClass UNICODE_WORD = CharClass.cached(CharClass.of(CharClass.U_WORD));
 
-    /** A word char, or a combining mark that follows one (so "e" + acute is one word char). */
-    private static boolean isWordAt(Matcher m, int i) {
-        char c = m.text.charAt(i);
-        if (isWord(c)) {
+    /**
+     * Whether the code point starting at `at` counts as a word char for . Observed on the
+     * oracle (RegexFlags, "word boundary and marks"): by default a letter, digit or '_', or a
+     * nonspacing mark that follows a letter or digit (through other nonspacing marks, but not
+     * through '_'; a supplementary mark is judged by the unit before its last unit, which is
+     * how the oracle's results come out); under UNICODE_CHARACTER_CLASS exactly the Unicode \w, so every mark and
+     * join control counts.
+     */
+    private boolean isWord(Matcher m, int cp, int at) {
+        if (wordClasses) {
+            return UNICODE_WORD.test(cp);
+        }
+        if (cp == '_' || Character.isLetterOrDigit(cp)) {
             return true;
         }
-        if (Category.type(c) != Category.Mn) {
+        if (Character.getType(cp) != Character.NON_SPACING_MARK) {
             return false;
         }
-        for (int k = i - 1; k >= 0; k--) {
-            char b = m.text.charAt(k);
-            if (isWord(b)) {
+        // Walks back one UTF-16 unit at a time from the unit before `at`.
+        for (int k = at - 1; k >= 0; k--) {
+            char before = m.text.charAt(k);
+            if (Character.isLetterOrDigit(before)) {
                 return true;
             }
-            if (Category.type(b) != Category.Mn) {
+            if (Character.getType(before) != Character.NON_SPACING_MARK) {
                 return false;
             }
         }
         return false;
     }
 
-    private static boolean wordBoundary(Matcher m, int i) {
+    /** The code point that ends just before index k. */
+    private static int cpBefore(CharSequence text, int k) {
+        char low = text.charAt(k - 1);
+        if (Character.isLowSurrogate(low) && k >= 2 && Character.isHighSurrogate(text.charAt(k - 2))) {
+            return Character.toCodePoint(text.charAt(k - 2), low);
+        }
+        return low;
+    }
+
+    private boolean wordBoundary(Matcher m, int i) {
         boolean left = false;
         boolean right = false;
         if (i > m.lo || (m.transparentBounds && i > 0)) {
-            left = isWordAt(m, i - 1);
+            int cp = cpBefore(m.text, i);
+            left = isWord(m, cp, i - 1);
         }
         if (i < m.hi || (m.transparentBounds && i < m.textLength)) {
-            right = isWordAt(m, i);
+            right = isWord(m, Character.codePointAt(m.text, i), i);
         } else {
             m.hitEnd = true;
             m.requireEnd = true;

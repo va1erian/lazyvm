@@ -24,6 +24,10 @@ final class GroupNodes {
             return body;
         }
 
+        int number() {
+            return n;
+        }
+
         boolean match(Matcher m, int i) {
             int old = m.open[n];
             m.open[n] = i;
@@ -80,12 +84,13 @@ final class GroupNodes {
         private final int maxLen;
         private Node head;
 
-        Look(Node body, boolean ahead, boolean positive) {
+        /** `maxLen` is how far back a lookbehind may look (see LookbehindReach). */
+        Look(Node body, boolean ahead, boolean positive, int maxLen) {
             this.body = body;
             this.ahead = ahead;
             this.positive = positive;
             this.minLen = body.min();
-            this.maxLen = body.max();
+            this.maxLen = maxLen;
         }
 
         Node link(Node after) {
@@ -101,7 +106,10 @@ final class GroupNodes {
 
         private boolean lookAhead(Matcher m, int i) {
             int hi = m.hi;
-            if (!positive && i >= m.hi) {
+            // Observed on the oracle (RegexRegions, "negative lookahead at the end"): a negative
+            // lookahead entered at the end of the text sets requireEnd, and keeps it if the match
+            // later fails; with transparent bounds the end is the end of the text.
+            if (!positive && i >= (m.transparentBounds ? m.textLength : m.hi)) {
                 m.requireEnd = true;
             }
             if (m.transparentBounds) {
@@ -119,7 +127,7 @@ final class GroupNodes {
                 m.lo = 0;
             }
             m.behindTarget = i;
-            int lowest = maxLen >= i ? 0 : i - maxLen;
+            int lowest = i - maxLen;
             if (lowest < m.lo) {
                 lowest = m.lo;
             }

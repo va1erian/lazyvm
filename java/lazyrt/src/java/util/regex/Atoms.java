@@ -5,10 +5,13 @@ final class Atoms {
     private Atoms() {
     }
 
-    /** The code point at i (i < m.hi); a surrogate pair inside the bounds reads as one. */
+    /**
+     * The code point at i (i < m.hi). A surrogate pair is read whole even when the region ends
+     * between its halves (observed on the oracle, RegexRegions, "region inside a pair").
+     */
     static int codePointAt(Matcher m, int i) {
         char c = m.text.charAt(i);
-        if (Character.isHighSurrogate(c) && i + 1 < m.hi) {
+        if (Character.isHighSurrogate(c) && i + 1 < m.textLength) {
             char d = m.text.charAt(i + 1);
             if (Character.isLowSurrogate(d)) {
                 return Character.toCodePoint(c, d);
@@ -38,6 +41,8 @@ final class Atoms {
         final CharClass cc;
         /** The code point when this is a plain case-sensitive literal (so runs of them can merge into a Str), else -1. */
         int literal = -1;
+        /** This class is the union of alternatives, as in (?:a|b); see LookbehindReach. */
+        boolean fromAlternation;
 
         One(CharClass cc) {
             this.cc = cc;

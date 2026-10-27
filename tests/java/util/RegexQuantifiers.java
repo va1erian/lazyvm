@@ -64,6 +64,15 @@ public class RegexQuantifiers {
         all("(?:^)*x", "x");
         all("(\\b)?x", "x");
         all("(\\b)*x", "x");
+        // A capturing group written directly under * or {0,n} with an empty-only body is not
+        // recorded, a wrapped one is, and '?' records either way.
+        all("(?:(\\b))*x", "x");
+        all("(?:(\\b)){0,2}x", "x");
+        all("((\\b))*x", "x");
+        all("(\\b){0,2}x", "x");
+        all("(\\b){1,2}x", "x");
+        all("(\\b)*+x", "x");
+        all("(\\b)*?x", "x");
         all("()*x", "x");
         all("(){0}x", "x");
         all("(\\n*?){2}a", "\naa");
@@ -117,6 +126,10 @@ public class RegexQuantifiers {
         full(".*c", big);
         full("(?>a+)b", big);
         full("a*+a", big);
+        // Backing off over a surrogate pair gives back both halves.
+        String pair = "a😀";
+        System.out.println(Pattern.compile("(?s).*[\\ude00]").matcher(pair).lookingAt() + " " + Pattern.compile("(?s).*?[\\ude00]").matcher(pair).lookingAt()
+            + " " + Pattern.compile("(?s)(.)*\\p{So}").matcher(pair).lookingAt() + " " + Pattern.compile("(?s).*(?<=a)").matcher(pair).lookingAt());
         System.out.println(Pattern.compile("a*").matcher(big).replaceAll("x"));
         System.out.println("done");
     }

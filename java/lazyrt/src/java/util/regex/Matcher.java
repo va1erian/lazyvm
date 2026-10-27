@@ -36,6 +36,8 @@ public final class Matcher implements MatchResult {
     boolean mustReachEnd;
     int matchEnd;
     int stopPos;
+    /** Where the most recent repeat iteration ended in the current attempt, or -1. */
+    int iterationEnd = -1;
     int behindTarget;
 
     Matcher(Pattern parent, CharSequence text) {
@@ -50,9 +52,7 @@ public final class Matcher implements MatchResult {
         open = new int[parentPattern.groupCount + 1];
         loopCount = new int[parentPattern.loopCount];
         loopStart = new int[parentPattern.loopCount];
-        for (int i = 0; i < groups.length; i++) {
-            groups[i] = -1;
-        }
+        clearGroups();
     }
 
     public Pattern pattern() {
@@ -76,9 +76,7 @@ public final class Matcher implements MatchResult {
         first = -1;
         last = 0;
         oldLast = -1;
-        for (int i = 0; i < groups.length; i++) {
-            groups[i] = -1;
-        }
+        clearGroups();
         lastAppendPosition = 0;
         textLength = text.length();
         regionStart = 0;
@@ -222,6 +220,7 @@ public final class Matcher implements MatchResult {
         lo = regionStart;
         hi = regionEnd;
         oldLast = oldLast < 0 ? from : oldLast;
+        iterationEnd = -1;
         clearGroups();
     }
 
@@ -233,7 +232,7 @@ public final class Matcher implements MatchResult {
                 return succeed(from);
             }
             first = -1;
-            oldLast = last;
+            oldLast = afterFailure();
             return false;
         }
         int guard = hi - parentPattern.minLength;
@@ -244,7 +243,7 @@ public final class Matcher implements MatchResult {
         }
         hitEnd = true;
         first = -1;
-        oldLast = last;
+        oldLast = afterFailure();
         return false;
     }
 
@@ -256,8 +255,20 @@ public final class Matcher implements MatchResult {
             return succeed(from);
         }
         first = -1;
-        oldLast = last;
+        oldLast = afterFailure();
         return false;
+    }
+
+    /**
+     * Observed on the oracle (RegexRegions, "G after a failed matches"): a failed attempt that
+     * matched some repeat iteration leaves the matcher's "end of previous match" at the end of
+     * that iteration, which is where \G matches and where the next find() starts.
+     */
+    private int afterFailure() {
+        if (iterationEnd >= 0) {
+            last = iterationEnd;
+        }
+        return last;
     }
 
     private boolean succeed(int start) {

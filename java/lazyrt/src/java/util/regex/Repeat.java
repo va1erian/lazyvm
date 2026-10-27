@@ -2,9 +2,12 @@ package java.util.regex;
 
 /**
  * Quantifiers. A body that always consumes exactly one code point of a class
- * gets {@link CharRepeat}, which counts forward in a loop and backs off without
- * recursion, so `.*` over a long text uses constant stack. Any other body gets
- * {@link Loop}, which recurses once per iteration.
+ * (also inside one capturing group) gets {@link CharRepeat}, which counts
+ * forward in a loop and backs off without recursion, so `.*` and `(\d)+` use
+ * constant stack. A body made only of such pieces, literals and zero-width
+ * anchors, possibly with alternatives, runs in {@link FlatLoop}, which keeps
+ * its backtracking states in an array. Any other {@link Loop} recurses, about
+ * four Java frames per iteration.
  */
 final class Repeat {
     static final int GREEDY = 0, LAZY = 1, POSSESSIVE = 2;
@@ -12,18 +15,50 @@ final class Repeat {
     private Repeat() {
     }
 
-    /** x{min,max} for a single-code-point class x. */
+    /** Width of the code point at j if it is in cc, else 0; reaching the end sets hitEnd. */
+    static int widthAt(Matcher m, CharClass cc, int j) {
+        if (j >= m.hi) {
+            m.hitEnd = true;
+            return 0;
+        }
+        int c = Atoms.codePointAt(m, j);
+        return cc.test(c) ? Character.charCount(c) : 0;
+    }
+
+    /** Width of the char ending at j when the scan started at i: 2 for a whole surrogate pair. */
+    static int widthBefore(Matcher m, int i, int j) {
+        return j - 2 >= i && Character.isLowSurrogate(m.text.charAt(j - 1))
+            && Character.isHighSurrogate(m.text.charAt(j - 2)) ? 2 : 1;
+    }
+
+    /**
+     * x{min,max} for a single-code-point class x, optionally inside a capturing group
+     * `(x){min,max}` whose capture is the last char matched.
+     */
     static final class CharRepeat extends Node {
-        private final CharClass cc;
+        final CharClass cc;
         private final int minCount;
         private final int maxCount;
-        private final int mode;
+        final int mode;
+        /** Capturing group number, or -1. */
+        final int group;
+        /** The class came from folding an alternation, as in (?:a|b)*. */
+        final boolean fromAlternation;
+        /** The quantifier was written '?'. */
+        final boolean question;
+        /** The class was written inside a (..) or (?:..) group. */
+        final boolean grouped;
 
-        CharRepeat(CharClass cc, int minCount, int maxCount, int mode) {
+        CharRepeat(CharClass cc, int minCount, int maxCount, int mode, int group, boolean fromAlternation,
+                   boolean question, boolean grouped) {
+            this.grouped = grouped;
             this.cc = cc;
             this.minCount = minCount;
             this.maxCount = maxCount;
             this.mode = mode;
+            this.group = group;
+            this.fromAlternation = fromAlternation;
+            this.question = question;
         }
 
         int minCount() {
@@ -34,14 +69,66 @@ final class Repeat {
             return maxCount;
         }
 
-        /** Width of the code point matched at j, or 0 if there is none that is in the class. */
-        private int widthAt(Matcher m, int j) {
-            if (j >= m.hi) {
-                m.hitEnd = true;
-                return 0;
+        /**
+         * Enumerates the ways to match at p for FlatLoop: the first call (retry false) returns the
+         * end of the preferred way and records the char count in st[countAt]; each later call
+         * returns the end of the next way, given the previous one's end, or -1.
+         */
+        int nextWay(Matcher m, int p, int[] st, int countAt, int prevEnd, boolean retry) {
+            if (!retry) {
+                int j = p;
+                int n = 0;
+                int limit = mode == LAZY ? minCount : maxCount;
+                while (n < limit) {
+                    int w = widthAt(m, cc, j);
+                    if (w == 0) {
+                        break;
+                    }
+                    j += w;
+                    n++;
+                }
+                st[countAt] = n;
+                return n < minCount ? -1 : j;
             }
-            int c = Atoms.codePointAt(m, j);
-            return cc.test(c) ? Character.charCount(c) : 0;
+            int n = st[countAt];
+            if (mode == POSSESSIVE) {
+                return -1;
+            }
+            if (mode == LAZY) {
+                int w = n >= maxCount ? 0 : widthAt(m, cc, prevEnd);
+                if (w == 0) {
+                    return -1;
+                }
+                st[countAt] = n + 1;
+                return prevEnd + w;
+            }
+            if (n == minCount) {
+                return -1;
+            }
+            st[countAt] = n - 1;
+            return prevEnd - widthBefore(m, p, prevEnd);
+        }
+
+        /** Continues at j after n chars, with the group (if any) set to the last one. */
+        private boolean proceed(Matcher m, int i, int j, int n) {
+            if (group < 0 || n == 0) {
+                return next.match(m, j);
+            }
+            int oldStart = m.groups[2 * group];
+            int oldEnd = m.groups[2 * group + 1];
+            m.groups[2 * group] = j - widthBefore(m, i, j);
+            m.groups[2 * group + 1] = j;
+            if (next.match(m, j)) {
+                return true;
+            }
+            if (mode == POSSESSIVE) {
+                // Observed on the oracle (RegexGroups, "possessive group keeps its capture"): a
+                // possessive repeat does not undo its capture when the rest of the match fails.
+                return false;
+            }
+            m.groups[2 * group] = oldStart;
+            m.groups[2 * group + 1] = oldEnd;
+            return false;
         }
 
         boolean match(Matcher m, int i) {
@@ -51,29 +138,31 @@ final class Repeat {
             int j = i;
             int n = 0;
             while (n < maxCount) {
-                int w = widthAt(m, j);
+                int w = widthAt(m, cc, j);
                 if (w == 0) {
                     break;
                 }
                 j += w;
                 n++;
             }
+            if (n > 0) {
+                m.iterationEnd = j;
+            }
             if (n < minCount) {
                 return false;
             }
             if (mode == POSSESSIVE) {
-                return next.match(m, j);
+                return proceed(m, i, j, n);
             }
             while (true) {
-                if (next.match(m, j)) {
+                if (proceed(m, i, j, n)) {
                     return true;
                 }
                 if (n == minCount) {
                     return false;
                 }
                 n--;
-                j -= j - 2 >= i && Character.isLowSurrogate(m.text.charAt(j - 1))
-                    && Character.isHighSurrogate(m.text.charAt(j - 2)) ? 2 : 1;
+                j -= widthBefore(m, i, j);
             }
         }
 
@@ -81,26 +170,28 @@ final class Repeat {
             int j = i;
             int n = 0;
             while (n < minCount) {
-                int w = widthAt(m, j);
+                int w = widthAt(m, cc, j);
                 if (w == 0) {
                     return false;
                 }
                 j += w;
                 n++;
+                m.iterationEnd = j;
             }
             while (true) {
-                if (next.match(m, j)) {
+                if (proceed(m, i, j, n)) {
                     return true;
                 }
                 if (n >= maxCount) {
                     return false;
                 }
-                int w = widthAt(m, j);
+                int w = widthAt(m, cc, j);
                 if (w == 0) {
                     return false;
                 }
                 j += w;
                 n++;
+                m.iterationEnd = j;
             }
         }
 
@@ -125,12 +216,23 @@ final class Repeat {
         private final int maxCount;
         private final boolean lazy;
         private final int id;
-        /** True for a (possibly lazy) group repeated by * + or {n,m}: Lengths gives up there. */
+        /** True for a group repeated by * + or {n,m} (see LookbehindReach). */
         final boolean grouped;
+        /** The quantifier was written '?'. */
+        final boolean question;
+        /** The quantifier was possessive (the loop sits inside an atomic wrapper). */
+        final boolean possessive;
+        /** The repeated atom was written as a (..) or (?:..) group. */
+        final boolean inGroup;
         private Tail tail;
+        private FlatLoop flat;
 
-        Loop(Node body, int minCount, int maxCount, boolean lazy, int id, boolean grouped) {
+        Loop(Node body, int minCount, int maxCount, boolean lazy, int id, boolean grouped, boolean question,
+             boolean possessive, boolean inGroup) {
+            this.inGroup = inGroup;
             this.grouped = grouped;
+            this.question = question;
+            this.possessive = possessive;
             this.body = body;
             this.minCount = minCount;
             this.maxCount = maxCount;
@@ -152,6 +254,11 @@ final class Repeat {
 
         Node link(Node after) {
             this.next = after;
+            this.flat = FlatLoop.of(body, minCount, maxCount, lazy);
+            if (flat != null) {
+                flat.next = after;
+                return this;
+            }
             this.tail = new Tail(id, minCount, maxCount, lazy);
             tail.next = after;
             tail.head = body.link(tail);
@@ -159,6 +266,9 @@ final class Repeat {
         }
 
         boolean match(Matcher m, int i) {
+            if (flat != null) {
+                return flat.match(m, i);
+            }
             int savedCount = m.loopCount[id];
             int savedStart = m.loopStart[id];
             m.loopCount[id] = 0;
@@ -207,6 +317,9 @@ final class Repeat {
                 // counts as met; observed on the oracle with (\n*?){2}a, see RegexQuantifiers).
                 return next.match(m, i);
             }
+            if (c > 0) {
+                m.iterationEnd = i;
+            }
             boolean required = c < minCount;
             if (lazy && !required && next.match(m, i)) {
                 return true;
@@ -223,5 +336,27 @@ final class Repeat {
             }
             return !required && !lazy && next.match(m, i);
         }
+    }
+
+    /** True when n can only match the empty string, with no loops over anything wider or branches. */
+    static boolean isFixedEmpty(Node n) {
+        if (n instanceof Node.Seq) {
+            for (Node item : ((Node.Seq) n).items) {
+                if (!isFixedEmpty(item)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (n instanceof GroupNodes.Group) {
+            return isFixedEmpty(((GroupNodes.Group) n).body());
+        }
+        if (n instanceof Repeat.Loop) {
+            Repeat.Loop l = (Repeat.Loop) n;
+            return l.minCount() == l.maxCount() && isFixedEmpty(l.body());
+        }
+        boolean zeroWidth = n instanceof Anchor || n instanceof GroupNodes.Look || n instanceof Node.Empty
+            || n instanceof Repeat.CharRepeat;
+        return zeroWidth && n.max() == 0;
     }
 }

@@ -118,6 +118,12 @@ public class RegexGroups {
         all("(?:(a)|b)+\\1", "aba");
         all("(a)?+b", "ab");
         all("(?<=(a))*b", "ab");
+        // a possessive group keeps its capture when the rest of the match fails after it
+        all("(?<=(a)?+)", "aaaab_ab");
+        all("(?<!(a)?+b)", "aaaab_ab");
+        all("(?:(a)?+b)*c|x", "abab");
+        all("(a)*+b|x", "aax");
+        all("(?:a)(?>(b))c|b", "abd abc");
         System.out.println("done");
     }
 }

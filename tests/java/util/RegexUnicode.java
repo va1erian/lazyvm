@@ -109,7 +109,11 @@ public class RegexUnicode {
         String[] names = {"InLatin-1Supplement", "InLatin-1 Supplement", "InLatin1Supplement", "InLatin Extended-A", "InLatin Extended A", "InLatinExtended-A",
             "InLATIN_EXTENDED_A", "InGreek and Coptic", "InGreekandCoptic", "InCyrillic Supplement", "InCyrillicSupplementary", "InBasic_Latin", "Inbasiclatin",
             "InNoSuchBlock", "IsLatn", "IsLATIN", "IsOld_Italic", "IsOldItalic", "IsCommon", "IsZyyy", "IsInherited", "IsHani", "IsNoSuchScript", "sc=Grek", "script=greek",
-            "blk=Arrows", "block=arrows", "gc=Lu", "gc=lu", "IsLu", "IsAlphabetic", "IsWhite_Space", "javaMirrored", "Is"};
+            "blk=Arrows", "block=arrows", "gc=Lu", "gc=lu", "IsLu", "IsAlphabetic", "IsWhite_Space", "javaMirrored", "Is",
+            "InSurrogatesArea", "InSurrogates_Area", "InSurrogates Area", "IsUnknown", "sc=Unknown", "script=UNKNOWN", "IsZzzz", "InLinear-B Syllabary", "InLinear B Syllabary",
+            "InLinear_B_Syllabary", "InPhags-pa", "InPhags pa", "InPhags_Pa", "InCJK Unified Ideographs Extension A", "InCJK_Unified_Ideographs_Extension_A",
+            "InCJKUnifiedIdeographsExtensionA", "InCJK Unified Ideographs Extension-A", "IsLinear-B", "IsLinear_B", "IsLinear B", "IsOld Italic", "InPrivate Use", "InPrivateUse",
+            "InCombining Diacritical Marks for Symbols", "InCombiningMarksforSymbols", "InCombining Marks for Symbols"};
         for (String n : names) {
             try {
                 Pattern.compile("\\p{" + n + "}");
@@ -121,6 +125,9 @@ public class RegexUnicode {
         set("\\p{IsCommon}", 0, 0x20, 0x7f);
         set("\\p{IsInherited}", 0, 0x300, 0x320);
         set("\\p{InMiscellaneousSymbols}", 0, 0x25ff, 0x2700);
+        set("\\p{IsUnknown}", 0, 0x377, 0x380);
+        set("\\p{InSurrogates_Area}", 0, 0xd7ff, 0xe000);
+        set("\\p{InHighSurrogates}", 0, 0xd7ff, 0xdc00);
         System.out.println("done");
     }
 }

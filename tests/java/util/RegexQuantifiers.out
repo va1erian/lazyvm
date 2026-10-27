@@ -57,6 +57,13 @@ a*+b in 'aaab': [0,4)
 (?:^)*x in 'x': [0,1)
 (\b)?x in 'x': [0,1) ''
 (\b)*x in 'x': [0,1) null
+(?:(\b))*x in 'x': [0,1) ''
+(?:(\b)){0,2}x in 'x': [0,1) ''
+((\b))*x in 'x': [0,1) null ''
+(\b){0,2}x in 'x': [0,1) null
+(\b){1,2}x in 'x': [0,1) ''
+(\b)*+x in 'x': [0,1) ''
+(\b)*?x in 'x': [0,1) null
 ()*x in 'x': [0,1) null
 (){0}x in 'x': [0,1) null
 (\n*?){2}a in '
@@ -109,5 +116,6 @@ a*+ matches '<1000 chars>': true
 .*c matches '<1000 chars>': false
 (?>a+)b matches '<1000 chars>': false
 a*+a matches '<1000 chars>': false
+false false true true
 xx
 done

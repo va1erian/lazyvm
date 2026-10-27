@@ -1,10 +1,34 @@
 package java.util.regex;
 
 /**
- * Group syntax: capturing, named, non-capturing, lookaround, atomic and inline
- * flag groups. The expression inside a group is parsed by the subclass.
+ * Group syntax: the part of a group from its '(' to the start of its body, for
+ * capturing, named, non-capturing, lookaround, atomic and inline-flag groups.
+ * The body and the closing ')' are handled by the Parser's explicit stack, so
+ * nesting depth does not use Java frames.
  */
 abstract class GroupReader extends ClassReader {
+    // What an open group will turn into when its ')' arrives.
+    static final int TOP = 0, CAPTURE = 1, PLAIN = 2, LOOKAHEAD = 3, LOOKBEHIND = 4, ATOMIC = 5, NOT_A_GROUP = 6;
+
+    /** An open group: the alternatives and items collected so far. */
+    static final class Frame {
+        final int kind;
+        final int savedFlags;
+        final int number;
+        final boolean positive;
+        Node[] branches = new Node[2];
+        int branchCount;
+        Node[] items = new Node[4];
+        int itemCount;
+
+        Frame(int kind, int savedFlags, int number, boolean positive) {
+            this.kind = kind;
+            this.savedFlags = savedFlags;
+            this.number = number;
+            this.positive = positive;
+        }
+    }
+
     int groupCount;
     String[] groupNames = new String[4];
 
@@ -12,78 +36,53 @@ abstract class GroupReader extends ClassReader {
         super(pattern, flags);
     }
 
-    /** Parses alternatives up to a ')' or the end of the pattern. */
-    abstract Node expr();
-
     static boolean isNameChar(int c) {
         return isAsciiLetter(c) || (c >= '0' && c <= '9');
     }
 
     final int groupNumber(String name) {
-        for (int n = 1; n <= groupCount; n++) {
-            if (name.equals(groupNames[n])) {
+        return groupNumber(groupNames, groupCount, name);
+    }
+
+    /** The number of the named group among groups 1..count, or -1. */
+    static int groupNumber(String[] names, int count, String name) {
+        for (int n = 1; n <= count; n++) {
+            if (name.equals(names[n])) {
                 return n;
             }
         }
         return -1;
     }
 
-    // Groups.
-
-    final Node group() {
+    /**
+     * Reads what follows a '(' and returns the group to open, or null for an inline-flag group
+     * `(?i)`, which only changes the flags for the rest of the enclosing group.
+     */
+    final Frame openGroup() {
         int saved = flags;
-        Node result;
-        if (!atEnd() && cur() == '?') {
-            cursor++;
-            int c = read();
-            switch (c) {
-                case ':':
-                    result = body();
-                    break;
-                case '=':
-                    result = new GroupNodes.Look(body(), true, true);
-                    break;
-                case '!':
-                    result = new GroupNodes.Look(body(), true, false);
-                    break;
-                case '>':
-                    result = new GroupNodes.Atomic(body());
-                    break;
-                case '<':
-                    result = angleGroup();
-                    break;
-                case '$':
-                case '@':
-                    throw error("Unknown group type");
-                default:
-                    cursor--;
-                    result = flagGroup(saved);
-                    break;
-            }
-        } else {
-            int n = newGroup(null);
-            result = new GroupNodes.Group(n, body());
-        }
-        if (result != null) {
-            flags = saved;
-        }
-        return result;
-    }
-
-    /** The contents of a group up to and including its ')'. */
-    private Node body() {
-        Node n = expr();
-        if (atEnd() || cur() != ')') {
-            unclosed();
+        skipComments();
+        if (atEnd() || cur() != '?') {
+            return new Frame(CAPTURE, saved, newGroup(null), true);
         }
         cursor++;
-        return n;
-    }
-
-    /** At the end of the pattern, or at a lone trailing backslash, which counts as one char more. */
-    private void unclosed() {
-        cursor = atEnd() ? len + 1 : len + 2;
-        throw error("Unclosed group");
+        int c = read();
+        switch (c) {
+            case ':':
+                return new Frame(PLAIN, saved, 0, true);
+            case '=':
+            case '!':
+                return new Frame(LOOKAHEAD, saved, 0, c == '=');
+            case '>':
+                return new Frame(ATOMIC, saved, 0, true);
+            case '<':
+                return angleGroup(saved);
+            case '$':
+            case '@':
+                throw error("Unknown group type");
+            default:
+                cursor--;
+                return flagGroup(saved);
+        }
     }
 
     private int newGroup(String name) {
@@ -97,36 +96,19 @@ abstract class GroupReader extends ClassReader {
         return groupCount;
     }
 
-    /** The body of a lookbehind, which must have a maximum length (see Lengths). */
-    private Node lookbehindBody() {
-        Node n = expr();
-        if (!Lengths.hasMaxLength(n)) {
-            throw error("Look-behind group does not have an obvious maximum length");
-        }
-        if (atEnd() || cur() != ')') {
-            unclosed();
-        }
-        cursor++;
-        return n;
-    }
-
     /** After "(?<": a lookbehind or a named group. */
-    private Node angleGroup() {
-        int c = read();
+    private Frame angleGroup(int saved) {
+        int c = readSkipping();
         if (c == '=' || c == '!') {
-            return new GroupNodes.Look(lookbehindBody(), false, c == '=');
+            return new Frame(LOOKBEHIND, saved, 0, c == '=');
         }
         if (!isAsciiLetter(c)) {
-            // Parsed as a lookbehind whose first char is neither '=' nor '!'.
-            Node unknown = expr();
-            throw error(Lengths.hasMaxLength(unknown)
-                ? "Unknown look-behind group"
-                : "Look-behind group does not have an obvious maximum length");
+            return new Frame(NOT_A_GROUP, saved, 0, true);
         }
         StringBuilder name = new StringBuilder();
         name.append((char) c);
         while (true) {
-            c = read();
+            c = readSkipping();
             if (!isNameChar(c)) {
                 break;
             }
@@ -139,18 +121,14 @@ abstract class GroupReader extends ClassReader {
         if (groupNumber(s) >= 0) {
             throw error("Named capturing group <" + s + "> is already defined");
         }
-        int n = newGroup(s);
-        return new GroupNodes.Group(n, body());
+        return new Frame(CAPTURE, saved, newGroup(s), true);
     }
 
-    /**
-     * After "(?" with the cursor on the first modifier char: (?flags) changes the flags for the rest of
-     * the enclosing group and returns null; (?flags:x) scopes them to x.
-     */
-    private Node flagGroup(int saved) {
+    /** After "(?" with the cursor on the first modifier char; null for (?flags), a group for (?flags:x). */
+    private Frame flagGroup(int saved) {
         boolean on = true;
         while (true) {
-            int c = read();
+            int c = readSkipping();
             switch (c) {
                 case 'i': setFlag(Pattern.CASE_INSENSITIVE, on); break;
                 case 'd': setFlag(Pattern.UNIX_LINES, on); break;
@@ -162,10 +140,7 @@ abstract class GroupReader extends ClassReader {
                 case 'U': setFlag(Pattern.UNICODE_CHARACTER_CLASS | Pattern.UNICODE_CASE, on); break;
                 case '-': on = false; break;
                 case ')': return null;
-                case ':':
-                    Node n = body();
-                    flags = saved;
-                    return n;
+                case ':': return new Frame(PLAIN, saved, 0, true);
                 default:
                     throw error("Unknown inline modifier");
             }
@@ -174,5 +149,11 @@ abstract class GroupReader extends ClassReader {
 
     private void setFlag(int flag, boolean on) {
         flags = on ? flags | flag : flags & ~flag;
+    }
+
+    /** At the end of the pattern, or at a lone trailing backslash, which counts as one char more. */
+    final PatternSyntaxException unclosed() {
+        cursor = atEnd() ? len + 1 : len + 2;
+        return error("Unclosed group");
     }
 }

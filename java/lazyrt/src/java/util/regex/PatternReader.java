@@ -24,11 +24,18 @@ class PatternReader {
     }
 
     final PatternSyntaxException error(String desc) {
-        return new PatternSyntaxException(desc, original, cursor - 1);
+        return errorAt(desc, cursor - 1);
     }
 
+    /**
+     * Observed on the oracle (RegexErrors, "supplementary characters"): the index counts code
+     * points, so a pair counts once.
+     */
     final PatternSyntaxException errorAt(String desc, int index) {
-        return new PatternSyntaxException(desc, original, index);
+        int cursorAfter = index + 1;
+        int points = cursorAfter <= len ? src.codePointCount(0, cursorAfter)
+            : src.codePointCount(0, len) + (cursorAfter - len);
+        return new PatternSyntaxException(desc, original, points - 1);
     }
 
     /** The next char without consuming it; 0 at the end. */
@@ -41,6 +48,12 @@ class PatternReader {
         int c = cursor < len ? src.charAt(cursor) : 0;
         cursor++;
         return c;
+    }
+
+    /** Like read(), but under COMMENTS first skips whitespace and comments. */
+    final int readSkipping() {
+        skipComments();
+        return read();
     }
 
     final boolean atEnd() {

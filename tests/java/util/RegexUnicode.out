@@ -99,7 +99,36 @@ IsAlphabetic : ok
 IsWhite_Space : ok
 javaMirrored : ok
 Is : Unknown character script name {}
+InSurrogatesArea : Unknown character block name {SurrogatesArea}
+InSurrogates_Area : ok
+InSurrogates Area : Unknown character block name {Surrogates Area}
+IsUnknown : ok
+sc=Unknown : ok
+script=UNKNOWN : ok
+IsZzzz : ok
+InLinear-B Syllabary : Unknown character block name {Linear-B Syllabary}
+InLinear B Syllabary : ok
+InLinear_B_Syllabary : ok
+InPhags-pa : ok
+InPhags pa : Unknown character block name {Phags pa}
+InPhags_Pa : ok
+InCJK Unified Ideographs Extension A : ok
+InCJK_Unified_Ideographs_Extension_A : ok
+InCJKUnifiedIdeographsExtensionA : ok
+InCJK Unified Ideographs Extension-A : Unknown character block name {CJK Unified Ideographs Extension-A}
+IsLinear-B : Unknown character script name {Linear-B}
+IsLinear_B : ok
+IsLinear B : Unknown character script name {Linear B}
+IsOld Italic : Unknown character script name {Old Italic}
+InPrivate Use : Unknown character block name {Private Use}
+InPrivateUse : Unknown character block name {PrivateUse}
+InCombining Diacritical Marks for Symbols : ok
+InCombiningMarksforSymbols : ok
+InCombining Marks for Symbols : ok
 \p{IsCommon} f0 20..7f => 20-40 5b-60 7b-7f
 \p{IsInherited} f0 300..320 => 300-320
 \p{InMiscellaneousSymbols} f0 25ff..2700 => 2600-26ff
+\p{IsUnknown} f0 377..380 => 378-379 37f-380
+\p{InSurrogates_Area} f0 d7ff..e000 =>
+\p{InHighSurrogates} f0 d7ff..dc00 => d800-db7f
 done

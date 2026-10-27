@@ -9,11 +9,85 @@ abstract class CharClass {
     }
 
     static CharClass or(CharClass a, CharClass b) {
-        return new Or(a, b);
+        return anyOf(new CharClass[] {a, b}, 2);
     }
 
     static CharClass and(CharClass a, CharClass b) {
-        return new And(a, b);
+        return new All(new CharClass[] {a, b});
+    }
+
+    /**
+     * The union of parts[0..n). Plain ranges are merged into one sorted table, so a class of
+     * thousands of characters is one binary search, not a chain of thousands of objects.
+     */
+    static CharClass anyOf(CharClass[] parts, int n) {
+        long[] keys = new long[n];
+        CharClass[] rest = new CharClass[n];
+        int nk = 0;
+        int nr = 0;
+        for (int k = 0; k < n; k++) {
+            if (parts[k] instanceof Range) {
+                Range r = (Range) parts[k];
+                keys[nk++] = (long) r.lo * 0x200000L + r.hi;
+            } else {
+                rest[nr++] = parts[k];
+            }
+        }
+        CharClass table = nk == 0 ? null : new Ranges(sortedRanges(keys, nk));
+        if (nr == 0) {
+            return table;
+        }
+        CharClass[] others = new CharClass[nr + (table == null ? 0 : 1)];
+        System.arraycopy(rest, 0, others, 0, nr);
+        if (table != null) {
+            others[nr] = table;
+        }
+        return others.length == 1 ? others[0] : new Any(others);
+    }
+
+    /** The intersection of the parts. */
+    static CharClass allOf(CharClass[] parts, int n) {
+        CharClass[] exact = new CharClass[n];
+        System.arraycopy(parts, 0, exact, 0, n);
+        return n == 1 ? exact[0] : new All(exact);
+    }
+
+    /** Sorts range keys (lo, hi packed in a long) and merges overlapping or adjacent ranges. */
+    private static int[][] sortedRanges(long[] keys, int n) {
+        long[] src = keys;
+        long[] dst = new long[n];
+        for (int width = 1; width < n; width *= 2) {
+            for (int from = 0; from < n; from += 2 * width) {
+                int mid = Math.min(from + width, n);
+                int end = Math.min(from + 2 * width, n);
+                int a = from;
+                int b = mid;
+                for (int k = from; k < end; k++) {
+                    dst[k] = b >= end || (a < mid && src[a] <= src[b]) ? src[a++] : src[b++];
+                }
+            }
+            long[] t = src;
+            src = dst;
+            dst = t;
+        }
+        int[] lo = new int[n];
+        int[] hi = new int[n];
+        int m = 0;
+        for (int k = 0; k < n; k++) {
+            int l = (int) (src[k] / 0x200000L);
+            int h = (int) (src[k] % 0x200000L);
+            if (m > 0 && l <= hi[m - 1] + 1) {
+                hi[m - 1] = Math.max(hi[m - 1], h);
+            } else {
+                lo[m] = l;
+                hi[m++] = h;
+            }
+        }
+        int[] lo2 = new int[m];
+        int[] hi2 = new int[m];
+        System.arraycopy(lo, 0, lo2, 0, m);
+        System.arraycopy(hi, 0, hi2, 0, m);
+        return new int[][] {lo2, hi2};
     }
 
     static CharClass single(int c) {
@@ -48,8 +122,8 @@ abstract class CharClass {
     }
 
     static final class Range extends CharClass {
-        private final int lo;
-        private final int hi;
+        final int lo;
+        final int hi;
 
         Range(int lo, int hi) {
             this.lo = lo;
@@ -77,31 +151,37 @@ abstract class CharClass {
         }
     }
 
-    private static final class Or extends CharClass {
-        private final CharClass a;
-        private final CharClass b;
+    private static final class Any extends CharClass {
+        private final CharClass[] parts;
 
-        Or(CharClass a, CharClass b) {
-            this.a = a;
-            this.b = b;
+        Any(CharClass[] parts) {
+            this.parts = parts;
         }
 
         boolean test(int cp) {
-            return a.test(cp) || b.test(cp);
+            for (CharClass p : parts) {
+                if (p.test(cp)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
-    private static final class And extends CharClass {
-        private final CharClass a;
-        private final CharClass b;
+    private static final class All extends CharClass {
+        private final CharClass[] parts;
 
-        And(CharClass a, CharClass b) {
-            this.a = a;
-            this.b = b;
+        All(CharClass[] parts) {
+            this.parts = parts;
         }
 
         boolean test(int cp) {
-            return a.test(cp) && b.test(cp);
+            for (CharClass p : parts) {
+                if (!p.test(cp)) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 
@@ -157,15 +237,27 @@ abstract class CharClass {
         private final int[] lo;
         private final int[] hi;
 
+        Ranges(int[][] table) {
+            lo = table[0];
+            hi = table[1];
+        }
+
         Ranges(String spec) {
+            this(parse(spec));
+        }
+
+        private static int[][] parse(String spec) {
+            if (spec.length() == 0) {
+                return new int[][] {new int[0], new int[0]};
+            }
             int n = 1;
             for (int i = 0; i < spec.length(); i++) {
                 if (spec.charAt(i) == ',') {
                     n++;
                 }
             }
-            lo = new int[n];
-            hi = new int[n];
+            int[] lo = new int[n];
+            int[] hi = new int[n];
             int start = 0;
             for (int k = 0; k < n; k++) {
                 int comma = spec.indexOf(',', start);
@@ -175,6 +267,7 @@ abstract class CharClass {
                 hi[k] = Integer.parseInt(spec.substring(dash + 1, end), 16);
                 start = end + 1;
             }
+            return new int[][] {lo, hi};
         }
 
         boolean test(int cp) {

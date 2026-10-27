@@ -74,4 +74,29 @@ a f=47(47) A : [0,1) matches=true
 (?i-)a f=0(2) A : [0,1) matches=true
 2 34 8 0 32
 65535 512
+( ?:a)b f=4(4) ab : [0,2) matches=true
+(? :a)b f=4(4) ab : [0,2) matches=true
+(?  =a)b f=4 : Unknown inline modifier @4
+(?< n>a) f=4(4) ab : [0,1) matches=false
+(?<n >a) f=4(4) ab : [0,1) matches=false
+(?i )a f=4(6) ab : [0,1) matches=false
+( ?=a)a f=4(4) ab : [0,1) matches=false
+( ? i)a f=4(6) ab : [0,1) matches=false
+(?i: a) f=4(4) ab : [0,1) matches=false
+( ?:a)b f=0(0) ab : matches=false
+\b in _\u0301: default 0 1 / 2; unicode 0 2 / 1
+\b in a\u0301: default 0 2 / 1; unicode 0 2 / 1
+\b in 1\u0301: default 0 2 / 1; unicode 0 2 / 1
+\b in \u0301: default / 0 1; unicode 0 1 /
+\b in \u0301a: default 1 2 / 0; unicode 0 2 / 1
+\b in a\u0301\u0302: default 0 3 / 1 2; unicode 0 3 / 1 2
+\b in _\u0301\u0302: default 0 1 / 2 3; unicode 0 3 / 1 2
+\b in a\u0903: default 0 1 / 2; unicode 0 2 / 1
+\b in a\u20dd: default 0 1 / 2; unicode 0 2 / 1
+\b in a\u200d: default 0 1 / 2; unicode 0 2 / 1
+\b in a\u0301b: default 0 3 / 1 2; unicode 0 3 / 1 2
+\b in  \u0301 a: default 3 4 / 0 1 2; unicode 1 2 3 4 / 0
+\b in a\ud800\uddfd: default 0 / 1 2 3; unicode 0 3 / 1 2
+\b in \ud801\udc00\u0301: default 0 2 / 1 3; unicode 0 3 / 1 2
+\b in \u00e9_: default 0 2 / 1; unicode 0 2 / 1
 done

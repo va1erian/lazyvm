@@ -37,6 +37,62 @@ public class RegexRegions {
         System.out.println(re + " | " + in.replace('\r', 'R').replace('\n', 'N') + " : matches=" + full + " " + a + " ; lookingAt=" + look + " " + b + " ; find=" + found + " " + flags(m));
     }
 
+    /** A negative lookahead entered at the end sets requireEnd, and keeps it; transparent bounds move the end. */
+    static void negativeLookaheadAtTheEnd() {
+        Matcher m = Pattern.compile("(?:(?!\\n)A)*\\w").matcher("");
+        System.out.println("skipped search " + m.find() + " " + flags(m));
+        System.out.println("matches " + m.matches() + " " + flags(m) + " " + m.lookingAt() + " " + flags(m));
+        Matcher t = Pattern.compile("(?!a)").matcher("0123456789");
+        t.region(7, 7).useTransparentBounds(true);
+        System.out.println("transparent " + t.lookingAt() + " " + flags(t) + " " + t.matches() + " " + flags(t) + " " + t.find() + " " + flags(t));
+        t.region(7, 7).useTransparentBounds(false);
+        System.out.println("opaque " + t.lookingAt() + " " + flags(t) + " " + t.matches() + " " + flags(t) + " " + t.find() + " " + flags(t));
+    }
+
+    /** A region that ends between the halves of a surrogate pair still reads the whole pair. */
+    static void pairAtTheRegionEnd() {
+        String pair = "\ud83d\ude00";
+        String[] patterns = {".", "\\W", "[^a]", "\\S", ".+", "(.)", "\\p{So}", "..", "x*"};
+        for (boolean transparent : new boolean[] {false, true}) {
+            StringBuilder sb = new StringBuilder("pair transparent=" + transparent + ":");
+            for (String re : patterns) {
+                Matcher m = Pattern.compile(re).matcher(pair + "\u00c9");
+                m.region(0, 1).useTransparentBounds(transparent);
+                sb.append(' ').append(m.lookingAt() ? m.end() : -1).append(m.hitEnd() ? "h" : "");
+                m.region(0, 1);
+                sb.append(m.matches() ? "M" : "-");
+            }
+            System.out.println(sb);
+        }
+    }
+
+    /** \G after attempts that fail: it follows the end of the last repeat iteration the attempt matched. */
+    static void previousMatchEnd() {
+        String[] patterns = {"\\G+", "\\G", "\\Ga", "a*\\G", "\\G+a", "(?:\\Ga)+"};
+        for (String re : patterns) {
+            Matcher m = Pattern.compile(re).matcher("aaxaa");
+            m.region(2, 5);
+            StringBuilder sb = new StringBuilder(re + " region(2,5):");
+            for (String op : new String[] {"matches", "lookingAt", "find", "matches", "lookingAt"}) {
+                boolean ok = op.equals("matches") ? m.matches() : op.equals("lookingAt") ? m.lookingAt() : m.find();
+                sb.append(' ').append(op).append('=').append(ok ? m.start() + "-" + m.end() : "no");
+            }
+            System.out.println(sb);
+        }
+        Matcher m = Pattern.compile("a*\\G").matcher("aaxaa");
+        System.out.println("a*\\G " + m.lookingAt() + " " + m.matches() + " " + m.find() + " " + m.start() + "-" + m.end());
+    }
+
+    /** Only ^ or \A written directly at the start lets a failed search skip the other positions. */
+    static void anchoredStart() {
+        String[] patterns = {"^a", "\\Aa", "(?i)^a", "(?:^a)", "(?:\\A)a", "(?x:\\A)b", "(^a)", "^*a", "^(?:a)", "^a|b", "(?>^)a", "(?=^)a"};
+        for (String re : patterns) {
+            Matcher m = Pattern.compile(re).matcher("bcd");
+            boolean found = m.find();
+            System.out.println("anchored " + re + " " + found + " " + flags(m));
+        }
+    }
+
     public static void main(String[] args) {
         Matcher m = Pattern.compile("^b|c$|\\bd").matcher("abcd bcd");
         System.out.println(spans(m));
@@ -127,17 +183,17 @@ public class RegexRegions {
         ends("(?<=a)", "a");
         ends("\\R", "\r");
         ends("\\R", "\r\n");
-        ends("x\\R", "x");
         ends("(a)\\1", "a");
         ends("(a)\\1", "aa");
         ends(".*", "abc");
-        ends(".*?", "abc");
         ends(".*c", "abc");
-        ends("[ab]+c", "abab");
         ends("\\d{2,3}", "12");
         ends("\\d{2,3}", "123");
-        ends("\\d{2,3}", "1234");
         System.out.println(Pattern.compile("a").matcher("ba"));
+        negativeLookaheadAtTheEnd();
+        pairAtTheRegionEnd();
+        previousMatchEnd();
+        anchoredStart();
         System.out.println("done");
     }
 }

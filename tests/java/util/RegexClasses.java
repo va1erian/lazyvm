@@ -39,6 +39,9 @@ public class RegexClasses {
         set("[^a-y]");
         set("[a-cx-z]");
         set("[a-c[x-z]]");
+        set("[a-zc-e]");
+        set("[c-ea-z]");
+        set("[a-eb-d[c-f]]");
         set("[a-z&&[def]]");
         set("[a-z&&[^aeiou]]");
         set("[a-d&&b-f&&c-z]");

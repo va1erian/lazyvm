@@ -1,12 +1,23 @@
 package java.util.regex;
 
-/** Parses a pattern into a node tree: alternation, groups, quantifiers, escapes. */
+/**
+ * Parses a pattern into a node tree: alternation, groups, quantifiers, escapes.
+ * Open groups live on an explicit stack, so deeply nested groups cost heap, not
+ * Java frames.
+ */
 final class Parser extends GroupReader {
     private static final int MAX = Integer.MAX_VALUE;
 
     int loopCount;
-    /** Whether the atom just parsed was a parenthesized group (Lengths treats its loops differently). */
+    /** Whether the pattern's first top-level atom is ^ or \A and it has no top-level alternative. */
+    boolean anchoredStart;
+    private boolean topStartsWithBegin;
+    /** Whether the atom just parsed was a (?:..) or capturing group (LookbehindReach treats its loops differently). */
     private boolean atomWasGroup;
+    /** Whether the atom just parsed was a capturing group. */
+    private boolean atomCapturing;
+    /** Whether the atom just parsed came out of a parenthesized group of any kind. */
+    private boolean atomFromGroup;
 
     Parser(String pattern, int flags) {
         super(pattern, flags);
@@ -16,7 +27,45 @@ final class Parser extends GroupReader {
         if (has(Pattern.LITERAL)) {
             return literalPattern();
         }
-        Node n = expr();
+        Frame[] stack = new Frame[16];
+        int depth = 0;
+        Frame cur = new Frame(TOP, flags, 0, true);
+        stack[0] = cur;
+        while (true) {
+            skipComments();
+            if (atEnd() || (src.charAt(cursor) == '\\' && cursor + 1 == len)) {
+                if (depth == 0) {
+                    break;
+                }
+                throw endInside(cur);
+            }
+            char c = src.charAt(cursor);
+            if (c == '|') {
+                cursor++;
+                endBranch(cur);
+            } else if (c == ')') {
+                if (depth == 0) {
+                    break;
+                }
+                Node closed = close(cur);
+                cur = stack[--depth];
+                add(cur, quantify(closed));
+            } else if (c == '(') {
+                cursor++;
+                Frame f = openGroup();
+                if (f != null) {
+                    if (++depth == stack.length) {
+                        Frame[] bigger = new Frame[depth * 2];
+                        System.arraycopy(stack, 0, bigger, 0, depth);
+                        stack = bigger;
+                    }
+                    stack[depth] = f;
+                    cur = f;
+                }
+            } else {
+                add(cur, quantify(atom()));
+            }
+        }
         if (!atEnd()) {
             if (cur() != ')') {
                 // Only a lone backslash at the very end stops the parse here.
@@ -25,7 +74,9 @@ final class Parser extends GroupReader {
             }
             throw error("Unmatched closing ')'");
         }
-        return n;
+        Node top = finish(cur);
+        anchoredStart = topStartsWithBegin && cur.branchCount == 1;
+        return top;
     }
 
     private Node literalPattern() {
@@ -40,69 +91,120 @@ final class Parser extends GroupReader {
         return sequenceOf(items, n);
     }
 
-    Node expr() {
-        Node[] branches = new Node[4];
-        int n = 0;
-        branches[n++] = sequence();
-        while (true) {
-            skipComments();
-            if (atEnd() || src.charAt(cursor) != '|') {
-                break;
-            }
-            cursor++;
-            if (n == branches.length) {
-                Node[] bigger = new Node[n * 2];
-                System.arraycopy(branches, 0, bigger, 0, n);
-                branches = bigger;
-            }
-            branches[n++] = sequence();
+    // The open groups.
+
+    private void add(Frame f, Node n) {
+        if (f.kind == TOP && f.branchCount == 0 && f.itemCount == 0) {
+            // Observed on the oracle (RegexRegions, "anchored start"): only a ^ or \A written
+            // directly at the start of the pattern lets a search try a single position; one
+            // inside any group, even (?:^), does not.
+            topStartsWithBegin = n instanceof Anchor && ((Anchor) n).isBegin() && !atomFromGroup;
         }
-        if (n == 1) {
-            return branches[0];
+        if (f.itemCount == f.items.length) {
+            Node[] bigger = new Node[f.itemCount * 2];
+            System.arraycopy(f.items, 0, bigger, 0, f.itemCount);
+            f.items = bigger;
         }
-        Node[] exact = new Node[n];
-        System.arraycopy(branches, 0, exact, 0, n);
+        f.items[f.itemCount++] = n;
+    }
+
+    private void endBranch(Frame f) {
+        Node branch = sequenceOf(f.items, f.itemCount);
+        f.itemCount = 0;
+        if (f.branchCount == f.branches.length) {
+            Node[] bigger = new Node[f.branchCount * 2];
+            System.arraycopy(f.branches, 0, bigger, 0, f.branchCount);
+            f.branches = bigger;
+        }
+        f.branches[f.branchCount++] = branch;
+    }
+
+    /** The node for everything collected in the group so far. */
+    private Node finish(Frame f) {
+        endBranch(f);
+        if (f.branchCount == 1) {
+            return f.branches[0];
+        }
+        Node[] exact = new Node[f.branchCount];
+        System.arraycopy(f.branches, 0, exact, 0, f.branchCount);
         return alternation(exact);
+    }
+
+    /** Handles the ')' that ends group f (the cursor is on it) and returns the group's node. */
+    private Node close(Frame f) {
+        Node body = finish(f);
+        Node result;
+        switch (f.kind) {
+            case CAPTURE:
+                result = new GroupNodes.Group(f.number, body);
+                break;
+            case LOOKAHEAD:
+                result = new GroupNodes.Look(body, true, f.positive, 0);
+                break;
+            case LOOKBEHIND:
+                LookbehindReach reach = LookbehindReach.of(body);
+                if (!reach.valid) {
+                    throw error(NO_MAX_LENGTH);
+                }
+                result = new GroupNodes.Look(body, false, f.positive, reach.max);
+                break;
+            case ATOMIC:
+                result = atomic(body);
+                break;
+            case NOT_A_GROUP:
+                throw error(unknownGroupMessage(body));
+            default:
+                result = body;
+                break;
+        }
+        cursor++;
+        flags = f.savedFlags;
+        atomWasGroup = f.kind == CAPTURE || f.kind == PLAIN;
+        atomCapturing = f.kind == CAPTURE;
+        atomFromGroup = true;
+        return result;
+    }
+
+    private static final String NO_MAX_LENGTH = "Look-behind group does not have an obvious maximum length";
+
+    private static String unknownGroupMessage(Node body) {
+        return LookbehindReach.of(body).valid ? "Unknown look-behind group" : NO_MAX_LENGTH;
+    }
+
+    /** The error for reaching the end of the pattern inside group f. */
+    private PatternSyntaxException endInside(Frame f) {
+        if (f.kind == LOOKBEHIND && !LookbehindReach.of(finish(f)).valid) {
+            return error(NO_MAX_LENGTH);
+        }
+        if (f.kind == NOT_A_GROUP) {
+            return error(unknownGroupMessage(finish(f)));
+        }
+        return unclosed();
+    }
+
+    /** (?>x): x alone when it can match only one way, which needs no atomic wrapper. */
+    private static Node atomic(Node body) {
+        if (body instanceof Atoms.One) {
+            return new Atoms.One(((Atoms.One) body).cc);
+        }
+        if (body instanceof Atoms.Str || body instanceof Node.Empty || body instanceof Anchor) {
+            return body;
+        }
+        return new GroupNodes.Atomic(body);
     }
 
     /** Alternatives that are each one char of a class are one class, which runs without recursion. */
     private static Node alternation(Node[] branches) {
-        CharClass union = null;
-        for (Node b : branches) {
-            if (!(b instanceof Atoms.One)) {
+        CharClass[] parts = new CharClass[branches.length];
+        for (int k = 0; k < branches.length; k++) {
+            if (!(branches[k] instanceof Atoms.One)) {
                 return new Node.Alt(branches);
             }
-            CharClass cc = ((Atoms.One) b).cc;
-            union = union == null ? cc : CharClass.or(union, cc);
+            parts[k] = ((Atoms.One) branches[k]).cc;
         }
-        return new Atoms.One(CharClass.cached(union));
-    }
-
-    private Node sequence() {
-        Node[] items = new Node[8];
-        int n = 0;
-        while (true) {
-            skipComments();
-            if (atEnd()) {
-                break;
-            }
-            char c = src.charAt(cursor);
-            if (c == '|' || c == ')' || (c == '\\' && cursor + 1 == len)) {
-                break;
-            }
-            Node atom = atom();
-            if (atom == null) {
-                continue;
-            }
-            atom = quantify(atom);
-            if (n == items.length) {
-                Node[] bigger = new Node[n * 2];
-                System.arraycopy(items, 0, bigger, 0, n);
-                items = bigger;
-            }
-            items[n++] = atom;
-        }
-        return sequenceOf(items, n);
+        Atoms.One one = new Atoms.One(CharClass.cached(CharClass.anyOf(parts, parts.length)));
+        one.fromAlternation = true;
+        return one;
     }
 
     /** Builds a sequence, merging runs of plain literal chars into one string node. */
@@ -135,15 +237,14 @@ final class Parser extends GroupReader {
         return new Node.Seq(exact);
     }
 
+    // Atoms other than groups.
+
     private Node atom() {
         char c = src.charAt(cursor);
         atomWasGroup = false;
+        atomCapturing = false;
+        atomFromGroup = false;
         switch (c) {
-            case '(':
-                cursor++;
-                Node g = group();
-                atomWasGroup = !(g instanceof GroupNodes.Look || g instanceof GroupNodes.Atomic);
-                return g;
             case '[':
                 cursor++;
                 return new Atoms.One(parseClass());
@@ -205,12 +306,13 @@ final class Parser extends GroupReader {
         if (predefined != null) {
             return new Atoms.One(predefined);
         }
+        boolean wordClasses = has(Pattern.UNICODE_CHARACTER_CLASS);
         switch (e) {
             case 'p':
             case 'P':
                 return new Atoms.One(property(e == 'P'));
-            case 'b': return new Anchor(Anchor.WORD, false);
-            case 'B': return new Anchor(Anchor.NOT_WORD, false);
+            case 'b': return new Anchor(Anchor.WORD, false, wordClasses);
+            case 'B': return new Anchor(Anchor.NOT_WORD, false, wordClasses);
             case 'A': return new Anchor(Anchor.BEGIN, false);
             case 'Z': return new Anchor(Anchor.END_INPUT_OR_FINAL, has(Pattern.UNIX_LINES));
             case 'z': return new Anchor(Anchor.END_INPUT, false);
@@ -251,8 +353,8 @@ final class Parser extends GroupReader {
             throw error("\\k is not followed by '<' for named capturing group");
         }
         StringBuilder name = new StringBuilder();
-        int ch = read();
-        name.append((char) ch);
+        int ch = readCodePoint();
+        name.appendCodePoint(ch);
         while (true) {
             ch = read();
             if (!isNameChar(ch)) {
@@ -346,42 +448,33 @@ final class Parser extends GroupReader {
             cursor++;
             mode = Repeat.POSSESSIVE;
         }
-        if (min == 0 && max > 0 && mode == Repeat.GREEDY && !question && isEmptyGroup(atom)) {
-            // A greedy optional group with a fixed zero-width body runs its body but never
-            // records a capture; observed on the oracle for * and {0,n}, but not for '?'.
+        if (min == 0 && max > 0 && mode == Repeat.GREEDY && !question && skipsEmptyCapture(atom)) {
+            // Observed on the oracle (RegexQuantifiers, "optional empty group"): the body runs,
+            // but the group is not recorded.
             return new Node.Alt(new Node[] {((GroupNodes.Group) atom).body(), new Node.Empty()});
         }
-        if (atom instanceof Atoms.One) {
-            return new Repeat.CharRepeat(((Atoms.One) atom).cc, min, max, mode);
+        int group = -1;
+        Node single = atom;
+        if (atom instanceof GroupNodes.Group && ((GroupNodes.Group) atom).body() instanceof Atoms.One) {
+            group = ((GroupNodes.Group) atom).number();
+            single = ((GroupNodes.Group) atom).body();
+        }
+        if (single instanceof Atoms.One) {
+            return new Repeat.CharRepeat(((Atoms.One) single).cc, min, max, mode, group,
+                ((Atoms.One) single).fromAlternation, question, atomWasGroup || group >= 0);
         }
         Node loop = new Repeat.Loop(atom, min, max, mode == Repeat.LAZY, loopCount++,
-            atomWasGroup && !question && mode != Repeat.POSSESSIVE);
+            atomWasGroup && !question && mode != Repeat.POSSESSIVE, question, mode == Repeat.POSSESSIVE,
+            atomWasGroup);
         return mode == Repeat.POSSESSIVE ? new GroupNodes.Atomic(loop) : loop;
     }
 
-    /** A capturing group whose body can only match the empty string, with no loops or branches. */
-    private static boolean isEmptyGroup(Node atom) {
-        return atom instanceof GroupNodes.Group && isFixedEmpty(((GroupNodes.Group) atom).body());
-    }
-
-    private static boolean isFixedEmpty(Node n) {
-        if (n instanceof Node.Seq) {
-            for (Node item : ((Node.Seq) n).items) {
-                if (!isFixedEmpty(item)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        if (n instanceof GroupNodes.Group) {
-            return isFixedEmpty(((GroupNodes.Group) n).body());
-        }
-        if (n instanceof Repeat.Loop) {
-            Repeat.Loop l = (Repeat.Loop) n;
-            return l.minCount() == l.maxCount() && isFixedEmpty(l.body());
-        }
-        boolean zeroWidth = n instanceof Anchor || n instanceof GroupNodes.Look || n instanceof Node.Empty
-            || n instanceof Repeat.CharRepeat;
-        return zeroWidth && n.max() == 0;
+    /**
+     * A capturing group written directly under the quantifier (not wrapped in (?:..)) whose body
+     * can only match the empty string, with no loops or branches.
+     */
+    private boolean skipsEmptyCapture(Node atom) {
+        return atomCapturing && atom instanceof GroupNodes.Group
+            && Repeat.isFixedEmpty(((GroupNodes.Group) atom).body());
     }
 }

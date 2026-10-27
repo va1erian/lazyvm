@@ -1,0 +1,82 @@
+package util;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/** Deep loops, long classes and alternations, and nested groups: sizes both engines handle. */
+public class RegexLimits {
+    static String rep(String s, int n) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            sb.append(s);
+        }
+        return sb.toString();
+    }
+
+    /** Whether re matches unit repeated n times; a stack overflow is reported, not thrown. */
+    static void loop(String re, String unit, int n) {
+        String result;
+        try {
+            result = String.valueOf(Pattern.compile(re).matcher(rep(unit, n)).matches());
+        } catch (StackOverflowError e) {
+            result = "overflow";
+        }
+        System.out.println(re + " x" + n + " -> " + result);
+    }
+
+    static String find(String re, String in) {
+        return String.valueOf(Pattern.compile(re).matcher(in).find());
+    }
+
+    public static void main(String[] args) {
+        // Loops over a single class, alone or inside one capturing group, take no stack per iteration.
+        int deep = 100000;
+        loop("(\\d)+", "1", 1000000);
+        loop("([a-z])*", "a", 1000000);
+        loop("(.)*", "a", 1000000);
+        loop("(a|b)*", "ab", 400);
+        loop("(?:ab)*+", "ab", deep);
+        loop("(?>a|b)*", "ab", deep);
+        loop("a*", "a", deep);
+        // Loops over a flat body (literals, classes, repeats of a class) keep their state in an array.
+        loop("(\\w+\\s?)*", "ab ", 800);
+        loop("(?:ab|c)*", "abc", 800);
+        loop("(ab|c)*", "abc", 800);
+        loop("(?:a|b)*?c", "a", 0);
+        loop("(?:ab+;?)*", "abb", 800);
+        loop("(?:(a)b)*", "ab", 500);
+        Matcher m = Pattern.compile("(\\d)+").matcher(rep("12", 2000));
+        System.out.println(m.matches() + " " + m.group(1) + " " + m.start(1) + " " + m.end(1));
+        m = Pattern.compile("(\\w+\\s?)*").matcher(rep("ab ", 1000) + "cd");
+        System.out.println(m.matches() + " [" + m.group(1) + "] " + m.start(1) + " " + m.end(1));
+        m = Pattern.compile("(ab|c)*d").matcher(rep("abc", 1000) + "d");
+        System.out.println(m.matches() + " " + m.group(1) + " " + m.start(1));
+        // A long class and a long alternation compile and match.
+        StringBuilder chars = new StringBuilder();
+        StringBuilder alternatives = new StringBuilder();
+        for (int i = 0; i < 10000; i++) {
+            char c = (char) (0x4e00 + i);
+            chars.append(c);
+            alternatives.append(i == 0 ? "" : "|").append(c);
+        }
+        String cjk = chars.toString();
+        System.out.println(find("[" + cjk + "]", "x丐") + " " + find("[" + cjk + "]", "x　") + " " + find("[^" + cjk + "]", "丐") + " "
+            + find("(?i)[" + cjk + "]", "丐") + " " + find("[a-c" + cjk + "&&[^丑]]+", "丑"));
+        System.out.println(find(alternatives.toString(), "x丐") + " " + find("(" + alternatives + ")", "渏") + " " + find("(" + alternatives + ")", "渐")
+            + " " + find("(?:" + alternatives + ")+x", "丐丑x"));
+        StringBuilder words = new StringBuilder();
+        for (int i = 0; i < 3000; i++) {
+            words.append(i == 0 ? "" : "|").append('w').append(i);
+        }
+        System.out.println(find("(?:" + words + ")x", "zw2999x") + " " + find(words.toString(), "w3000"));
+        // Nested groups are parsed without recursion.
+        for (int depth : new int[] {10, 300}) {
+            System.out.println("nesting " + depth + " " + find(rep("(?:", depth) + "a" + rep(")", depth), "a") + " " + find(rep("(", depth) + "a" + rep(")", depth), "a")
+                + " " + find(rep("(?=", depth) + "a" + rep(")", depth), "a") + " " + find(rep("(?>", depth) + "a" + rep(")", depth), "a")
+                + " " + find(rep("(?i:", depth) + "a" + rep(")", depth), "A"));
+        }
+        m = Pattern.compile(rep("(", 200) + "a" + rep(")", 200)).matcher("a");
+        System.out.println(m.matches() + " " + m.groupCount() + " " + m.group(1) + " " + m.group(200) + " " + m.start(100));
+        System.out.println("done");
+    }
+}

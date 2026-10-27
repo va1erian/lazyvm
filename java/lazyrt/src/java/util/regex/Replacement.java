@@ -41,7 +41,7 @@ final class Replacement {
             StringBuilder name = new StringBuilder();
             while (cursor < len) {
                 next = s.charAt(cursor);
-                if (isNameChar(next)) {
+                if (GroupReader.isNameChar(next)) {
                     name.append(next);
                     cursor++;
                 } else {
@@ -88,9 +88,5 @@ final class Replacement {
             out.append(captured);
         }
         return cursor;
-    }
-
-    private static boolean isNameChar(char c) {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
     }
 }

@@ -56,17 +56,9 @@ public final class Pattern implements java.io.Serializable {
         groupCount = parser.groupCount;
         loopCount = parser.loopCount;
         groupNames = parser.groupNames;
-        minLength = Lengths.minLength(tree);
-        anchoredStart = startsWithBegin(tree);
+        minLength = tree.min();
+        anchoredStart = parser.anchoredStart;
         root = tree.link(new Node.Accept());
-    }
-
-    private static boolean startsWithBegin(Node n) {
-        if (n instanceof Node.Seq) {
-            Node[] items = ((Node.Seq) n).items;
-            return items.length > 0 && startsWithBegin(items[0]);
-        }
-        return n instanceof Anchor && ((Anchor) n).isBegin();
     }
 
     public static Pattern compile(String regex) {
@@ -110,12 +102,7 @@ public final class Pattern implements java.io.Serializable {
 
     /** The group number of a named group, or -1. */
     int groupNumber(String name) {
-        for (int n = 1; n <= groupCount; n++) {
-            if (name.equals(groupNames[n])) {
-                return n;
-            }
-        }
-        return -1;
+        return GroupReader.groupNumber(groupNames, groupCount, name);
     }
 
     public String[] split(CharSequence input) {

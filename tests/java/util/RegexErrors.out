@@ -351,6 +351,41 @@ a ) b : desc=Unmatched closing ')' index=1 pattern=true
 a  # comment )  : ok
 (?x) ? a : desc=Dangling meta character '?' index=6 pattern=true
     Dangling meta character '?' near index 6|(?x) ? a|      ^
+😀( : desc=Unclosed group index=2 pattern=true
+    Unclosed group near index 2|😀(|  ^
+😀[ : desc=Unclosed character class index=1 pattern=true
+    Unclosed character class near index 1|😀[| ^
+😀) : desc=Unmatched closing ')' index=0 pattern=true
+    Unmatched closing ')' near index 0|😀)|^
+(😀 : desc=Unclosed group index=2 pattern=true
+    Unclosed group near index 2|(😀|  ^
+😀* : ok
+😀😀{ : desc=Illegal repetition index=1 pattern=true
+    Illegal repetition near index 1|😀😀{| ^
+😀{1 : desc=Unclosed counted closure index=3 pattern=true
+    Unclosed counted closure near index 3|😀{1|   ^
+(?<😀>x) : desc=Unknown look-behind group index=5 pattern=true
+    Unknown look-behind group near index 5|(?<😀>x)|     ^
+\k<😀 : desc=named capturing group is missing trailing '>' index=4 pattern=true
+    named capturing group is missing trailing '>' near index 4|\k<😀|    ^
+😀\ : desc=Unexpected internal error index=2 pattern=true
+    Unexpected internal error near index 2|😀\|  ^
+[😀-😁 : desc=Unclosed character class index=3 pattern=true
+    Unclosed character class near index 3|[😀-😁|   ^
+[😁-😀] : desc=Illegal character range index=3 pattern=true
+    Illegal character range near index 3|[😁-😀]|   ^
+\p{😀} : desc=Unknown character property name {😀} index=4 pattern=true
+    Unknown character property name {😀} near index 4|\p{😀}|    ^
+a😀\Qb\E( : desc=Unclosed group index=4 pattern=true
+    Unclosed group near index 4|a😀\Qb\E(|    ^
+😀a{2,1} : desc=Illegal repetition range index=6 pattern=true
+    Illegal repetition range near index 6|😀a{2,1}|      ^
+😀😀😀[ : desc=Unclosed character class index=3 pattern=true
+    Unclosed character class near index 3|😀😀😀[|   ^
+😀|* : desc=Dangling meta character '*' index=2 pattern=true
+    Dangling meta character '*' near index 2|😀|*|  ^
+é( : desc=Unclosed group index=2 pattern=true
+    Unclosed group near index 2|é(
 desc near index 2|regex|  ^ 2 desc regex
 desc|re
 desc near index 5|re

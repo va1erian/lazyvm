@@ -119,6 +119,32 @@ public class RegexFlags {
         System.out.println(Pattern.compile("(?i)a").flags() + " " + Pattern.compile("(?i)a", Pattern.DOTALL).flags() + " "
             + Pattern.compile("a(?m)").flags() + " " + Pattern.compile("(a(?m))").flags() + " " + Pattern.compile("(?:a)(?s)").flags());
         System.out.println(Pattern.compile("a", 0xFFFF).flags() + " " + Pattern.compile("a", 512).flags());
+        for (String re : new String[] {"( ?:a)b", "(? :a)b", "(?  =a)b", "(?< n>a)", "(?<n >a)", "(?i )a", "( ?=a)a", "( ? i)a", "(?i: a)"}) {
+            find(re, Pattern.COMMENTS, "ab");
+        }
+        find("( ?:a)b", 0, "ab");
+        wordBoundaries();
         System.out.println("done");
+    }
+
+    /** \b with combining marks: by default a mark joins the word only after a letter or digit. */
+    static void wordBoundaries() {
+        String[] texts = {"_́", "á", "1́", "́", "́a", "á̂", "_́̂", "aः", "a⃝", "a‍", "áb", " ́ a", "a𐇽", "𐐀́", "é_"};
+        for (String t : texts) {
+            StringBuilder sb = new StringBuilder("\\b in " + esc(t) + ":");
+            for (int flags : new int[] {0, Pattern.UNICODE_CHARACTER_CLASS}) {
+                Matcher m = Pattern.compile("\\b", flags).matcher(t);
+                sb.append(flags == 0 ? " default" : "; unicode");
+                while (m.find()) {
+                    sb.append(' ').append(m.start());
+                }
+                Matcher n = Pattern.compile("\\B", flags).matcher(t);
+                sb.append(" /");
+                while (n.find()) {
+                    sb.append(' ').append(n.start());
+                }
+            }
+            System.out.println(sb);
+        }
     }
 }

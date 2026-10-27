@@ -67,6 +67,13 @@ public class RegexErrors {
         bad("a ) b", Pattern.COMMENTS);
         bad("a  # comment ) ", Pattern.COMMENTS);
         bad("(?x) ? a", 0);
+        // The index counts code points: a surrogate pair is one.
+        String pair = "😀";
+        String[] wide = {pair + "(", pair + "[", pair + ")", "(" + pair, pair + "*", pair + pair + "{", pair + "{1", "(?<" + pair + ">x)", "\\k<" + pair, pair + "\\",
+            "[" + pair + "-😁", "[😁-" + pair + "]", "\\p{" + pair + "}", "a" + pair + "\\Qb\\E(", pair + "a{2,1}", pair + pair + pair + "[", pair + "|*", "é("};
+        for (String re : wide) {
+            bad(re);
+        }
         PatternSyntaxException e = new PatternSyntaxException("desc", "regex", 2);
         System.out.println(e.getMessage().replace("\r", "").replace("\n", "|") + " " + e.getIndex() + " " + e.getDescription() + " " + e.getPattern());
         e = new PatternSyntaxException("desc", "re", -1);
