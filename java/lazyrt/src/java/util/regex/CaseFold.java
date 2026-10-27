@@ -52,6 +52,14 @@ final class CaseFold {
         return widenedKeys;
     }
 
+    /** The ASCII letter of the other case, or cp itself: the only folding without UNICODE_CASE. */
+    static int asciiSwap(int cp) {
+        if (cp >= 'a' && cp <= 'z') {
+            return cp - 32;
+        }
+        return cp >= 'A' && cp <= 'Z' ? cp + 32 : cp;
+    }
+
     /** toLowerCase(toUpperCase(c)): code points with the same key match each other (FoldChar). */
     static int foldKey(int c) {
         return Character.toLowerCase(Character.toUpperCase(c));
@@ -72,10 +80,7 @@ final class CaseFold {
                 return true;
             }
             if (!unicode) {
-                if (cp >= 'a' && cp <= 'z') {
-                    return inner.test(cp - 32);
-                }
-                return cp >= 'A' && cp <= 'Z' && inner.test(cp + 32);
+                return inner.test(asciiSwap(cp));
             }
             return inner.test(Character.toUpperCase(cp)) || inner.test(foldKey(cp));
         }
@@ -108,7 +113,7 @@ final class CaseFold {
                 return true;
             }
             if (!unicode) {
-                return cp < 128 && c < 128 && Character.toLowerCase(cp) == Character.toLowerCase(c);
+                return asciiSwap(cp) == c;
             }
             int key = foldKey(c);
             if (!loose && Character.toUpperCase(c) == key) {

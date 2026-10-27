@@ -9,6 +9,7 @@ final class Parser extends GroupReader {
     private static final int MAX = Integer.MAX_VALUE;
 
     int loopCount;
+    int lookCount;
     /** Whether the pattern's first top-level atom is ^ or \A and it has no top-level alternative. */
     boolean anchoredStart;
     private boolean topStartsWithBegin;
@@ -139,14 +140,14 @@ final class Parser extends GroupReader {
                 result = new GroupNodes.Group(f.number, body);
                 break;
             case LOOKAHEAD:
-                result = new GroupNodes.Look(body, true, f.positive, 0);
+                result = new GroupNodes.Look(body, true, f.positive, 0, lookCount++);
                 break;
             case LOOKBEHIND:
                 LookbehindReach reach = LookbehindReach.of(body);
                 if (!reach.valid) {
                     throw error(NO_MAX_LENGTH);
                 }
-                result = new GroupNodes.Look(body, false, f.positive, reach.max);
+                result = new GroupNodes.Look(body, false, f.positive, reach.max, lookCount++);
                 break;
             case ATOMIC:
                 result = atomic(body);

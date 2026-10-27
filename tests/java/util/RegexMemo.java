@@ -68,7 +68,8 @@ public class RegexMemo {
             row("(?:a(?=(?:a|aa)*c)|a)*b", a(n) + "x" + a(3) + "b");
         }
         String block = a(300) + "d";
-        row("(?:(?:(?!x)a)+){2}c", block + block + block + a(300) + "c");
+        row("(?:(?:aa)+){2}c", block + block + block + a(300) + "c");
+        row("(?:(?:aa)+){3}c", block + block + block + a(300) + "c");
         System.out.println("== a counted loop: the same position fails with one count and succeeds with another");
         for (int n = 16; n <= 24; n += 4) {
             row("(?:a|aa){3}b", a(n) + "c" + a(5) + "b");
@@ -91,6 +92,20 @@ public class RegexMemo {
         row("(?:a|a(?=(a)))*b", junk + a(12) + "x aaab");
         row("(?:(a)|(aa))*\\1\\2x", junk + a(12) + "aaax");
         row("[ab]*(?:ab){2,}x", junk + rep("ab", 3) + "x");
+        System.out.println("== a capturing repeat of one character inside a lookaround or atomic group");
+        row("(?:a|a(?=(a){2}))*b", junk + a(6) + "x aaab");
+        row("(?:a|a(?=(a)+?))*b", junk + a(6) + "x aaab");
+        row("(?:a|(?>(a)+?)a)*b", junk + a(6) + "x aaab");
+        row("(?:a|(?>(a){1,3})a)*b", junk + a(6) + "x aaab");
+        System.out.println("== \\G reads where a failed search left off, and the memo must not move that");
+        for (String re : new String[] {"(?:a{1,3}b?)*c|\\G[ab]", "(?:a+b?)*c|\\Ga", "(?:a+b?)*c|\\Gb", "(?:ab|a)*c|\\Ga"}) {
+            Matcher m = Pattern.compile(re).matcher(junk + "aabaab");
+            StringBuilder sb = new StringBuilder("#" + re + ":");
+            for (int k = 0; k < 4; k++) {
+                sb.append(m.find() ? " " + (m.start() - 21000) + "," + (m.end() - 21000) : " no");
+            }
+            System.out.println(sb);
+        }
         System.out.println("done");
     }
 

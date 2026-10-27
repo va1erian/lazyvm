@@ -41,6 +41,8 @@ final class Props {
         return result;
     }
 
+    private static final String[] POSIX_NAMES = {"Lower", "Upper", "Alpha", "Digit", "Alnum", "Punct", "Graph", "Print", "Blank", "Cntrl", "XDigit", "Space"};
+
     /** A POSIX, java* or category name, as written alone or as the value of gc=. */
     private static CharClass plain(String name, boolean unicodeClasses) {
         CharClass result = name.startsWith("java") ? javaClass(name) : posix(name, unicodeClasses);
@@ -52,8 +54,7 @@ final class Props {
      * matched ignoring case (\p{alpha}), except ASCII; the value of gc= and the Is forms never are.
      */
     private static String canonicalPosix(String name) {
-        String[] posix = {"Lower", "Upper", "Alpha", "Digit", "Alnum", "Punct", "Graph", "Print", "Blank", "Cntrl", "XDigit", "Space"};
-        for (String p : posix) {
+        for (String p : POSIX_NAMES) {
             if (p.equalsIgnoreCase(name)) {
                 return p;
             }

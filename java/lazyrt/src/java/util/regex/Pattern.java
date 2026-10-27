@@ -32,11 +32,14 @@ public final class Pattern implements java.io.Serializable {
     transient Node root;
     transient int groupCount;
     transient int loopCount;
+    transient int lookCount;
     transient int minLength;
     /** The pattern starts with ^ or \A, so a search only needs to try where it starts. */
     transient boolean anchoredStart;
     /** See PatternReader.supplementary. */
     transient boolean supplementary;
+    /** Shortcuts for the start-position loop of a search, or null (see SearchHints). */
+    transient SearchHints hints;
     private transient String[] groupNames;
 
     private Pattern(String p, int f) {
@@ -57,11 +60,13 @@ public final class Pattern implements java.io.Serializable {
         flags = parser.flags;
         groupCount = parser.groupCount;
         loopCount = parser.loopCount;
+        lookCount = parser.lookCount;
         groupNames = parser.groupNames;
         minLength = tree.min();
         anchoredStart = parser.anchoredStart;
         supplementary = parser.supplementary;
         LoopMemo.prepare(tree);
+        hints = SearchHints.of(tree);
         root = tree.link(new Node.Accept());
     }
 

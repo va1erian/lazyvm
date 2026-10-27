@@ -1,0 +1,161 @@
+$ anchoring=true transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=true transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=true transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=true transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+$ anchoring=true transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=true transparent=true region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=true transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=true transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+$ anchoring=false transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=false transparent=false region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+$ anchoring=false transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=false transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+$ anchoring=false transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=false transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+$ anchoring=false transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+$ anchoring=false transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+\z anchoring=true transparent=false region=1,5: [5,5] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=true transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=true transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=true transparent=false region=2,5: [5,5] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=true transparent=true region=1,5: [5,5] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=true transparent=true region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=true transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=true transparent=true region=2,5: [5,5] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=false transparent=false region=1,5: [2,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=false transparent=false region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=false transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=false transparent=false region=2,5: [2,6] hitEnd=true requireEnd=false lookingAt=6 matches=false
+\z anchoring=false transparent=true region=1,5: [2,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=false transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=false transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\z anchoring=false transparent=true region=2,5: [2,6] hitEnd=true requireEnd=false lookingAt=6 matches=false
+\Z anchoring=true transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=true transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=true transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=true transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+\Z anchoring=true transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=true transparent=true region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=true transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=true transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+\Z anchoring=false transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=false transparent=false region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\Z anchoring=false transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=false transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+\Z anchoring=false transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=false transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\Z anchoring=false transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\Z anchoring=false transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?m)$ anchoring=true transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=true transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=true transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=true transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?m)$ anchoring=true transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=true transparent=true region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=true transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=true transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?m)$ anchoring=false transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=false transparent=false region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?m)$ anchoring=false transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=false transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?m)$ anchoring=false transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=false transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?m)$ anchoring=false transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?m)$ anchoring=false transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+\b anchoring=true transparent=false region=1,5: [1,1] [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\b anchoring=true transparent=false region=1,4: [1,1] [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\b anchoring=true transparent=false region=1,6: [1,1] [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\b anchoring=true transparent=false region=2,5: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=4 matches=false
+\b anchoring=true transparent=true region=1,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\b anchoring=true transparent=true region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\b anchoring=true transparent=true region=1,6: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\b anchoring=true transparent=true region=2,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=4 matches=false
+\b anchoring=false transparent=false region=1,5: [1,1] [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\b anchoring=false transparent=false region=1,4: [1,1] [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\b anchoring=false transparent=false region=1,6: [1,1] [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\b anchoring=false transparent=false region=2,5: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=4 matches=false
+\b anchoring=false transparent=true region=1,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\b anchoring=false transparent=true region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+\b anchoring=false transparent=true region=1,6: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\b anchoring=false transparent=true region=2,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=4 matches=false
+\B anchoring=true transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\B anchoring=true transparent=false region=1,4: [2,3] [3,3] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\B anchoring=true transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\B anchoring=true transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+\B anchoring=true transparent=true region=1,5: [1,1] [2,6] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\B anchoring=true transparent=true region=1,4: [1,1] [2,3] [3,3] hitEnd=true requireEnd=false lookingAt=1 matches=false
+\B anchoring=true transparent=true region=1,6: [1,1] [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\B anchoring=true transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+\B anchoring=false transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\B anchoring=false transparent=false region=1,4: [2,3] [3,3] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\B anchoring=false transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+\B anchoring=false transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+\B anchoring=false transparent=true region=1,5: [1,1] [2,6] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\B anchoring=false transparent=true region=1,4: [1,1] [2,3] [3,3] hitEnd=true requireEnd=false lookingAt=1 matches=false
+\B anchoring=false transparent=true region=1,6: [1,1] [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=1 matches=false
+\B anchoring=false transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?=\z) anchoring=true transparent=false region=1,5: [5,5] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=true transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=true transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=true transparent=false region=2,5: [5,5] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=true transparent=true region=1,5: [2,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=true transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=true transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=true transparent=true region=2,5: [2,6] hitEnd=true requireEnd=false lookingAt=6 matches=false
+(?=\z) anchoring=false transparent=false region=1,5: [2,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=false transparent=false region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=false transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=false transparent=false region=2,5: [2,6] hitEnd=true requireEnd=false lookingAt=6 matches=false
+(?=\z) anchoring=false transparent=true region=1,5: [2,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=false transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=false transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?=\z) anchoring=false transparent=true region=2,5: [2,6] hitEnd=true requireEnd=false lookingAt=6 matches=false
+(?!.) anchoring=true transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=true transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=true transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=true transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?!.) anchoring=true transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=true transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?!.) anchoring=true transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=true transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?!.) anchoring=false transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=false transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=false transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=false transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?!.) anchoring=false transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=false transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?!.) anchoring=false transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?!.) anchoring=false transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?s)(?!.) anchoring=true transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=true transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=true transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=true transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?s)(?!.) anchoring=true transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=true transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?s)(?!.) anchoring=true transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=true transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?s)(?!.) anchoring=false transparent=false region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=false transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=false transparent=false region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=false transparent=false region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?s)(?!.) anchoring=false transparent=true region=1,5: [2,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=false transparent=true region=1,4: hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?s)(?!.) anchoring=false transparent=true region=1,6: [2,6] [6,6] hitEnd=true requireEnd=true lookingAt=-1 matches=false
+(?s)(?!.) anchoring=false transparent=true region=2,5: [2,6] hitEnd=true requireEnd=true lookingAt=6 matches=false
+(?<=I) anchoring=true transparent=false region=1,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=true transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=true transparent=false region=1,6: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=true transparent=false region=2,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=4 matches=false
+(?<=I) anchoring=true transparent=true region=1,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=true transparent=true region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=true transparent=true region=1,6: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=true transparent=true region=2,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=4 matches=false
+(?<=I) anchoring=false transparent=false region=1,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=false transparent=false region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=false transparent=false region=1,6: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=false transparent=false region=2,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=4 matches=false
+(?<=I) anchoring=false transparent=true region=1,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=false transparent=true region=1,4: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=false transparent=true region=1,6: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=-1 matches=false
+(?<=I) anchoring=false transparent=true region=2,5: [2,4] [4,4] hitEnd=true requireEnd=false lookingAt=4 matches=false
+done

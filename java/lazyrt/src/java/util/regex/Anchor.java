@@ -26,6 +26,11 @@ final class Anchor extends Node {
         return kind == BEGIN;
     }
 
+    /** True for \G, which reads where the previous match ended. */
+    boolean isLastMatch() {
+        return kind == LAST_MATCH;
+    }
+
     boolean match(Matcher m, int i) {
         return holds(m, i) && next.match(m, i);
     }
@@ -62,6 +67,20 @@ final class Anchor extends Node {
         return true;
     }
 
+    /**
+     * The end that $ compares with. Observed on the oracle (RegexRegions, "dollar past a split
+     * pair"): when the region ends between the halves of a surrogate pair, the pair has been read
+     * whole, and $ (not \z) holds right after it.
+     */
+    private int lineEnd(Matcher m, int i) {
+        int end = endIndex(m);
+        if (i == end + 1 && m.anchoringBounds && end >= 1 && end < m.textLength
+            && Character.isSurrogatePair(m.text.charAt(end - 1), m.text.charAt(end))) {
+            return i;
+        }
+        return end;
+    }
+
     /** ^ in MULTILINE: at the start, or after a line terminator that is not the last thing in the input. */
     private boolean beginLine(Matcher m, int i) {
         int start = m.anchoringBounds ? m.lo : 0;
@@ -81,7 +100,7 @@ final class Anchor extends Node {
 
     /** $ in MULTILINE: before any line terminator, or at the end. */
     private boolean endLine(Matcher m, int i) {
-        int end = endIndex(m);
+        int end = lineEnd(m, i);
         if (i == end) {
             m.hitEnd = true;
             m.requireEnd = true;
@@ -99,7 +118,7 @@ final class Anchor extends Node {
 
     /** $ and \Z outside MULTILINE: at the end, or before the final line terminator. */
     private boolean endOrFinalTerminator(Matcher m, int i) {
-        int end = endIndex(m);
+        int end = lineEnd(m, i);
         if (i > end || i < end - 2) {
             return false;
         }

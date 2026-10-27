@@ -8,24 +8,32 @@ package java.util.regex;
  * <p>A state is a loop, how many iterations it has done (capped where more makes no
  * difference: {@link #slots}) and a position. Skipping a state that failed before is sound only
  * if what happens from it is decided by those three things and by nothing the search changed on
- * the way there, and if the groups left over by a failed path do not show in the result:
+ * the way there.
+ *
+ * <p>The memo is on only for a pattern made entirely of nodes whose behaviour is understood to
+ * leave a state's outcome decided by (loop, count, position): literals, classes and their
+ * repeats (not a possessive repeat of a group), line breaks, plain and capturing groups,
+ * alternation, loops that are not possessive, and the anchors other than \G. Everything else
+ * (lookarounds, atomic groups and possessive loops, back references, \G, and any node added
+ * later) switches it off for the whole pattern. Why each allowed node is safe:
  * <ul>
- * <li>The text, region and flags are fixed for the whole search, so position-only nodes (anchors,
- * classes, , \G) answer the same each time.
+ * <li>The text, region and flags are fixed for the whole search, so literals, classes, line
+ * breaks and the anchors answer the same each time.
+ * <li>A group sets its capture on the way in and restores it when the path fails, and nothing
+ * reads a capture while matching (no back reference is allowed), so the groups of a failed path
+ * never show. Lookarounds, atomic groups and possessive repeats are the constructs that keep a
+ * capture after failing, which is why they are not allowed.
  * <li>An enclosing loop would put its own count and iteration start into the state, so only
- * loops that sit inside no other loop are marked.
- * <li>A lookbehind body is run from many starts towards one fixed end, and a lookahead body ends
- * at its own marker, so a loop inside any lookaround is not marked.
- * <li>A back reference reads a group that earlier choices set, so a pattern with one is not
- * marked at all. The check covers the whole tree, so a back reference after the loop counts.
- * <li>A group inside a lookaround or an atomic group, and a possessive repeat of a group, keep
- * their capture when the path later fails, so which paths were tried shows in the groups of the
- * match: a pattern with one is not marked at all.
+ * loops that sit inside no other loop are marked. The check runs on the whole tree, so a node
+ * after the loop counts.
+ * <li>\G reads the end of the previous match, which the end-of-attempt events (Matcher.iterationEnd) move, so it would make a
+ * skipped state show.
  * <li>hitEnd and requireEnd only ever turn on during a search, and the first visit of a state
  * already turned on what a revisit would, so skipping it changes neither.
  * </ul>
  * What is left to differ is the position at which a failed attempt leaves
- * Matcher.iterationEnd, which only a failed pathological search can show.
+ * Matcher.iterationEnd, which only a failed pathological search can show, and then only to a
+ * \G in another pattern installed with usePattern (documented in docs/regex.md).
  *
  * <p>{@link #prepare} marks the loops that qualify. Nothing is remembered, or even allocated,
  * until a search has taken {@link #AFTER} loop steps, so ordinary matches pay for a counter only.
@@ -102,54 +110,58 @@ final class LoopMemo {
         }
     }
 
-    private static final int SHIELDED = 1;
-    private static final int KEEPS_CAPTURES = 2;
-
     /**
      * Visits every node without recursion (a pattern can nest thousands of groups). Returns true
-     * when the pattern is unsafe as a whole (see the class comment); with `mark`, sets each
-     * loop's memoize flag instead.
+     * when the pattern holds a node outside the allowed set (see the class comment); with `mark`,
+     * sets each loop's memoize flag instead: only loops outside every other loop qualify.
      */
     private static boolean walk(Node root, boolean mark) {
         Node[] nodes = new Node[32];
-        int[] context = new int[32];
+        boolean[] inLoop = new boolean[32];
         int top = 0;
         nodes[top++] = root;
         while (top > 0) {
             top--;
             Node n = nodes[top];
-            int ctx = context[top];
-            if (n instanceof Atoms.BackRef
-                || (n instanceof GroupNodes.Group && (ctx & KEEPS_CAPTURES) != 0)
-                || (n instanceof Repeat.CharRepeat && ((Repeat.CharRepeat) n).keepsCapture())) {
+            boolean nested = inLoop[top];
+            if (!allowed(n)) {
                 return true;
             }
             if (n instanceof Repeat.Loop) {
                 if (mark) {
-                    ((Repeat.Loop) n).memoize((ctx & SHIELDED) == 0);
+                    ((Repeat.Loop) n).memoize(!nested);
                 }
-                ctx |= SHIELDED;
-            } else if (n instanceof GroupNodes.Look) {
-                ctx |= SHIELDED | KEEPS_CAPTURES;
-            } else if (n instanceof GroupNodes.Atomic) {
-                ctx |= KEEPS_CAPTURES;
+                nested = true;
             }
             Node[] kids = children(n);
             if (top + kids.length > nodes.length) {
                 int size = Math.max(nodes.length * 2, top + kids.length);
                 Node[] biggerNodes = new Node[size];
-                int[] biggerContext = new int[size];
+                boolean[] biggerFlags = new boolean[size];
                 System.arraycopy(nodes, 0, biggerNodes, 0, top);
-                System.arraycopy(context, 0, biggerContext, 0, top);
+                System.arraycopy(inLoop, 0, biggerFlags, 0, top);
                 nodes = biggerNodes;
-                context = biggerContext;
+                inLoop = biggerFlags;
             }
             for (Node kid : kids) {
                 nodes[top] = kid;
-                context[top++] = ctx;
+                inLoop[top++] = nested;
             }
         }
         return false;
+    }
+
+    /** The whitelist of the class comment; a node of any other class disables the memo. */
+    private static boolean allowed(Node n) {
+        if (n instanceof Repeat.CharRepeat) {
+            return !((Repeat.CharRepeat) n).keepsCapture();
+        }
+        if (n instanceof Anchor) {
+            return !((Anchor) n).isLastMatch();
+        }
+        return n instanceof Node.Seq || n instanceof Node.Alt || n instanceof Node.Empty || n instanceof Atoms.One
+            || n instanceof Atoms.Str || n instanceof Atoms.LineBreak || n instanceof GroupNodes.Group
+            || n instanceof Repeat.Loop;
     }
 
     private static Node[] children(Node n) {

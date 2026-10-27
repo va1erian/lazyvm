@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
  * Where the matcher's "end of the previous match" is after an attempt fails, which is where \G
  * matches and where the next find() starts. Each row reads it back with \G after a failed
  * matches(), lookingAt() and find() on a set of texts ("-" when the call succeeded). The sweep at
- * the end hashes the same readings for every pair of 21 fragments and all texts up to length 4.
+ * the end hashes the same readings for every pair of 26 fragments and all texts up to length 4.
  */
 public class RegexAfterFailure {
     static final String[] TEXTS = {"", "a", "b", "ab", "aab", "aabx", "abcx", "abx", "ababx", "ababab", "1,22,333;", "aaax", "abab", "abc",
@@ -37,7 +37,7 @@ public class RegexAfterFailure {
     }
 
     static final String[] FRAGMENTS = {"a", "ab", "(?:ab)*", "(?:ab)+?", "(?:a|b)*", "(a|bb)+", "a+", "b*?", "b?", "(?:a+b)*", "(?:a(?=b))*",
-        "(a)*", "(?:a|ab)*", "(?:ab){1,2}", "[ab]*+", "(?:a*b)+", "(?:ab)?", "(?:a|b)*+", "(?>(?:a|bb)*)", "(?:a|bb)*+", "(?:ab|a)++"};
+        "(a)*", "(?:a|ab)*", "(?:ab){1,2}", "[ab]*+", "(?:a*b)+", "(?:ab)?", "(?:a|b)*+", "(?>(?:a|bb)*)", "(?:a|bb)*+", "(?:ab|a)++", "(?=ab)", "(?!b)", "a(?=b)", "(?:a(?=b)|b)", "(?<=a)"};
 
     public static void main(String[] args) {
         System.out.println("== a repeated class: the end of its run, not moved by backing off");
@@ -56,6 +56,11 @@ public class RegexAfterFailure {
         System.out.println("== possessive and atomic: the end of the whole group");
         for (String re : new String[] {"(?:a|b)*+c", "(a|b)*+c", "(?>a|b)*c", "(?:a|bb)*+c", "(?>(?:a|bb)*)c", "(?>(?:ab)?)c", "(?>(?:a+b)*)c", "(?>a+b)c", "(?>a+c)",
             "(?>(?:ab)*c)c", "(?>a*b)"}) {
+            row(re);
+        }
+        System.out.println("== lookahead: where its body ended, positive or negative");
+        for (String re : new String[] {"(?=ab)c", "a(?=ab)c|a", "(?!b)c", "(?:a(?=b)|b)*c", "(?:ab(?=a)|a)*c", "(?=a+)c", "(?=a*b)c", "x|(?=aab)c", "(?<=a)c",
+            "(?:a(?!a)|b)*c", "(?=(?>a+))c", "(?:a(?=a)|b)+?c"}) {
             row(re);
         }
         System.out.println("== every pair of fragments");

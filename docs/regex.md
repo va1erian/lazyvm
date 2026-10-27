@@ -18,6 +18,7 @@ exist (S11).
 | `CharClass`, `CaseFold`, `Props`, `Category`, `Blocks`, `UnicodeData` | sets of code points, their case-insensitive forms, and the `\p{..}` names |
 | `LookbehindReach` | how far back a lookbehind may look, and which bodies compile |
 | `LoopMemo` | the failed loop states a long search remembers, and which loops may |
+| `SearchHints`, `StartIndex` | shortcuts for the start-position loop of a search and for a lookbehind over a long way back |
 | `Replacement` | `$n`, `${name}` and `\` expansion for `appendReplacement` |
 
 A match is a walk down `next` pointers: a node consumes input and calls
@@ -73,6 +74,9 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
   `gc=`, `general_category=` and `GC=` take POSIX (always ASCII), `java*` and
   category names, case-sensitively; under `UNICODE_CHARACTER_CLASS` a bare
   POSIX name is matched ignoring case (`\p{alpha}`, not `ascii`) (`RegexNames`).
+- A region that ends between the halves of a surrogate pair has the pair read
+  whole, and `$`, `\Z` and `(?m)$` (not `\z`) hold right after it when the bounds
+  anchor (`RegexPairEnd`).
 - Case folding (`RegexFolding`, 13 pattern forms over a sample of 2268
   characters): with `CASE_INSENSITIVE | UNICODE_CASE` a character written alone
   (a literal, or `[c]`) matches the characters with the same
@@ -111,8 +115,9 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
   run of alternatives such as `(?:a|b)*`), the end of an iteration of a loop
   over a fixed-width body (`(?:ab)*`, not one written `?`, nor one over
   alternatives or a variable body, whose inner runs still count), and, for a
-  written `(?>..)` whose body matched, the end of the body in place of what
-  happened inside it. Possessive loops record every iteration.
+  written `(?>..)` or a lookahead (positive or negative) whose body matched, the
+  end of the body in place of what happened inside it. Possessive loops record
+  every iteration.
 - Only `^` or `\A` written directly at the start of a pattern lets a failed
   search skip the other positions; inside any group it does not (`RegexRegions`).
 
@@ -153,6 +158,33 @@ the oracle's indexes. `RegexErrors` covers many cases; patterns that mix
 which is what the oracle's indexes show (a leading digit in a quote becomes a
 hex escape so it cannot extend an earlier escape).
 
+### Long inputs
+
+Two shortcuts keep the start-position loop of `find()` from being quadratic
+(`SearchHints`), neither visible in any result, flag or after-failure end:
+
+- a pattern that must begin with one class or literal skips the starts that
+  cannot begin it;
+- a pattern that is an unbounded repeat of one class (no group) followed only
+  by literals, classes, line breaks and anchors skips the rest of a run after a
+  failed attempt: the attempt has already tried the rest of the pattern at
+  every position of the run, and the same rest of the pattern cannot succeed
+  from a later start inside it. A run holding a surrogate pair is not skipped.
+
+A lookbehind over an unbounded body that must begin with one class only tries
+the starts that can begin it, found by jumping through a bit set of the text
+(`StartIndex`), built once the way back is longer than 2048.
+
+Measured with the oracle on the same machine (wall time including the start of
+the VM; the oracle's run is the second figure):
+
+| Input | before | after | oracle |
+|---|---|---|---|
+| `\s+$` on 20000 spaces and `x` | over 300 s | 0.16 s | 0.7 s |
+| `.*foo` on 30000 `x` | over 300 s | 0.2 s | 1.3 s |
+| `x*y` on 4000 `x` | 21.6 s | 0.08 s | 0.12 s |
+| `(?:(?<=(a)+)a|aa)*b` after 21000 `z` (ten runs) | over 300 s | 20 s | 13.6 s |
+
 ## Known gaps
 
 - **Unicode data.** General categories use `Character.getType`. lazyrt has no
@@ -167,6 +199,14 @@ hex escape so it cannot extend an earlier escape).
   `*`/`+` loop over a group with a variable body) and then reports `hitEnd` and
   `requireEnd` differently after a failed `find()`.
 - Back references do not set `hitEnd` in `matches()` the way the oracle does.
+- `hitEnd` on the empty input for `(?:(?<=\xe5|\x{10400}Y)(..|..)(..))*+`, a possessive
+  loop whose body begins with a failing lookbehind: the oracle reports true, here
+  false. A literal supplementary character at the end of a region that splits a
+  pair is read whole by the oracle in more shapes than here (fuzz seed 1021).
+- The end of the previous match after a failed search over a pattern with a
+  supplementary literal (`a*\x{1F600}\x{1F600}`) differs on the oracle.
+- A loop of loops is limited to roughly a thousand outer iterations here
+  (`(?:(?:ab)+c)*` on 4000 repetitions overflows; the oracle manages it).
 - The shortest match that bounds a failed search counts nothing for a repeat of
   alternatives or of a variable body (`\b(?:B|C)+z` on `""` reports
   `requireEnd` on the oracle), and nothing after the first such repeat in the
@@ -209,6 +249,13 @@ iterations) overflows, and so does a loop that recurses:
   Possessive quantifiers and atomic groups avoid it, and so does `LoopMemo`:
   once a search has taken 20000 loop steps it remembers, per loop, the
   (iteration count, position) states that failed and does not enter them again.
+  The memo is a whitelist: it is on only for a pattern made entirely of
+  literals, classes, line breaks, groups, alternation, non-possessive loops and
+  anchors other than `\G`; one lookaround, atomic group, possessive loop,
+  back reference or `\G` turns it off for the whole pattern. The one visible
+  effect of a skipped state is where a failed search leaves the end of the
+  previous match, which a later `usePattern(\G)` could read; that is why `\G` in
+  the pattern turns the memo off, and why this one case is not covered.
   It applies to loops that sit inside no other loop and no lookaround, in
   patterns without back references anywhere (also after the loop) and without
   a capturing group inside a lookaround or atomic group or a possessive repeat

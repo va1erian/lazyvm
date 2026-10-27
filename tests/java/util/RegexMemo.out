@@ -54,7 +54,8 @@
 #(?<!(?>aa|a){3,30}b)c len26: [25,26]
 #(?=(?:a|aa)*b)a len27: [23,24] [24,25] [25,26]
 #(?:a(?=(?:a|aa)*c)|a)*b len27: [23,27]
-#(?:(?:(?!x)a)+){2}c len1204: [903,1204]
+#(?:(?:aa)+){2}c len1204: [903,1204]
+#(?:(?:aa)+){3}c len1204: [903,1204]
 == a counted loop: the same position fails with one count and succeeds with another
 #(?:a|aa){3}b len23: [17,23]
 #(?:a|aa){2,3}(?:b|$) len22: [17,22]
@@ -80,4 +81,14 @@
 #(?:a|a(?=(a)))*b len21018: [21014,21018 21011:21012]
 #(?:(a)|(aa))*\1\2x len21016: [21000,21016 21009:21010 21010:21012]
 #[ab]*(?:ab){2,}x len21007: [21000,21007]
+== a capturing repeat of one character inside a lookaround or atomic group
+#(?:a|a(?=(a){2}))*b len21012: [21008,21012 21005:21006]
+#(?:a|a(?=(a)+?))*b len21012: [21008,21012 21005:21006]
+#(?:a|(?>(a)+?)a)*b len21012: [21008,21012 21005:21006]
+#(?:a|(?>(a){1,3})a)*b len21012: [21008,21012 21005:21006]
+== \G reads where a failed search left off, and the memo must not move that
+#(?:a{1,3}b?)*c|\G[ab]: no no no no
+#(?:a+b?)*c|\Ga: no no no no
+#(?:a+b?)*c|\Gb: no no no no
+#(?:ab|a)*c|\Ga: no no no no
 done

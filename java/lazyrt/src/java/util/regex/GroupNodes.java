@@ -86,15 +86,20 @@ final class GroupNodes {
         private final boolean positive;
         private final int minLen;
         private final int maxLen;
+        /** A class the body must begin with, or null (see SearchHints). */
+        private final CharClass firstChars;
+        private final int id;
         private Node head;
 
         /** `maxLen` is how far back a lookbehind may look (see LookbehindReach). */
-        Look(Node body, boolean ahead, boolean positive, int maxLen) {
+        Look(Node body, boolean ahead, boolean positive, int maxLen, int id) {
+            this.id = id;
             this.body = body;
             this.ahead = ahead;
             this.positive = positive;
             this.minLen = body.min();
             this.maxLen = maxLen;
+            this.firstChars = SearchHints.mustStartWith(body);
         }
 
         Node body() {
@@ -125,6 +130,11 @@ final class GroupNodes {
             }
             boolean found = head.match(m, i);
             m.hi = hi;
+            if (found) {
+                // Observed on the oracle (RegexAfterFailure): where a lookahead body ended, positive
+                // or negative, is the last event of the attempt, like the end of an atomic body.
+                m.iterationEnd = m.stopPos;
+            }
             return found;
         }
 
@@ -140,8 +150,25 @@ final class GroupNodes {
                 lowest = m.lo;
             }
             boolean found = false;
+            // A start the body cannot begin at fails without any effect, so it is not tried; over a
+            // long way back a bit set of the possible starts lets the loop jump between them.
+            StartIndex index = null;
+            if (firstChars != null && i - lowest > 2048) {
+                if (m.starts[id] == null) {
+                    m.starts[id] = new StartIndex(m, firstChars);
+                }
+                index = m.starts[id];
+            }
             for (int start = i - minLen; start >= lowest && !found; start--) {
-                found = head.match(m, start);
+                if (index != null) {
+                    start = index.previous(start);
+                    if (start < lowest) {
+                        break;
+                    }
+                }
+                if (firstChars == null || firstChars.test(Atoms.codePointAt(m, start))) {
+                    found = head.match(m, start);
+                }
             }
             m.lo = lo;
             m.behindTarget = target;
