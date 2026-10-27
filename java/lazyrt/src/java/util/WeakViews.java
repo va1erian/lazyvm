@@ -1,7 +1,5 @@
 package java.util;
 
-import java.util.function.Function;
-
 /** WeakHashMap's three views and their iterator (docs/design/weakhashmap.md W13, W17 to W26). */
 final class WeakViews {
     private WeakViews() {
@@ -16,7 +14,11 @@ final class WeakViews {
      */
     static final class Cursor<K, V, T> implements Iterator<T> {
         private final WeakHashMap<K, V> map;
-        private final Function<WeakLink<K, V>, T> pick;
+        /** What next() hands out; a switch rather than a function object keeps the walk cheap. */
+        static final int KEYS = 0;
+        static final int VALUES = 1;
+        static final int ENTRIES = 2;
+        private final int kind;
         private int expected;
         private int slot;
         private WeakLink<K, V> pending;
@@ -25,9 +27,9 @@ final class WeakViews {
         private WeakLink<K, V> returned;
         private Object returnedKey;
 
-        Cursor(WeakHashMap<K, V> map, Function<WeakLink<K, V>, T> pick) {
+        Cursor(WeakHashMap<K, V> map, int kind) {
             this.map = map;
-            this.pick = pick;
+            this.kind = kind;
             this.expected = map.edits;
             // W23: an iterator made on an empty map has no buckets left to read.
             this.slot = map.isEmpty() ? 0 : map.table.length;
@@ -57,18 +59,24 @@ final class WeakViews {
         }
 
         /** W18: a change is reported before the end is. */
+        @SuppressWarnings("unchecked")
         public T next() {
             if (map.edits != expected) {
                 throw new ConcurrentModificationException();
             }
-            if (!hasNext()) {
+            // The found check first saves a call per element on the common path.
+            if (found == null && !hasNext()) {
                 throw Support.noElement();
             }
             returned = found;
             returnedKey = foundKey;
             found = null;
             foundKey = null;
-            return pick.apply(returned);
+            // Picked inline: the held key is the same object as returned.getKey().
+            if (kind == KEYS) {
+                return (T) returnedKey;
+            }
+            return (T) (kind == VALUES ? returned.value : returned);
         }
 
         /**
@@ -94,7 +102,7 @@ final class WeakViews {
         private final WeakHashMap<K, V> m;
 
         Keys(WeakHashMap<K, V> m) { this.m = m; }
-        public Iterator<K> iterator() { return new Cursor<>(m, WeakLink::getKey); }
+        public Iterator<K> iterator() { return new Cursor<>(m, Cursor.KEYS); }
         public int size() { return m.size(); }
         public boolean contains(Object o) { return m.containsKey(o); }
 
@@ -114,7 +122,7 @@ final class WeakViews {
         private final WeakHashMap<K, V> m;
 
         Values(WeakHashMap<K, V> m) { this.m = m; }
-        public Iterator<V> iterator() { return new Cursor<>(m, WeakLink::getValue); }
+        public Iterator<V> iterator() { return new Cursor<>(m, Cursor.VALUES); }
         public int size() { return m.size(); }
         public boolean contains(Object o) { return m.containsValue(o); }
         public void clear() { m.clear(); }
@@ -125,7 +133,7 @@ final class WeakViews {
         private final WeakHashMap<K, V> m;
 
         Entries(WeakHashMap<K, V> m) { this.m = m; }
-        public Iterator<Map.Entry<K, V>> iterator() { return new Cursor<>(m, l -> l); }
+        public Iterator<Map.Entry<K, V>> iterator() { return new Cursor<>(m, Cursor.ENTRIES); }
         public int size() { return m.size(); }
 
         /** W24: look the key up as get does, then ask the stored entry whether it equals o. */

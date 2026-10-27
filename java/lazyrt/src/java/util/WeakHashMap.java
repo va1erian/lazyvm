@@ -6,7 +6,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 /**
- * A hash map whose keys are held weakly (docs/design/weakhashmap.md, rules W1 to W26).
+ * A hash map whose keys are held weakly (docs/design/weakhashmap.md, rules W1 to W27).
  *
  * Design. The table is an array of singly linked chains of {@link WeakLink}s; each link is itself
  * the weak reference to its key and the {@code Map.Entry} the entry view hands out. All links
@@ -71,13 +71,17 @@ public class WeakHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
         return (p ^ (p >>> 4) ^ (p >>> 7)) & (n - 1);
     }
 
-    /** W10: cuts every link the collector has cleared out of the table and forgets its value. */
+    /**
+     * W10: cuts every link the collector has cleared out of the table and forgets its value.
+     * W27: a link the map had already let go of (remove, clear, iterator remove) keeps its value.
+     */
     void drain() {
         for (Reference<?> r; (r = cleared.poll()) != null;) {
             @SuppressWarnings("unchecked")
             WeakLink<K, V> gone = (WeakLink<K, V>) r;
-            cut(gone);
-            gone.value = null;
+            if (cut(gone)) {
+                gone.value = null;
+            }
         }
     }
 
@@ -192,13 +196,16 @@ public class WeakHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
 
     /**
      * W16, W24: entrySet().remove. Hashes the entry's key once, then asks each live link of that
-     * hash whether it equals the entry: the stored key's equals, never the argument's.
+     * hash whether it equals the entry: the stored key's equals, never the argument's. A null key
+     * only ever meets the null key's link, so no stored key is asked to equal null.
      */
     boolean removeEntry(Map.Entry<?, ?> e) {
         drain();
-        int h = hashOf(e.getKey());
+        Object key = e.getKey();
+        boolean nullKey = key == null;
+        int h = hashOf(key);
         for (WeakLink<K, V> l = table[bucket(h, table.length)]; l != null; l = l.next) {
-            if (l.hash == h && l.live() && l.equals(e)) {
+            if (l.hash == h && l.live() && l.holdsNull == nullKey && l.equals(e)) {
                 unmap(l);
                 return true;
             }

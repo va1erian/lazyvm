@@ -49,6 +49,7 @@ public class WeakMapViews {
         bulk();
         iteratorRemove();
         hasNextAfterChanges();
+        nullProbes();
         System.out.println("done");
     }
 
@@ -199,6 +200,27 @@ public class WeakMapViews {
         live.next();
         live.remove();
         System.out.println("W26 remove before the end " + n);
+    }
+
+    /** Hash code 0 and wrongly equal to null: a null probe must never be compared with it. */
+    static final class Z {
+        public int hashCode() { LOG.append("Z.h "); return 0; }
+        public boolean equals(Object o) { LOG.append("Z.eq(").append(o).append(") "); return o == null || o == this; }
+        public String toString() { return "z"; }
+    }
+
+    /** W24: lookups and removals by the null key meet only the null key's own entry. */
+    static void nullProbes() {
+        WeakHashMap<Object, String> m = new WeakHashMap<>();
+        m.put(new Z(), "x");
+        log();
+        p("W24 null probes get", m.get(null) + " " + m.containsKey(null) + " " + m.remove(null) + " " + m.keySet().contains(null)
+                + " " + m.keySet().remove(null) + " " + m.entrySet().contains(se(null, "x")));
+        p("W24 entrySet.remove(null=x)", m.entrySet().remove(se(null, "x")) + " map " + m);
+        m.put(null, "n");
+        log();
+        p("W24 with a null key too", m.entrySet().remove(se(null, "x")) + " " + m.entrySet().contains(se(null, "n"))
+                + " " + m.entrySet().remove(se(null, "n")) + " map " + m);
     }
 
     static int bucket(int h, int n) {
