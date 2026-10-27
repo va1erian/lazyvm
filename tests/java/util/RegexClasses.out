@@ -1,0 +1,103 @@
+[abc] => 61-63
+[a-c] => 61-63
+[^a-y] => 0-60 7a-ff
+[a-cx-z] => 61-63 78-7a
+[a-c[x-z]] => 61-63 78-7a
+[a-zc-e] => 61-7a
+[c-ea-z] => 61-7a
+[a-eb-d[c-f]] => 61-66
+[a-z&&[def]] => 64-66
+[a-z&&[^aeiou]] => 62-64 66-68 6a-6e 70-74 76-7a
+[a-d&&b-f&&c-z] => 63-64
+[^a-c&&b-d] => 64
+[^a[b]c] => 0-60 62 64-ff
+[a[^b]c] => 0-61 63-ff
+[\w&&[^\d_]] => 41-5a 61-7a
+[-a] => 2d 61
+[a-] => 2d 61
+[a-b-c] => 2d 61-63
+[]a] => 5d 61
+[^]a] => 0-5c 5e-60 62-ff
+[a^] => 5e 61
+[\^\-\]] => 2d 5d-5e
+[\Q^-]\E] => 2d 5d-5e
+[&&a] => 61
+[a&&] => 61
+[a&&&b] => 26 61-62
+[\x41-\x43\u0061\0142] => 41-43 61-62
+\d => 30-39
+\D => 0-2f 3a-ff
+\w => 30-39 41-5a 5f 61-7a
+\W => 0-2f 3a-40 5b-5e 60 7b-ff
+\s => 9-d 20
+\S => 0-8 e-1f 21-ff
+\h => 9 20 a0
+\H => 0-8 a-1f 21-9f a1-ff
+\v => a-d 85
+\V => 0-9 e-84 86-ff
+. => 0-9 b-c e-84 86-ff
+(?s). => 0-ff
+\p{Lower} => 61-7a
+\p{Upper} => 41-5a
+\p{ASCII} => 0-7f
+\p{Alpha} => 41-5a 61-7a
+\p{Digit} => 30-39
+\p{Alnum} => 30-39 41-5a 61-7a
+\p{Punct} => 21-2f 3a-40 5b-60 7b-7e
+\p{Graph} => 21-7e
+\p{Print} => 20-7e
+\p{Blank} => 9 20
+\p{Cntrl} => 0-1f 7f
+\p{XDigit} => 30-39 41-46 61-66
+\p{Space} => 9-d 20
+\P{Alpha} => 0-40 5b-60 7b-ff
+[\p{Lower}&&[^a-c]] => 64-7a
+\p{L} => 41-5a 61-7a aa b5 ba c0-d6 d8-f6 f8-ff
+\p{Lu} => 41-5a c0-d6 d8-de
+\p{Ll} => 61-7a b5 df-f6 f8-ff
+\p{N} => 30-39 b2-b3 b9 bc-be
+\p{Nd} => 30-39
+\p{P} => 21-23 25-2a 2c-2f 3a-3b 3f-40 5b-5d 5f 7b 7d a1 a7 ab b6-b7 bb bf
+\p{S} => 24 2b 3c-3e 5e 60 7c 7e a2-a6 a8-a9 ac ae-b1 b4 b8 d7 f7
+\p{Z} => 20 a0
+\p{C} => 0-1f 7f-9f ad
+\p{Sc} => 24 a2-a5
+\p{Pd} => 2d
+\p{Sm} => 2b 3c-3e 7c 7e ac b1 d7 f7
+\p{IsAlphabetic} => 41-5a 61-7a aa b5 ba c0-d6 d8-f6 f8-ff
+\p{javaLowerCase} => 61-7a aa b5 ba df-f6 f8-ff
+\p{javaUpperCase} => 41-5a c0-d6 d8-de
+\p{javaWhitespace} => 9-d 1c-20
+\p{javaLetter} => 41-5a 61-7a aa b5 ba c0-d6 d8-f6 f8-ff
+\p{javaDigit} => 30-39
+\p{javaLetterOrDigit} => 30-39 41-5a 61-7a aa b5 ba c0-d6 d8-f6 f8-ff
+\p{javaISOControl} => 0-1f 7f-9f
+\p{IsLatin} => 41-5a 61-7a aa ba c0-d6 d8-f6 f8-ff
+\p{InBasicLatin} => 0-7f
+\p{InLatin-1Supplement} => 80-ff
+\p{gc=Lu} => 41-5a c0-d6 d8-de
+\p{general_category=Nd} => 30-39
+\p{IsL} => 41-5a 61-7a aa b5 ba c0-d6 d8-f6 f8-ff
+\pL => 41-5a 61-7a aa b5 ba c0-d6 d8-f6 f8-ff
+\PL => 0-40 5b-60 7b-a9 ab-b4 b6-b9 bb-bf d7 f7
+\p{IsGreek}+ : true false
+\p{InGreek}+ : true false
+\p{Lu}+ : true false
+\p{Ll}+ : true false
+\p{IsCyrillic}+ : true false
+\p{L}+ : true false
+\p{IsHan} : true false
+\p{IsHiragana} : true false
+\R : true true true true true false false
+\R\R : true true true
+a\Rb : true true false
+[\d&&[^5]]+ : true false
+[a-c&&[^b]]+ : true false
+[a-cA-C]+ : true false
+[^abc] : true false
+[\s\S] : true true
+[\x{1F600}-\x{1F64F}] : true false
+. : true true false
+.. : false true
+[^a] : true false
+done

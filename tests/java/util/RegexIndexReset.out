@@ -1,0 +1,17 @@
+(?<=a[xb]{0,2100})b reset() first: 2101-2102
+(?<=a[xb]{0,2100})b reset() longer: 2601-2602
+(?<=a[xb]{0,2100})b reset() same length: 2601-2602
+(?<=a[xb]{0,2100})b reset() shorter: 101-102
+(?<=a[xb]{0,2100})b reset(input) first: 2101-2102
+(?<=a[xb]{0,2100})b reset(input) longer: 2601-2602
+(?<=a[xb]{0,2100})b reset(input) same length: 2601-2602
+(?<=a[xb]{0,2100})b reset(input) shorter: 101-102
+b(?<=a[xb]{0,2100}) reset() first: 2101-2102
+b(?<=a[xb]{0,2100}) reset() longer: 2601-2602
+b(?<=a[xb]{0,2100}) reset() same length: 2601-2602
+b(?<=a[xb]{0,2100}) reset() shorter: 101-102
+b(?<=a[xb]{0,2100}) reset(input) first: 2101-2102
+b(?<=a[xb]{0,2100}) reset(input) longer: 2601-2602
+b(?<=a[xb]{0,2100}) reset(input) same length: 2601-2602
+b(?<=a[xb]{0,2100}) reset(input) shorter: 101-102
+done

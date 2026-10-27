@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.PatternSyntaxException;
 import lazy.internal.PathSyntax;
-import lazy.internal.Regex;
 
 /** The platform's file system: paths in lazy.internal.PathSyntax, files through the natives. */
 final class DefaultFileSystem extends FileSystem {
@@ -66,10 +65,12 @@ final class DefaultFileSystem extends FileSystem {
         } else {
             throw new UnsupportedOperationException("Syntax '" + syntax + "' not recognized");
         }
-        final Regex re = Regex.compile(regex, SYNTAX.ignoresCase());
+        // Spec PW1: on Windows matching ignores case.
+        int flags = SYNTAX.ignoresCase() ? java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE : 0;
+        final java.util.regex.Pattern re = java.util.regex.Pattern.compile(regex, flags);
         return new PathMatcher() {
             public boolean matches(Path path) {
-                return re.matches(path.toString());
+                return re.matcher(path.toString()).matches();
             }
         };
     }

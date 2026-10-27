@@ -1,0 +1,133 @@
+a* in 'caaaab': [0,0) [1,5) [5,5) [6,6)
+(?:ab)* in 'xababab': [0,0) [1,7) [7,7)
+a+ in 'caaaab': [1,5)
+(?:ab)+ in 'xababab': [1,7)
+a? in 'caaaab': [0,0) [1,2) [2,3) [3,4) [4,5) [5,5) [6,6)
+(?:ab)? in 'xababab': [0,0) [1,3) [3,5) [5,7) [7,7)
+a{2} in 'caaaab': [1,3) [3,5)
+(?:ab){2} in 'xababab': [1,5)
+a{2,} in 'caaaab': [1,5)
+(?:ab){2,} in 'xababab': [1,7)
+a{1,2} in 'caaaab': [1,3) [3,5)
+(?:ab){1,2} in 'xababab': [1,5) [5,7)
+a{0} in 'caaaab': [0,0) [1,1) [2,2) [3,3) [4,4) [5,5) [6,6)
+(?:ab){0} in 'xababab': [0,0) [1,1) [2,2) [3,3) [4,4) [5,5) [6,6) [7,7)
+a{0,1} in 'caaaab': [0,0) [1,2) [2,3) [3,4) [4,5) [5,5) [6,6)
+(?:ab){0,1} in 'xababab': [0,0) [1,3) [3,5) [5,7) [7,7)
+a*? in 'caaaab': [0,0) [1,1) [2,2) [3,3) [4,4) [5,5) [6,6)
+(?:ab)*? in 'xababab': [0,0) [1,1) [2,2) [3,3) [4,4) [5,5) [6,6) [7,7)
+a+? in 'caaaab': [1,2) [2,3) [3,4) [4,5)
+(?:ab)+? in 'xababab': [1,3) [3,5) [5,7)
+a?? in 'caaaab': [0,0) [1,1) [2,2) [3,3) [4,4) [5,5) [6,6)
+(?:ab)?? in 'xababab': [0,0) [1,1) [2,2) [3,3) [4,4) [5,5) [6,6) [7,7)
+a{2,}? in 'caaaab': [1,3) [3,5)
+(?:ab){2,}? in 'xababab': [1,5)
+a{1,2}? in 'caaaab': [1,2) [2,3) [3,4) [4,5)
+(?:ab){1,2}? in 'xababab': [1,3) [3,5) [5,7)
+a*+ in 'caaaab': [0,0) [1,5) [5,5) [6,6)
+(?:ab)*+ in 'xababab': [0,0) [1,7) [7,7)
+a++ in 'caaaab': [1,5)
+(?:ab)++ in 'xababab': [1,7)
+a?+ in 'caaaab': [0,0) [1,2) [2,3) [3,4) [4,5) [5,5) [6,6)
+(?:ab)?+ in 'xababab': [0,0) [1,3) [3,5) [5,7) [7,7)
+a{1,2}+ in 'caaaab': [1,3) [3,5)
+(?:ab){1,2}+ in 'xababab': [1,5) [5,7)
+a*b in 'aaab b ab': [0,4) [5,6) [7,9)
+a*?b in 'aaab': [0,4)
+a*+b in 'aaab': [0,4)
+.*foo in 'xfooyfoo': [0,8)
+.*?foo in 'xfooyfoo': [0,4) [4,8)
+.*+foo in 'xfooyfoo':
+<.+> in '<a><b>': [0,6)
+<.+?> in '<a><b>': [0,3) [3,6)
+<[^>]+> in '<a><b>': [0,3) [3,6)
+(a+)(b+) in 'aabbb': [0,5) 'aa' 'bbb'
+(a+?)(b+?) in 'aabbb': [0,3) 'aa' 'b'
+(a++)(b++) in 'aabbb': [0,5) 'aa' 'bbb'
+(a*)* in 'aab': [0,2) '' [2,2) '' [3,3) ''
+(a*)+ in 'aab': [0,2) '' [2,2) '' [3,3) ''
+(a?)* in 'aab': [0,2) '' [2,2) '' [3,3) ''
+(a|b)*c in 'abbac': [0,5) 'a'
+(a|b)*?c in 'abbac': [0,5) 'a'
+(a|ab)*c in 'abac': [0,4) 'a'
+(a*?)* in 'aa': [0,0) '' [1,1) '' [2,2) ''
+(?:a*)* in 'aaa': [0,3) [3,3)
+(?:a|())*b in 'aab': [0,3) ''
+(?:\b)*x in 'x': [0,1)
+(?:^)*x in 'x': [0,1)
+(\b)?x in 'x': [0,1) ''
+(\b)*x in 'x': [0,1) null
+(?:(\b))*x in 'x': [0,1) ''
+(?:(\b)){0,2}x in 'x': [0,1) ''
+((\b))*x in 'x': [0,1) null ''
+(\b){0,2}x in 'x': [0,1) null
+(\b){1,2}x in 'x': [0,1) ''
+(\b)*+x in 'x': [0,1) ''
+(\b)*?x in 'x': [0,1) null
+()*x in 'x': [0,1) null
+(){0}x in 'x': [0,1) null
+(\n*?){2}a in '
+aa': [0,2) '' [2,3) ''
+(?:(?=a)\n*?){2}a in 'aa': [0,1) [1,2)
+(?:(?!x)(\n*?)){3}a in '
+aa': [0,2) '' [2,3) ''
+((?!x)(\n*?)){2}a in 'a
+
+a': [0,1) '' '' [1,4) '
+' '
+'
+(?:(?=\n|a)\n*?){3}a in '
+
+
+aa': [0,4) [4,5)
+(?:(?<!(a))|.*+){2} in 'xa': [0,0) null [1,1) null [2,2) 'a'
+(a){0}b in 'ab': [1,2) null
+(a){0,0}b in 'ab': [1,2) null
+(a{0})*x in 'x': [0,1) null
+(a){2} in 'aaaaa': [0,2) 'a' [2,4) 'a'
+(a){2,3} in 'aaaaa': [0,3) 'a' [3,5) 'a'
+(ab){2} in 'ababab': [0,4) 'ab'
+(\d{1,2}){2} in '1234': [0,4) '34'
+(\d{1,2}?){2} in '1234': [0,2) '2' [2,4) '4'
+x{2}{3} in 'xxxxxx x{3}': [0,2) [2,4) [4,6)
+a{1}{2} in 'a a{2}': [0,1) [2,3)
+{1}a in 'a': [0,1)
+(?:x{2}){3} in 'xxxxxx': [0,6)
+a{2,3}? in 'aaaa': [0,2) [2,4)
+a{0,2}?b in 'aab': [0,3)
+\w+?(?=\d) in 'abc123': [0,3) [3,4) [4,5)
+\d+? in '123': [0,1) [1,2) [2,3)
+\d*+\d in '123':
+(?>\d*)\d in '123':
+[ab]*?b in 'aabab': [0,3) [3,5)
+[ab]*+b in 'aabab':
+[ab]++b in 'aabab':
+\s*\w+\s* in '  ab  cd ': [0,6) [6,9)
+(\w+\s*)+ in 'one two': [0,7) 'two'
+(\w+\s*)++ in 'one two': [0,7) 'two'
+(?:(\w+)\s*)+ in 'one two': [0,7) 'two'
+\.*? in '...': [0,0) [1,1) [2,2) [3,3)
+a* in '😀aa': [0,0) [1,1) [2,4) [4,4)
+.* in 'a😀b': [0,4) [4,4)
+.+? in '😀😀': [0,2) [2,4)
+[^a]* in '😀a': [0,2) [2,2) [3,3)
+a{3} matches 'aaa': true
+a{3} matches 'aaaa': false
+(a|b){3} matches 'aba': true a
+(a|b){2,3} matches 'ababab': false
+(a|b){2,3} matches 'ab': true b
+(a*)*b matches 'aaab': true 
+(a|aa)+b matches 'aaaab': true a
+(a+)+b matches 'aaaaaaaaaaaaaaab': true aaaaaaaaaaaaaaa
+(a+)+b matches 'aaaaaaaaaaaaaaac': false
+a* matches '<1000 chars>': true
+a*+ matches '<1000 chars>': true
+(?>a*) matches '<1000 chars>': true
+(?:a|b)* matches '<1000 chars>': true
+[ab]*c matches '<1001 chars>': true
+.*c matches '<1000 chars>': false
+(?>a+)b matches '<1000 chars>': false
+a*+a matches '<1000 chars>': false
+false false true true
+xx
+done

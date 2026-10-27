@@ -21,7 +21,8 @@ resolve…, relativize…, startsWith…, endsWith…]
 
 **P3.** `getPathMatcher`: only `glob:` and `regex:`, lower case (`GLOB:` → `UnsupportedOperationException`), no
 colon → IAE. Glob: `*`, `?` within a name, `**` across names, `[…]`, `[!…]`, `{a,b}`; nested or unclosed braces →
-`PatternSyntaxException`; `*.txt` matches `.txt`; the whole path must match. [PathOps: glob…, regex, … syntax]
+`PatternSyntaxException`; `*.txt` matches `.txt`; the whole path must match. Both syntaxes compile through
+`java.util.regex` (`docs/regex.md`), a glob after its translation. [PathOps: glob…, regex, … syntax]
 
 **P4.** Glob classes (found by review): `[!…]` never matches the separator; `/` (or the separator) inside a class →
 `PatternSyntaxException("Explicit 'name separator' in class")` at its index; `]` right after `[` or `[!` closes an
@@ -173,7 +174,10 @@ Where LazyVM knowingly differs from the oracle; the reviewer's probes show each 
   time.
 - `Files.exists(Paths.get("NUL"))` is false (the oracle says true; `new File("NUL").exists()` is false on both).
 - The `dos` attribute view is not provided (`UnsupportedOperationException("View 'dos' not available")`).
-- The index and pattern of the `PatternSyntaxException` for an empty glob class (nio-file.md P4).
+- A glob's `PatternSyntaxException` for a malformed class: for an empty class its index and pattern (P4), and for
+  an unclosed class that ends in `-` or holds a reversed range the description too (the oracle reports `"Invalid
+  range"` or `"Illegal character range"` from its translated regex, or `"Missing ']"` one index later; LazyVM
+  `"Missing ']"` or the separator error). Which paths a valid glob matches is the oracle's.
 - An array too large for LazyVM's heap is `"Java heap space"` where the oracle's larger default heap allocates it
   (from `Integer.MAX_VALUE - 1` elements, in any dimension of `multianewarray` too, both say `"Requested array size
   exceeds VM limit"`).

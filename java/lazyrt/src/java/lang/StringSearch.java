@@ -157,46 +157,6 @@ final class StringSearch {
         return true;
     }
 
-    /**
-     * String.split, with a fast path for patterns that match one literal string; others go to
-     * StringRegex.
-     */
-    static String[] split(String s, String regex, int limit) {
-        String sep = literal(regex);
-        if (sep == null) {
-            return StringRegex.split(s, regex, limit);
-        }
-        java.util.ArrayList<String> parts = new java.util.ArrayList<>();
-        int from = 0;
-        int at;
-        while ((limit <= 0 || parts.size() < limit - 1) && (at = s.indexOf(sep, from)) >= 0) {
-            parts.add(s.substring(from, at));
-            from = at + sep.length();
-        }
-        if (parts.isEmpty()) {
-            return new String[] {s};
-        }
-        parts.add(s.substring(from));
-        int n = parts.size();
-        while (limit == 0 && n > 0 && parts.get(n - 1).isEmpty()) {
-            n--;
-        }
-        return parts.subList(0, n).toArray(new String[n]);
-    }
-
-    /** The text a pattern matches if it is a plain string or one escaped symbol, else null. */
-    private static String literal(String regex) {
-        if (regex.length() == 2 && regex.charAt(0) == '\\' && !Character.isLetterOrDigit(regex.charAt(1))) {
-            return regex.substring(1);
-        }
-        for (int i = 0; i < regex.length(); i++) {
-            if (".$|()[{^?*+\\".indexOf(regex.charAt(i)) >= 0) {
-                return null;
-            }
-        }
-        return regex.isEmpty() ? null : regex;
-    }
-
     /** String.replace(CharSequence, CharSequence): every occurrence, left to right. */
     static String replace(String s, String target, String replacement) {
         StringBuilder sb = new StringBuilder();

@@ -1,0 +1,74 @@
+== anchors at the end
+a$ : Fh-/Fh-/Fh- Thr/Thr/Thr Fh-/F--/F-- Thr/F--/F-- Thr/F--/F--
+(?m)a$ : Fh-/Fh-/Fh- Thr/Thr/Thr Fh-/F--/F-- Thr/F--/F-- T--/F--/F--
+a\z : Fh-/Fh-/Fh- Th-/Th-/Th- Fh-/F--/F-- Th-/F--/F-- Fh-/F--/F--
+a\Z : Fh-/Fh-/Fh- Thr/Thr/Thr Fh-/F--/F-- Thr/F--/F-- Thr/F--/F--
+(?m)a$|b : Fh-/Fh-/Fh- Thr/Thr/Thr T--/F--/F-- T--/F--/T-- T--/F--/F--
+a(?m:$) : Fh-/Fh-/Fh- Thr/Thr/Thr Fh-/F--/F-- Thr/F--/F-- T--/F--/F--
+(?m)^a$ : Fh-/Fh-/Fh- Thr/Thr/Thr Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+a$|b : Fh-/Fh-/Fh- Thr/Thr/Thr T--/F--/F-- T--/F--/T-- Thr/F--/F--
+\ba : Fh-/Fhr/Fhr T--/T--/T-- T--/F--/T-- T--/F--/F-- T--/F--/T--
+a\b : Fh-/Fh-/Fh- Thr/Thr/Thr Fh-/F--/F-- Thr/F--/F-- T--/F--/F--
+a\B : Fh-/Fh-/Fh- Fhr/Fhr/Fhr T--/F--/T-- Fhr/F--/F-- T--/F--/T--
+(?m)$ : Thr/Thr/Thr Thr/F--/F-- Thr/F--/F-- Thr/F--/F-- T--/F--/F--
+$ : Thr/Thr/Thr Thr/F--/F-- Thr/F--/F-- Thr/F--/F-- Thr/F--/F--
+a?$ : Thr/Thr/Thr Thr/Thr/Thr Thr/F--/F-- Thr/F--/F-- Thr/F--/F--
+== a repeat of alternatives or a variable body counts nothing towards the shortest match
+\b(?:B)+?z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\bB+?z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B|C)+?z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B|C)+z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B|C)*z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B|C)*?z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B|C){2}z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B|C){2,3}z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(B|C)+z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:BB?)+?z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B\p{Sm}??|C)+?z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B+)+z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B*C)+z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B{1,2})+z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B(?:C|D))+z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B|C)+x*z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+x*\b(?:B|C)+z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?=B)(?:B|C)+z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+\b(?:B|C)+ : Fhr/Fhr/Fhr Th-/Th-/Th- Th-/Th-/Th- T--/F--/T-- Th-/F--/F--
+\b(?:B|C)+? : Fhr/Fhr/Fhr T--/T--/T-- T--/T--/T-- T--/F--/T-- T--/F--/F--
+\bz|\b(?:B|C)+?z : Fhr/Fhr/Fhr Fhr/Fh-/Fh- Fhr/Fh-/Fh- Fhr/F--/F-- Fhr/F--/F--
+== bodies that count in full
+\b(?:BC)+?z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(B)+?z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B)*z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:BB)+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B\d)+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:[BC])+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B|C)?z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:BC){2}z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(BC)+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B\b)+z : Fh-/Fhr/Fhr Fh-/Fhr/Fhr Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B{2})+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B|C)++z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(?>B|C)+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B(?=C))+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B(?:C))+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B)+(?:C|D)z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+(?:B|C)+?z : Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(B)?\1{3,}z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(B)\1+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:(B)\1)+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:BB|C)++z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B+C)*+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(?:B|CC)*+z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(?>(?:BB|C)*)z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?>(?:BB|C)+)z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F--
+\b(?>B+C)z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+\b(?>(?:B|C)+x*)z : Fh-/Fhr/Fhr Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F--
+== a possessive or atomic loop over alternatives, without \b, on texts that end right after the loop
+(?:BB|C)++z : Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F-- Fh-/Fh-/Fh- T--/T--/T--
+(?:B+C)*+z : Fh-/F--/F-- Fh-/F--/F-- Fh-/Fh-/Fh- Fh-/F--/F-- T--/F--/F-- Fh-/Fh-/Fh- T--/F--/F--
+(?:B|CC)++z : Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- T--/T--/T-- Fh-/Fh-/Fh- T--/T--/T--
+(?:B|CC)*+z : Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- T--/T--/T-- Fh-/Fh-/Fh- T--/T--/T--
+(?>(?:BB|C)+)z : Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F-- Fh-/Fh-/Fh- T--/T--/T--
+(?:BB|C)+z : Fh-/Fh-/Fh- Fh-/Fh-/Fh- Fh-/F--/F-- Fh-/F--/F-- Fh-/F--/F-- Fh-/Fh-/Fh- T--/T--/T--
+(?:B+C)*z : Fh-/F--/F-- Fh-/F--/F-- Fh-/Fh-/Fh- Fh-/F--/F-- T--/F--/F-- Fh-/Fh-/Fh- T--/F--/F--
+done

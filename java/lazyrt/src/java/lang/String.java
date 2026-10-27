@@ -352,28 +352,15 @@ public final class String implements java.io.Serializable, Comparable<String>, C
         return StringSearch.replace(this, target.toString(), replacement.toString());
     }
 
-    public boolean matches(String regex) {
-        return StringRegex.matches(this, regex);
-    }
-
-    public String replaceAll(String regex, String replacement) {
-        return StringRegex.replace(this, regex, replacement, true);
-    }
-
-    public String replaceFirst(String regex, String replacement) {
-        return StringRegex.replace(this, regex, replacement, false);
-    }
+    // Regular-expression methods: thin wrappers over java.util.regex.
+    public boolean matches(String regex) { return java.util.regex.Pattern.matches(regex, this); }
+    public String replaceFirst(String regex, String repl) { return java.util.regex.Pattern.compile(regex).matcher(this).replaceFirst(repl); }
+    public String replaceAll(String regex, String repl) { return java.util.regex.Pattern.compile(regex).matcher(this).replaceAll(repl); }
+    public String[] split(String regex, int limit) { return java.util.regex.Pattern.compile(regex).split(this, limit); }
+    public String[] split(String regex) { return split(regex, 0); }
 
     public boolean contains(CharSequence s) {
         return indexOf(s.toString()) >= 0;
-    }
-
-    public String[] split(String regex, int limit) {
-        return StringSearch.split(this, regex, limit);
-    }
-
-    public String[] split(String regex) {
-        return split(regex, 0);
     }
 
     public String toLowerCase() {

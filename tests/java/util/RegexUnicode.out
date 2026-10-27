@@ -1,0 +1,134 @@
+\p{L} f0 370..3ff => 370-374 376-377 37a-37d 386 388-38a 38c 38e-3a1 3a3-3f5 3f7-3ff
+\p{Lu} f0 370..3ff => 370 372 376 386 388-38a 38c 38e-38f 391-3a1 3a3-3ab 3cf 3d2-3d4 3d8 3da 3dc 3de 3e0 3e2 3e4 3e6 3e8 3ea 3ec 3ee 3f4 3f7 3f9-3fa 3fd-3ff
+\p{Ll} f0 370..3ff => 371 373 377 37b-37d 390 3ac-3ce 3d0-3d1 3d5-3d7 3d9 3db 3dd 3df 3e1 3e3 3e5 3e7 3e9 3eb 3ed 3ef-3f3 3f5 3f8 3fb-3fc
+\p{L} f0 400..4ff => 400-481 48a-4ff
+\p{Nd} f0 600..6ff => 660-669 6f0-6f9
+\p{Nd} f0 900..9ff => 966-96f 9e6-9ef
+\p{N} f0 2000..2200 => 2070 2074-2079 2080-2089 2150-2182 2185-2189
+\p{P} f0 2000..2080 => 2010-2027 2030-2043 2045-2051 2053-205e 207d-207e
+\p{Sc} f0 20a0..20d0 => 20a0-20bf
+\p{Sm} f0 2190..2300 => 2190-2194 219a-219b 21a0 21a3 21a6 21ae 21ce-21cf 21d2 21d4 21f4-22ff
+\p{Mn} f0 300..380 => 300-36f
+\p{Zs} f0 2000..2010 => 2000-200a
+\p{Cf} f0 200b..2070 => 200b-200f 202a-202e 2060-2064 206a-206f
+\p{Lo} f0 4e00..4e20 => 4e00-4e20
+\p{Lu} f0 1d400..1d41f => 1d400-1d419
+\p{L} f0 10400..1044f => 10400-1044f
+\p{Cs} f0 d7ff..e001 => d800-dfff
+\p{Co} f0 dfff..e002 => e000-e002
+\p{Cn} f0 378..380 => 378-379 37f-380
+\d f256 660..66a => 660-669
+\d f0 660..66a =>
+\d f256 960..970 => 966-96f
+\w f256 900..910 => 900-910
+\w f256 2000..2080 => 200c-200d 203f-2040 2054 2071 207f
+\s f256 2000..2030 => 2000-200a 2028-2029 202f
+\p{Alpha} f256 390..3b0 => 390-3a1 3a3-3b0
+\p{Punct} f256 2010..2030 => 2010-2027 2030
+\p{javaMirrored} f0 2000..2300 => 2039-203a 2045-2046 207d-207e 208d-208e 2140 2201-2204 2208-220d 2211 2215-2216 221a-221d 221f-2222 2224 2226 222b-2233 2239 223b-224c 2252-2255 225f-2260 2262 2264-226b 226e-228c 228f-2292 2298 22a2-22a3 22a6-22b8 22be-22bf 22c9-22cd 22d0-22d1 22d6-22ed 22f0-22ff
+\p{javaTitleCase} f0 1c0..1d0 => 1c5 1c8 1cb
+\p{IsIdeographic} f0 3000..3010 => 3006-3007
+\p{javaDefined} f0 370..380 => 370-377 37a-37e
+\p{InDevanagari} f0 8ff..980 => 900-97f
+\p{IsDevanagari} f0 8ff..980 => 900-950 953-963 966-977 979-97f
+\p{InGreek} f0 36f..400 => 370-3ff
+\p{IsGreek} f0 36f..400 => 370-373 375-377 37a-37d 384 386 388-38a 38c 38e-3a1 3a3-3e1 3f0-3ff
+\p{IsCyrillic} f0 3ff..530 => 400-484 487-527
+\p{InCyrillic} f0 3ff..530 => 400-4ff
+\p{InHiragana} f0 303f..30a1 => 3040-309f
+\p{IsHiragana} f0 303f..30a1 => 3041-3096 309d-309f
+\p{IsKatakana} f0 30a0..3100 => 30a1-30fa 30fd-30ff
+\p{IsThai} f0 e00..e60 => e01-e3a e40-e5b
+\p{IsHebrew} f0 58f..600 => 591-5c7 5d0-5ea 5f0-5f4
+\p{InGeneralPunctuation} f0 1fff..2070 => 2000-206f
+\p{InCurrencySymbols} f0 209f..20d1 => 20a0-20cf
+\p{InArrows} f0 218f..2200 => 2190-21ff
+\p{InCJKUnifiedIdeographs} f0 4dff..4e01 => 4e00-4e01
+\p{InCJKUnifiedIdeographs} f0 9fff..a000 => 9fff
+\p{IsHan} f0 4dbe..4e01 => 4e00-4e01
+\p{IsHan}+ f0 : true true false
+\p{IsHan} f0 : true true
+\p{IsLatin}+ f0 : true false
+\p{IsLatin}+ f0 : true
+\p{IsGreek}+ f0 : true true
+\p{Lu} f0 : true false
+\p{L}+ f0 : true false
+\w+ f256 : true true
+\w+ f0 : false
+\d+ f256 : true true
+[\p{L}&&[^\p{IsGreek}]]+ f0 : true false
+\p{L}\p{M}* f0 : true true false
+(?i)бЖ f0 : false
+(?iu)бЖ f0 : true
+(?iu)[α-ω]+ f0 : true
+. f0 : true true false
+\x{10400} f0 : true
+\ud801\udc00 f0 : true
+[\x{10400}-\x{1044f}]+ f0 : true false
+InLatin-1Supplement : ok
+InLatin-1 Supplement : ok
+InLatin1Supplement : Unknown character block name {Latin1Supplement}
+InLatin Extended-A : ok
+InLatin Extended A : Unknown character block name {Latin Extended A}
+InLatinExtended-A : ok
+InLATIN_EXTENDED_A : ok
+InGreek and Coptic : ok
+InGreekandCoptic : ok
+InCyrillic Supplement : ok
+InCyrillicSupplementary : ok
+InBasic_Latin : ok
+Inbasiclatin : ok
+InNoSuchBlock : Unknown character block name {NoSuchBlock}
+IsLatn : ok
+IsLATIN : ok
+IsOld_Italic : ok
+IsOldItalic : Unknown character script name {OldItalic}
+IsCommon : ok
+IsZyyy : ok
+IsInherited : ok
+IsHani : ok
+IsNoSuchScript : Unknown character script name {NoSuchScript}
+sc=Grek : ok
+script=greek : ok
+blk=Arrows : ok
+block=arrows : ok
+gc=Lu : ok
+gc=lu : Unknown character property name {lu}
+IsLu : ok
+IsAlphabetic : ok
+IsWhite_Space : ok
+javaMirrored : ok
+Is : Unknown character script name {}
+InSurrogatesArea : Unknown character block name {SurrogatesArea}
+InSurrogates_Area : ok
+InSurrogates Area : Unknown character block name {Surrogates Area}
+IsUnknown : ok
+sc=Unknown : ok
+script=UNKNOWN : ok
+IsZzzz : ok
+InLinear-B Syllabary : Unknown character block name {Linear-B Syllabary}
+InLinear B Syllabary : ok
+InLinear_B_Syllabary : ok
+InPhags-pa : ok
+InPhags pa : Unknown character block name {Phags pa}
+InPhags_Pa : ok
+InCJK Unified Ideographs Extension A : ok
+InCJK_Unified_Ideographs_Extension_A : ok
+InCJKUnifiedIdeographsExtensionA : ok
+InCJK Unified Ideographs Extension-A : Unknown character block name {CJK Unified Ideographs Extension-A}
+IsLinear-B : Unknown character script name {Linear-B}
+IsLinear_B : ok
+IsLinear B : Unknown character script name {Linear B}
+IsOld Italic : Unknown character script name {Old Italic}
+InPrivate Use : Unknown character block name {Private Use}
+InPrivateUse : Unknown character block name {PrivateUse}
+InCombining Diacritical Marks for Symbols : ok
+InCombiningMarksforSymbols : ok
+InCombining Marks for Symbols : ok
+\p{IsCommon} f0 20..7f => 20-40 5b-60 7b-7f
+\p{IsInherited} f0 300..320 => 300-320
+\p{InMiscellaneousSymbols} f0 25ff..2700 => 2600-26ff
+\p{IsUnknown} f0 377..380 => 378-379 37f-380
+\p{InSurrogates_Area} f0 d7ff..e000 =>
+\p{InHighSurrogates} f0 d7ff..dc00 => d800-db7f
+done
