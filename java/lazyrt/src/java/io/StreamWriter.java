@@ -76,19 +76,29 @@ final class StreamWriter extends Writer {
         pending.delete(0, n);
         for (int i = 0; i < bytes.length;) {
             int k = Math.min(LIMIT - used, bytes.length - i);
+            // Observed on the oracle: a char's bytes never straddle two
+            // blocks; a block ends short instead (tests/java/util/WriterBlocks).
+            while (i + k < bytes.length && (bytes[i + k] & 0xC0) == 0x80) {
+                k--;
+            }
             System.arraycopy(bytes, i, block, used, k);
             used += k;
             i += k;
-            if (used == LIMIT) {
+            if (i < bytes.length) {
                 writeBlock();
             }
+        }
+        if (used == LIMIT) {
+            writeBlock();
         }
     }
 
     private void writeBlock() throws IOException {
-        if (used > 0) {
-            out.write(block, 0, used);
-            used = 0;
+        // A block that fails to write is dropped, not resent, as on the oracle.
+        int n = used;
+        used = 0;
+        if (n > 0) {
+            out.write(block, 0, n);
         }
     }
 
@@ -102,11 +112,15 @@ final class StreamWriter extends Writer {
     public void close() throws IOException {
         if (!closed) {
             ensureOpen();
-            // Closing does not flush `out` first, as observed on the oracle.
-            drain(true);
-            writeBlock();
-            closed = true;
-            out.close();
+            // Closing does not flush `out` first, and a failed close stays
+            // closed, as observed on the oracle.
+            try {
+                drain(true);
+                writeBlock();
+                out.close();
+            } finally {
+                closed = true;
+            }
         }
     }
 }

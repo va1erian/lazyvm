@@ -7,6 +7,8 @@ import java.util.Locale;
 public class PrintStream extends FilterOutputStream implements Appendable, Closeable {
     private final boolean autoFlush;
     private boolean trouble;
+    /** After close, writes only record trouble, as observed on the oracle. */
+    private boolean closed;
 
     public PrintStream(OutputStream out) {
         this(out, false);
@@ -32,6 +34,9 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     }
 
     public void flush() {
+        if (closed) {
+            return;
+        }
         try {
             out.flush();
         } catch (IOException e) {
@@ -40,8 +45,11 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     }
 
     public void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
         try {
-            out.flush();
             out.close();
         } catch (IOException e) {
             trouble = true;
@@ -61,7 +69,18 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         trouble = false;
     }
 
+    /** True, with trouble recorded, when the stream is closed. */
+    private boolean refused() {
+        if (closed) {
+            trouble = true;
+        }
+        return closed;
+    }
+
     public void write(int b) {
+        if (refused()) {
+            return;
+        }
         try {
             out.write(b);
             if (b == '\n' && autoFlush) {
@@ -73,6 +92,9 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     }
 
     public void write(byte[] buf, int off, int len) {
+        if (refused()) {
+            return;
+        }
         try {
             out.write(buf, off, len);
             if (autoFlush) {
@@ -87,6 +109,9 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     private void writeText(String s, boolean newline) {
         if (newline) {
             s = s + System.lineSeparator();
+        }
+        if (refused()) {
+            return;
         }
         byte[] bytes = s.getBytes();
         try {
