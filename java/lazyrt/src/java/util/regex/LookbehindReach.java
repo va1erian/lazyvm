@@ -14,11 +14,14 @@ package java.util.regex;
  * <li>A repeat written * + {n} {n,m} or {n,} is rejected when its own reach
  * overflows the total so far (a+b+ and ab* are rejected, a+b and a*a are not).
  * A '?' on a char or class never is, so a+_? and a*[ab]?+ are accepted; a ?+
- * on a group is checked like the others.
+ * on a group is checked like the others. A '?' of any kind on another atom (an
+ * atomic group, \R) counts the atom as if it were not repeated: a(?>b+)? is
+ * rejected, x*\S(?>b+)? and a+\R? are not.
  * <li>The total starts again from zero after an alternation and after a group
  * repeated by a plain or lazy '?': (?:a|b)a+ and (?:ab)?a+ are accepted while
  * (?:ab)?+a+ and ab?a+ are not. The restart covers everything that follows in the
- * same branch or repeated group, however many groups close in between.
+ * same branch or repeated group, however many groups close in between, except
+ * that it ends where an atomic group around it closes.
  * <li>A repeat of a group is rejected when the group has alternatives or any
  * variable part, even with a small count: (?:a|b){2} and (?:a|b)+ fail but
  * (?:a|b)? and (?>a|b)+ are accepted. A lookaround inside the group counts as
@@ -41,6 +44,12 @@ final class LookbehindReach {
     private boolean ok = true;
 
     private LookbehindReach(Node body) {
+        this(body, 0);
+    }
+
+    /** Studies body as a stretch of its own that starts from the running total `from`. */
+    private LookbehindReach(Node body, int from) {
+        sum = from;
         study(body);
         this.max = carried + sum;
         this.valid = ok;
@@ -76,7 +85,7 @@ final class LookbehindReach {
         } else if (n instanceof GroupNodes.Group) {
             study(((GroupNodes.Group) n).body());
         } else if (n instanceof GroupNodes.Atomic) {
-            study(((GroupNodes.Atomic) n).body());
+            atomic(((GroupNodes.Atomic) n).body());
         } else if (n instanceof Repeat.CharRepeat) {
             charRepeat((Repeat.CharRepeat) n);
         } else if (n instanceof Repeat.Loop) {
@@ -98,27 +107,39 @@ final class LookbehindReach {
     }
 
     private void loop(Repeat.Loop loop) {
+        if (loop.question && !loop.inGroup) {
+            // Observed on the oracle (RegexLookbehindEdges, atomicStretch): '?', '??' and '?+' on
+            // an atom that is not a (..) or (?:..) group, such as an atomic group or \R, count it
+            // as if it were not repeated.
+            study(loop.body());
+            return;
+        }
         LookbehindReach inner = new LookbehindReach(loop.body());
         if (loop.question && loop.possessive && fixedShape(loop.body(), true)) {
             sum += inner.max;
         } else if (loop.question && loop.possessive) {
             repeat(inner.max, inner.valid, 1);
         } else if (loop.question) {
-            int before = sum;
             sum += inner.max;
             ok &= inner.valid;
-            if (loop.inGroup) {
-                restart();
-            } else if (sum < before) {
-                // Observed on the oracle (RegexLookbehind): a '?' on an atomic group is checked
-                // for overflow like any other repeat, so a(?>b+)? is rejected and (?>b+)? is not.
-                ok = false;
-            }
+            restart();
         } else if (loop.grouped && !fixedShape(loop.body(), true)) {
             ok = false;
         } else {
             repeat(inner.max, inner.valid, loop.maxCount());
         }
+    }
+
+    /**
+     * Observed on the oracle (RegexLookbehindEdges, atomicStretch): an atomic group is a stretch
+     * of its own that starts from the running total, so the repeats in it are checked against
+     * what came before, and a restart inside it ends where it closes: (?>(?:b|c)d+)b+ is
+     * accepted, (?:(?:b|c)d+)(?>b+)? is not.
+     */
+    private void atomic(Node body) {
+        LookbehindReach inner = new LookbehindReach(body, sum);
+        sum = inner.max;
+        ok &= inner.valid;
     }
 
     private void alternatives(Node[] branches) {

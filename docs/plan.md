@@ -320,7 +320,7 @@ Goal: the everyday `java.util` and `java.io` surface from
 
 - [ ] S5-09 `java.util.regex` engine: an explicit backtrack stack (no recursion per
       iteration, so a non-flat loop runs as deep as the heap allows instead of
-      about 800 to 2000 iterations), and the loop memo extended across lookarounds
+      about 500 to 2000 iterations), and the loop memo extended across lookarounds
       and possessive repeats (so `(?:a|a*)*b(?=c)` stops being exponential).
       Behaviour stays as pinned by the `Regex*` goldens; see "Known gaps" in
       `docs/regex.md` for the measured limits.

@@ -19,9 +19,22 @@ final class Parser extends GroupReader {
     private boolean atomCapturing;
     /** Whether the atom just parsed came out of a parenthesized group of any kind. */
     private boolean atomFromGroup;
+    /** Where the deepest group opened so far starts, or -1 (see stackOverflow). */
+    private int deepestOpen = -1;
+    private int deepestDepth;
 
     Parser(String pattern, int flags) {
         super(pattern, flags);
+    }
+
+    /**
+     * The error for a pattern nested too deeply for the stack. Observed on the oracle
+     * (RegexLimits): it has an index inside the pattern, which there depends on the stack size;
+     * here it is the '(' of the deepest group, or where the parse stopped when there is none.
+     */
+    PatternSyntaxException stackOverflow() {
+        int at = deepestOpen >= 0 ? deepestOpen : Math.max(0, Math.min(cursor, len) - 1);
+        return errorAt("Stack overflow during pattern compilation", at);
     }
 
     Node parse() {
@@ -63,6 +76,10 @@ final class Parser extends GroupReader {
                     }
                     stack[depth] = f;
                     cur = f;
+                    if (depth > deepestDepth) {
+                        deepestDepth = depth;
+                        deepestOpen = open;
+                    }
                 }
             } else {
                 add(cur, quantify(atom()));

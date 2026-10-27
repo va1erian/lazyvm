@@ -139,17 +139,23 @@ A lookbehind looks back in one of two ways, as the oracle does
 
 - When the pattern text has a surrogate char written raw (a pair, or a lone
   half) at or after the start of the lookbehind, the starts are found by
-  stepping back whole code points. The first start tried is the one `min` code
-  points back (the lowest start, if fewer lie behind) and the others follow one
-  code point at a time up to the reach. A start never falls between the halves
+  stepping back whole code points over the text. The first start tried is the
+  one `min` code points back (the start of the text, if fewer lie behind; a
+  start before the start of an opaque region is not tried, so it sets neither a
+  group nor `hitEnd`) and the others follow one code point at a time up to the
+  reach. A start never falls between the halves
   of a pair, so `(?<=😀)A`, `(?<=\x{1F600}y)A`, `(?<=.)A` and `(?<=[^😀])A` all
   see an emoji as one step, and a lone low surrogate `\uDC00` is not found
   inside a pair. A raw surrogate written before the lookbehind does not count:
-  `😀|(?<=\x{1F600})A` is the second kind. A reach that wrapped negative (see
-  "Lookbehind reach") allows as many steps as its absolute value, but at most
-  the number of chars from the position to the end of the text (not the
-  region), and `Integer.MIN_VALUE` allows none: `(?<=c(y)?b*)x|😀` matches `cx`
-  and not `cbx`, and `(?<=b*\S)x|😀` never matches.
+  `😀|(?<=\x{1F600})A` is the second kind. A reach that wrapped to a negative
+  -k (see "Lookbehind reach") is not a number of steps but a bound in chars: a
+  start may lie as many chars before the position as k code points take after
+  it, the walk forward stopping at the end of the text (not the region). A pair
+  after the position therefore lets the search go one char further back, and at
+  the end of the text, or for `Integer.MIN_VALUE` (whose negation overflows),
+  only the position itself is left: `(?<=c(y)?b*)x|😀` matches `cx` and not
+  `cbx`, `(?<=a*b?😀)x` finds nothing in `ab😀x`, and `(?<=b*\S)x|😀` never
+  matches (`RegexLookbehindEdges`, `wrappedFloor`).
 - Otherwise the starts are found by stepping back chars, from `min` down to
   `i - reach` computed in `int` arithmetic, clamped to the region start. The reach
   counts a character above U+FFFF as one, so `(?<=\x{1F600})A` and
@@ -160,11 +166,14 @@ its characters, a repeat that many times), and so does the overflow check:
 `(?<=(?:😀a){715827883})A` is accepted. When the region starts inside a pair
 the step still reads the pair and then has no start left.
 
-The supplementary fuzz of the reviewer (`RxFuzz supp`, 15000 cases over ten
-seeds) differs from the oracle in 12 cases by `hitEnd`/`requireEnd` only, and in
-3 more: a nested `(?<!..(?<!..){1,3}|..)++` (the wrapped reach inside a repeated
-lookbehind), the capture quirk below, and `a+(?>x\s*)?` in a lookbehind (the
-oracle accepts it, here it is rejected; `a+(?>\s*x)?` is rejected by both).
+The reviewer's fuzz (`RxFuzz`, 1500 cases for each of ten seeds, plain and
+supplementary: 30000 cases) differs from the oracle as follows. Of the 15000
+supplementary cases, 7 differ by `hitEnd`/`requireEnd` only and 1 more by the
+capture quirk of a group inside a group repeated by `*` (Known gaps). Of the
+15000 plain ones, 16 differ by `hitEnd`/`requireEnd` only and 17 more, every one
+of which has a `\G` that reads the end of the previous match after a failed
+attempt (Known gaps). The engine differed from the oracle in each of these cases
+before the last round of lookbehind fixes as well.
 
 ## Lookbehind reach
 
@@ -179,14 +188,23 @@ bodies with the oracle's verdicts and match counts).
 | `*`, `+`, `{n}`, `{n,m}`, `{n,}` are rejected when their count overflows the total so far | `a+b+`, `ab*`, `_a+` rejected; `a*a`, `a+aa`, `_*a` ok |
 | a plain or lazy `?` never is | `a+_?` ok, `a+_{0,1}` rejected |
 | an alternation contributes its longest branch, counted from -1 | `a+b\|c+d` ok, never matches; `a*_?\|c*_?` ok, finds nothing |
-| after an alternation, and after a group repeated by plain or lazy `?`, the total starts again from zero, up to the end of the enclosing branch or repeated group | `(?:a\|b)a+`, `(?:ab)?a+` ok; `(?:ab)?+a+`, `ab?a+` rejected |
+| after an alternation, and after a group repeated by plain or lazy `?`, the total starts again from zero, up to the end of the enclosing branch or repeated group, or of an atomic group around it | `(?:a\|b)a+`, `(?:ab)?a+`, `(?>(?:b\|c)d+)b+` ok; `(?:ab)?+a+`, `ab?a+`, `(?:(?:b\|c)d+)(?>b+)?` rejected |
+| an atomic group, and `?`, `??` or `?+` on an atom that is not a `(..)` or `(?:..)` group (an atomic group, `\R`), count as the atom written alone: the repeats inside are checked against the total before it | `(?>b+)?`, `x*\S(?>b+)?`, `a+(?>x\s*)?`, `a(?>b+\|c)?`, `a+\R?`, `(?>\s*x)?+` ok; `a(?>b+)?`, `a+(?>\s*x)?`, `(?>b+\|c)?(?>\s*x)?`, `a+(?>b{2147483640})?+` rejected |
 | a repeat of a group is rejected when the group has alternatives or a variable part; a lookaround in the group takes no width and is not a variable part | `(?:a\|b)+`, `(?:a\|b){2}`, `(?:a?b)+` rejected; `(?:a\|b)?`, `(?>a\|b)+`, `(?:(?=b)b){2}` ok |
 | a group of n chars repeated without an upper bound reaches n * 2147483647 in int arithmetic: an odd n gives a positive reach (accepted), an even n a negative one (rejected) | `(?:abc)+`, `(?:abcde)+` ok; `(?:ab)+`, `(?:abcd)+`, `(?:ab){2,}` rejected |
 | a back reference is rejected | `(a)\1` |
 | the matcher looks back from the shortest body to the reach, in int arithmetic | a reach that wrapped to a small negative number finds nothing: `(?<!_*\p{InBasicLatin}.+)` is true everywhere, `(?<=_*\p{InBasicLatin}.+)` never |
 
-Known differences: a possessive `?+` over a group with an unbounded body, and a
-few deeper nestings of these rules, can differ from the oracle.
+The atomic and `?` rows were checked against about 90000 probes on the
+oracle (prefixes whose total has already wrapped, alternation inside and around
+the group, nested `(?>(?>..)?)?`, all three kinds of `?`): every verdict agrees.
+
+Known differences: a `(..)` or `(?:..)` group (including `(?i:..)`) repeated by
+`?` whose own reach wrapped negative adds that negative reach here, where the
+oracle behaves as if it added nothing, so `(?<=a(?:b+c)?)y` finds `y` in `abcy`
+here and not on the oracle, and `(?<=x*\S(?:b+c)?)y` finds it in `abcxy` only on
+the oracle; the verdicts agree. A possessive `?+` over such a group with an
+unbounded body, and a few deeper nestings of these rules, can also differ.
 
 ## Errors
 
@@ -256,6 +274,11 @@ the VM; the oracle's run is the second figure):
   pair is read whole by the oracle in more shapes than here (fuzz seed 1021).
 - The end of the previous match after a failed search over a pattern with a
   supplementary literal (`a*\x{1F600}\x{1F600}`) differs on the oracle.
+- The end of the previous match that `\G` reads after a failed attempt also
+  differs for some patterns that nest possessive or lazy loops and lookarounds
+  (17 of the 15000 plain fuzz cases, such as `\b(?>\p{javaLowerCase})\G` with
+  `UNICODE_CASE` on `fooA`, which `lookingAt()` matches after a failed `matches()`
+  on the oracle and not here).
 - A loop of loops is limited to roughly a thousand outer iterations here
   (`(?:(?:ab)+c)*` on 4000 repetitions overflows; the oracle manages it).
 - The shortest match that bounds a failed search counts nothing for a repeat of
@@ -287,16 +310,20 @@ the VM; the oracle's run is the second figure):
   check comes before the end of the pattern is noticed here).
 - **Depth of recursion.** A loop over a body that is not flat recurses, and the
   VM allows 4096 Java frames (`Options::max_frames`); the oracle's default
-  stack is far deeper, so it throws `StackOverflowError` later. Measured here
-  (`Depth` probe, iterations that still match): `(?:(a)b)*` 816 (5 frames per
-  iteration), `((a)b)*` 576 (7), `(a)\1*` 2016 (2), `(?:(?=a)a)*` 1360 (3),
-  `(?:a(b))*` 816, `(?:(a)|b)*` 816. The oracle with an 8 MB stack manages
-  more than 260000 of each. The cause is the frame limit and the one-frame-
-  per-node walk, not the matcher alone; a raised `max_frames` moves the limits
-  proportionally. A pattern nested too deeply to compile raises
-  `PatternSyntaxException` ("Stack overflow during pattern compilation"), as on
-  the oracle; the depth where that happens differs (here between 1000 and 5000 levels of `(`,
-  `(?=` or `(?<=`; the oracle manages 5000 of them).
+  stack goes deeper, so it throws `StackOverflowError` later. Measured with the
+  reviewer's `Depth8` probe (the most iterations that still match, searched up
+  to 400000): here `(?:(a)b)*` 817 (5 frames per iteration), `((a)b)*` 583 (7),
+  `(a)\1*` 2044 (2), `(?:(?=a)a)*` 1362 (3), `(?:a(b))*` 817, and `(?:(a)|b)*`
+  817 on `a`s, 1362 on `b`s and 510 on `ab`s. The oracle at its default stack
+  size (no `-Xss`) matches the first five at 400000 and `(?:(a)|b)*` up to about
+  1500 `a`s, 1750 `b`s and 680 `ab`s; with `-Xss8m` about 16200, 14500 and 6500
+  (these vary by a few percent from run to run). The cause is the frame limit
+  and the one-frame-per-node walk, not the matcher alone; a raised `max_frames`
+  moves the limits proportionally. A pattern nested too deeply to compile
+  raises `PatternSyntaxException` ("Stack overflow during pattern
+  compilation"), as on the oracle, with the index of the `(` of the deepest
+  group (the oracle's index depends on its stack); the depth where that happens
+  differs (see Cost and limits).
 - **Exponential blow-up.** A lookaround, an atomic group, a possessive repeat
   or a back reference in the pattern turns `LoopMemo` off, and a pattern that
   backtracks exponentially then does so 6 to 8 characters earlier than on the
@@ -319,10 +346,14 @@ iterations) overflows, and so does a loop that recurses:
   backtracking state in an int array: no stack, about 40 bytes per iteration.
 - Any other loop (a body with a nested group, lookaround or back reference, e.g.
   `(?:(a)b)*`) recurses, about four frames per iteration: roughly 1000 iterations.
-- Group nesting is parsed with an explicit stack: 1000 levels of any group kind
-  compile, and 5000 of `(?:`, `(?>` and `(?i:`; `(`, `(?=` and `(?<=` fail
-  between 1000 and 5000 (the oracle fails between 5000 and 20000). Nested character
-  classes recurse, about 4000 levels.
+- Group nesting is parsed with an explicit stack (the reviewer's `Deep8` probe,
+  at 300, 1000, 2000, 5000, 20000 and 200000 levels): here 2000 levels of any
+  group kind compile, `(`, `(?=`, `(?!`, `(?<=` and `(?<!` fail at 5000, and
+  `(?:`, `(?>`, `(?i:` and `(?:x|` compile at 200000. The oracle at its default
+  stack size (no `-Xss`) fails at 1000 for `(?:`, at 2000 for `(`, `(?<=`,
+  `(?<!`, `(?i:` and `(?:x|`, and at 5000 for `(?=`, `(?!` and `(?>`. Nested character
+  classes recurse: here 2000 levels compile and 5000 fail, on the oracle 5000
+  compile and 20000 fail.
 - A class or alternation of ten thousand single characters is one sorted range
   table; ranges are merged, so lookups are a binary search.
 - Backtracking is exponential on patterns such as `(a+)+b` against `aaaa..c`.

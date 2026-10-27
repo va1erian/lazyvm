@@ -191,31 +191,30 @@ final class GroupNodes {
 
         /**
          * Observed on the oracle (RegexLookbehindEdges): starts are tried by stepping back one code
-         * point at a time, from minLen of them (or the lowest start when fewer lie behind) up to a
-         * limit that is maxLen. When the reach wrapped negative, the limit is its absolute value
-         * but at most the number of chars from i to the end of the text (not of the region), and
-         * Integer.MIN_VALUE, whose negation overflows, leaves no step at all. A start that needs
-         * more steps than the limit is not tried. A step that reads a pair the region start splits
-         * ends the search.
+         * point at a time over the text, not the region, from minLen of them (or the start of the
+         * text when fewer lie behind) up to maxLen of them. A start before the region start is not
+         * tried (lowestStart), and a step that reads a pair the region start splits ends the
+         * search. A reach that wrapped negative is a bound in chars instead (see wrappedFloor).
          */
         private boolean behindByCodePoints(Matcher m, int i) {
-            int limit = maxLen >= 0 ? maxLen : maxLen == Integer.MIN_VALUE ? 0 : Math.min(-maxLen, m.textLength - i);
+            int limit = maxLen >= 0 ? maxLen : Integer.MAX_VALUE;
+            int floor = maxLen >= 0 ? Integer.MIN_VALUE : wrappedFloor(m, i, -maxLen);
             int start = i;
             int n = 0;
-            while (n < minLen && start > m.lo) {
+            while (n < minLen && start > 0) {
                 start = stepBack(m, start);
                 n++;
             }
             if (start < m.lo) {
                 return false;
             }
-            if (n <= limit && head.match(m, start)) {
+            if (n <= limit && start >= floor && head.match(m, start)) {
                 return true;
             }
             while (n < limit && start > m.lo) {
                 start = stepBack(m, start);
                 n++;
-                if (start < m.lo) {
+                if (start < m.lo || start < floor) {
                     return false;
                 }
                 if (head.match(m, start)) {
@@ -223,6 +222,22 @@ final class GroupNodes {
                 }
             }
             return false;
+        }
+
+        /**
+         * Observed on the oracle (RegexLookbehindEdges, wrappedFloor): for a reach that wrapped to
+         * -k, the lowest start lies as many chars before i as k code points take after i, the walk
+         * stopping at the end of the text (not of the region). A pair after i thus lets the search
+         * go one char further back, and at the end of the text only i itself is left, as it is for
+         * Integer.MIN_VALUE, whose negation overflows and walks nothing.
+         */
+        private static int wrappedFloor(Matcher m, int i, int k) {
+            int f = i;
+            for (int c = 0; c < k && f < m.textLength; c++) {
+                boolean pair = f + 1 < m.textLength && Character.isSurrogatePair(m.text.charAt(f), m.text.charAt(f + 1));
+                f += pair ? 2 : 1;
+            }
+            return i - (f - i);
         }
 
         private static int stepBack(Matcher m, int start) {

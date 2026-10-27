@@ -38,6 +38,15 @@ public class RegexLimits {
         return String.valueOf(Pattern.compile(re).matcher(in).find());
     }
 
+    /** Whether the message is "description near index N", the pattern, and a caret under index N. */
+    static String messageShape(PatternSyntaxException e, String p) {
+        int at = e.getIndex();
+        String nl = System.lineSeparator();
+        String caret = rep(" ", Math.max(at, 0)) + "^";
+        boolean whole = e.getMessage().equals(e.getDescription() + " near index " + at + nl + p + nl + caret);
+        return (at > 0 && at < p.length() ? ", index inside" : ", index " + at) + (whole ? ", full message" : ", short message");
+    }
+
     public static void main(String[] args) {
         // Loops over a single class, alone or inside one capturing group, take no stack per iteration.
         int deep = 100000;
@@ -136,13 +145,15 @@ public class RegexLimits {
         long millis = (System.nanoTime() - start) / 1000000;
         System.out.println("repeated resets over a String " + found + (millis < 5000 ? " fast" : " slow"));
         // A pattern nested too deeply to compile is reported as a syntax error. The depth at which
-        // that happens differs between engines, so only a depth that both reject is tried.
+        // that happens differs between engines, so only a depth that both reject is tried. The
+        // index depends on the stack as well, so only the shape of the message is printed.
         for (String open : new String[] {"(", "(?=", "(?<="}) {
+            String p = rep(open, 200000) + "a" + rep(")", 200000);
             try {
-                Pattern.compile(rep(open, 200000) + "a" + rep(")", 200000));
+                Pattern.compile(p);
                 System.out.println("nesting 200000 " + open + " compiled");
             } catch (PatternSyntaxException e) {
-                System.out.println("nesting 200000 " + open + " " + e.getDescription());
+                System.out.println("nesting 200000 " + open + " " + e.getDescription() + messageShape(e, p));
             } catch (StackOverflowError e) {
                 System.out.println("nesting 200000 " + open + " StackOverflowError");
             }

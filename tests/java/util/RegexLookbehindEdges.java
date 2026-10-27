@@ -62,7 +62,7 @@ public class RegexLookbehindEdges {
         }
     }
 
-    /** A wrapped reach allows as many steps as chars remain in the text, whatever the region. */
+    /** A wrapped reach is bounded by the chars after the position up to the end of the text. */
     static void wrappedRegions() {
         String t = "ppcbbbbxzz" + E + "zz";
         String[] ps = {"(?<=c(y)?b*)x|" + E, "(?<=b*\\S)x|" + E, "(?<=cc(y)?b*)\\w|" + E};
@@ -76,6 +76,58 @@ public class RegexLookbehindEdges {
                     while (m.find()) {
                         sb.append(m.start()).append('-').append(m.end()).append(',');
                     }
+                }
+            }
+            System.out.println(sb);
+        }
+    }
+
+    /**
+     * A reach that wrapped to -k is a bound in chars: as many before the position as k code points
+     * take after it, up to the end of the text, so a pair after the position lets the search go
+     * one char further back.
+     */
+    static void wrappedFloor() {
+        String[] ps = {"(?<=a*b?" + E + ")x", "(?<=c(y)?[b" + E + "]*)x|" + E, "(?<!_*\\S.+)|" + E,
+            "(?<=x*\\S.{0,2147483647})\\w|" + E, "(?<=x*\\S.{0,2147483646})\\w|" + E,
+            "(?<!x*\\S.{0,2147483645})|" + E, "(?<=x*\\S\\S.{0,2147483644})\\w|" + E, "(?<=x*\\S?.{0,2147483645})\\w|" + E};
+        String[] ts = {"ab" + E + "x", "c" + E + "xz", "aa" + E, "x" + E + "x" + E + "x", E + E + "xx", "bb" + E + "b" + E + "x", "abcdef"};
+        rows(ps, ts);
+        String t = "ab" + E + "c" + E + E + "de";
+        for (String p : ps) {
+            StringBuilder sb = new StringBuilder(esc(p) + ":");
+            for (int[] r : new int[][] {{1, 6}, {2, 5}, {0, 4}, {3, 9}}) {
+                for (int tb = 0; tb < 2; tb++) {
+                    Matcher m = Pattern.compile(p).matcher(t);
+                    m.region(r[0], r[1]).useTransparentBounds(tb == 1);
+                    sb.append(' ');
+                    while (m.find()) {
+                        sb.append(m.start()).append('-').append(m.end()).append(',');
+                    }
+                }
+            }
+            System.out.println(sb);
+        }
+    }
+
+    /**
+     * Fewer code points behind than the body's minimum, counted over the text: the lowest start is
+     * tried only when it lies in the region (or the bounds are transparent), so a start outside an
+     * opaque region sets neither a group nor hitEnd.
+     */
+    static void lowestStart() {
+        String[] ps = {"(?<!(?=(.))[\\w" + E + "]\\w)", "(?<=(?=(.))[\\w" + E + "]\\w\\w)", "(?<![\\w" + E + "](\\w))"};
+        for (String p : ps) {
+            StringBuilder sb = new StringBuilder(esc(p) + ":");
+            for (int[] r : new int[][] {{0, 0}, {1, 1}, {1, 2}, {2, 3}, {0, 1}, {3, 3}}) {
+                for (int tb = 0; tb < 2; tb++) {
+                    Matcher m = Pattern.compile(p).matcher("abc");
+                    m.region(r[0], r[1]).useTransparentBounds(tb == 1);
+                    sb.append(' ');
+                    while (m.find()) {
+                        sb.append(m.start()).append('g').append(m.start(1)).append(',');
+                    }
+                    sb.append(m.hitEnd() ? 'h' : '-');
                 }
             }
             System.out.println(sb);
@@ -122,7 +174,7 @@ public class RegexLookbehindEdges {
         rows(ps, ts);
     }
 
-    /** '?' on an atomic group with an unbounded body is checked for overflow. */
+    /** The repeats inside '?' on an atomic group are checked for overflow against the total before it. */
     static void atomicQuestion() {
         String[] bodies = {"a(?>b+)?", "a(?>b+)?c", "(?>b+)?", "a(?>b+)", "a(?>b+)??", "a(?>b+)?+", "a(?:b+)?", "a(?>b*)?", "a(?>b{2,})?", "a(?>b+)?(?>c+)?", "a(?>b|c)?",
             "a(?>(b+))?", "a(?>bc)?", "x(?>y+)?z+", "(?>b+)?a", "a(?>b++)?"};
@@ -135,13 +187,51 @@ public class RegexLookbehindEdges {
         }
     }
 
+    /**
+     * '?', '??' and '?+' on an atom that is not a (..) or (?:..) group, such as an atomic group or
+     * \R, check the repeats inside it against the running total; an atomic group ends a restart
+     * made inside it, and one made before it carries on into it.
+     */
+    static void atomicStretch() {
+        String[] bodies = {"(?>b+c)?", "(?>\\s*x)?", "a(?>b+|c)?", "x*(?>b+|c)?", "a+\\R?", ".*\\R??\\d", "a+\\R?+b",
+            "x*\\S(?>b+)?", "a+(?>x\\s*)?", "a+(?>\\s*x)?", "(?>b+|c)?(?>\\s*x)?", "(?>b+|c)?(?>c(?>b+)?)?",
+            "(?>(?:b|c)d+)b+", "(?:(?:b|c)d+)(?>b+)?", "(?:b|c)d+(?>b+)?", ".{0,2147483000}(?:a|b)(?>c{1000})?",
+            ".{0,2147483000}(?:a|b).{0,2147483000}(?>c{1000})?", "(?>\\s*x)?+", "a+(?>b{2147483640})?+",
+            "a*(?>b{3}c{2})?+", "x*\\S(?>x\\s*)?+", ".{1,2147483640}(?>(?:b|c)d+)?d+", "a+(?>(?>b+)?)?"};
+        String[] ts = {"abbc", "a\r\nb", "xbbc  xc", "a1b"};
+        for (String b : bodies) {
+            StringBuilder sb = new StringBuilder(esc(b) + ":");
+            for (String pre : new String[] {"(?<=", "(?<!"}) {
+                for (String t : ts) {
+                    sb.append(" [").append(finds(pre + b + ")[bc]", t)).append(']');
+                }
+            }
+            System.out.println(sb);
+        }
+    }
+
+    /** Forty nested '?' on atomic groups compile at once: each level is studied once. */
+    static void nestedQuestions() {
+        StringBuilder open = new StringBuilder();
+        StringBuilder close = new StringBuilder();
+        for (int k = 0; k < 40; k++) {
+            open.append("(?>");
+            close.append(")?");
+        }
+        System.out.println("nested ?: [" + finds("(?<=" + open + "a" + close + ")b", "aab") + "]");
+    }
+
     public static void main(String[] args) {
         wrapped();
         wrappedRegions();
+        wrappedFloor();
+        lowestStart();
         shortBehind();
         regionRestored();
         loops();
         atomicQuestion();
+        atomicStretch();
+        nestedQuestions();
         System.out.println("done");
     }
 }
