@@ -1,0 +1,40 @@
+a-1|true java.lang.StringBuilder true
+true
+en_US
+en_US
+pre:a1b1,234.50
+format: closed null
+toString: closed null
+out: closed null
+locale: closed null
+flush: closed null
+null
+pre:a1b1,234.50
+java.lang.StringBuilder x
+en|null
+6 café1
+7
+true
+java.io.IOException: nope
+a|    b|c    |
+1,234,567
+1,234,567
+null
+null
+no args
+x y
+x
+x
+1-x
+2.3
+   ab|
+   ab|
+true
+50%2
+en_US||en
+en_US de de__x _DE en_US_Var []
+enUS|||C
+true false true
+en_GB de_DE fr_FR en_CA de fr ja_JP it_IT zh_CN
+npe
+done

@@ -1,6 +1,7 @@
 package java.lang;
 
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
 
 public class Throwable implements Serializable {
@@ -150,16 +151,31 @@ public class Throwable implements Serializable {
     }
 
     public void printStackTrace(PrintStream s) {
+        String text = traceText();
         synchronized (s) {
-            printTrace(s, NO_TRACE, "", "", new Seen());
+            s.print(text);
         }
     }
 
+    public void printStackTrace(PrintWriter s) {
+        String text = traceText();
+        synchronized (s) {
+            s.print(text);
+        }
+    }
+
+    /** The whole trace, with its causes and suppressed exceptions, one line per frame. */
+    private String traceText() {
+        StringBuilder sb = new StringBuilder();
+        printTrace(sb, NO_TRACE, "", "", new Seen());
+        return sb.toString();
+    }
+
     /** Prints this throwable, eliding the frames it shares with the enclosing trace. */
-    private void printTrace(PrintStream s, StackTraceElement[] enclosing, String caption,
+    private void printTrace(StringBuilder s, StackTraceElement[] enclosing, String caption,
             String prefix, Seen seen) {
         if (seen.contains(this)) {
-            s.println(prefix + caption + "[CIRCULAR REFERENCE: " + this + "]");
+            line(s, prefix + caption + "[CIRCULAR REFERENCE: " + this + "]");
             return;
         }
         seen.add(this);
@@ -171,12 +187,12 @@ public class Throwable implements Serializable {
             n--;
         }
         int common = trace.length - 1 - m;
-        s.println(prefix + caption + this);
+        line(s, prefix + caption + this);
         for (int i = 0; i <= m; i++) {
-            s.println(prefix + "\tat " + trace[i]);
+            line(s, prefix + "\tat " + trace[i]);
         }
         if (common != 0) {
-            s.println(prefix + "\t... " + common + " more");
+            line(s, prefix + "\t... " + common + " more");
         }
         Throwable[] sup = getSuppressed();
         for (int i = 0; i < sup.length; i++) {
@@ -186,6 +202,10 @@ public class Throwable implements Serializable {
         if (c != null) {
             c.printTrace(s, trace, "Caused by: ", prefix, seen);
         }
+    }
+
+    private static void line(StringBuilder sb, String text) {
+        sb.append(text).append(System.lineSeparator());
     }
 
     /** Identity set of the throwables already printed. */

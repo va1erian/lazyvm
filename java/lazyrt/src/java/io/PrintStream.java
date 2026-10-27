@@ -1,5 +1,8 @@
 package java.io;
 
+import java.util.Formatter;
+import java.util.Locale;
+
 /** A stream that formats values as UTF-8 text and never throws IOException. */
 public class PrintStream extends FilterOutputStream implements Appendable, Closeable {
     private final boolean autoFlush;
@@ -185,6 +188,25 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
 
     public PrintStream append(char c) {
         print(c);
+        return this;
+    }
+
+    public PrintStream printf(String format, Object... args) {
+        return format(format, args);
+    }
+
+    public PrintStream printf(Locale l, String format, Object... args) {
+        return format(l, format, args);
+    }
+
+    /** Formats into a buffer first, so the text reaches the stream in one write. */
+    public PrintStream format(String format, Object... args) {
+        writeText(new Formatter().format(format, args).toString(), false);
+        return this;
+    }
+
+    public PrintStream format(Locale l, String format, Object... args) {
+        writeText(new Formatter(l).format(format, args).toString(), false);
         return this;
     }
 }

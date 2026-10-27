@@ -1,0 +1,81 @@
+% => java.util.UnknownFormatConversionException: Conversion = '%'
+abc% => java.util.UnknownFormatConversionException: Conversion = '%'
+%- => java.util.UnknownFormatConversionException: Conversion = '-'
+%5 => java.util.UnknownFormatConversionException: Conversion = '5'
+%5. => java.util.UnknownFormatConversionException: Conversion = '5'
+%.3 => java.util.UnknownFormatConversionException: Conversion = '.'
+%.f => java.util.UnknownFormatConversionException: Conversion = '.'
+%..2f => java.util.UnknownFormatConversionException: Conversion = '.'
+%y => java.util.UnknownFormatConversionException: Conversion = 'y'
+%-y => java.util.UnknownFormatConversionException: Conversion = 'y'
+%! => java.util.UnknownFormatConversionException: Conversion = '!'
+%# => java.util.UnknownFormatConversionException: Conversion = '#'
+%-5$s => java.util.UnknownFormatConversionException: Conversion = '-'
+%5<s| => java.util.UnknownFormatConversionException: Conversion = '5'
+%1$1$s => java.util.UnknownFormatConversionException: Conversion = '1'
+%F => java.util.UnknownFormatConversionException: Conversion = 'F'
+%i => java.util.UnknownFormatConversionException: Conversion = 'i'
+%tq => java.util.UnknownFormatConversionException: Conversion = 'tq'
+%Tq => java.util.UnknownFormatConversionException: Conversion = 'tq'
+%--d => java.util.DuplicateFormatFlagsException: Flags = '-'
+%++d => java.util.DuplicateFormatFlagsException: Flags = '+'
+%  d => java.util.DuplicateFormatFlagsException: Flags = ' '
+%00d => java.util.DuplicateFormatFlagsException: Flags = '0'
+%##x => java.util.DuplicateFormatFlagsException: Flags = '#'
+%,,d => java.util.DuplicateFormatFlagsException: Flags = ','
+%((d => java.util.DuplicateFormatFlagsException: Flags = '('
+%<<s => java.util.DuplicateFormatFlagsException: Flags = '<'
+%-d => java.util.MissingFormatWidthException: %-d
+%-s => java.util.MissingFormatWidthException: %-s
+%-b => java.util.MissingFormatWidthException: %-b
+%-c => java.util.MissingFormatWidthException: %-c
+%-% => java.util.MissingFormatWidthException: %-%
+%-+ d => java.util.MissingFormatWidthException: %-+ d
+%0d => java.util.MissingFormatWidthException: %0d
+%0,d => java.util.MissingFormatWidthException: %0,d
+%0f => java.util.MissingFormatWidthException: %0f
+%0e => java.util.MissingFormatWidthException: %0e
+%0.3f => java.util.MissingFormatWidthException: %0.3f
+%0(d => java.util.MissingFormatWidthException: %0(d
+%0-d => java.util.MissingFormatWidthException: %-0d
+%-0d => java.util.MissingFormatWidthException: %-0d
+%-010d| => java.util.IllegalFormatFlagsException: Flags = '-0'
+%-010f| => java.util.IllegalFormatFlagsException: Flags = '-0'
+%-010x| => java.util.IllegalFormatFlagsException: Flags = '-0'
+%-07E| => java.util.IllegalFormatFlagsException: Flags = '-^0'
+%+ d => java.util.IllegalFormatFlagsException: Flags = '+ '
+% +d => java.util.IllegalFormatFlagsException: Flags = '+ '
+%+ f => java.util.IllegalFormatFlagsException: Flags = '+ '
+%+ 5.2e => java.util.IllegalFormatFlagsException: Flags = '+ '
+%.2d => java.util.IllegalFormatPrecisionException: 2
+%.0d => java.util.IllegalFormatPrecisionException: 0
+%5.2d => java.util.IllegalFormatPrecisionException: 2
+%.3x => java.util.IllegalFormatPrecisionException: 3
+%.3o => java.util.IllegalFormatPrecisionException: 3
+%.3X => java.util.IllegalFormatPrecisionException: 3
+%.3c => java.util.IllegalFormatPrecisionException: 3
+%.3C => java.util.IllegalFormatPrecisionException: 3
+%.3n => java.util.IllegalFormatPrecisionException: 3
+%.3% => java.util.IllegalFormatPrecisionException: 3
+%.3tY => java.util.IllegalFormatPrecisionException: 3
+%5n => java.util.IllegalFormatWidthException: 5
+%-n => java.util.IllegalFormatFlagsException: Flags = '-'
+%#n => java.util.IllegalFormatFlagsException: Flags = '#'
+%0n => java.util.IllegalFormatFlagsException: Flags = '0'
+%5.2n => java.util.IllegalFormatPrecisionException: 2
+%#% => java.util.IllegalFormatFlagsException: Flags = '#'
+%+% => java.util.IllegalFormatFlagsException: Flags = '+'
+%0% => java.util.IllegalFormatFlagsException: Flags = '0'
+% % => java.util.IllegalFormatFlagsException: Flags = ' '
+%,% => java.util.IllegalFormatFlagsException: Flags = ','
+%(% => java.util.IllegalFormatFlagsException: Flags = '('
+%#d => java.util.FormatFlagsConversionMismatchException: Conversion = d, Flags = #
+%#b => java.util.FormatFlagsConversionMismatchException: Conversion = b, Flags = #
+%#B => java.util.FormatFlagsConversionMismatchException: Conversion = b, Flags = #
+%#h => java.util.FormatFlagsConversionMismatchException: Conversion = h, Flags = #
+%#c => java.util.FormatFlagsConversionMismatchException: Conversion = c, Flags = #
+%#e => [1.500000e+00]
+%#f => [1.500000]
+%#g => java.util.FormatFlagsConversionMismatchException: Conversion = g, Flags = #
+%#a => [0x1.8p0]
+done

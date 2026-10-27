@@ -1,0 +1,18 @@
+abcdfgijkmnpqnull 17
+false
+1c21.52.5truesnullnullxy|42|line|ab|sb|  3.1|ab  |0042|1,234,567|k=7|ff!?b
+closed error: true
+boom error: true
+fine error: false
+to stdout through a stream
+printf too
+flushed explicitly
+5hello
+1 w true true
+4 -1 -1
+111 3 0
+Stream closed
+-1 0
+java.lang.RuntimeException: outer / Caused by: java.lang.IllegalStateException: inner / 
+true
+done

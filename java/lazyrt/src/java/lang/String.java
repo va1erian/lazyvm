@@ -2,7 +2,9 @@ package java.lang;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Comparator;
+import java.util.Formatter;
 import java.util.Iterator;
+import java.util.Locale;
 
 public final class String implements java.io.Serializable, Comparable<String>, CharSequence {
     private final char[] value;
@@ -473,5 +475,13 @@ public final class String implements java.io.Serializable, Comparable<String>, C
 
     public static String valueOf(double d) {
         return Double.toString(d);
+    }
+
+    public static String format(String format, Object... args) {
+        return new Formatter().format(format, args).toString();
+    }
+
+    public static String format(Locale l, String format, Object... args) {
+        return new Formatter(l).format(format, args).toString();
     }
 }
