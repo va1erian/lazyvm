@@ -149,7 +149,7 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
   cause; Java 8's carries a `ClassNotFoundException` from its class loader.
   Tests print only the error's class and message.
 - `PrintStream` and `PrintWriter` over a stream make the same overridable
-  calls as Java 8 (`tests/java/util/PrintCalls`, `WriterBlocks`), with three
+  calls as Java 8 (`tests/java/util/PrintCalls`, `WriterBlocks`), with these
   known exceptions, none of which changes the bytes of an ordinary stream:
   - the number of `write`/`flush` calls reaching the underlying
     `OutputStream` can differ;
@@ -160,3 +160,7 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
     array overwritten on Java 8 only. For the same reason, after a
     subclass's `write` throws, Java 8 sends the text left in that buffer
     again on the next call; LazyVM does not.
+  - when a subclass's `write` throws while `close` writes a held half of a
+    surrogate pair, Java 8 is left half closed (text is refused, but raw
+    `write`, `flush` and `checkError` still reach the stream); LazyVM treats
+    the stream as closed.
