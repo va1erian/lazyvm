@@ -10,9 +10,10 @@ final class StreamWriter extends Writer {
 
     private final OutputStream out;
     private final StringBuilder pending = new StringBuilder();
+    /** Encoded bytes not yet written: `out` sees whole blocks of LIMIT bytes, as on the oracle. */
+    private final byte[] block = new byte[LIMIT];
+    private int used;
     private boolean closed;
-    /** Bytes reached `out` since its last flush; close flushes only then. */
-    private boolean unflushed;
 
     StreamWriter(OutputStream out) {
         super(out);
@@ -27,6 +28,9 @@ final class StreamWriter extends Writer {
 
     public void write(char[] cbuf, int off, int len) throws IOException {
         ensureOpen();
+        if (off < 0 || len < 0 || off > cbuf.length - len) {
+            throw new IndexOutOfBoundsException();
+        }
         pending.append(cbuf, off, len);
         if (pending.length() >= LIMIT) {
             drain(false);
@@ -35,7 +39,22 @@ final class StreamWriter extends Writer {
 
     public void write(String str, int off, int len) throws IOException {
         ensureOpen();
-        pending.append(str, off, off + len);
+        if (str == null) {
+            throw new NullPointerException();
+        }
+        // Observed on the oracle: an empty or overflowing range writes
+        // nothing; any other bad range names its out-of-range end.
+        int end = off + len;
+        if (end <= off) {
+            return;
+        }
+        if (off < 0) {
+            throw new StringIndexOutOfBoundsException(off);
+        }
+        if (end > str.length()) {
+            throw new StringIndexOutOfBoundsException(end);
+        }
+        pending.append(str, off, end);
         if (pending.length() >= LIMIT) {
             drain(false);
         }
@@ -55,24 +74,37 @@ final class StreamWriter extends Writer {
         }
         byte[] bytes = pending.substring(0, n).getBytes();
         pending.delete(0, n);
-        out.write(bytes, 0, bytes.length);
-        unflushed = true;
+        for (int i = 0; i < bytes.length;) {
+            int k = Math.min(LIMIT - used, bytes.length - i);
+            System.arraycopy(bytes, i, block, used, k);
+            used += k;
+            i += k;
+            if (used == LIMIT) {
+                writeBlock();
+            }
+        }
+    }
+
+    private void writeBlock() throws IOException {
+        if (used > 0) {
+            out.write(block, 0, used);
+            used = 0;
+        }
     }
 
     public void flush() throws IOException {
         ensureOpen();
         drain(false);
+        writeBlock();
         out.flush();
-        unflushed = false;
     }
 
     public void close() throws IOException {
         if (!closed) {
             ensureOpen();
+            // Closing does not flush `out` first, as observed on the oracle.
             drain(true);
-            if (unflushed) {
-                out.flush();
-            }
+            writeBlock();
             closed = true;
             out.close();
         }

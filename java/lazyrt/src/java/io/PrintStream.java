@@ -201,12 +201,19 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
 
     /** Formats into a buffer first, so the text reaches the stream in one write. */
     public PrintStream format(String format, Object... args) {
-        writeText(new Formatter().format(format, args).toString(), false);
-        return this;
+        return formatted(new Formatter().format(format, args).toString());
     }
 
     public PrintStream format(Locale l, String format, Object... args) {
-        writeText(new Formatter(l).format(format, args).toString(), false);
+        return formatted(new Formatter(l).format(format, args).toString());
+    }
+
+    /** With autoflush, formatted text is flushed even without a newline. */
+    private PrintStream formatted(String text) {
+        writeText(text, false);
+        if (autoFlush) {
+            flush();
+        }
         return this;
     }
 }

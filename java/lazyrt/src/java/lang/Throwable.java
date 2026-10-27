@@ -150,25 +150,42 @@ public class Throwable implements Serializable {
         printStackTrace(System.err);
     }
 
+    /** One println per line, so an autoflush stream flushes each line. */
     public void printStackTrace(PrintStream s) {
-        String text = traceText();
+        String[] lines = traceLines();
         synchronized (s) {
-            s.print(text);
+            for (String line : lines) {
+                s.println(line);
+            }
         }
     }
 
     public void printStackTrace(PrintWriter s) {
-        String text = traceText();
+        String[] lines = traceLines();
         synchronized (s) {
-            s.print(text);
+            for (String line : lines) {
+                s.println(line);
+            }
         }
     }
 
     /** The whole trace, with its causes and suppressed exceptions, one line per frame. */
-    private String traceText() {
+    private String[] traceLines() {
         StringBuilder sb = new StringBuilder();
         printTrace(sb, NO_TRACE, "", "", new Seen());
-        return sb.toString();
+        String text = sb.toString();
+        String nl = System.lineSeparator();
+        int count = 0;
+        for (int i = text.indexOf(nl); i >= 0; i = text.indexOf(nl, i + nl.length())) {
+            count++;
+        }
+        String[] lines = new String[count];
+        for (int k = 0, i = 0; k < count; k++) {
+            int j = text.indexOf(nl, i);
+            lines[k] = text.substring(i, j);
+            i = j + nl.length();
+        }
+        return lines;
     }
 
     /** Prints this throwable, eliding the frames it shares with the enclosing trace. */

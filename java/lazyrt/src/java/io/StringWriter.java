@@ -35,6 +35,9 @@ public class StringWriter extends Writer {
     }
 
     public void write(String str, int off, int len) {
+        if (off + len < 0) {
+            throw new StringIndexOutOfBoundsException(off + len);
+        }
         buf.append(str.substring(off, off + len));
     }
 

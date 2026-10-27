@@ -158,6 +158,8 @@ final class FormatSpec {
         }
         if (dateTime) {
             sb.append(upper ? 'T' : 't');
+            // The oracle names an upper-case date conversion in upper case.
+            return sb.append(upper ? Character.toUpperCase(conv) : conv).toString();
         }
         return sb.append(conv).toString();
     }
