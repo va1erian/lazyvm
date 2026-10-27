@@ -104,10 +104,15 @@ final class LookbehindReach {
         } else if (loop.question && loop.possessive) {
             repeat(inner.max, inner.valid, 1);
         } else if (loop.question) {
+            int before = sum;
             sum += inner.max;
             ok &= inner.valid;
             if (loop.inGroup) {
                 restart();
+            } else if (sum < before) {
+                // Observed on the oracle (RegexLookbehind): a '?' on an atomic group is checked
+                // for overflow like any other repeat, so a(?>b+)? is rejected and (?>b+)? is not.
+                ok = false;
             }
         } else if (loop.grouped && !fixedShape(loop.body(), true)) {
             ok = false;

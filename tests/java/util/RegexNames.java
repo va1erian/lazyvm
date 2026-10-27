@@ -50,6 +50,7 @@ public class RegexNames {
         rows("gc= takes POSIX, java and category names, case-sensitively; a bare POSIX name is case-insensitive only under UNICODE_CHARACTER_CLASS",
             "gc=Lower", "general_category=Alpha", "GC=Digit", "gc=javaLowerCase", "gc=javalowercase", "gc=alpha", "gc=IsLower", "gc=Lu", "gc=lu", "gc=Word",
             "lower", "LOWER", "alpha", "ALPHA", "aLpHa", "xdigit", "ascii", "isalpha", "Alpha", "Lower");
+        rows("Latin-1", "L1", "IsL1", "l1", "isL1", "ISL1", "gc=L1", "general_category=L1", "javaL1", "IsLatin1", "L2", "ASCII", "IsASCII");
         System.out.println("done");
     }
 }

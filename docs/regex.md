@@ -70,6 +70,8 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
 reads the pair even when the end of a region splits it, so a start at the
 high half just before the end is followed by the end, not by the end minus one
 (`RegexRegionPairs`).
+- `\p{L1}` and `\p{IsL1}` are U+0000 to U+00FF, whatever
+  `UNICODE_CHARACTER_CLASS` says, like `ASCII`.
 - `\p{IsAlnum}`, `IsGraph`, `IsPrint`, `IsBlank` and `IsDigit` are the Unicode
   sets and the other `Is` + POSIX names (`IsLower`, `IsAlpha`, ...) stay ASCII,
   whatever `UNICODE_CHARACTER_CLASS` says; `\p{C}` leaves out unassigned code
@@ -133,26 +135,36 @@ high half just before the end is followed by the end, not by the end minus one
   search skip the other positions; inside any group it does not (`RegexRegions`).
 
 A lookbehind looks back in one of two ways, as the oracle does
-(`RegexLookbehindPairs`, `RegexLookbehindWide`, and a fuzz of about 63000
-cases with raw surrogates, where the few seeds that differ all hit the region
-gap listed below):
+(`RegexLookbehindPairs`, `RegexLookbehindWide`, `RegexLookbehindEdges`):
 
 - When the pattern text has a surrogate char written raw (a pair, or a lone
   half) at or after the start of the lookbehind, the starts are found by
-  stepping back whole code points, from the minimum to the maximum number of
-  them. A start never falls between the halves of a pair, so `(?<=😀)A`,
-  `(?<=\x{1F600}y)A`, `(?<=.)A` and `(?<=[^😀])A` all see an emoji as one
-  step, and a lone low surrogate `\uDC00` is not found inside a pair. A raw
-  surrogate written before the lookbehind does not count: `😀|(?<=\x{1F600})A`
-  is the second kind.
-- Otherwise the starts are found by stepping back chars. The reach counts a
-  character above U+FFFF as one, so `(?<=\x{1F600})A` and `(?<=\x{1F600}y)A`
-  fail on an emoji followed by `A` or `yA`.
+  stepping back whole code points. The first start tried is the one `min` code
+  points back (the lowest start, if fewer lie behind) and the others follow one
+  code point at a time up to the reach. A start never falls between the halves
+  of a pair, so `(?<=😀)A`, `(?<=\x{1F600}y)A`, `(?<=.)A` and `(?<=[^😀])A` all
+  see an emoji as one step, and a lone low surrogate `\uDC00` is not found
+  inside a pair. A raw surrogate written before the lookbehind does not count:
+  `😀|(?<=\x{1F600})A` is the second kind. A reach that wrapped negative (see
+  "Lookbehind reach") allows as many steps as its absolute value, but at most
+  the number of chars from the position to the end of the text (not the
+  region), and `Integer.MIN_VALUE` allows none: `(?<=c(y)?b*)x|😀` matches `cx`
+  and not `cbx`, and `(?<=b*\S)x|😀` never matches.
+- Otherwise the starts are found by stepping back chars, from `min` down to
+  `i - reach` computed in `int` arithmetic, clamped to the region start. The reach
+  counts a character above U+FFFF as one, so `(?<=\x{1F600})A` and
+  `(?<=\x{1F600}y)A` fail on an emoji followed by `A` or `yA`.
 
 The reach counts the same in both (a class or a character one, a literal run
 its characters, a repeat that many times), and so does the overflow check:
 `(?<=(?:😀a){715827883})A` is accepted. When the region starts inside a pair
 the step still reads the pair and then has no start left.
+
+The supplementary fuzz of the reviewer (`RxFuzz supp`, 15000 cases over ten
+seeds) differs from the oracle in 12 cases by `hitEnd`/`requireEnd` only, and in
+3 more: a nested `(?<!..(?<!..){1,3}|..)++` (the wrapped reach inside a repeated
+lookbehind), the capture quirk below, and `a+(?>x\s*)?` in a lookbehind (the
+oracle accepts it, here it is rejected; `a+(?>\s*x)?` is rejected by both).
 
 ## Lookbehind reach
 
@@ -263,6 +275,34 @@ the VM; the oracle's run is the second figure):
   One iteration, lazy and possessive repeats, and alternations of groups agree.
 - A loop inside another loop, such as the inner one of `((a+)+)+b`, stays
   exponential (see Cost and limits).
+- A capturing group inside a group repeated by `*` keeps, on the oracle, the
+  capture of an iteration that was backed out: `((([^a]))*b)` on `b` reports
+  group 3 at 0:1 there and unset here (the repeat of group 2 matches `b`, `b`
+  then fails, and the iteration is given up). This is a different case from the
+  outer-loop capture above.
+- Under `COMMENTS`, the escapes that read the next char (`\c`, `\k<`, `\x{`,
+  `\p{`) do not skip white space and comments the way the oracle does, so
+  error positions and messages differ for patterns such as `\p{ L}`.
+- `(?<😀a*` reports a different error first than the oracle (the group-name
+  check comes before the end of the pattern is noticed here).
+- **Depth of recursion.** A loop over a body that is not flat recurses, and the
+  VM allows 4096 Java frames (`Options::max_frames`); the oracle's default
+  stack is far deeper, so it throws `StackOverflowError` later. Measured here
+  (`Depth` probe, iterations that still match): `(?:(a)b)*` 816 (5 frames per
+  iteration), `((a)b)*` 576 (7), `(a)\1*` 2016 (2), `(?:(?=a)a)*` 1360 (3),
+  `(?:a(b))*` 816, `(?:(a)|b)*` 816. The oracle with an 8 MB stack manages
+  more than 260000 of each. The cause is the frame limit and the one-frame-
+  per-node walk, not the matcher alone; a raised `max_frames` moves the limits
+  proportionally. A pattern nested too deeply to compile raises
+  `PatternSyntaxException` ("Stack overflow during pattern compilation"), as on
+  the oracle; the depth where that happens differs (here between 1000 and 5000 levels of `(`,
+  `(?=` or `(?<=`; the oracle manages 5000 of them).
+- **Exponential blow-up.** A lookaround, an atomic group, a possessive repeat
+  or a back reference in the pattern turns `LoopMemo` off, and a pattern that
+  backtracks exponentially then does so 6 to 8 characters earlier than on the
+  oracle: `(?:a|a*)*b(?=c)` on 14 `a` takes 18 s here and 0.17 s there, and
+  `({0}+(.|.*()?))*\s` takes over 300 s on the reviewer's input. The plan item
+  S5-09 covers both this and the depth above.
 
 ## Cost and limits
 
@@ -279,8 +319,9 @@ iterations) overflows, and so does a loop that recurses:
   backtracking state in an int array: no stack, about 40 bytes per iteration.
 - Any other loop (a body with a nested group, lookaround or back reference, e.g.
   `(?:(a)b)*`) recurses, about four frames per iteration: roughly 1000 iterations.
-- Group nesting is parsed with an explicit stack: 1300 levels of `(?:`, `(`,
-  `(?=` or `(?>` compile (the oracle manages 800 to 1150). Nested character
+- Group nesting is parsed with an explicit stack: 1000 levels of any group kind
+  compile, and 5000 of `(?:`, `(?>` and `(?i:`; `(`, `(?=` and `(?<=` fail
+  between 1000 and 5000 (the oracle fails between 5000 and 20000). Nested character
   classes recurse, about 4000 levels.
 - A class or alternation of ten thousand single characters is one sorted range
   table; ranges are merged, so lookups are a binary search.

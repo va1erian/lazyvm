@@ -190,6 +190,9 @@ final class Props {
         if (name.equals("ASCII")) {
             return CharClass.range(0, 0x7F);
         }
+        if (name.equals("L1")) {
+            return CharClass.range(0, 0xFF);
+        }
         if (unicode) {
             return unicodePosix(name);
         }

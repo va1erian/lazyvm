@@ -252,17 +252,7 @@ final class FlatLoop extends Node {
             return w == 0 ? -1 : p + w;
         }
         if (item instanceof Atoms.Str) {
-            char[] chars = ((Atoms.Str) item).chars;
-            for (int k = 0; k < chars.length; k++) {
-                if (p + k >= m.hi) {
-                    m.hitEnd = true;
-                    return -1;
-                }
-                if (m.text.charAt(p + k) != chars[k]) {
-                    return -1;
-                }
-            }
-            return p + chars.length;
+            return ((Atoms.Str) item).matchEnd(m, p);
         }
         return ((Anchor) item).holds(m, p) ? p : -1;
     }

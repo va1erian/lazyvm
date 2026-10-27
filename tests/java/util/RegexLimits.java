@@ -2,6 +2,7 @@ package util;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /** Deep loops, long classes and alternations, and nested groups: sizes both engines handle. */
 public class RegexLimits {
@@ -134,6 +135,18 @@ public class RegexLimits {
         }
         long millis = (System.nanoTime() - start) / 1000000;
         System.out.println("repeated resets over a String " + found + (millis < 5000 ? " fast" : " slow"));
+        // A pattern nested too deeply to compile is reported as a syntax error. The depth at which
+        // that happens differs between engines, so only a depth that both reject is tried.
+        for (String open : new String[] {"(", "(?=", "(?<="}) {
+            try {
+                Pattern.compile(rep(open, 200000) + "a" + rep(")", 200000));
+                System.out.println("nesting 200000 " + open + " compiled");
+            } catch (PatternSyntaxException e) {
+                System.out.println("nesting 200000 " + open + " " + e.getDescription());
+            } catch (StackOverflowError e) {
+                System.out.println("nesting 200000 " + open + " StackOverflowError");
+            }
+        }
         System.out.println("done");
     }
 }

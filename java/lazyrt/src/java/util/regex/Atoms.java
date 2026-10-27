@@ -89,23 +89,29 @@ final class Atoms {
         }
 
         boolean match(Matcher m, int i) {
+            int end = matchEnd(m, i);
+            return end >= 0 && next.match(m, end);
+        }
+
+        /** Where the run ends when it matches at i, or -1. */
+        int matchEnd(Matcher m, int i) {
             int n = chars.length;
             for (int k = 0; k < n; k++) {
                 if (i + k >= m.hi) {
                     m.hitEnd = true;
-                    return false;
+                    return -1;
                 }
                 if (m.text.charAt(i + k) != chars[k]) {
-                    return false;
+                    return -1;
                 }
             }
             // Observed on the oracle (RegexSurrogates): a run that ends with a high surrogate does
             // not match when the text goes on with a low surrogate (the pair is not split), even
             // past the end of the region.
             if (Character.isHighSurrogate(chars[n - 1]) && i + n < m.textLength && Character.isLowSurrogate(m.text.charAt(i + n))) {
-                return false;
+                return -1;
             }
-            return next.match(m, i + n);
+            return i + n;
         }
 
         int min() {

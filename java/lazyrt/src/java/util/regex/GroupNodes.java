@@ -189,21 +189,45 @@ final class GroupNodes {
             return found;
         }
 
+        /**
+         * Observed on the oracle (RegexLookbehindEdges): starts are tried by stepping back one code
+         * point at a time, from minLen of them (or the lowest start when fewer lie behind) up to a
+         * limit that is maxLen. When the reach wrapped negative, the limit is its absolute value
+         * but at most the number of chars from i to the end of the text (not of the region), and
+         * Integer.MIN_VALUE, whose negation overflows, leaves no step at all. A start that needs
+         * more steps than the limit is not tried. A step that reads a pair the region start splits
+         * ends the search.
+         */
         private boolean behindByCodePoints(Matcher m, int i) {
+            int limit = maxLen >= 0 ? maxLen : maxLen == Integer.MIN_VALUE ? 0 : Math.min(-maxLen, m.textLength - i);
             int start = i;
-            for (int n = 0; n <= maxLen; n++) {
-                if (n >= minLen && head.match(m, start)) {
-                    return true;
-                }
-                // Observed on the oracle: the step reads a pair that the region start splits, and
-                // then there is no start left to try.
-                boolean pair = start >= 2 && Character.isSurrogatePair(m.text.charAt(start - 2), m.text.charAt(start - 1));
-                start -= pair ? 2 : 1;
+            int n = 0;
+            while (n < minLen && start > m.lo) {
+                start = stepBack(m, start);
+                n++;
+            }
+            if (start < m.lo) {
+                return false;
+            }
+            if (n <= limit && head.match(m, start)) {
+                return true;
+            }
+            while (n < limit && start > m.lo) {
+                start = stepBack(m, start);
+                n++;
                 if (start < m.lo) {
-                    break;
+                    return false;
+                }
+                if (head.match(m, start)) {
+                    return true;
                 }
             }
             return false;
+        }
+
+        private static int stepBack(Matcher m, int start) {
+            boolean pair = start >= 2 && Character.isSurrogatePair(m.text.charAt(start - 2), m.text.charAt(start - 1));
+            return start - (pair ? 2 : 1);
         }
 
         int min() {

@@ -55,6 +55,16 @@ public final class Pattern implements java.io.Serializable {
     }
 
     private void compile() {
+        try {
+            build();
+        } catch (StackOverflowError e) {
+            // Observed on the oracle (RegexLimits): a pattern nested too deeply fails to compile
+            // with this error, not with the StackOverflowError of the parser.
+            throw new PatternSyntaxException("Stack overflow during pattern compilation", pattern, -1);
+        }
+    }
+
+    private void build() {
         Parser parser = new Parser(pattern, flags);
         Node tree = parser.parse();
         flags = parser.flags;
