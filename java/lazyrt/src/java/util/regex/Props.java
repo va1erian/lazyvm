@@ -34,17 +34,31 @@ final class Props {
                 result = Blocks.script(rest);
             }
             failure[0] = "Unknown character script name {" + rest + "}";
-        } else if (name.startsWith("java")) {
-            result = javaClass(name);
-            failure[0] = "Unknown character property name {" + name + "}";
         } else {
-            result = posix(name, unicodeClasses);
-            if (result == null) {
-                result = category(name);
-            }
+            result = plain(unicodeClasses ? canonicalPosix(name) : name, unicodeClasses);
             failure[0] = "Unknown character property name {" + name + "}";
         }
         return result;
+    }
+
+    /** A POSIX, java* or category name, as written alone or as the value of gc=. */
+    private static CharClass plain(String name, boolean unicodeClasses) {
+        CharClass result = name.startsWith("java") ? javaClass(name) : posix(name, unicodeClasses);
+        return result != null ? result : category(name);
+    }
+
+    /**
+     * Observed on the oracle (RegexNames): with UNICODE_CHARACTER_CLASS a bare POSIX name is
+     * matched ignoring case (\p{alpha}), except ASCII; the value of gc= and the Is forms never are.
+     */
+    private static String canonicalPosix(String name) {
+        String[] posix = {"Lower", "Upper", "Alpha", "Digit", "Alnum", "Punct", "Graph", "Print", "Blank", "Cntrl", "XDigit", "Space"};
+        for (String p : posix) {
+            if (p.equalsIgnoreCase(name)) {
+                return p;
+            }
+        }
+        return name;
     }
 
     private static CharClass keyValue(String rawKey, String value, String[] failure) {
@@ -59,7 +73,8 @@ final class Props {
         }
         if (key.equals("gc") || key.equals("general_category")) {
             failure[0] = "Unknown character property name {" + value + "}";
-            return category(value);
+            // Observed on the oracle (RegexNames): a POSIX name here stays ASCII under UNICODE_CHARACTER_CLASS.
+            return plain(value, false);
         }
         failure[0] = "Unknown Unicode property {name=<" + key + ">, value=<" + value + ">}";
         return null;

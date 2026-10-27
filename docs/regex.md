@@ -15,7 +15,7 @@ exist (S11).
 | `Pattern`, `Matcher`, `MatchResult`, `PatternSyntaxException` | the public API |
 | `PatternReader`, `ClassReader`, `GroupReader`, `Parser` | one inheritance chain: cursor and escapes, character classes, group headers, and the main loop with its explicit stack of open groups |
 | `Node`, `Atoms`, `Anchor`, `GroupNodes`, `Repeat`, `FlatLoop` | the node tree the parser builds and `link` wires into a chain |
-| `CharClass`, `Props`, `Category`, `Blocks`, `UnicodeData` | sets of code points and the `\p{..}` names |
+| `CharClass`, `CaseFold`, `Props`, `Category`, `Blocks`, `UnicodeData` | sets of code points, their case-insensitive forms, and the `\p{..}` names |
 | `LookbehindReach` | how far back a lookbehind may look, and which bodies compile |
 | `LoopMemo` | the failed loop states a long search remembers, and which loops may |
 | `Replacement` | `$n`, `${name}` and `\` expansion for `appendReplacement` |
@@ -59,7 +59,8 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
 - Under `COMMENTS`, white space and `#` comments are skipped on both sides of
   the `-` of a class range: `[a- b]` is `a-b`, `[\r- ]` runs on to `]` and is
   unclosed (`RegexFlags`).
-- A pattern with a supplementary character written in its text, or with a
+- A pattern with a surrogate char written raw in its text (a pair, or a lone
+  half: `\x{D83D}` as an escape does not count), or with a
   negated category or block (`\P{Lu}`, `\P{InGreek}`; not `\P{all}`, scripts,
   binary properties or `[^\p{Lu}]`), skips the low half of a pair after a
   failed search attempt at the high half. An explicit start inside the pair
@@ -68,8 +69,26 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
 - `\p{IsAlnum}`, `IsGraph`, `IsPrint`, `IsBlank` and `IsDigit` are the Unicode
   sets and the other `Is` + POSIX names (`IsLower`, `IsAlpha`, ...) stay ASCII,
   whatever `UNICODE_CHARACTER_CLASS` says; `\p{C}` leaves out unassigned code
-  points; `LD`, `all` and `IsWord` exist; `Is` + `java*` names work
-  (`RegexNames`).
+  points; `LD`, `all` and `IsWord` exist; `Is` + `java*` names work.
+  `gc=`, `general_category=` and `GC=` take POSIX (always ASCII), `java*` and
+  category names, case-sensitively; under `UNICODE_CHARACTER_CLASS` a bare
+  POSIX name is matched ignoring case (`\p{alpha}`, not `ascii`) (`RegexNames`).
+- Case folding (`RegexFolding`, 13 pattern forms over a sample of 2268
+  characters): with `CASE_INSENSITIVE | UNICODE_CASE` a character written alone
+  (a literal, or `[c]`) matches the characters with the same
+  `toLowerCase(toUpperCase(x))`, except that `ß` matches only itself (the
+  capital `ẞ` matches `ß`, not the other way round) unless it is part of a
+  literal string of two or more characters; a range, even `[ß-ß]`, holds x when
+  x, `toUpperCase(x)` or `toLowerCase(toUpperCase(x))` is inside it, so `[ſ-ſ]`
+  does not match `s`. In a class, `k`, `s`, `i`, their capitals, `µ`, `Å`, `å`
+  and `ÿ` are not part of a "run of plain characters" because their case
+  partners lie at or above U+0100.
+- Under `COMMENTS`, a single `&` followed by white space or a comment is
+  dropped, and `&` `&` with such text between them is `&&`; a `[` or `]` right
+  after a dropped `&` is an ordinary character. The error index of a range
+  whose plain end is smaller than its start counts the white space after it.
+- `\v` straight before a `-` in a class is the one character U+000B
+  (`[\v-z]` is a range, `[\v-]` holds U+000B and `-`).
 - `{` where an atom is expected starts a repeat of nothing, so `{1}` compiles
   (`RegexErrors`).
 - `\R` is atomic for CRLF (`RegexClasses`).
@@ -85,8 +104,15 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
 - A `PatternSyntaxException` index counts code points (`RegexErrors`).
 - A region that ends between the halves of a surrogate pair still reads the
   whole pair (`RegexRegions`).
-- After a failed attempt that matched some repeat iteration, `\G` and the next
-  `find()` start at the end of that iteration (`RegexRegions`).
+- After a failed attempt, `\G` and the next `find()` start where the last
+  "event" of the attempt ended, in the order they happened and not moved by
+  backing off (`RegexAfterFailure`, which also hashes a sweep over every pair
+  of 21 loop shapes): the end of a run of a repeated class (`a*`, `\d+`, not a
+  run of alternatives such as `(?:a|b)*`), the end of an iteration of a loop
+  over a fixed-width body (`(?:ab)*`, not one written `?`, nor one over
+  alternatives or a variable body, whose inner runs still count), and, for a
+  written `(?>..)` whose body matched, the end of the body in place of what
+  happened inside it. Possessive loops record every iteration.
 - Only `^` or `\A` written directly at the start of a pattern lets a failed
   search skip the other positions; inside any group it does not (`RegexRegions`).
 
@@ -145,14 +171,19 @@ hex escape so it cannot extend an earlier escape).
   alternatives or of a variable body (`\b(?:B|C)+z` on `""` reports
   `requireEnd` on the oracle), and nothing after the first such repeat in the
   same sequence (`RegexEnds`). Other shapes of the oracle's bound can still
-  differ after a failed `find()`.
+  differ after a failed `find()`: a pattern that starts with four or more literal
+  characters is searched for its prefix by the oracle and so is also tried
+  where fewer than the shortest match remains.
+- A pattern with a raw surrogate char in its text compares a literal run by
+  code points on the oracle, so escaped halves of a pair (`\uD83D` then a raw
+  `\uDE00`) do not match a pair in the text there; here they do.
 - A capturing group repeated by a greedy `+`, `*` or `{n,m}` inside an outer
   loop (`(?:(a)+b)*`) keeps, on the oracle, the capture of an earlier outer
   iteration in some cases: `(?:(a)+b)*` on `aabab` reports group 1 at index 1
   there and 3 here, and `(?:(a)*b)*` on `abab` reports 0 there and 2 here.
   One iteration, lazy and possessive repeats, and alternations of groups agree.
-- A nested loop of nested loops such as `((a+)+)+b` stays exponential in its
-  inner loop (see Cost and limits).
+- A loop inside another loop, such as the inner one of `((a+)+)+b`, stays
+  exponential (see Cost and limits).
 
 ## Cost and limits
 
@@ -179,7 +210,13 @@ iterations) overflows, and so does a loop that recurses:
   once a search has taken 20000 loop steps it remembers, per loop, the
   (iteration count, position) states that failed and does not enter them again.
   It applies to loops that sit inside no other loop and no lookaround, in
-  patterns without back references (the class comment says why those are safe).
+  patterns without back references anywhere (also after the loop) and without
+  a capturing group inside a lookaround or atomic group or a possessive repeat
+  of a group (those keep their capture when a path fails, so which paths were
+  tried would show in the groups). The class comment of `LoopMemo` lists what
+  the outcome of a state depends on, and `RegexMemo` pins each guard with
+  searches long enough to switch the memo on (a run of 21000 failing starts
+  first is the cheap way).
   Nested loops such as `((a+)+)+b` stay exponential in their inner loop.
   `(?:x+x+)+y` on 22 `x` takes 0.2 s and `(.*?,){11}P` on `1,` twenty times
   0.3 s here (45 s before); `(?:\w+\s?)*$` on 2000 words and a `!` finishes in

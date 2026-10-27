@@ -29,6 +29,8 @@ final class FlatLoop extends Node {
     private final int slots;
     /** Set by LoopMemo.prepare: this loop may remember the states that failed. */
     boolean memoizable;
+    /** Set by Repeat.Loop: iterations of this loop count as events for Matcher.iterationEnd. */
+    boolean records;
 
     private FlatLoop(Node[][] branches, int group, int minCount, int maxCount, boolean lazy, int id) {
         this.id = id;
@@ -105,16 +107,13 @@ final class FlatLoop extends Node {
             int i = st[f + POS];
             int c = st[f + DONE];
             boolean required = c < minCount;
-            if (c > 0) {
-                m.iterationEnd = i;
-            }
             switch (st[f + PHASE]) {
                 case ENTER:
                     if (c > 0 && i == st[f + LAST]) {
                         st[f + PHASE] = EXIT_ONLY;
                         break;
                     }
-                    if (memoizable && m.memo.busy() && m.memo.failed(id, c < slots ? c : slots - 1, i)) {
+                    if (memoizable && m.memo.step() && m.memo.failed(id, c, slots, i)) {
                         f = drop(m, st, f);
                         if (f < 0) {
                             return false;
@@ -139,6 +138,9 @@ final class FlatLoop extends Node {
                         System.arraycopy(st, 0, bigger, 0, st.length);
                         st = bigger;
                     }
+                    if (records) {
+                        m.iterationEnd = e;
+                    }
                     st[child + POS] = e;
                     st[child + DONE] = c + 1;
                     st[child + LAST] = i;
@@ -156,8 +158,8 @@ final class FlatLoop extends Node {
                     if (!required && !lazy && next.match(m, i)) {
                         return true;
                     }
-                    if (memoizable) {
-                        m.memo.fail(id, c < slots ? c : slots - 1, slots, i);
+                    if (memoizable && m.memo.active()) {
+                        m.memo.fail(id, c, slots, i);
                     }
                     f = drop(m, st, f);
                     if (f < 0) {

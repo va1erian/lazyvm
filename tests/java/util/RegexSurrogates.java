@@ -60,6 +60,19 @@ public class RegexSurrogates {
         for (String re : literal) {
             row(re, texts);
         }
+        System.out.println("== a lone half written raw counts too; the same half as an escape does not");
+        String hi = "\uD835";
+        String lo = "\uDC01";
+        String probe = "(?!\\A)(?:%s(?!)|)";
+        String[] raw = {String.format(probe, hi), String.format(probe, lo), String.format(probe, "[" + lo + "]"), String.format(probe, "\\Q" + hi + "\\E"),
+            String.format(probe, "\\x{D835}"), String.format(probe, "\\x{DC01}"), String.format(probe, "\\" + lo), lo + "x", "a|" + lo, "[" + lo + "]x"};
+        for (String re : raw) {
+            row(re, texts);
+        }
+        System.out.println("== a negated category is flagged only as \\P, and \\P{all} is not");
+        for (String re : new String[] {"(?!\\A)(?:\\P{all}|)", "(?!\\A)(?:\\P{Lu}(?!)|)", "(?!\\A)(?:[^\\p{Lu}](?!)|)", "(?!\\A)(?:\\P{IsLatin}(?!)|)"}) {
+            row(re, texts);
+        }
         System.out.println("== replaceAll and split");
         System.out.println(esc(PAIR.replaceAll("\\P{Lu}", "x")) + " " + esc(("a" + PAIR + "b").replaceAll("\\P{Lu}", "x")));
         System.out.println(esc(PAIR.replaceAll("[^\\p{Lu}]", "x")) + " " + esc(PAIR.replaceAll("\\P{IsAlphabetic}", "x")));

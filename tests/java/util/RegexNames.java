@@ -47,6 +47,9 @@ public class RegexNames {
         rows("java names, with and without Is", "javaLowerCase", "IsjavaLowerCase", "javaLetterOrDigit", "IsjavaLetterOrDigit", "javaDefined",
             "IsjavaDefined", "javaWhitespace", "IsjavaWhitespace", "javaMirrored", "IsjavaMirrored", "javaUnicodeIdentifierPart", "IsjavaUnicodeIdentifierPart", "IsjavaSomething");
         rows("scripts and blocks", "IsLatin", "IsLatn", "IsGreek", "IsCommon", "InGreek", "InBasicLatin", "Latin", "IsInGreek", "block=Greek", "sc=Latin", "script=Common");
+        rows("gc= takes POSIX, java and category names, case-sensitively; a bare POSIX name is case-insensitive only under UNICODE_CHARACTER_CLASS",
+            "gc=Lower", "general_category=Alpha", "GC=Digit", "gc=javaLowerCase", "gc=javalowercase", "gc=alpha", "gc=IsLower", "gc=Lu", "gc=lu", "gc=Word",
+            "lower", "LOWER", "alpha", "ALPHA", "aLpHa", "xdigit", "ascii", "isalpha", "Alpha", "Lower");
         System.out.println("done");
     }
 }

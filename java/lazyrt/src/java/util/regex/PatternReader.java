@@ -16,7 +16,8 @@ class PatternReader {
     int cursor;
     int flags;
     /**
-     * Observed on the oracle: a pattern whose text holds a supplementary character, or that
+     * Observed on the oracle: a pattern whose text holds a surrogate char (a pair, or a lone half
+     * written raw; a \x{D83D} escape does not count), or that
      * negates a category or block (\P{Lu}, \P{InGreek}, \P{all} excepted), makes a failed
      * search attempt at a high surrogate skip the low half of its pair (Matcher.search). It
      * changes nothing for an explicit start inside a pair. Pinned by RegexSurrogates, blessed
@@ -29,8 +30,8 @@ class PatternReader {
         this.src = (flags & Pattern.LITERAL) != 0 ? pattern : removeQuotes(pattern);
         this.len = src.length();
         this.flags = flags;
-        for (int i = 0; i + 1 < pattern.length(); i++) {
-            if (Character.isSurrogatePair(pattern.charAt(i), pattern.charAt(i + 1))) {
+        for (int i = 0; i < pattern.length(); i++) {
+            if (Character.isSurrogate(pattern.charAt(i))) {
                 supplementary = true;
             }
         }

@@ -77,6 +77,26 @@
 [a- -> {error Illegal character range @3}
 [b-a] -> {error Illegal character range @3}
 [a&&b-a] -> {error Illegal character range @6}
+== \v before a '-' is the one character U+000B
+[\v] -> a b c d 85 2028
+[\v-] -> b 2d
+[\v-z] -> b c d 20 2d 61 7a 30 5f 62
+[a\v-] -> b 2d 61
+[\v-\n] -> error Illegal character range @5
+[\v-\x0c] -> b c
+[-\v] -> a b c d 85 2028 2d
+[\v-a-c] -> b c d 20 2d 61 30 5f
+[\v-\v] -> b
+[a-\v] -> error Illegal character range @4
+[\v-[a]] -> b 2d 61
+[\v-&&[b]] -> b c d 20 62
+[\h-] -> 20 2d 9
+[\h-z] -> 20 2d 7a 9
+[\V-] -> 20 2d 61 7a 30 9 5f 62
+[\w-z] -> 2d 61 7a 30 5f 62
+[\s-z] -> a b c d 20 2d 7a 9
+[\v\v-] -> a b c d 85 2028 2d
+[\v -] -> a b c d 85 2028 20 2d
 == every class of up to four items
 4680 classes, 4468 not empty, hash -1953682963419814192
 4680 negated classes, 3876 not empty, hash 3430581304036737

@@ -190,7 +190,7 @@ final class Parser extends GroupReader {
         if (body instanceof Atoms.Str || body instanceof Node.Empty || body instanceof Anchor) {
             return body;
         }
-        return new GroupNodes.Atomic(body);
+        return new GroupNodes.Atomic(body, true);
     }
 
     /** Alternatives that are each one char of a class are one class, which runs without recursion. */
@@ -209,6 +209,14 @@ final class Parser extends GroupReader {
 
     /** Builds a sequence, merging runs of plain literal chars into one string node. */
     private Node sequenceOf(Node[] items, int n) {
+        // Observed on the oracle (RegexFolding): two or more case-folded literals in a row form a
+        // literal string, which folds without the single character's exceptions (CharClass.FoldChar).
+        for (int k = 1; k < n; k++) {
+            if (isFoldedLiteral(items[k - 1]) && isFoldedLiteral(items[k])) {
+                ((Atoms.One) items[k - 1]).cc.loosen();
+                ((Atoms.One) items[k]).cc.loosen();
+            }
+        }
         Node[] out = new Node[n];
         int m = 0;
         int i = 0;
@@ -235,6 +243,10 @@ final class Parser extends GroupReader {
         Node[] exact = new Node[m];
         System.arraycopy(out, 0, exact, 0, m);
         return new Node.Seq(exact);
+    }
+
+    private static boolean isFoldedLiteral(Node n) {
+        return n instanceof Atoms.One && ((Atoms.One) n).foldedLiteral;
     }
 
     // Atoms other than groups.
@@ -284,7 +296,9 @@ final class Parser extends GroupReader {
 
     private Atoms.One literal(int cp) {
         if (has(Pattern.CASE_INSENSITIVE)) {
-            return new Atoms.One(CharClass.foldRange(cp, cp, has(Pattern.UNICODE_CASE)));
+            Atoms.One folded = new Atoms.One(CaseFold.single(cp, has(Pattern.UNICODE_CASE)));
+            folded.foldedLiteral = true;
+            return folded;
         }
         Atoms.One one = new Atoms.One(CharClass.single(cp));
         one.literal = cp;
@@ -466,7 +480,7 @@ final class Parser extends GroupReader {
         Node loop = new Repeat.Loop(atom, min, max, mode == Repeat.LAZY, loopCount++,
             atomWasGroup && !question && mode != Repeat.POSSESSIVE, question, mode == Repeat.POSSESSIVE,
             atomWasGroup);
-        return mode == Repeat.POSSESSIVE ? new GroupNodes.Atomic(loop) : loop;
+        return mode == Repeat.POSSESSIVE ? new GroupNodes.Atomic(loop, false) : loop;
     }
 
     /**

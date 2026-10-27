@@ -33,6 +33,23 @@ public class RegexClassAlgebra {
         }
     }
 
+    /** The hex code points among the line breaks, white space and a few letters that cls matches. */
+    static String hexMembers(String cls) {
+        String alphabet = "\n\u000b\f\r\u0085  -az0\t_b";
+        StringBuilder sb = new StringBuilder();
+        try {
+            Pattern p = Pattern.compile(cls);
+            for (int i = 0; i < alphabet.length(); i++) {
+                if (p.matcher(String.valueOf(alphabet.charAt(i))).matches()) {
+                    sb.append(' ').append(Integer.toHexString(alphabet.charAt(i)));
+                }
+            }
+        } catch (PatternSyntaxException e) {
+            sb.append(" error ").append(e.getDescription()).append(" @").append(e.getIndex());
+        }
+        return sb.toString();
+    }
+
     static final String[] TOKENS = {"a", "b", "[b]", "[^b]", "a-c", "\\d", "&&", "&"};
     static long hash;
     static int count;
@@ -73,6 +90,11 @@ public class RegexClassAlgebra {
             "[^bĀ[b]c]", "[^ĀĀ[^b]b]");
         rows("errors",
             "[&&]", "[&&a]", "[a&&", "[a&&[", "[]", "[a-", "[b-a]", "[a&&b-a]");
+        System.out.println("== \\v before a '-' is the one character U+000B");
+        for (String c : new String[] {"[\\v]", "[\\v-]", "[\\v-z]", "[a\\v-]", "[\\v-\\n]", "[\\v-\\x0c]", "[-\\v]", "[\\v-a-c]", "[\\v-\\v]", "[a-\\v]",
+            "[\\v-[a]]", "[\\v-&&[b]]", "[\\h-]", "[\\h-z]", "[\\V-]", "[\\w-z]", "[\\s-z]", "[\\v\\v-]", "[\\v -]"}) {
+            System.out.println(c + " ->" + hexMembers(c));
+        }
         System.out.println("== every class of up to four items");
         sweep("", 4);
         long plain = hash;

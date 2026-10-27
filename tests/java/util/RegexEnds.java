@@ -44,8 +44,13 @@ public class RegexEnds {
         System.out.println("== bodies that count in full");
         for (String re : new String[] {"\\b(?:BC)+?z", "\\b(B)+?z", "\\b(?:B)*z", "\\b(?:BB)+z", "\\b(?:B\\d)+z", "\\b(?:[BC])+z", "\\b(?:B|C)?z", "\\b(?:BC){2}z",
             "\\b(BC)+z", "\\b(?:B\\b)+z", "\\b(?:B{2})+z", "\\b(?:B|C)++z", "\\b(?>B|C)+z", "\\b(?:B(?=C))+z", "\\b(?:B(?:C))+z", "\\b(?:B)+(?:C|D)z", "(?:B|C)+?z",
-            "\\b(B)?\\1{3,}z", "\\b(B)\\1+z", "\\b(?:(B)\\1)+z"}) {
+            "\\b(B)?\\1{3,}z", "\\b(B)\\1+z", "\\b(?:(B)\\1)+z",
+            "\\b(?:BB|C)++z", "\\b(?:B+C)*+z", "\\b(?:B|CC)*+z", "\\b(?>(?:BB|C)*)z", "\\b(?>(?:BB|C)+)z", "\\b(?>B+C)z", "\\b(?>(?:B|C)+x*)z"}) {
             row(re, loopTexts);
+        }
+        System.out.println("== a possessive or atomic loop over alternatives, without \\b, on texts that end right after the loop");
+        for (String re : new String[] {"(?:BB|C)++z", "(?:B+C)*+z", "(?:B|CC)++z", "(?:B|CC)*+z", "(?>(?:BB|C)+)z", "(?:BB|C)+z", "(?:B+C)*z"}) {
+            row(re, "C", "CC", "BC", "xC", "Bz", "BBC", "CCz");
         }
         System.out.println("done");
     }

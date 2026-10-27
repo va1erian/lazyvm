@@ -129,6 +129,14 @@ public class RegexFlags {
             find(re, Pattern.COMMENTS, "abc \n-");
         }
         find("[a- b]", 0, "abc \n-");
+        // A single '&' with white space after it is dropped (and '&' '&' with white space between is &&); a '[' or ']'
+        // straight after a dropped one is an ordinary character.
+        for (String re : new String[] {"[a& b]", "[a& ]", "[a& ]]", "[a&  b]", "[a& #c\nb]", "[a& ]x]", "[a&& b]", "[a& &b]", "[a&b]", "[a&]", "[a&\n]",
+            "[a&# c\n]", "[& b]", "[^a& b]", "[^a& &b]", "[a& &]", "[a&&& b]", "[a&c& b]", "[a& [b]]", "[a& [b]c]", "[a& [^b]]", "[ab& [bc]]", "[a& \\d]",
+            "[a& \\p{L}]", "[a& .]", "[a& ]b]", "[a& - c]", "[k-a ]", "[k-a]", "[k-a #x\n]", "[a-\\x62 ]", "[\\x62-a ]"}) {
+            find(re, Pattern.COMMENTS, "ab&c ]x-1.[");
+            find(re, 0, "ab&c ]x-1.[");
+        }
         wordBoundaries();
         System.out.println("done");
     }

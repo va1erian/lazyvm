@@ -106,9 +106,9 @@ abstract class CharClass {
         return new Range(lo, hi);
     }
 
-    /** `[lo-hi]` ignoring case. */
-    static CharClass foldRange(int lo, int hi, boolean unicode) {
-        return lo == hi ? new FoldChar(lo, unicode) : new Fold(new Range(lo, hi), unicode);
+    /** Lets a folded character match in a literal string (see CaseFold.FoldChar); other classes ignore it. */
+    CharClass loosen() {
+        return this;
     }
 
     /** Answers ASCII queries from a bitmap, which is how character classes are used almost always. */
@@ -190,54 +190,6 @@ abstract class CharClass {
                 }
             }
             return true;
-        }
-    }
-
-    /** A range that also matches the code points whose case-mapped forms fall inside it. */
-    private static final class Fold extends CharClass {
-        private final CharClass inner;
-        private final boolean unicode;
-
-        Fold(CharClass inner, boolean unicode) {
-            this.inner = inner;
-            this.unicode = unicode;
-        }
-
-        boolean test(int cp) {
-            if (inner.test(cp)) {
-                return true;
-            }
-            if (!unicode) {
-                if (cp >= 'a' && cp <= 'z') {
-                    return inner.test(cp - 32);
-                }
-                return cp >= 'A' && cp <= 'Z' && inner.test(cp + 32);
-            }
-            int up = Character.toUpperCase(cp);
-            return inner.test(up) || inner.test(Character.toLowerCase(up));
-        }
-    }
-
-    /** One code point, compared ignoring case. */
-    private static final class FoldChar extends CharClass {
-        private final int c;
-        private final boolean unicode;
-
-        FoldChar(int c, boolean unicode) {
-            this.c = c;
-            this.unicode = unicode;
-        }
-
-        boolean test(int cp) {
-            if (cp == c) {
-                return true;
-            }
-            if (!unicode) {
-                return cp < 128 && c < 128 && Character.toLowerCase(cp) == Character.toLowerCase(c);
-            }
-            int up = Character.toUpperCase(cp);
-            int cup = Character.toUpperCase(c);
-            return up == cup || Character.toLowerCase(up) == Character.toLowerCase(cup);
         }
     }
 

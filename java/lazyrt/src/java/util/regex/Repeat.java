@@ -46,6 +46,20 @@ final class Repeat {
         final boolean fromAlternation;
         /** The quantifier was written '?'. */
         final boolean question;
+
+        /**
+         * Observed on the oracle (RegexAfterFailure): the end of a run of a repeated class is an
+         * event for Matcher.iterationEnd, except for a class made of alternatives (?:a|b)*, which
+         * the oracle runs as a loop and which records nothing unless it is possessive.
+         */
+        private boolean recordsRuns() {
+            return !fromAlternation || mode == POSSESSIVE;
+        }
+
+        /** A possessive repeat of a group leaves its capture set when the match later backs out. */
+        boolean keepsCapture() {
+            return group >= 0 && mode == POSSESSIVE;
+        }
         /** The class was written inside a (..) or (?:..) group. */
         final boolean grouped;
 
@@ -88,6 +102,9 @@ final class Repeat {
                     n++;
                 }
                 st[countAt] = n;
+                if (n > 0 && recordsRuns()) {
+                    m.iterationEnd = j;
+                }
                 return n < minCount ? -1 : j;
             }
             int n = st[countAt];
@@ -100,6 +117,9 @@ final class Repeat {
                     return -1;
                 }
                 st[countAt] = n + 1;
+                if (recordsRuns()) {
+                    m.iterationEnd = prevEnd + w;
+                }
                 return prevEnd + w;
             }
             if (n == minCount) {
@@ -145,7 +165,7 @@ final class Repeat {
                 j += w;
                 n++;
             }
-            if (n > 0) {
+            if (n > 0 && recordsRuns()) {
                 m.iterationEnd = j;
             }
             if (n < minCount) {
@@ -176,7 +196,9 @@ final class Repeat {
                 }
                 j += w;
                 n++;
-                m.iterationEnd = j;
+                if (recordsRuns()) {
+                    m.iterationEnd = j;
+                }
             }
             while (true) {
                 if (proceed(m, i, j, n)) {
@@ -191,7 +213,9 @@ final class Repeat {
                 }
                 j += w;
                 n++;
-                m.iterationEnd = j;
+                if (recordsRuns()) {
+                    m.iterationEnd = j;
+                }
             }
         }
 
@@ -237,11 +261,21 @@ final class Repeat {
 
         /** Lets this loop remember failed states (see LoopMemo). */
         void memoize(boolean on) {
-            if (flat != null) {
-                flat.memoizable = on;
-            } else {
-                tail.memoizable = on;
-            }
+            memoizable = on;
+        }
+
+        private boolean memoizable;
+
+        /**
+         * Observed on the oracle (RegexRegions, RegexAfterFailure): after a failed attempt the
+         * "end of the previous match" is the end of the last greedy or lazy run of a repeated
+         * class and of the last iteration of a loop over a fixed-width body, in the order they
+         * happened; backing off does not move it. A loop written '?', or over a body with
+         * alternatives or a variable part, records no iterations of its own unless it is
+         * possessive.
+         */
+        private boolean recordsIterations() {
+            return possessive || (!question && LookbehindReach.fixedShape(body, false));
         }
 
         Loop(Node body, int minCount, int maxCount, boolean lazy, int id, boolean grouped, boolean question,
@@ -274,10 +308,14 @@ final class Repeat {
             this.flat = FlatLoop.of(body, minCount, maxCount, lazy, id);
             if (flat != null) {
                 flat.next = after;
+                flat.memoizable = memoizable;
+                flat.records = recordsIterations();
                 return this;
             }
             this.tail = new Tail(id, minCount, maxCount, lazy);
             tail.next = after;
+            tail.memoizable = memoizable;
+            tail.records = recordsIterations();
             tail.head = body.link(tail);
             return this;
         }
@@ -326,6 +364,7 @@ final class Repeat {
         private final boolean lazy;
         private final int slots;
         boolean memoizable;
+        boolean records;
         Node head;
 
         Tail(int id, int minCount, int maxCount, boolean lazy) {
@@ -343,12 +382,11 @@ final class Repeat {
                 // counts as met; observed on the oracle with (\n*?){2}a, see RegexQuantifiers).
                 return next.match(m, i);
             }
-            if (c > 0) {
+            if (c > 0 && records) {
                 m.iterationEnd = i;
             }
-            boolean memo = memoizable && m.memo.busy();
-            int slot = c < slots ? c : slots - 1;
-            if (memo && m.memo.failed(id, slot, i)) {
+            boolean memo = memoizable && m.memo.step();
+            if (memo && m.memo.failed(id, c, slots, i)) {
                 return false;
             }
             boolean required = c < minCount;
@@ -369,7 +407,7 @@ final class Repeat {
                 return true;
             }
             if (memo) {
-                m.memo.fail(id, slot, slots, i);
+                m.memo.fail(id, c, slots, i);
             }
             return false;
         }

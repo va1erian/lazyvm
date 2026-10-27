@@ -267,9 +267,10 @@ public final class Matcher implements MatchResult {
     }
 
     /**
-     * Observed on the oracle (RegexRegions, "G after a failed matches"): a failed attempt that
-     * matched some repeat iteration leaves the matcher's "end of previous match" at the end of
-     * that iteration, which is where \G matches and where the next find() starts.
+     * Observed on the oracle (RegexAfterFailure): a failed attempt leaves the matcher's "end of
+     * previous match" where the last recorded event ended (a run of a repeated class, an iteration
+     * of a loop over a fixed-width body, the body of an atomic group; see Repeat and GroupNodes),
+     * which is where \G matches and where the next find() starts.
      */
     private int afterFailure() {
         if (iterationEnd >= 0) {

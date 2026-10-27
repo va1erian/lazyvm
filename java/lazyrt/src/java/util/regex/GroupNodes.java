@@ -156,10 +156,13 @@ final class GroupNodes {
     /** (?>x): matches x once and never backtracks into it. */
     static final class Atomic extends Node {
         private final Node body;
+        private final boolean group;
         private Node head;
 
-        Atomic(Node body) {
+        /** `group` is true for a written (?>..), false for the wrapper of a possessive repeat. */
+        Atomic(Node body, boolean group) {
             this.body = body;
+            this.group = group;
         }
 
         Node body() {
@@ -173,15 +176,27 @@ final class GroupNodes {
         }
 
         boolean match(Matcher m, int i) {
-            return head.match(m, i) && next.match(m, m.stopPos);
+            if (!group) {
+                return head.match(m, i) && next.match(m, m.stopPos);
+            }
+            // Observed on the oracle (RegexAfterFailure): when the body of a written (?>..)
+            // matches, what it records is where it ended, replacing the runs and iterations
+            // inside it; when it fails those stay.
+            if (!head.match(m, i)) {
+                return false;
+            }
+            m.iterationEnd = m.stopPos;
+            return next.match(m, m.stopPos);
         }
 
         int min() {
             return body.min();
         }
 
+        // Observed on the oracle (RegexEnds): an atomic group hides a block inside it, so what
+        // follows the group still counts towards the shortest match.
         boolean blocksMin() {
-            return body.blocksMin();
+            return false;
         }
 
         int max() {

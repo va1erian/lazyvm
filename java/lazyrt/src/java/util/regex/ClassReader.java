@@ -60,27 +60,32 @@ class ClassReader extends PatternReader {
         boolean lastIsSingle = false;
         boolean stale = false;
         boolean first = true;
+        boolean literalNext = false;
         while (true) {
             skipComments();
             if (atEnd()) {
                 throw errorAt("Unclosed character class", len - 1);
             }
             int c = src.charAt(cursor);
-            if (c == ']' && !(first && bracketed)) {
+            boolean forced = literalNext && (c == '[' || c == ']');
+            literalNext = false;
+            if (c == ']' && !(first && bracketed) && !forced) {
                 if (bracketed) {
                     cursor++;
                 }
                 break;
             }
             first = false;
-            if (c == '[') {
+            int and = c == '&' ? ampersand() : PLAIN;
+            if (c == '[' && !forced) {
                 cursor++;
                 last = parseClass();
                 lastIsSingle = false;
                 stale |= negating;
                 acc.add(Acc.UNION, last);
-            } else if (c == '&' && cursor + 1 < len && src.charAt(cursor + 1) == '&') {
-                cursor += 2;
+            } else if (and == DROPPED) {
+                literalNext = true;
+            } else if (and == OPERATOR) {
                 CharClass rhs = rightSide();
                 if (rhs == null && acc.isEmpty()) {
                     throw error("Bad class syntax");
@@ -152,6 +157,31 @@ class ClassReader extends PatternReader {
         }
     }
 
+    private static final int PLAIN = 0, OPERATOR = 1, DROPPED = 2;
+
+    /**
+     * Classifies the '&' at the cursor and moves past what it uses. Observed on the oracle
+     * (RegexClassAlgebra, RegexFlags): under COMMENTS, white space and comments after a '&' are
+     * skipped before looking for the second '&', so [a& &b] is [a&&b]; when none follows, a '&'
+     * that had white space after it is dropped, and a '[' or ']' right after that is an ordinary
+     * character: [a& ]] holds a and ']', [a& ] is unclosed.
+     */
+    private int ampersand() {
+        int start = cursor++;
+        if (has(Pattern.COMMENTS)) {
+            skipComments();
+        }
+        if (cur() == '&' && !atEnd()) {
+            cursor++;
+            return OPERATOR;
+        }
+        if (cursor > start + 1) {
+            return DROPPED;
+        }
+        cursor = start;
+        return PLAIN;
+    }
+
     /**
      * The side of an && up to the next '&' or the closing bracket; null when it is empty.
      * Observed on the oracle: nested classes are unioned, but a plain item (or range) starts
@@ -203,14 +233,16 @@ class ClassReader extends PatternReader {
             if (e == 0 && cursor > len) {
                 throw error("Unclosed character class");
             }
-            CharClass cc = predefined(e);
+            // Observed on the oracle: a \v directly before '-' is the one char U+000B, so [\v-z]
+            // is a range and [\v-] holds U+000B and '-'. Pinned by RegexClassAlgebra.
+            CharClass cc = e == 'v' && cur() == '-' ? null : predefined(e);
             if (cc != null) {
                 return cc;
             }
             if (e == 'p' || e == 'P') {
                 return property(e == 'P');
             }
-            c = classEscapeChar(e);
+            c = e == 'v' ? 0x0B : classEscapeChar(e);
         }
         skipComments();
         if (cur() == '-' && !atEnd()) {
@@ -218,10 +250,10 @@ class ClassReader extends PatternReader {
             boolean literalDash = cursor + 1 < len && (after == ']' || after == '[');
             if (!literalDash) {
                 cursor++;
-                return range(c, rangeEnd());
+                return range(c, rangeEnd(c));
             }
         }
-        singleItem = c < 256;
+        singleItem = c < 256 && (!(has(Pattern.CASE_INSENSITIVE) && has(Pattern.UNICODE_CASE)) || CaseFold.staysInLatin1(c));
         return single(c);
     }
 
@@ -236,15 +268,23 @@ class ClassReader extends PatternReader {
         return e;
     }
 
-    private int rangeEnd() {
+    private int rangeEnd(int lo) {
         skipComments();
         int c = readCodePoint();
         if (c != '\\') {
+            if (c < lo) {
+                // Observed on the oracle (RegexFlags): after a plain end of range under COMMENTS the
+                // white space that follows is read before the error, so [k-a ] reports index 4.
+                skipComments();
+            }
             return c;
         }
         int e = read();
         if (e == 0 && cursor > len) {
             throw error("Illegal character range");
+        }
+        if (e == 'v') {
+            return 0x0B;
         }
         if (predefined(e) != null) {
             throw error("Illegal character range");
@@ -254,7 +294,7 @@ class ClassReader extends PatternReader {
 
     private CharClass single(int c) {
         return has(Pattern.CASE_INSENSITIVE)
-            ? CharClass.foldRange(c, c, has(Pattern.UNICODE_CASE)) : CharClass.single(c);
+            ? CaseFold.single(c, has(Pattern.UNICODE_CASE)) : CharClass.single(c);
     }
 
     private CharClass range(int lo, int hi) {
@@ -262,6 +302,6 @@ class ClassReader extends PatternReader {
             throw error("Illegal character range");
         }
         return has(Pattern.CASE_INSENSITIVE)
-            ? CharClass.foldRange(lo, hi, has(Pattern.UNICODE_CASE)) : CharClass.range(lo, hi);
+            ? CaseFold.range(lo, hi, has(Pattern.UNICODE_CASE)) : CharClass.range(lo, hi);
     }
 }

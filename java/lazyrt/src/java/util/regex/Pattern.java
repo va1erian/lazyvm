@@ -61,8 +61,8 @@ public final class Pattern implements java.io.Serializable {
         minLength = tree.min();
         anchoredStart = parser.anchoredStart;
         supplementary = parser.supplementary;
+        LoopMemo.prepare(tree);
         root = tree.link(new Node.Accept());
-        LoopMemo.prepare(root);
     }
 
     public static Pattern compile(String regex) {

@@ -6,15 +6,29 @@ package java.util.regex;
  * proportional to the text length times the iteration limit.
  *
  * <p>A state is a loop, how many iterations it has done (capped where more makes no
- * difference) and a position. The future of such a state only depends on those when the
- * pattern has no back references, the loop sits inside no other loop (whose count would be
- * part of the state) and not inside a lookaround (a lookbehind's body must end at a fixed
- * place). {@link #prepare} marks the loops that qualify. Nothing is remembered until a search
- * has taken {@link #AFTER} loop steps, so ordinary matches pay for a counter only.
- *
- * <p>A state that is skipped would have failed the same way, so the match found and its
- * groups are the same. What differs is the position at which a failed attempt leaves
+ * difference: {@link #slots}) and a position. Skipping a state that failed before is sound only
+ * if what happens from it is decided by those three things and by nothing the search changed on
+ * the way there, and if the groups left over by a failed path do not show in the result:
+ * <ul>
+ * <li>The text, region and flags are fixed for the whole search, so position-only nodes (anchors,
+ * classes, , \G) answer the same each time.
+ * <li>An enclosing loop would put its own count and iteration start into the state, so only
+ * loops that sit inside no other loop are marked.
+ * <li>A lookbehind body is run from many starts towards one fixed end, and a lookahead body ends
+ * at its own marker, so a loop inside any lookaround is not marked.
+ * <li>A back reference reads a group that earlier choices set, so a pattern with one is not
+ * marked at all. The check covers the whole tree, so a back reference after the loop counts.
+ * <li>A group inside a lookaround or an atomic group, and a possessive repeat of a group, keep
+ * their capture when the path later fails, so which paths were tried shows in the groups of the
+ * match: a pattern with one is not marked at all.
+ * <li>hitEnd and requireEnd only ever turn on during a search, and the first visit of a state
+ * already turned on what a revisit would, so skipping it changes neither.
+ * </ul>
+ * What is left to differ is the position at which a failed attempt leaves
  * Matcher.iterationEnd, which only a failed pathological search can show.
+ *
+ * <p>{@link #prepare} marks the loops that qualify. Nothing is remembered, or even allocated,
+ * until a search has taken {@link #AFTER} loop steps, so ordinary matches pay for a counter only.
  */
 final class LoopMemo {
     static final int AFTER = 20000;
@@ -37,21 +51,26 @@ final class LoopMemo {
     }
 
     /** Counts one loop step; true once the search has done enough of them to start remembering. */
-    boolean busy() {
+    boolean step() {
         return ++work > AFTER;
     }
 
-    /** True when the state (loop, count slot, position) is known to fail. */
-    boolean failed(int loop, int slot, int pos) {
+    /** True once the search has done enough steps to remember failures (without counting one). */
+    boolean active() {
+        return work > AFTER;
+    }
+
+    /** True when the state (loop, iterations done, position) is known to fail. */
+    boolean failed(int loop, int count, int slots, int pos) {
         long[] table = bits == null ? null : bits[loop];
         if (table == null || pos < lo || pos >= lo + span) {
             return false;
         }
-        long bit = (long) slot * span + (pos - lo);
+        long bit = bit(count, slots, pos);
         return (table[(int) (bit >> 6)] & (1L << (bit & 63))) != 0;
     }
 
-    void fail(int loop, int slot, int slots, int pos) {
+    void fail(int loop, int count, int slots, int pos) {
         if (bits == null || pos < lo || pos >= lo + span || (long) slots * span > LIMIT_BITS) {
             return;
         }
@@ -60,8 +79,12 @@ final class LoopMemo {
             table = new long[(int) (((long) slots * span + 63) >> 6)];
             bits[loop] = table;
         }
-        long bit = (long) slot * span + (pos - lo);
+        long bit = bit(count, slots, pos);
         table[(int) (bit >> 6)] |= 1L << (bit & 63);
+    }
+
+    private long bit(int count, int slots, int pos) {
+        return (long) (count < slots ? count : slots - 1) * span + (pos - lo);
     }
 
     /** The slot count for a loop: counts below the minimum differ, counts beyond it do not. */
@@ -69,50 +92,61 @@ final class LoopMemo {
         return (maxCount == Node.UNBOUNDED ? minCount : maxCount) + 1;
     }
 
-    /** Marks which loops of the linked tree may remember failures. */
-    static void prepare(Node root) {
-        if (!walk(root, false)) {
-            walk(root, true);
+    /**
+     * Marks which loops of the tree may remember failures. It must run before the tree is linked,
+     * because linking replaces the children of some nodes by their linked heads.
+     */
+    static void prepare(Node tree) {
+        if (!walk(tree, false)) {
+            walk(tree, true);
         }
     }
 
+    private static final int SHIELDED = 1;
+    private static final int KEEPS_CAPTURES = 2;
+
     /**
      * Visits every node without recursion (a pattern can nest thousands of groups). Returns true
-     * when a back reference is found; with `mark`, sets each loop's memoize flag instead.
+     * when the pattern is unsafe as a whole (see the class comment); with `mark`, sets each
+     * loop's memoize flag instead.
      */
     private static boolean walk(Node root, boolean mark) {
         Node[] nodes = new Node[32];
-        boolean[] shielded = new boolean[32];
+        int[] context = new int[32];
         int top = 0;
         nodes[top++] = root;
         while (top > 0) {
             top--;
             Node n = nodes[top];
-            boolean shield = shielded[top];
-            if (n instanceof Atoms.BackRef) {
+            int ctx = context[top];
+            if (n instanceof Atoms.BackRef
+                || (n instanceof GroupNodes.Group && (ctx & KEEPS_CAPTURES) != 0)
+                || (n instanceof Repeat.CharRepeat && ((Repeat.CharRepeat) n).keepsCapture())) {
                 return true;
             }
             if (n instanceof Repeat.Loop) {
                 if (mark) {
-                    ((Repeat.Loop) n).memoize(!shield);
+                    ((Repeat.Loop) n).memoize((ctx & SHIELDED) == 0);
                 }
-                shield = true;
+                ctx |= SHIELDED;
             } else if (n instanceof GroupNodes.Look) {
-                shield = true;
+                ctx |= SHIELDED | KEEPS_CAPTURES;
+            } else if (n instanceof GroupNodes.Atomic) {
+                ctx |= KEEPS_CAPTURES;
             }
             Node[] kids = children(n);
             if (top + kids.length > nodes.length) {
                 int size = Math.max(nodes.length * 2, top + kids.length);
                 Node[] biggerNodes = new Node[size];
-                boolean[] biggerShield = new boolean[size];
+                int[] biggerContext = new int[size];
                 System.arraycopy(nodes, 0, biggerNodes, 0, top);
-                System.arraycopy(shielded, 0, biggerShield, 0, top);
+                System.arraycopy(context, 0, biggerContext, 0, top);
                 nodes = biggerNodes;
-                shielded = biggerShield;
+                context = biggerContext;
             }
             for (Node kid : kids) {
                 nodes[top] = kid;
-                shielded[top++] = shield;
+                context[top++] = ctx;
             }
         }
         return false;
