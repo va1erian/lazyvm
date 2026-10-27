@@ -133,7 +133,23 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public String getCanonicalPath() throws IOException {
+        if (invalid(path)) {
+            throw new IOException("Invalid file path");
+        }
         return SYNTAX.canonical(getAbsolutePath());
+    }
+
+    /** Observed: a path holding a NUL char names no file ("Invalid file path"). */
+    static boolean invalid(String path) {
+        return path.indexOf('\u0000') >= 0;
+    }
+
+    /** `name` for a file stream to open, or the FileNotFoundException Java 8 gives for it. */
+    static String openable(String name) throws FileNotFoundException {
+        if (invalid(name)) {
+            throw new FileNotFoundException("Invalid file path");
+        }
+        return name;
     }
 
     // Observed: kept as given, so a trailing separator of the canonical form stays.
@@ -212,6 +228,9 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public boolean createNewFile() throws IOException {
+        if (invalid(path)) {
+            throw new IOException("Invalid file path");
+        }
         return FileSystem.createNew(path);
     }
 
@@ -389,7 +408,7 @@ public class File implements Serializable, Comparable<File> {
         while (true) {
             String name = pre + lazy.internal.TempNames.next() + s;
             File f = new File(dir, name);
-            if (!name.equals(f.getName())) {
+            if (!name.equals(f.getName()) || invalid(f.getPath())) {
                 throw new IOException("Unable to create temporary file, " + f.getPath());
             }
             if (f.createNewFile()) {

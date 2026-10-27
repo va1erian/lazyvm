@@ -114,8 +114,10 @@ final class StringSearch {
         if (s.length == 0) {
             return Math.min(from, len);
         }
-        for (int i = from; i <= len - s.length; i++) {
-            if (matchesAt(v, len, s, i)) {
+        // The first char is scanned for inline; only a hit is compared in full.
+        char first = s[0];
+        for (int i = from, last = len - s.length; i <= last; i++) {
+            if (v[i] == first && matchesAt(v, len, s, i)) {
                 return i;
             }
         }
@@ -127,8 +129,12 @@ final class StringSearch {
     }
 
     static int lastIndexOf(char[] v, int len, char[] s, int from) {
-        for (int i = Math.min(from, len - s.length); i >= 0; i--) {
-            if (matchesAt(v, len, s, i)) {
+        int i = Math.min(from, len - s.length);
+        if (s.length == 0) {
+            return i < 0 ? -1 : i;
+        }
+        for (char first = s[0]; i >= 0; i--) {
+            if (v[i] == first && matchesAt(v, len, s, i)) {
                 return i;
             }
         }

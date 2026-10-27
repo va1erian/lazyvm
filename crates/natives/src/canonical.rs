@@ -7,9 +7,10 @@
 //! appended as written. On Windows `.` and `..` are applied by name first,
 //! as the OS itself does, and names lose trailing dots (and spaces) by the
 //! observed rules below. On Unix the OS resolves the existing part as
-//! written, so a `..` after a link leaves the link's target, and only the
-//! missing rest is resolved by name: the canonical path names the file the
-//! path opens.
+//! written, so a `..` after a link leaves the link's target, a dangling link
+//! is followed to the target it names, and only the missing rest is resolved
+//! by name, so the canonical path names the file the path opens (files.md
+//! lists the exception: a current directory whose name is not UTF-8).
 
 use std::path::MAIN_SEPARATOR;
 
@@ -23,6 +24,8 @@ const WINDOWS: bool = cfg!(windows);
 const DOT: u16 = b'.' as u16;
 const SPACE: u16 = b' ' as u16;
 const COLON: u16 = b':' as u16;
+/// Win32's path limit; longer paths are opened in their verbatim form.
+const MAX_PATH: usize = 260;
 const SYNTAX: &str = "The filename, directory name, or volume label syntax is incorrect";
 
 fn path_units(vm: &Vm, args: &[Value]) -> VmResult<Vec<u16>> {
@@ -53,8 +56,14 @@ pub(crate) fn real_path(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> 
     let opened = if WINDOWS {
         let (names, trailing) = opened_names(&path, root);
         let parent = &names[..names.len().saturating_sub(1)];
-        if names.last().is_some_and(|n| is_device(n)) && is_dir(&join(&path[..root], parent)) {
-            // Observed: NUL in an existing directory is its own real path.
+        let short = path.len() < MAX_PATH;
+        if !unc(&path)
+            && short
+            && names.last().is_some_and(|n| is_device(n))
+            && is_dir(&join(&path[..root], parent))
+        {
+            // Observed: NUL in an existing directory of a drive is its own
+            // real path; on a share, or past MAX_PATH, it is an ordinary name.
             return ret_ref(Some(vm.new_string_utf16(&joined(
                 &path[..root],
                 &names,
@@ -70,7 +79,7 @@ pub(crate) fn real_path(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> 
             let real = without_verbatim(vm::wtf::to_units(real.as_os_str()));
             ret_ref(Some(vm.new_string_utf16(&real)?))
         }
-        Err(e) if missing(&e) && !below_file(&opened) => {
+        Err(e) if (missing(&e) || refused_device(&e, &opened)) && !below_file(&opened) => {
             Err(VmError::bare("java/nio/file/NoSuchFileException"))
         }
         Err(e) if missing(&e) => {
@@ -95,6 +104,43 @@ fn below_file(path: &[u16]) -> bool {
     let (names, _) = resolved_names(path, root);
     let k = existing(&path[..root], &names);
     WINDOWS && k > 0 && !is_dir(&join(&path[..root], &names[..k]))
+}
+
+/// Observed: a share refuses a DOS device name anywhere in a path as access
+/// denied, and a path past MAX_PATH as an invalid parameter; Java 8 reports
+/// both as a missing file.
+fn refused_device(e: &std::io::Error, path: &[u16]) -> bool {
+    const ERROR_ACCESS_DENIED: i32 = 5;
+    const ERROR_INVALID_PARAMETER: i32 = 87;
+    let refusal = if unc(path) {
+        ERROR_ACCESS_DENIED
+    } else if path.len() >= MAX_PATH {
+        ERROR_INVALID_PARAMETER
+    } else {
+        return false;
+    };
+    WINDOWS && e.raw_os_error() == Some(refusal) && path.split(|&c| c == SEP).any(dos_device)
+}
+
+/// CON, PRN, AUX, NUL, COM1-9, LPT1-9, CONIN$, CONOUT$, before any
+/// extension or trailing spaces, in any case.
+fn dos_device(name: &[u16]) -> bool {
+    let stem = String::from_utf16_lossy(name).to_ascii_uppercase();
+    let stem = stem.split('.').next().unwrap_or("").trim_end();
+    let numbered = |p: &str| {
+        stem.len() == 4
+            && stem.starts_with(p)
+            && stem.as_bytes()[3].is_ascii_digit()
+            && &stem[3..] != "0"
+    };
+    matches!(stem, "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$")
+        || numbered("COM")
+        || numbered("LPT")
+}
+
+/// Whether a path is on a share (`\\host\share\`) rather than a drive.
+fn unc(path: &[u16]) -> bool {
+    path.starts_with(&[SEP, SEP])
 }
 
 /// Whether the OS says the file is not there. On Windows only "file" and
@@ -169,7 +215,8 @@ fn names(path: &[u16], root: usize, strict: bool) -> Result<(Vec<Vec<u16>>, bool
 }
 
 /// The names after `root` with `.` and `..` applied by name, and whether a
-/// separator ends the path: the one place either is resolved by name.
+/// separator ends the path: the one place either is resolved by name (Unix
+/// resolves only the missing rest, after the OS's real base).
 fn resolved_names(path: &[u16], root: usize) -> (Vec<Vec<u16>>, bool) {
     let mut names: Vec<Vec<u16>> = Vec::new();
     for n in path[root..].split(|&c| c == SEP).filter(|n| !n.is_empty()) {
@@ -187,13 +234,23 @@ fn resolved_names(path: &[u16], root: usize) -> (Vec<Vec<u16>>, bool) {
 fn windows_canonical(path: &[u16]) -> Result<Vec<u16>, &'static str> {
     let root_len = root_length(path);
     let root = &path[..root_len];
-    let (names, trailing) = names(path, root_len, true)?;
-    if let Some(device) = names.last().filter(|n| is_device(n)) {
-        // Observed: NUL stands for the device wherever it is.
-        let mut out = units(r"\\.\");
-        out.extend_from_slice(&device[..3]);
-        return Ok(out);
+    // Observed: on a drive, a last name NUL as written (trailing dots and
+    // spaces aside, before `.` and `..` apply and before any other check)
+    // stands for the device wherever it is; on a share it is a name.
+    let written = path[root_len..]
+        .split(|&c| c == SEP)
+        .rfind(|n| !n.is_empty());
+    if let Some(mut device) = written.map(<[u16]>::to_vec).filter(|_| !unc(path)) {
+        while matches!(device.last(), Some(&DOT | &SPACE)) {
+            device.pop();
+        }
+        if is_device(&device) {
+            let mut out = units(r"\\.\");
+            out.extend_from_slice(&device[..3]);
+            return Ok(out);
+        }
     }
+    let (names, trailing) = names(path, root_len, true)?;
     // Observed: a name of only dots and spaces is not looked up (the OS
     // would read `. ` as the directory itself), so it and the rest stay.
     let lookable = names
@@ -202,12 +259,13 @@ fn windows_canonical(path: &[u16]) -> Result<Vec<u16>, &'static str> {
         .unwrap_or(names.len());
     let k = existing(root, &names[..lookable]);
     // Observed: a ':' in a name the OS looks up (one whose parent is a
-    // directory) is a syntax error; below a missing parent it stays as written.
+    // directory under the parent's name as written, so `d2 \a:b` is not) is
+    // a syntax error; below a missing parent it stays as written.
     let colon = |n: &Vec<u16>| n.contains(&COLON);
     if names[..k].iter().any(colon)
         || names
             .get(k)
-            .is_some_and(|n| colon(n) && is_dir(&join(root, &names[..k])))
+            .is_some_and(|n| colon(n) && is_dir(&joined(root, &names[..k], true)))
     {
         return Err(SYNTAX);
     }
@@ -215,6 +273,12 @@ fn windows_canonical(path: &[u16]) -> Result<Vec<u16>, &'static str> {
 }
 
 fn unix_canonical(path: &[u16]) -> Vec<u16> {
+    unix_canonical_hops(path, 40)
+}
+
+/// The existing part resolved by the OS, a dangling link at its end followed
+/// (at most `hops` times, as the OS bounds link chains), then the rest by name.
+fn unix_canonical_hops(path: &[u16], hops: u32) -> Vec<u16> {
     let root_len = root_length(path);
     let root = &path[..root_len];
     let raw: Vec<Vec<u16>> = path[root_len..]
@@ -223,23 +287,33 @@ fn unix_canonical(path: &[u16]) -> Vec<u16> {
         .map(<[u16]>::to_vec)
         .collect();
     let k = existing(root, &raw);
-    let mut out = os_real(join(root, &raw[..k]));
-    for n in &raw[k..] {
-        match n.as_slice() {
-            [DOT] => {}
-            [DOT, DOT] => {
-                let parent = out.iter().rposition(|&c| c == SEP).unwrap_or(0);
-                out.truncate(parent.max(root_len));
-            }
-            _ => {
-                if out.last() != Some(&SEP) {
-                    out.push(SEP);
-                }
-                out.extend_from_slice(n);
-            }
+    let base = os_real(join(root, &raw[..k]));
+    let link = (k < raw.len() && hops > 0)
+        .then(|| dangling_target(&join(root, &raw[..=k])))
+        .flatten();
+    if let Some(target) = link {
+        let start = if target.first() == Some(&SEP) {
+            Vec::new()
+        } else {
+            base
+        };
+        let mut next = join(&start, &[target]);
+        for n in &raw[k + 1..] {
+            next.push(SEP);
+            next.extend_from_slice(n);
         }
+        return unix_canonical_hops(&next, hops - 1);
     }
-    out
+    let rest = join(&base, &raw[k..]);
+    let (names, _) = resolved_names(&rest, root_len);
+    join(root, &names)
+}
+
+/// The target of `path` when it is a symbolic link (whose target is missing).
+fn dangling_target(path: &[u16]) -> Option<Vec<u16>> {
+    let os = vm::wtf::from_units(path);
+    let link = std::fs::read_link(&os).ok()?;
+    Some(vm::wtf::to_units(link.as_os_str()))
 }
 
 /// The OS's resolved form of the first `k` names, then the rest as written.

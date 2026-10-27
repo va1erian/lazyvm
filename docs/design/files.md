@@ -6,10 +6,12 @@ the strings Java code built (relative paths resolve against the process's
 current directory, which is `user.dir`), converted exactly (`vm::wtf`): on
 Windows the UTF-16 units as they are, lone surrogates included; on Unix
 their generalized UTF-8, so a lone surrogate is its own three-byte form.
-Names the OS gives back (listings, canonical forms) convert the other way;
-bytes that are not of that form read as U+FFFD, a surrogate pair spelled as
-two three-byte forms (CESU-8) included, so two different names never read
-as the same string. Distinct strings never name the same file. Messages that
+Every Java string maps to one OS name and back, so distinct strings never
+name the same file. Names the OS gives back (listings, canonical forms)
+convert the other way, and on Unix that is lossy for bytes that are not of
+that form: each byte that starts no valid form reads as U+FFFD (a surrogate
+pair spelled as two three-byte forms, CESU-8, too), so such names can read
+as one another or as a real U+FFFD name (nio-file.md §3). Messages that
 name a file (`FileNotFoundException`, `NoSuchFileException`) hold the path
 exactly as the caller's string, lone surrogates too; so do `user.dir` and
 `java.io.tmpdir`. On LazyOS the same calls go through the Linux ABI.
@@ -90,8 +92,15 @@ Paths (no handle):
   rest appended as written. On Windows `.`/`..` are applied by name first,
   as the OS does, and names are trimmed and checked by nio-file.md PW2; on Unix the
   OS resolves the existing part as written (a `..` after a link leaves the
-  link's target) and only the missing rest is resolved by name, so the
-  result names the file the path opens.
+  link's target), a dangling link is followed to the target it names, and
+  only the missing rest is resolved by name, so the result names the file
+  the path opens or would create. Exception: a relative path under a
+  current directory whose name is not UTF-8 (`user.dir` reads it lossily).
+- A path holding a NUL char names no file: `getCanonicalPath` and
+  `createNewFile` → `IOException("Invalid file path")`, the file streams →
+  `FileNotFoundException("Invalid file path")`, `createTempFile` →
+  `"Unable to create temporary file, <path>"`; the queries return false, 0
+  or null, as Java 8 does.
 - `static native String realPath(String path)`: the OS's real path of an
   existing file (`Path.toRealPath`); missing → `NoSuchFileException`,
   another failure → `IOException` whose message is the OS's reason.

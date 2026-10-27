@@ -42,7 +42,10 @@ public class CanonWin {
         {"nope:x|y", SYNTAX}, {"x|..|a:b", SYNTAX}, {"d2|a:", SYNTAX},
         {"f2|a:b", "<B>|f2|a:b"}, {"nope|a:b", "<B>|nope|a:b"}, {"d2|nope|a:b", "<B>|d2|nope|a:b"},
         {"nope|NUL", "||.|NUL"}, {"d2|NUL:", "||.|NUL"}, {"NUL.", "||.|NUL"}, {"x|NUL|y", "<B>|x|NUL|y"},
-        {"NUL.|x", "<B>|NUL|x"},
+        {"NUL.|x", "<B>|NUL|x"}, {"nope..|NUL", "||.|NUL"}, {"d2..|NUL", "||.|NUL"}, {"d2|x..|NUL", "||.|NUL"},
+        {"nope|nul:|in|..", "<B>|nope|nul:"}, {"d2|NUL|x|..", "<B>|d2|NUL"}, {"d2|NUL|.", "<B>|d2|NUL"},
+        // e2 is used by these rows only: the oracle's canonical cache would remember an earlier "e2 ".
+        {"e2 |a:b", "<B>|e2|a:b"}, {"e2. |in:x", "<B>|e2|in:x"}, {"e2 .|f:x", "<B>|e2|f:x"}, {"e2.|a:b", SYNTAX},
     };
 
     // relative to the scratch directory, toRealPath (or its exception)
@@ -50,7 +53,8 @@ public class CanonWin {
         {"nope.|x", "NoSuchFileException <B>|nope|x"}, {"nope..|x", "NoSuchFileException <B>|nope..|x"},
         {"nope .", "NoSuchFileException <B>|nope"}, {". .|x", "NoSuchFileException <B>|. |x"},
         {"nope|..|q|.|r", "NoSuchFileException <B>|q|r"}, {"d2..|in", "<B>|d2|in"}, {"d2.|in", "<B>|d2|in"},
-        {"D2|IN", "<B>|d2|in"}, {"f2|x", "FileSystemException <B>|f2|x: The directory name is invalid.|r|n"},
+        {"D2|IN", "<B>|d2|in"}, {"NUL", "<B>|NUL"}, {"d2|NUL", "<B>|d2|NUL"},
+        {"nope|NUL", "NoSuchFileException <B>|nope|NUL"}, {"f2|x", "FileSystemException <B>|f2|x: The directory name is invalid.|r|n"},
     };
 
     static String canonical(String p) {
@@ -113,6 +117,8 @@ public class CanonWin {
             base = root.getPath();
             File d2 = new File(root, "d2");
             d2.mkdir();
+            File e2 = new File(root, "e2");
+            e2.mkdir();
             new FileOutputStream(new File(root, "f2")).close();
             new FileOutputStream(new File(d2, "in")).close();
             for (String[] c : CANONICAL) {
@@ -126,10 +132,17 @@ public class CanonWin {
                 check("unc a:b", canonical("\\\\localhost\\C$\\a:b"), SYNTAX);
                 check("unc nope|a:b", canonical("\\\\localhost\\C$\\nope\\a:b"), "||localhost|C$|nope|a:b");
                 check("unc nope..|x", canonical("\\\\localhost\\C$\\nope..\\x"), "IOE Bad pathname");
+                // Observed: on a share NUL is an ordinary name, which the share refuses.
+                String share = "\\\\localhost\\C$" + base.substring(2);
+                check("unc nul:", canonical(share + "\\nul:"), SYNTAX);
+                check("unc d2|NUL", canonical(share + "\\d2\\NUL"), u(share) + "|d2|NUL");
+                check("unc real d2|NUL", real(Paths.get(share, "d2", "NUL")), "NoSuchFileException " + u(share) + "|d2|NUL");
+                check("unc real CON", real(Paths.get(share, "CON")), "NoSuchFileException " + u(share) + "|CON");
             }
             files(root);
             new File(d2, "in").delete();
             d2.delete();
+            e2.delete();
             new File(root, "f2").delete();
             check("cleanup", root.delete(), "true");
         }

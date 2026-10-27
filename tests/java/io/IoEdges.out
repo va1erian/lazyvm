@@ -24,6 +24,11 @@ temp suffix climbing out: !java.io.IOException: Unable to create temporary file,
 dir setLastModified: true 1000000000000
 file setLastModified: true 1234567890000
 toURI of the empty path ends with /: true
+NUL char canonical: !java.io.IOException: Invalid file path
+NUL char createNewFile: !java.io.IOException: Invalid file path
+NUL char stream: !java.io.FileNotFoundException: Invalid file path
+lone surrogate in a message: true
+NUL char queries: false 0 false null
 toURI brackets: /u%5Bv%5D
 toURI nbsp and line separator: /a%C2%A0b%E2%80%A8c
 lone surrogate names: no aliasing

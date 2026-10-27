@@ -47,16 +47,21 @@ types; a `/` in a glob matches the separator.
 `\\?\UNC\` (→ `\\`) prefixes and keep a UNC host and share as given. `.` and `..` are applied by name first; then a
 name before another loses one final dot (`nope.\x` → `nope\x`, `nope .\x` → `nope \x`, `nope. \x` kept) and the last
 name all its trailing dots and spaces. The part that exists is resolved by the OS, which reads `d2 \in` as `d2\in`; a
-name of only dots and spaces (`. .\x` → `. \x`) is not looked up, and it and the rest are appended as written. A last
-name `NUL` or `NUL:` (after trimming), even below a missing directory, is `\\.\NUL`. No canonical form
-(`IOException`): a wildcard; a name before another ending in two dots once `..` is applied (`"Bad pathname"`:
-`nope..\x`, `d2..\in`, ` ...\x`; `nope..\..\x` is fine); a `:` in a name whose parent is an existing directory, a
-share's root included (`"The filename, directory name, or volume label syntax is incorrect"`: `f2:x`, `f2::$DATA`,
-`d2::$INDEX_ALLOCATION\in`, `C:\a:b`), while below a missing directory or a file it stays (`nope\a:b`, `f2\a:b`). On
-Unix the existing part is resolved as written, so `/t/link/../x` is the `x` beside the link's target, the file the
-path opens. `Path.toRealPath` opens the path with every name's trailing dots and spaces ignored (`d2..\in` resolves)
-and reports one it cannot resolve with this trimming but no "Bad pathname" (`nope..\x` stays); NUL in an existing
-directory is its own real path. [CanonWin; NioEdges: toRealPath of a missing path]
+name of only dots and spaces (`. .\x` → `. \x`) is not looked up, and it and the rest are appended as written. First of
+all, on a drive (not a share), a last name `NUL` or `NUL:` as written (its trailing dots and spaces aside, before `.`
+and `..` apply) is `\\.\NUL`, even below a missing directory or a name ending in two dots (`nope..\NUL`); a `NUL` that
+only `..` makes last is a name (`d2\NUL\x\..` → `d2\NUL`, `nope\nul:\in\..` → `nope\nul:`), and on a share NUL is
+always a name. No canonical form (`IOException`): a wildcard; a name before another ending in two dots once `..` is
+applied (`"Bad pathname"`: `nope..\x`, `d2..\in`, ` ...\x`; `nope..\..\x` is fine); a `:` in a name whose parent
+exists as a directory under the parent's name as written (after the one-dot trim), a share's root included (`"The
+filename, directory name, or volume label syntax is incorrect"`: `f2:x`, `f2::$DATA`, `d2::$INDEX_ALLOCATION\in`,
+`C:\a:b`, `d2.\a:b`), while below a missing directory, a file, or a parent named with trailing spaces it stays
+(`nope\a:b`, `f2\a:b`, `d2 \a:b` → `d2\a:b`, `d2. \in:x`). On Unix the existing part is resolved as written, so
+`/t/link/../x` is the `x` beside the link's target, and a dangling link is followed to its target, the file the path
+opens or would create. `Path.toRealPath` opens the path with every name's trailing dots and spaces ignored (`d2..\in`
+resolves) and reports one it cannot resolve with this trimming but no "Bad pathname" (`nope..\x` stays); NUL in an
+existing directory of a drive is its own real path, while on a share or past MAX_PATH a DOS device name is a missing
+file (`NoSuchFileException`; the OS refuses it). [CanonWin; NioEdges: toRealPath of a missing path]
 
 **U1.** `java.net.URI` (the part file names need; S7-02 adds the rest) parses left to right, so the leftmost bad
 component is reported: scheme (`"Expected scheme name"` for a leading `:`, `"Illegal character in scheme name"`),
@@ -180,12 +185,23 @@ Where LazyVM knowingly differs from the oracle; the reviewer's probes show each 
   root follows PW2's rule (the oracle keeps the name); `\\.\C:\x` is `C:\x` (the oracle keeps the prefix);
   `toRealPath` of `NUL.` is the NUL path (the oracle: `"The parameter is incorrect."`).
 - `URI.toASCIIString` of a lone surrogate escapes it as `%3F`; the oracle throws `NullPointerException`.
+- Canonical forms not matched (the third and fourth reviews' fuzz): a `\\.\` or `\\?\` prefix is dropped (the oracle
+  keeps `\\.\` and refuses `\\?\` with `"Invalid argument"`); some names of dots or spaces that the oracle refuses
+  with `"Invalid argument"` are `"Bad pathname"` or kept; a non-last `NUL ` keeps its space; a `nul:` below a
+  file or under a name with trailing dots is kept (the oracle: the syntax error); and `toRealPath` of a missing
+  `NUL` is `NoSuchFileException` where the oracle sometimes reports `"\\.\NUL: The parameter is incorrect."`.
 - `getFileAttributeView` and the attribute view classes are not provided (out of scope with the non-basic views).
 - The length of a directory is what the file system reports (0 on NTFS, often 4096 on Linux).
 - On Unix, file names are bytes: a string becomes its generalized UTF-8, so a lone surrogate is its own name and
   comes back from a listing (LazyOS's file system, which takes UTF-8 names only, refuses it: "No such file or
-  directory"); bytes that are not of that form (made by another program, a pair spelled as two three-byte
-  surrogates too) read as U+FFFD.
+  directory"). Every string maps to one name, but not every name to one string: bytes that are not of that form
+  (made by another program, a pair spelled as two three-byte surrogates too) read as U+FFFD, so `x\xff`,
+  `x\xfe` and a real `x\xef\xbf\xbd` all list as `x\uFFFD`, and a CESU-8 name as `FFFD FFFD FFFD DC00`, which a
+  real name of those units also gives. That is inherent unless names were escaped; a listed name that does not
+  round-trip may not open. A relative path under a current directory whose name is not UTF-8 resolves against
+  that lossy `user.dir`.
+- Unix devices (no Linux oracle): a block device's `length()` is what `fstat` reports, 0, so `skipBytes` at
+  the end can return a negative count, and `setLength` on one fails with the OS's error.
 - Stack traces show LazyVM's line numbers and frames.
 - How often a wrapped stream is called is matched only where a rule above pins it; LazyVM has no finalizers, so an
   unreferenced stream is not closed; a file open in `java.io` cannot be deleted on Windows (nio streams allow it).

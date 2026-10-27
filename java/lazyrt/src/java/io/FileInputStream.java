@@ -11,7 +11,7 @@ public class FileInputStream extends InputStream {
         if (name == null) {
             throw new NullPointerException();
         }
-        handle = FileSystem.open(name, FileSystem.READ);
+        handle = FileSystem.open(File.openable(name), FileSystem.READ);
     }
 
     public FileInputStream(File file) throws FileNotFoundException {

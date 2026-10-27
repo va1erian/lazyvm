@@ -11,7 +11,7 @@ public class FileOutputStream extends OutputStream {
         if (name == null) {
             throw new NullPointerException();
         }
-        handle = FileSystem.open(name, append ? FileSystem.APPEND : FileSystem.WRITE);
+        handle = FileSystem.open(File.openable(name), append ? FileSystem.APPEND : FileSystem.WRITE);
     }
 
     public FileOutputStream(String name) throws FileNotFoundException {

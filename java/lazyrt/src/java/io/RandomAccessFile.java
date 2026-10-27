@@ -18,7 +18,7 @@ public class RandomAccessFile implements DataOutput, DataInput, Closeable {
         if (name == null) {
             throw new NullPointerException();
         }
-        handle = FileSystem.open(name, mode.equals("r") ? FileSystem.READ : FileSystem.READ_WRITE);
+        handle = FileSystem.open(File.openable(name), mode.equals("r") ? FileSystem.READ : FileSystem.READ_WRITE);
         sync = mode.length() == 3;
     }
 

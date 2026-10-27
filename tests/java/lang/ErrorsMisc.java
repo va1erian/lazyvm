@@ -69,6 +69,21 @@ public class ErrorsMisc {
         t("Throwable(null cause)", new Case(){public void run() throws Throwable { System.out.println(new RuntimeException((Throwable) null).getMessage()); }});
         t("Throwable(cause) msg", new Case(){public void run() throws Throwable { System.out.println(new RuntimeException(new Error("e")).getMessage()); }});
         t("Throwable toString", new Case(){public void run() throws Throwable { System.out.println(new IllegalStateException("m") + " " + new Error()); }});
+        final int max = Integer.MAX_VALUE;
+        // multianewarray: counts left to right, negative first, then an allocated level past the limit.
+        t("multi 1,MAX", new Case(){public void run() throws Throwable { Object o = new int[1][max]; }});
+        t("multi 0,MAX", new Case(){public void run() throws Throwable { System.out.println(new int[0][max].length); }});
+        t("multi MAX,-1", new Case(){public void run() throws Throwable { Object o = new int[max][-1]; }});
+        t("multi 0,-1", new Case(){public void run() throws Throwable { Object o = new int[0][-1]; }});
+        t("multi -1,MAX", new Case(){public void run() throws Throwable { Object o = new int[-1][max]; }});
+        t("multi 2,0,MAX", new Case(){public void run() throws Throwable { System.out.println(new long[2][0][max].length); }});
+        // Builder searches see only the used part, not stale chars past it.
+        StringBuilder grown = new StringBuilder("abNEEDLE");
+        grown.setLength(2);
+        StringBuffer cut = new StringBuffer("abNEEDLE");
+        cut.delete(2, 8);
+        System.out.println("search past length: " + grown.indexOf("NEEDLE") + " " + grown.lastIndexOf("NEEDLE", 9) + " "
+                + cut.indexOf("N", 1) + " " + cut.lastIndexOf("E") + " " + grown.indexOf("b") + " " + cut.lastIndexOf("", 9));
         PrintStream ps = new PrintStream(new OutputStream() {
             public void write(int b) throws IOException { throw new IOException("bad"); }
         });
