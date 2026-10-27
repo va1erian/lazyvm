@@ -157,7 +157,7 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
   inputs (`atan2`, `cbrt`, `log10`, `hypot`, `tanh`, `cos`, `sin`, `log`,
   `cosh`, `sinh`, `log1p`); the other 12 matched on every input measured.
   The table and how it was measured are in [`decisions.md`](../decisions.md)
-  D12.
+  D13.
 - A `NoClassDefFoundError` for a class missing from the class path has no
   cause; Java 8's carries a `ClassNotFoundException` from its class loader.
   Tests print only the error's class and message.

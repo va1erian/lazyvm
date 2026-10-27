@@ -152,7 +152,7 @@ public class RandomSeq {
 
     /**
      * A gaussian to 10 significant digits. LazyVM's StrictMath.log may be a few ulps from fdlibm's
-     * (docs/decisions.md D12), which never reaches the 10th digit of these values; the draws
+     * (docs/decisions.md D13), which never reaches the 10th digit of these values; the draws
      * (the LCG, the rejections and the pairing) stay exact.
      */
     static String g(double v) { return String.format(Locale.ROOT, "%.9e", v); }

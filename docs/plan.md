@@ -299,8 +299,8 @@ Goal: the everyday `java.util` and `java.io` surface from
       `Tokenizers` (both).
       State (branch `s5-util`): `Optional*`, `Objects`, `Random` R3, `Base64`, `UUID`,
       `BitSet`, `StringTokenizer` and `InputMismatchException` are built; Utilities,
-      Base64s, Base64Streams, Uuids, BitSets and Tokenizers pass on both. RandomSeq waits
-      for the `StrictMath` decision (util.md R1). `Scanner` waits for S5-03 regex / S5-05;
+      Base64s, Base64Streams, Uuids, BitSets, Tokenizers and RandomSeq pass on both
+      (`StrictMath` stays on `libm`, decisions.md D13). `Scanner` waits for S5-03 regex / S5-05;
       `Properties` waits for S5-05 (and `java.util.Date` for its `store` line); UtilBuffers,
       `Base64`'s `ByteBuffer` overloads and `BitSet.valueOf` of buffers wait for S5-06.
 - [ ] S5-05 `java.io`: byte and char streams, `Buffered*`, `InputStreamReader`

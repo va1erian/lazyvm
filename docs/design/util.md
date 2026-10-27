@@ -126,7 +126,7 @@ its rejection loop (a draw is rejected when `bits - val + (bound - 1)` overflows
 `nextBytes` taking one `nextInt()` per 4 bytes, low byte first, and dropping the unused bytes of the
 last one; `nextGaussian` by the polar method with `StrictMath.log` and `StrictMath.sqrt`, returning the
 second value of each pair on the next call, which `setSeed` forgets. LazyVM's `StrictMath.log` is
-the `libm` crate's, which is within 1 ulp of fdlibm's but not always equal (`decisions.md` D12), so a
+the `libm` crate's, which is within 1 ulp of fdlibm's but not always equal (`decisions.md` D13), so a
 gaussian can differ from Java 8's in its last digits. Everything else about `nextGaussian` is exact:
 which draws it makes, the rejected pairs, the signs, and the pairing and caching. RandomSeq
 therefore prints gaussians to 10 significant digits and their sums to 1e-6, which no ulp-level
@@ -174,7 +174,7 @@ RandomSeq ("two instances differ", "seeds are not clock readings"), RandomSeedin
 
 - `Objects`: complete and matches every J rule; the private constructor's text is reworded.
 - `Random`: matches R1, R2 and R3 (seeded from `lazy.internal.VM.entropy()`, natives.md); its
-  gaussians may differ from Java 8's in the last digits, as R1 and `decisions.md` D12 accept.
+  gaussians may differ from Java 8's in the last digits, as R1 and `decisions.md` D13 accept.
 - Built on branch `s5-util`: `Optional*`, `Base64` (not the `ByteBuffer` overloads), `UUID` (MD5 in
   `lazy.internal.Md5`), `BitSet` (not the buffer `valueOf`s), `StringTokenizer`,
   `InputMismatchException`, `WeakHashMap`.

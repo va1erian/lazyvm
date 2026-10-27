@@ -121,7 +121,7 @@ decision marked **(proposed)** is not in force until the owner confirms it.
 
 | Area | Stage | Contents |
 |---|---|---|
-| `java.lang` core | S2-S5 | `Object`, `String`, `StringBuilder`, boxing with caches, `Math`/`StrictMath` (through Rust `libm`, within a few ulps of fdlibm: D12), `Character` (tables generated from UnicodeData, Unicode 6.2 as in Java 8), `System`, `Runtime`, `Throwable` with suppressed exceptions and causes, `Enum`, `Iterable`, `AutoCloseable` |
+| `java.lang` core | S2-S5 | `Object`, `String`, `StringBuilder`, boxing with caches, `Math`/`StrictMath` (through Rust `libm`, within a few ulps of fdlibm: D13), `Character` (tables generated from UnicodeData, Unicode 6.2 as in Java 8), `System`, `Runtime`, `Throwable` with suppressed exceptions and causes, `Enum`, `Iterable`, `AutoCloseable` |
 | Reflection and annotations | S4 | `Class` (name, super, interfaces, `isInstance`, `forName`, `newInstance`, `getEnumConstants`), `java.lang.annotation`, `getAnnotation(s)` on classes, methods, fields and parameters, `Method.invoke`, `Field.get/set`, `Constructor.newInstance` |
 | `java.util` | S5 | Collections (`ArrayList`, `LinkedList`, `ArrayDeque`, `HashMap`, `LinkedHashMap`, `TreeMap`, `HashSet`, `TreeSet`, `PriorityQueue`, `Collections`, `Arrays`), `Optional*`, `Objects`, `Random`, `Scanner`, `StringJoiner`, `Formatter`/`String.format`, `Properties`, `UUID`, `Base64`, `BitSet`, `Iterator` and friends |
 | `java.util.function` | S4 | All 43 interfaces |
@@ -235,7 +235,7 @@ files and its checks. They are copied into GitHub issues on the LazyVM GitHub re
 only when a stage starts, with the ID in the title. LazyOS-side items (`LOS-…`)
 become issues on the LazyOS repo.
 
-## D12. `StrictMath` is not bit-identical to fdlibm
+## D13. `StrictMath` is not bit-identical to fdlibm
 
 `StrictMath` uses the `libm` crate (`crates/natives/src/math.rs`, MIT, a
 port of musl's libm) and accepts its results. The `StrictMath` Javadoc asks
