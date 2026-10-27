@@ -1,0 +1,77 @@
+1 2 4 8 16 32 64 128 256
+abc f=0(0) ABC abc : [4,7) matches=false
+abc f=2(2) ABC aBc abd : [0,3) [4,7) matches=false
+[a-c]+ f=2(2) AbCd : [0,3) matches=false
+[^a-c]+ f=2(2) AbCd : [3,4) matches=false
+\p{Lower}+ f=2(2) abC : [0,2) matches=false
+(a)\1 f=2(2) aA : [0,2) matches=true
+\u00e9 f=2(2) \u00c9\u00e9 : [1,2) matches=false
+\u00e9 f=66(66) \u00c9\u00e9 : [0,1) [1,2) matches=false
+[\u00e0-\u00e5] f=66(66) \u00c0\u00e3 : [0,1) [1,2) matches=false
+\u03c3 f=66(66) \u03a3\u03c3\u03c2 : [0,1) [1,2) [2,3) matches=false
+\u0431\u0432 f=66(66) \u0411\u0412\u0431\u0432 : [0,2) [2,4) matches=false
+\u0431\u0432 f=2(2) \u0411\u0412 : matches=false
+k f=66(66) K\u212a : [0,1) [1,2) matches=false
+k f=2(2) K\u212a : [0,1) matches=false
+(?i)abc f=0(2) ABC : [0,3) matches=true
+(?iu)\u00e9 f=0(66) \u00c9 : [0,1) matches=true
+a(?i)b f=0(2) aB Ab : [0,2) matches=false
+(?i:a)b f=0(0) Ab AB : [0,2) matches=false
+a.b f=0(0) a\nb a\rb a\u0085b a\u2028b a\u2029b axb : [20,23) matches=false
+a.b f=32(32) a\nb a\rb : [0,3) [4,7) matches=false
+a.b f=1(1) a\nb a\rb a\u0085b : [4,7) [8,11) matches=false
+(?s)a.b f=0(32) a\nb : [0,3) matches=true
+(?d)a.b f=0(1) a\nb a\rb : [4,7) matches=false
+^a f=0(0) a\na : [0,1) matches=false
+^a f=8(8) a\na\r\na\ra : [0,1) [2,3) [5,6) [7,8) matches=false
+a$ f=8(8) a\na\r\na\ra : [0,1) [2,3) [5,6) [7,8) matches=false
+a$ f=0(0) a\n : [0,1) matches=false
+a$ f=0(0) a\r\n : [0,1) matches=false
+a$ f=0(0) a\n\n : matches=false
+a$ f=1(1) a\r : matches=false
+a$ f=9(9) a\ra\n : [2,3) matches=false
+^$ f=8(8) \n\na : [0,0) [1,1) matches=false
+^ f=8(8) a\n : [0,0) matches=false
+$ f=8(8) a\n : [1,1) [2,2) matches=false
+(?m)^a$ f=0(8) x\na\ny : [2,3) matches=false
+a b # not part\n c f=4(4) abc : [0,3) matches=true
+a\ b f=4(4) a b : [0,3) matches=true
+a[ ]b f=4 : Unclosed character class @4
+[a b]+ f=4(4) a b : [0,1) [2,3) matches=false
+\# a f=4(4) #a : [0,2) matches=true
+a # comment f=4(4) a : [0,1) matches=true
+a b f=0(0) a b ab : [0,3) matches=false
+(?x) a b  f=0(4) ab : [0,2) matches=true
+a. b f=16(16) xa. by : [1,5) matches=false
+(a|b) f=16(16) (a|b) a : [0,5) matches=false
+\d f=16(16) \d 5 : [0,2) matches=false
+\Qa\E f=16(16) \Qa\E a : [0,5) matches=false
+A.B f=18(18) a.b axb : [0,3) matches=false
+ f=16(16) ab : [0,0) [1,1) [2,2) matches=false
+\u00e9 f=128(128) \u00e9 : [0,1) matches=true
+\w+ f=0(0) caf\u00e9 na\u00efve : [0,3) [5,7) [8,10) matches=false
+\w+ f=256(320) caf\u00e9 na\u00efve : [0,4) [5,10) matches=false
+\b\w f=256(320) \u00e9a b : [0,1) [3,4) matches=false
+(?U)\w+ f=0(320) caf\u00e9 : [0,4) matches=true
+\p{Alpha}+ f=0(0) caf\u00e9 : [0,3) matches=false
+\p{Alpha}+ f=256(320) caf\u00e9 : [0,4) matches=true
+\p{Lower}+ f=256(320) caf\u00e9X : [0,4) matches=false
+\p{Upper}+ f=256(320) \u00c9X\u00e9 : [0,2) matches=false
+\s+ f=256(320) a\u00a0\u2003b : [1,3) matches=false
+\s+ f=0(0) a\u00a0\u2003b : matches=false
+\d+ f=256(320) 12 : [0,2) matches=true
+[\w&&[^\d]]+ f=256(320) caf\u00e91 : [0,4) matches=false
+\u00e9 f=256(320) \u00c9 : matches=false
+a f=47(47) A : [0,1) matches=true
+(?idmsux)a f=0(111) A : [0,1) matches=true
+(?idmsux-idmsux)a f=0(0) a : [0,1) matches=true
+(?i)a(?-i)b(?i)c f=0(2) AbC ABC : [0,3) matches=false
+((?i)a)b f=0(0) Ab AB : [0,2) matches=false
+(?i)(?-i:a)b f=0(2) aB AB : [0,2) matches=false
+(?m)(?s)^a.b$ f=0(40) x\na\nb\ny : [2,5) matches=false
+(?i) f=0(2) x : [0,0) [1,1) matches=false
+(?-) f=0(0) x : [0,0) [1,1) matches=false
+(?i-)a f=0(2) A : [0,1) matches=true
+2 34 8 0 32
+65535 512
+done

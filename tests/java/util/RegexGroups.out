@@ -1,0 +1,80 @@
+(a)(b)(c) in 'abcabc': [0,3) 'a'@0 'b'@1 'c'@2 [3,6) 'a'@3 'b'@4 'c'@5
+(a(b(c))) in 'abc': [0,3) 'abc'@0 'bc'@1 'c'@2
+(a)|(b) in 'ab': [0,1) 'a'@0 null@-1 [1,2) null@-1 'b'@1
+(a)?(b) in 'b ab': [0,1) null@-1 'b'@0 [2,4) 'a'@2 'b'@3
+(?:a)(b) in 'ab': [0,2) 'b'@1
+((a)|(b))+ in 'abab': [0,4) 'b'@3 'a'@2 'b'@3
+(a*)+ in 'aab': [0,2) ''@2 [2,2) ''@2 [3,3) ''@3
+(a*)* in 'aab': [0,2) ''@2 [2,2) ''@2 [3,3) ''@3
+(a|b)* in 'abba': [0,4) 'a'@3 [4,4) null@-1
+(?<x>a)(?<y>b)? in 'a ab': [0,1) 'a'@0 null@-1 [2,4) 'a'@2 'b'@3
+(\w)\1 in 'hello bookkeeper': [2,4) 'l'@2 [7,9) 'o'@7 [9,11) 'k'@9 [11,13) 'e'@11
+(?<c>\w)\k<c> in 'hello bookkeeper': [2,4) 'l'@2 [7,9) 'o'@7 [9,11) 'k'@9 [11,13) 'e'@11
+(a)\1+ in 'aaa a aa': [0,3) 'a'@0 [6,8) 'a'@6
+(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)\10 in 'abcdefghijj': [0,11) 'a'@0 'b'@1 'c'@2 'd'@3 'e'@4 'f'@5 'g'@6 'h'@7 'i'@8 'j'@9
+(a)\10 in 'aa0': [0,3) 'a'@0
+(a)\2 in 'aa':
+\1(a) in 'aa':
+(a)?\1b in 'b ab aab': [5,8) 'a'@5
+(?i)(a)\1 in 'aA Aa AA': [0,2) 'a'@0 [3,5) 'A'@3 [6,8) 'A'@6
+(a)\1 in 'aA':
+(?<n>[a-z]+) \k<n> in 'abc abc abd abd': [0,7) 'abc'@0 [8,15) 'abd'@8
+<(\w+)>.*?</\1> in '<b>x</b><i>y</i><b>z</i>': [0,8) 'b'@1 [8,16) 'i'@9
+(a+)+b in 'aaab': [0,4) 'aaa'@0
+(?>a+)b in 'aaab': [0,4)
+(?>a+)a in 'aaa':
+(?>a|ab)c in 'abc':
+(?:a|ab)c in 'abc': [0,3)
+a++a in 'aaa':
+(?>(a)|b)\1 in 'aa': [0,2) 'a'@0
+(a|ab)(c|bcd)(d*) vs 'abcd': true (end) 'abcd' 'a' 'bcd' ''
+(a|ab)(c|bcd) vs 'abcd': true 'abcd' 'a' 'bcd'
+(a)|b vs 'b': true 'b' null
+((a)|b)+ vs 'ab': true (end) 'ab' 'b' 'a'
+(?:(a)|(b))+ vs 'ab': true (end) 'ab' 'a' 'b'
+(a*)(a*) vs 'aaa': true (end) 'aaa' 'aaa' ''
+(a*?)(a*) vs 'aaa': true (end) 'aaa' '' 'aaa'
+(.*)(\d+) vs 'abc123': true (end) 'abc123' 'abc12' '3'
+(.*?)(\d+) vs 'abc123': true (end) 'abc123' 'abc' '123'
+(.*+)(\d+) vs 'abc123': false (end)
+a(?=b) in 'ab ac a': [0,1)
+a(?!b) in 'ab ac a': [3,4) [6,7)
+(?<=a)b in 'ab cb b': [1,2)
+(?<!a)b in 'ab cb b': [4,5) [6,7)
+(?<=ab|c)d in 'abd cd bd': [2,3) [5,6)
+(?<=a+)b in 'aab b': [2,3)
+(?<=a*)b in 'aab b': [2,3) [4,5)
+(?<=\d{3})x in '123x 12x': [3,4)
+(?<=(a))b in 'ab': [1,2) 'a'@0
+(?=(a))a in 'aa': [0,1) 'a'@0 [1,2) 'a'@1
+(?<!(a))b in 'cb ab': [1,2) null@-1
+\w+(?=,) in 'ab,cd,ef': [0,2) [3,5)
+(?<=,)\w+ in 'ab,cd,ef': [3,5) [6,8)
+(?<!\d)\d{2}(?!\d) in '12 123 45 6': [0,2) [7,9)
+(?=.*\d)(?=.*[a-z])\w{6,} in 'abc123 abcdef 123456': [0,6) [7,13)
+(?=a) in 'ba': [1,1)
+(?!a) in 'ba': [0,0) [2,2)
+(?<=a) in 'ba': [2,2)
+(?<!a) in 'ba': [0,0) [1,1)
+$(?<=a) in 'a': [1,1)
+(?<=^)a in 'a': [0,1)
+(?<=\b)a in 'a ba': [0,1)
+(?<=ab)(?<=b)c in 'abc': [2,3)
+(?=a)*b in 'ab b': [1,2) [3,4)
+a(?=b)b vs 'ab': true 'ab'
+a(?!b) vs 'a': true (end) 'a'
+(?<=a) vs '': false
+(?i)abc in 'ABC aBc': [0,3) [4,7)
+a(?i)bc in 'aBC ABC': [0,3)
+a(?i:b)c in 'aBc aBC': [0,3)
+(?i)a(?-i)b in 'Ab AB': [0,2)
+(a(?i)b)c in 'aBc aBC': [0,3) 'aB'@0
+(?i:a)b|c in 'Ab C': [0,2)
+(?:ab)+ in 'ababab': [0,6)
+(?:ab){2} in 'ababab': [0,4)
+(?s:.)(.) in '\na': [0,2) 'a'@1
+(?:(a)|b)* in 'ab': [0,2) 'a'@0 [2,2) null@-1
+(?:(a)|b)+\1 in 'aba': [0,3) 'a'@0
+(a)?+b in 'ab': [0,2) 'a'@0
+(?<=(a))*b in 'ab': [1,2) 'a'@0
+done

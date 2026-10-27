@@ -1,0 +1,358 @@
+( : desc=Unclosed group index=1 pattern=true
+    Unclosed group near index 1|(
+) : desc=Unmatched closing ')' index=-1 pattern=true
+    Unmatched closing ')'|)
+a) : desc=Unmatched closing ')' index=0 pattern=true
+    Unmatched closing ')' near index 0|a)|^
+(a : desc=Unclosed group index=2 pattern=true
+    Unclosed group near index 2|(a
+((a) : desc=Unclosed group index=4 pattern=true
+    Unclosed group near index 4|((a)
+(a)) : desc=Unmatched closing ')' index=2 pattern=true
+    Unmatched closing ')' near index 2|(a))|  ^
+[ : desc=Unclosed character class index=0 pattern=true
+    Unclosed character class near index 0|[|^
+[a : desc=Unclosed character class index=1 pattern=true
+    Unclosed character class near index 1|[a| ^
+[] : desc=Unclosed character class index=1 pattern=true
+    Unclosed character class near index 1|[]| ^
+[^ : desc=Unclosed character class index=1 pattern=true
+    Unclosed character class near index 1|[^| ^
+[^] : desc=Unclosed character class index=2 pattern=true
+    Unclosed character class near index 2|[^]|  ^
+[a- : desc=Illegal character range index=3 pattern=true
+    Illegal character range near index 3|[a-
+[a-z&&[ : desc=Unclosed character class index=6 pattern=true
+    Unclosed character class near index 6|[a-z&&[|      ^
+[[] : desc=Unclosed character class index=2 pattern=true
+    Unclosed character class near index 2|[[]|  ^
+[a[] : desc=Unclosed character class index=3 pattern=true
+    Unclosed character class near index 3|[a[]|   ^
+[\ : desc=Unclosed character class index=2 pattern=true
+    Unclosed character class near index 2|[\
+(?<name> : desc=Unclosed group index=8 pattern=true
+    Unclosed group near index 8|(?<name>
+(?: : desc=Unclosed group index=3 pattern=true
+    Unclosed group near index 3|(?:
+(?=a : desc=Unclosed group index=4 pattern=true
+    Unclosed group near index 4|(?=a
+(?>a : desc=Unclosed group index=4 pattern=true
+    Unclosed group near index 4|(?>a
+(?i:a : desc=Unclosed group index=5 pattern=true
+    Unclosed group near index 5|(?i:a
+* : desc=Dangling meta character '*' index=0 pattern=true
+    Dangling meta character '*' near index 0|*|^
++a : desc=Dangling meta character '+' index=0 pattern=true
+    Dangling meta character '+' near index 0|+a|^
+? : desc=Dangling meta character '?' index=0 pattern=true
+    Dangling meta character '?' near index 0|?|^
+a** : desc=Dangling meta character '*' index=2 pattern=true
+    Dangling meta character '*' near index 2|a**|  ^
+a+* : desc=Dangling meta character '*' index=2 pattern=true
+    Dangling meta character '*' near index 2|a+*|  ^
+a?* : desc=Dangling meta character '*' index=2 pattern=true
+    Dangling meta character '*' near index 2|a?*|  ^
+a*?+ : desc=Dangling meta character '+' index=3 pattern=true
+    Dangling meta character '+' near index 3|a*?+|   ^
+a*?? : desc=Dangling meta character '?' index=3 pattern=true
+    Dangling meta character '?' near index 3|a*??|   ^
+a{1}* : desc=Dangling meta character '*' index=4 pattern=true
+    Dangling meta character '*' near index 4|a{1}*|    ^
+(*) : desc=Dangling meta character '*' index=1 pattern=true
+    Dangling meta character '*' near index 1|(*)| ^
+a|* : desc=Dangling meta character '*' index=2 pattern=true
+    Dangling meta character '*' near index 2|a|*|  ^
+^*+? : desc=Dangling meta character '?' index=3 pattern=true
+    Dangling meta character '?' near index 3|^*+?|   ^
+x{2}?+* : desc=Dangling meta character '+' index=5 pattern=true
+    Dangling meta character '+' near index 5|x{2}?+*|     ^
+a{ : desc=Illegal repetition index=0 pattern=true
+    Illegal repetition near index 0|a{|^
+a{1 : desc=Unclosed counted closure index=3 pattern=true
+    Unclosed counted closure near index 3|a{1
+a{1, : desc=Unclosed counted closure index=4 pattern=true
+    Unclosed counted closure near index 4|a{1,
+a{1,2 : desc=Unclosed counted closure index=5 pattern=true
+    Unclosed counted closure near index 5|a{1,2
+a{x} : desc=Illegal repetition index=0 pattern=true
+    Illegal repetition near index 0|a{x}|^
+a{,3} : desc=Illegal repetition index=0 pattern=true
+    Illegal repetition near index 0|a{,3}|^
+a{} : desc=Illegal repetition index=0 pattern=true
+    Illegal repetition near index 0|a{}|^
+a{-1} : desc=Illegal repetition index=0 pattern=true
+    Illegal repetition near index 0|a{-1}|^
+a{1x} : desc=Unclosed counted closure index=3 pattern=true
+    Unclosed counted closure near index 3|a{1x}|   ^
+a{1,x} : desc=Unclosed counted closure index=4 pattern=true
+    Unclosed counted closure near index 4|a{1,x}|    ^
+a{1,2,3} : desc=Unclosed counted closure index=5 pattern=true
+    Unclosed counted closure near index 5|a{1,2,3}|     ^
+a{2,1} : desc=Illegal repetition range index=5 pattern=true
+    Illegal repetition range near index 5|a{2,1}|     ^
+a{2147483648} : desc=Illegal repetition range index=12 pattern=true
+    Illegal repetition range near index 12|a{2147483648}|            ^
+a{1,2147483648} : desc=Illegal repetition range index=14 pattern=true
+    Illegal repetition range near index 14|a{1,2147483648}|              ^
+ab{ : desc=Illegal repetition index=1 pattern=true
+    Illegal repetition near index 1|ab{| ^
+\b{ : desc=Illegal repetition index=1 pattern=true
+    Illegal repetition near index 1|\b{| ^
+a{ 1} : desc=Illegal repetition index=0 pattern=true
+    Illegal repetition near index 0|a{ 1}|^
+a{1 } : desc=Unclosed counted closure index=3 pattern=true
+    Unclosed counted closure near index 3|a{1 }|   ^
+{1} : ok
+{x} : desc=Illegal repetition index=-1 pattern=true
+    Illegal repetition|{x}
+{ : desc=Illegal repetition index=-1 pattern=true
+    Illegal repetition|{
+a|{1} : ok
+[z-a] : desc=Illegal character range index=3 pattern=true
+    Illegal character range near index 3|[z-a]|   ^
+[a-\d] : desc=Illegal character range index=4 pattern=true
+    Illegal character range near index 4|[a-\d]|    ^
+[\d-z] : ok
+[a-\p{L}] : desc=Illegal/unsupported escape sequence index=4 pattern=true
+    Illegal/unsupported escape sequence near index 4|[a-\p{L}]|    ^
+[a--] : desc=Illegal character range index=3 pattern=true
+    Illegal character range near index 3|[a--]|   ^
+[--a] : ok
+[a-] : ok
+[-a] : ok
+[b-a] : desc=Illegal character range index=3 pattern=true
+    Illegal character range near index 3|[b-a]|   ^
+[\w-\d] : ok
+[a-\ : desc=Illegal character range index=4 pattern=true
+    Illegal character range near index 4|[a-\
+\ : desc=Unexpected internal error index=1 pattern=true
+    Unexpected internal error near index 1|\
+\x : desc=Illegal hexadecimal escape sequence index=2 pattern=true
+    Illegal hexadecimal escape sequence near index 2|\x
+\xg : desc=Illegal hexadecimal escape sequence index=2 pattern=true
+    Illegal hexadecimal escape sequence near index 2|\xg|  ^
+\x{ : desc=Illegal hexadecimal escape sequence index=2 pattern=true
+    Illegal hexadecimal escape sequence near index 2|\x{|  ^
+\x{} : desc=Illegal hexadecimal escape sequence index=2 pattern=true
+    Illegal hexadecimal escape sequence near index 2|\x{}|  ^
+\x{zz} : desc=Illegal hexadecimal escape sequence index=2 pattern=true
+    Illegal hexadecimal escape sequence near index 2|\x{zz}|  ^
+\x{110000} : desc=Hexadecimal codepoint is too big index=8 pattern=true
+    Hexadecimal codepoint is too big near index 8|\x{110000}|        ^
+\x{10FFFF} : ok
+\x{41 : desc=Unclosed hexadecimal escape sequence index=5 pattern=true
+    Unclosed hexadecimal escape sequence near index 5|\x{41
+\u12 : desc=Illegal Unicode escape sequence index=4 pattern=true
+    Illegal Unicode escape sequence near index 4|\u12
+\u123g : desc=Illegal Unicode escape sequence index=5 pattern=true
+    Illegal Unicode escape sequence near index 5|\u123g|     ^
+\c : desc=Illegal control escape sequence index=1 pattern=true
+    Illegal control escape sequence near index 1|\c| ^
+\0 : desc=Illegal octal escape sequence index=2 pattern=true
+    Illegal octal escape sequence near index 2|\0
+\09 : desc=Illegal octal escape sequence index=2 pattern=true
+    Illegal octal escape sequence near index 2|\09|  ^
+\08 : desc=Illegal octal escape sequence index=2 pattern=true
+    Illegal octal escape sequence near index 2|\08|  ^
+\0377 : ok
+\0400 : ok
+\N : desc=Illegal/unsupported escape sequence index=1 pattern=true
+    Illegal/unsupported escape sequence near index 1|\N| ^
+\X : desc=Illegal/unsupported escape sequence index=1 pattern=true
+    Illegal/unsupported escape sequence near index 1|\X| ^
+\C : desc=Illegal/unsupported escape sequence index=1 pattern=true
+    Illegal/unsupported escape sequence near index 1|\C| ^
+\y : desc=Illegal/unsupported escape sequence index=1 pattern=true
+    Illegal/unsupported escape sequence near index 1|\y| ^
+\E : desc=Illegal/unsupported escape sequence index=1 pattern=true
+    Illegal/unsupported escape sequence near index 1|\E| ^
+a\E : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|a\E|  ^
+\Qabc : ok
+\Qa\E\E : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|\Qa\E\E|  ^
+[\R] : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|[\R]|  ^
+[\b] : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|[\b]|  ^
+[\B] : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|[\B]|  ^
+[\A] : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|[\A]|  ^
+[\z] : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|[\z]|  ^
+[\1] : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|[\1]|  ^
+[\E] : desc=Illegal/unsupported escape sequence index=2 pattern=true
+    Illegal/unsupported escape sequence near index 2|[\E]|  ^
+\i : desc=Illegal/unsupported escape sequence index=1 pattern=true
+    Illegal/unsupported escape sequence near index 1|\i| ^
+\_ : ok
+\- : ok
+\e : ok
+\a : ok
+\cA : ok
+\p : desc=Unknown character property name { } index=2 pattern=true
+    Unknown character property name { } near index 2|\p
+\P : desc=Unknown character property name { } index=2 pattern=true
+    Unknown character property name { } near index 2|\P
+\p{ : desc=Unclosed character family index=3 pattern=true
+    Unclosed character family near index 3|\p{
+\p{} : desc=Empty character family index=3 pattern=true
+    Empty character family near index 3|\p{}|   ^
+\p{ } : desc=Unknown character property name { } index=4 pattern=true
+    Unknown character property name { } near index 4|\p{ }|    ^
+\p{=} : desc=Unknown Unicode property {name=<>, value=<>} index=4 pattern=true
+    Unknown Unicode property {name=<>, value=<>} near index 4|\p{=}|    ^
+\p{L : desc=Unclosed character family index=4 pattern=true
+    Unclosed character family near index 4|\p{L
+\p{Foo} : desc=Unknown character property name {Foo} index=6 pattern=true
+    Unknown character property name {Foo} near index 6|\p{Foo}|      ^
+\p{IsFoo} : desc=Unknown character script name {Foo} index=8 pattern=true
+    Unknown character script name {Foo} near index 8|\p{IsFoo}|        ^
+\p{InFoo} : desc=Unknown character block name {Foo} index=8 pattern=true
+    Unknown character block name {Foo} near index 8|\p{InFoo}|        ^
+\p{Is} : desc=Unknown character script name {} index=5 pattern=true
+    Unknown character script name {} near index 5|\p{Is}|     ^
+\p{In} : desc=Unknown character block name {} index=5 pattern=true
+    Unknown character block name {} near index 5|\p{In}|     ^
+\p{gc=} : desc=Unknown character property name {} index=6 pattern=true
+    Unknown character property name {} near index 6|\p{gc=}|      ^
+\p{gc=Foo} : desc=Unknown character property name {Foo} index=9 pattern=true
+    Unknown character property name {Foo} near index 9|\p{gc=Foo}|         ^
+\p{sc=Foo} : desc=Unknown character script name {Foo} index=9 pattern=true
+    Unknown character script name {Foo} near index 9|\p{sc=Foo}|         ^
+\p{blk=Foo} : desc=Unknown character block name {Foo} index=10 pattern=true
+    Unknown character block name {Foo} near index 10|\p{blk=Foo}|          ^
+\p{foo=bar} : desc=Unknown Unicode property {name=<foo>, value=<bar>} index=10 pattern=true
+    Unknown Unicode property {name=<foo>, value=<bar>} near index 10|\p{foo=bar}|          ^
+\p{javaFoo} : desc=Unknown character property name {javaFoo} index=10 pattern=true
+    Unknown character property name {javaFoo} near index 10|\p{javaFoo}|          ^
+\p{alpha} : desc=Unknown character property name {alpha} index=8 pattern=true
+    Unknown character property name {alpha} near index 8|\p{alpha}|        ^
+\p{Greek} : desc=Unknown character property name {Greek} index=8 pattern=true
+    Unknown character property name {Greek} near index 8|\p{Greek}|        ^
+\p{isAlpha} : desc=Unknown character property name {isAlpha} index=10 pattern=true
+    Unknown character property name {isAlpha} near index 10|\p{isAlpha}|          ^
+\p{L} : ok
+\p{IsL} : ok
+\pL : ok
+\p{Lu} : ok
+\p{IsAlphabetic} : ok
+\p{InGreek} : ok
+\p{IsLatin} : ok
+\p{javaLowerCase} : ok
+\p{Alpha} : ok
+\p{general_category=Lu} : ok
+\p{Upp=er} : desc=Unknown Unicode property {name=<upp>, value=<er>} index=9 pattern=true
+    Unknown Unicode property {name=<upp>, value=<er>} near index 9|\p{Upp=er}|         ^
+\p{sc=latin} : ok
+(? : desc=Unknown inline modifier index=2 pattern=true
+    Unknown inline modifier near index 2|(?
+(?z) : desc=Unknown inline modifier index=2 pattern=true
+    Unknown inline modifier near index 2|(?z)|  ^
+(?a) : desc=Unknown inline modifier index=2 pattern=true
+    Unknown inline modifier near index 2|(?a)|  ^
+(?i : desc=Unknown inline modifier index=3 pattern=true
+    Unknown inline modifier near index 3|(?i
+(?- : desc=Unknown inline modifier index=3 pattern=true
+    Unknown inline modifier near index 3|(?-
+(?i: : desc=Unclosed group index=4 pattern=true
+    Unclosed group near index 4|(?i:
+(?i- : desc=Unknown inline modifier index=4 pattern=true
+    Unknown inline modifier near index 4|(?i-
+(?) : ok
+(?-) : ok
+(?-:a) : ok
+(?^i) : desc=Unknown inline modifier index=2 pattern=true
+    Unknown inline modifier near index 2|(?^i)|  ^
+(?#x : desc=Unknown inline modifier index=2 pattern=true
+    Unknown inline modifier near index 2|(?#x|  ^
+(?$a) : desc=Unknown group type index=2 pattern=true
+    Unknown group type near index 2|(?$a)|  ^
+(?@a) : desc=Unknown group type index=2 pattern=true
+    Unknown group type near index 2|(?@a)|  ^
+(?< : desc=Unknown look-behind group index=3 pattern=true
+    Unknown look-behind group near index 3|(?<
+(?<>x) : desc=Unknown look-behind group index=4 pattern=true
+    Unknown look-behind group near index 4|(?<>x)|    ^
+(?<1>x) : desc=Unknown look-behind group index=5 pattern=true
+    Unknown look-behind group near index 5|(?<1>x)|     ^
+(?<1a>x) : desc=Unknown look-behind group index=6 pattern=true
+    Unknown look-behind group near index 6|(?<1a>x)|      ^
+(?<_a>x) : desc=Unknown look-behind group index=6 pattern=true
+    Unknown look-behind group near index 6|(?<_a>x)|      ^
+(?<a_b>x) : desc=named capturing group is missing trailing '>' index=4 pattern=true
+    named capturing group is missing trailing '>' near index 4|(?<a_b>x)|    ^
+(?<a-b>x) : desc=named capturing group is missing trailing '>' index=4 pattern=true
+    named capturing group is missing trailing '>' near index 4|(?<a-b>x)|    ^
+(?<a : desc=named capturing group is missing trailing '>' index=4 pattern=true
+    named capturing group is missing trailing '>' near index 4|(?<a
+(?<ab : desc=named capturing group is missing trailing '>' index=5 pattern=true
+    named capturing group is missing trailing '>' near index 5|(?<ab
+(?<a> : desc=Unclosed group index=5 pattern=true
+    Unclosed group near index 5|(?<a>
+(?<a>x : desc=Unclosed group index=6 pattern=true
+    Unclosed group near index 6|(?<a>x
+(?<a>x)(?<a>y) : desc=Named capturing group <a> is already defined index=11 pattern=true
+    Named capturing group <a> is already defined near index 11|(?<a>x)(?<a>y)|           ^
+(?<a>x)(?<b>y) : ok
+(?<A>x)(?<a>y) : ok
+(?<a1>x) : ok
+\k : desc=\k is not followed by '<' for named capturing group index=2 pattern=true
+    \k is not followed by '<' for named capturing group near index 2|\k
+\k< : desc=named capturing group is missing trailing '>' index=4 pattern=true
+    named capturing group is missing trailing '>' near index 4|\k<
+\k<> : desc=named capturing group is missing trailing '>' index=4 pattern=true
+    named capturing group is missing trailing '>' near index 4|\k<>
+\k<x> : desc=(named capturing group <x> does not exit index=4 pattern=true
+    (named capturing group <x> does not exit near index 4|\k<x>|    ^
+\k<a>(?<a>x) : desc=(named capturing group <a> does not exit index=4 pattern=true
+    (named capturing group <a> does not exit near index 4|\k<a>(?<a>x)|    ^
+(?<a>x)\k<a> : ok
+(?<a>x)\k<b> : desc=(named capturing group <b> does not exit index=11 pattern=true
+    (named capturing group <b> does not exit near index 11|(?<a>x)\k<b>|           ^
+(?<a>x)\k<a : desc=named capturing group is missing trailing '>' index=11 pattern=true
+    named capturing group is missing trailing '>' near index 11|(?<a>x)\k<a
+(?<=a*) : ok
+(?<=a+)b : ok
+(?<=ab*) : desc=Look-behind group does not have an obvious maximum length index=6 pattern=true
+    Look-behind group does not have an obvious maximum length near index 6|(?<=ab*)|      ^
+(?<=a.*b) : desc=Look-behind group does not have an obvious maximum length index=7 pattern=true
+    Look-behind group does not have an obvious maximum length near index 7|(?<=a.*b)|       ^
+(?<=.*) : ok
+(?<=(a|bc)*) : desc=Look-behind group does not have an obvious maximum length index=10 pattern=true
+    Look-behind group does not have an obvious maximum length near index 10|(?<=(a|bc)*)|          ^
+(?<!a|bc) : ok
+(?<=\1) : desc=Look-behind group does not have an obvious maximum length index=5 pattern=true
+    Look-behind group does not have an obvious maximum length near index 5|(?<=\1)|     ^
+(?<*=a) : desc=Unknown look-behind group index=5 pattern=true
+    Unknown look-behind group near index 5|(?<*=a)|     ^
+(?<.!c) : desc=Unknown look-behind group index=5 pattern=true
+    Unknown look-behind group near index 5|(?<.!c)|     ^
+(?<=a)? : ok
+(a)\2 : ok
+\1 : ok
+(a)\10 : ok
+\8 : ok
+(?x)a b # c : ok
+(?x)a ) : desc=Unmatched closing ')' index=5 pattern=true
+    Unmatched closing ')' near index 5|(?x)a )|     ^
+a ) : desc=Unmatched closing ')' index=1 pattern=true
+    Unmatched closing ')' near index 1|a )| ^
+a * * : desc=Dangling meta character '*' index=4 pattern=true
+    Dangling meta character '*' near index 4|a * *|    ^
+a{1 : ok
+( : ok
+[a : desc=Unclosed character class index=1 pattern=true
+    Unclosed character class near index 1|[a| ^
+a ) b : desc=Unmatched closing ')' index=1 pattern=true
+    Unmatched closing ')' near index 1|a ) b| ^
+a  # comment )  : ok
+(?x) ? a : desc=Dangling meta character '?' index=6 pattern=true
+    Dangling meta character '?' near index 6|(?x) ? a|      ^
+desc near index 2|regex|  ^ 2 desc regex
+desc|re
+desc near index 5|re
+true
+done
