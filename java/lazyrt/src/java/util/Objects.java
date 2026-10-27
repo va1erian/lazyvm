@@ -2,7 +2,7 @@ package java.util;
 
 public final class Objects {
     private Objects() {
-        throw new AssertionError("No java.util.Objects instances for you!");
+        throw new AssertionError("Objects has only static methods");
     }
 
     public static boolean equals(Object a, Object b) {

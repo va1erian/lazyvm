@@ -2,7 +2,7 @@ W10 before 10 {k9=v9, k8=v8, k7=v7, k6=v6, k5=v5, k4=v4, k3=v3, k2=v2, k1=v1, k0
 W10 settled true {k8=v8, k6=v6, k4=v4, k2=v2, k0=v0} empty false
 W10 queries get null containsKey false containsValue false remove null
 W10 views 5 5 5 [k8, k6, k4, k2, k0] [v8, v6, v4, v2, v0] [k8=v8, k6=v6, k4=v4, k2=v2, k0=v0]
-W10 walked 5 hash 1936590504 kept [k0, null, k2, null, k4, null, k6, null, k8, null]
+W10 walked 5 hash 20020 kept [k0, null, k2, null, k4, null, k6, null, k8, null]
 W10 all dropped true {} true
 W11 an equal key keeps the first key object true {k2=v22} true
 W10 a third of 300 dropped true null v4

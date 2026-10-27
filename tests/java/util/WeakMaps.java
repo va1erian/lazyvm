@@ -39,6 +39,8 @@ public class WeakMaps {
         final int n;
         Object ref;
         Val(int n) { this.n = n; }
+        /** Not the identity hash: VMs choose those freely, and the map's hashCode is printed. */
+        public int hashCode() { return 1000 * n; }
         public String toString() { return "v" + n; }
     }
 
@@ -93,10 +95,11 @@ public class WeakMaps {
     static void disappearing() throws Exception {
         WeakHashMap<Key, Val> m = new WeakHashMap<>();
         Key[] keep = new Key[10];
+        // No local holds an odd key: a dead local slot may stay a root on a VM without liveness
+        // maps (JLS 12.6.1 allows both), and the test must not depend on which kind it runs on.
         for (int i = 0; i < 10; i++) {
-            Key k = new Key(i);
-            if (i % 2 == 0) keep[i] = k;
-            m.put(k, new Val(i));
+            if (i % 2 == 0) keep[i] = new Key(i);
+            m.put(i % 2 == 0 ? keep[i] : new Key(i), new Val(i));
         }
         Val v3 = m.get(new Key(3));
         System.out.println("W10 before " + m.size() + " " + m);

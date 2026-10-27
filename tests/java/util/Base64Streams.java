@@ -162,6 +162,22 @@ public class Base64Streams {
         sb.append(" 7 [").append(text(bm)).append(']');
         om.close();
         System.out.println(sb.append(" close [").append(text(bm)).append(']'));
+        // B14a: a line length of 1 to 3 gives arrays one unbroken line, but the stream puts the
+        // separator once before its first character; 0 and below add nothing.
+        sb = new StringBuilder("mime short lines:");
+        for (int len : new int[] {-1, 0, 1, 3, 4}) {
+            for (int n : new int[] {0, 1, 4}) {
+                Base64.Encoder e = Base64.getMimeEncoder(len, latin1("|"));
+                if (n == 4) e = e.withoutPadding();
+                ByteArrayOutputStream o = new ByteArrayOutputStream();
+                OutputStream w = e.wrap(o);
+                w.write(new byte[n]);
+                w.close();
+                sb.append(' ').append(len).append('/').append(n).append(" [").append(text(o)).append("] [")
+                    .append(e.encodeToString(new byte[n])).append(']');
+            }
+        }
+        System.out.println(sb);
         // B14: close closes the wrapped stream.
         final boolean[] closed = {false};
         OutputStream oc = Base64.getEncoder().wrap(new OutputStream() {

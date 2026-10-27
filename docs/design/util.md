@@ -133,6 +133,15 @@ in fifty of the gaussian loop, and "gaussian sum" fails. Pinned by: RandomSeq ("
 "rejected", "scripted bytes", "gaussians", "gaussian sum", "StrictMath.log", "scripted gaussian"),
 RandomSeeding.
 
+*Measured (S5-04 implementation, `libm` 0.2.16 against the oracle, 10^6 inputs per function: edge
+values, random bit patterns, a typical range and log-uniform magnitudes).* Bit-identical: `tan`,
+`asin`, `acos`, `atan`, `exp`, `sqrt`, `ceil`, `floor`, `rint`, `expm1`, `pow`, `IEEEremainder`
+(12 of 23). Different, at most the ulps shown: `atan2` 9.6 % (1 ulp, mostly results near
+±π/2), `cbrt` 8.3 % (1), `log10` 2.9 % (2), `hypot` 1.6 % (1), `tanh` 0.95 % (3), `cos` 0.62 % (1),
+`sin` 0.61 % (1), `log` 0.16 % (1), `cosh` 0.10 % (1), `sinh` 0.09 % (1), `log1p` 0.02 % (1). Older
+`libm` releases (0.2.7) give the same counts. Which replacement fits the clean-room rules is an open
+decision for the owner; until then `StrictMath` stays on `libm`.
+
 **R2.** Each method reaches the overridable `next(bits)` like this: `nextInt()` once with 32;
 `nextLong()` twice with 32; `nextBoolean()` once with 1; `nextFloat()` once with 24; `nextDouble()`
 with 26 then 27; `nextInt(bound)` once with 31 per draw, rejected draws included, for powers of two
@@ -169,12 +178,15 @@ RandomSeq ("two instances differ", "seeds are not clock readings"), RandomSeedin
 
 ## 6. What lazyrt has today
 
-- `Objects`: complete and matches every J rule (checked by running Utilities' Objects lines on
-  LazyVM). Only the private constructor's text, above, needs rewording.
-- `Random`: matches R1 and R2 except where `StrictMath.log` is off (R1); R3 fails.
-- `Optional*`, `Base64`, `UUID`, `BitSet`, `Scanner`, `InputMismatchException`, `Properties`,
-  `StringTokenizer`, `WeakHashMap`, `java.util.Date`, `java.math`, `java.nio`, `java.security`:
-  absent.
+- `Objects`: complete and matches every J rule; the private constructor's text is reworded.
+- `Random`: matches R1, R2 and R3 (seeded from `lazy.internal.VM.entropy()`, natives.md), except
+  where `StrictMath.log` is off (R1): RandomSeq's "gaussian sum" and "StrictMath.log" lines still
+  fail until the `StrictMath` source is decided.
+- Built on branch `s5-util`: `Optional*`, `Base64` (not the `ByteBuffer` overloads), `UUID` (MD5 in
+  `lazy.internal.Md5`), `BitSet` (not the buffer `valueOf`s), `StringTokenizer`,
+  `InputMismatchException`, `WeakHashMap`.
+- Still absent, waiting for the merges: `Scanner` (S5-03 regex and S5-05), `Properties` (S5-05),
+  the `java.nio` overloads (S5-06), `java.util.Date`; and `java.math`, `java.security`.
 
 ## 7. API to provide
 

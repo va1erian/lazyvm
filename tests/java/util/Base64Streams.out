@@ -10,6 +10,7 @@ enc tail 'abc': [YWJj]->[YWJj] [YWJj]->[YWJj] [YWJj]->[YWJj] [YWJj]->[YWJj] [YWJ
 enc tail 'abcd': [YWJj]->[YWJjZA==] [YWJj]->[YWJjZA] [YWJj]->[YWJjZA==] [YWJj]->[YWJj|ZA==] [YWJj]->[YWJjZA]
 enc tail 'abcdefghijk': [YWJjZGVmZ2hp]->[YWJjZGVmZ2hpams=] [YWJjZGVmZ2hp]->[YWJjZGVmZ2hpams] [YWJjZGVmZ2hp]->[YWJjZGVmZ2hpams=] [YWJj|ZGVm|Z2hp]->[YWJj|ZGVm|Z2hp|ams=] [YWJjZGVm\r\nZ2hp]->[YWJjZGVm\r\nZ2hpams]
 mime stream: 3 [AAAA] 6 [AAAA|AAAA] 7 [AAAA|AAAA] close [AAAA|AAAA|AQ==]
+mime short lines: -1/0 [] [] -1/1 [AA==] [AA==] -1/4 [AAAAAA] [AAAAAA] 0/0 [] [] 0/1 [AA==] [AA==] 0/4 [AAAAAA] [AAAAAA] 1/0 [] [] 1/1 [|AA==] [AA==] 1/4 [|AAAAAA] [AAAAAA] 3/0 [] [] 3/1 [|AA==] [AA==] 3/4 [|AAAAAA] [AAAAAA] 4/0 [] [] 4/1 [AA==] [AA==] 4/4 [AAAA|AA] [AAAA|AA]
 enc close closes underlying true
 fuzz enc stream same 200
 dec stream '': B0=|EOF B1=|EOF B3=|EOF B64=|EOF M64=|EOF U64=|EOF trickle=|EOF

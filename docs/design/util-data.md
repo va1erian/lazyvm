@@ -105,9 +105,16 @@ as it is complete and holds back 1 or 2 bytes until more data or `close()`. `wri
 8 bits. `flush()` does not emit a held-back group. For a MIME encoder, a separator is written only
 when the first character of a new line is written, so never at the end. `close()` writes the held-back
 group (padded unless the encoder is `withoutPadding()`), then closes `out`. Any split of the data into
-`write` calls gives exactly `encodeToString` of the whole.
+`write` calls gives exactly `encodeToString` of the whole, except as B14a says.
 Pinned by: Base64Streams ("enc stream", "enc tail", "mime stream", "enc close closes underlying",
 "fuzz enc stream").
+
+**B14a.** (Found by the implementer's differential fuzz; the first version of B14 said there was no
+exception.) For `getMimeEncoder(lineLength, sep)` with `lineLength` 1, 2 or 3, arrays and strings
+get one unbroken line (B4), but the stream writes `sep` once, before its first character, and never
+again; with no data it writes nothing. `withoutPadding()` keeps this. `lineLength` ≤ 0 adds nothing.
+So `getMimeEncoder(3, "|")` gives `AA==` from `encode` and `|AA==` from the stream. LazyVM matches.
+Pinned by: Base64Streams ("mime short lines").
 
 **B15.** After `close()`, `write(int)` and `write(b, off, len)` (even with `len` 0) throw
 `IOException: Stream is closed`; `flush()` and a second `close()` do nothing.

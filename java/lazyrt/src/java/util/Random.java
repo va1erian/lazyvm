@@ -6,9 +6,6 @@ public class Random implements java.io.Serializable {
     private static final long PLUS = 0xBL;
     private static final long LOW_48_BITS = (1L << 48) - 1;
 
-    /** Distinguishes Random() instances made within one nanoTime tick. Spec 12: not observable. */
-    private static long instances;
-
     private long seed;
     private double nextNextGaussian;
     private boolean haveNextNextGaussian;
@@ -24,10 +21,11 @@ public class Random implements java.io.Serializable {
         }
     }
 
-    private static synchronized long freshSeed() {
-        instances++;
-        return System.nanoTime() ^ (instances * TIMES);
-    }
+    /**
+     * util.md R3: a process-relative clock would repeat across runs, so the seed comes from the
+     * VM's entropy source, which also differs on every call (one seed per instance).
+     */
+    private static long freshSeed() { return lazy.internal.VM.entropy(); }
 
     private static long firstSeed(long seed) { return (seed ^ TIMES) & LOW_48_BITS; }
 

@@ -16,7 +16,10 @@ The tests wait for the collector with a bounded loop (`System.gc()`, a short sle
 call) and print only the outcome, never how long it took. LazyVM's `System.gc()` is a full
 collection that clears weak references and puts them on their queues before it returns
 (`docs/design/natives.md`, `java/lang/ref`); the oracle enqueues a little later, which the loops
-absorb.
+absorb. Two things the VMs may do differently stay out of the tests: LazyVM treats every local
+variable slot of a frame as a root, even one whose variable is out of scope, where HotSpot ignores
+dead slots (JLS 12.6.1 allows both), so a key that must go is never left in a local; and identity
+hash codes differ, so a printed map hash uses values with their own `hashCode`.
 
 ## 1. Order without the collector
 

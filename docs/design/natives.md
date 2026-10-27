@@ -129,6 +129,12 @@ like the oracle.
 - `public static native void gc()`
 - `public static native long freeMemory()`, `totalMemory()`, `maxMemory()`
 - `public static native int availableProcessors()`
+- `public static native long entropy()`: 64 bits that differ on every call and
+  in every run. The platform hashes the wall clock (full resolution), the
+  monotonic clock and a call counter with keys the OS random source gives
+  once per process. It seeds `new Random()` and `UUID.randomUUID()`
+  (`design/util.md` R3, `design/util-data.md` U8); it is not a cryptographic
+  generator.
 - `public static native byte[] getResource(String name)` (null when absent)
 - `public static native boolean isBootClass(Class<?> c)`
 - Java, called by the VM: `static void uncaught(Throwable t)` prints
