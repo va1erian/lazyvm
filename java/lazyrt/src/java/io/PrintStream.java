@@ -50,15 +50,12 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         if (closed) {
             return;
         }
-        closed = true;
-        try {
-            if (held != 0) {
-                held = 0;
-                out.write('?');
-            }
-        } catch (IOException e) {
-            trouble = true;
+        if (held != 0) {
+            // Through the overridable write, as observed; a lone half is '?'.
+            held = 0;
+            write(new byte[] {'?'}, 0, 1);
         }
+        closed = true;
         try {
             out.close();
         } catch (IOException e) {
@@ -284,15 +281,20 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
 
     /**
      * Formats straight into this stream through append, so text before a
-     * bad specifier is already written when the exception is thrown.
+     * bad specifier is already written when the exception is thrown. A closed
+     * stream formats nothing and only records trouble (observed).
      */
     public PrintStream format(String format, Object... args) {
-        new Formatter((Appendable) this).format(format, args);
+        if (!refused()) {
+            new Formatter((Appendable) this).format(format, args);
+        }
         return this;
     }
 
     public PrintStream format(Locale l, String format, Object... args) {
-        new Formatter((Appendable) this, l).format(format, args);
+        if (!refused()) {
+            new Formatter((Appendable) this, l).format(format, args);
+        }
         return this;
     }
 }

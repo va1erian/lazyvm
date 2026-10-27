@@ -75,6 +75,17 @@ public class PrintCalls {
         fw.printf("%d", 2);
         fw.format(Locale.US, "%d", 3);
         System.out.println("PrintWriter format: " + fw.seen);
+
+        ps = new PrintStream(new ByteArrayOutputStream());
+        ps.close();
+        ps.printf("%q");
+        ps.printf((String) null);
+        System.out.println("closed printf: no exception, " + ps.checkError());
+
+        tee = new Tee(new ByteArrayOutputStream());
+        tee.print("a\ud83d");
+        tee.close();
+        System.out.println("held close: " + tee.seen);
         System.out.println("done");
     }
 }

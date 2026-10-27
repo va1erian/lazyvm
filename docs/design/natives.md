@@ -148,3 +148,13 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
 - A `NoClassDefFoundError` for a class missing from the class path has no
   cause; Java 8's carries a `ClassNotFoundException` from its class loader.
   Tests print only the error's class and message.
+- `PrintStream` and `PrintWriter` over a stream make the same overridable
+  calls as Java 8 (`tests/java/util/PrintCalls`, `WriterBlocks`), with three
+  known exceptions, none of which changes the bytes of an ordinary stream:
+  - the number of `write`/`flush` calls reaching the underlying
+    `OutputStream` can differ;
+  - Java 8's `close` runs a second time from inside itself, so a wrapped
+    stream is closed twice; LazyVM closes it once;
+  - each `write(byte[],int,int)` gets a fresh array, where Java 8 reuses one
+    buffer per stream, so a subclass whose `write` prints again sees its
+    array overwritten on Java 8 only.
