@@ -1,0 +1,10 @@
+78 f0 9f 98 80
+8195 f0 9f 98 80
+79 3f
+C
+java.lang.StringIndexOutOfBoundsException: String index out of range: -1
+%1$-d java.util.MissingFormatWidthException: %-1$d
+%3$+(30d java.util.MissingFormatArgumentException: Format specifier '%+(3$30d'
+%3$-% java.util.MissingFormatWidthException: %-%
+%2$#c java.util.FormatFlagsConversionMismatchException: Conversion = c, Flags = #
+%1$-08.3f java.util.IllegalFormatFlagsException: Flags = '-0'

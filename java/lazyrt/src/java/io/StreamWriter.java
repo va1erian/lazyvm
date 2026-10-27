@@ -11,6 +11,8 @@ final class StreamWriter extends Writer {
     private final OutputStream out;
     private final StringBuilder pending = new StringBuilder();
     private boolean closed;
+    /** Bytes reached `out` since its last flush; close flushes only then. */
+    private boolean unflushed;
 
     StreamWriter(OutputStream out) {
         super(out);
@@ -27,7 +29,7 @@ final class StreamWriter extends Writer {
         ensureOpen();
         pending.append(cbuf, off, len);
         if (pending.length() >= LIMIT) {
-            drain();
+            drain(false);
         }
     }
 
@@ -35,25 +37,42 @@ final class StreamWriter extends Writer {
         ensureOpen();
         pending.append(str, off, off + len);
         if (pending.length() >= LIMIT) {
-            drain();
+            drain(false);
         }
     }
 
-    private void drain() throws IOException {
-        byte[] bytes = pending.toString().getBytes();
-        pending.setLength(0);
+    /**
+     * Encodes what is pending. Unless `all`, a trailing high surrogate waits
+     * for its low half, so a pair split across writes stays one code point.
+     */
+    private void drain(boolean all) throws IOException {
+        int n = pending.length();
+        if (!all && n > 0 && Character.isHighSurrogate(pending.charAt(n - 1))) {
+            n--;
+        }
+        if (n == 0) {
+            return;
+        }
+        byte[] bytes = pending.substring(0, n).getBytes();
+        pending.delete(0, n);
         out.write(bytes, 0, bytes.length);
+        unflushed = true;
     }
 
     public void flush() throws IOException {
         ensureOpen();
-        drain();
+        drain(false);
         out.flush();
+        unflushed = false;
     }
 
     public void close() throws IOException {
         if (!closed) {
-            flush();
+            ensureOpen();
+            drain(true);
+            if (unflushed) {
+                out.flush();
+            }
             closed = true;
             out.close();
         }

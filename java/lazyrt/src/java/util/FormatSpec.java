@@ -144,11 +144,12 @@ final class FormatSpec {
 
     /** The specifier rebuilt from its fields, as used in exception messages. */
     public String toString() {
+        // Java 8 writes flags before the index, and no index for %%.
         StringBuilder sb = new StringBuilder("%");
-        if (index > 0) {
+        sb.append(flagsString(flags & ~UPPER));
+        if (index > 0 && conv != '%') {
             sb.append(index).append('$');
         }
-        sb.append(flagsString(flags & ~UPPER));
         if (width != -1) {
             sb.append(width);
         }

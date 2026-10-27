@@ -29,7 +29,8 @@ public abstract class Writer implements Appendable, Closeable, Flushable {
     }
 
     public void write(String str, int off, int len) throws IOException {
-        char[] buf = new char[len];
+        // Bounds first: a negative len is an index error, not an array size.
+        char[] buf = new char[Math.max(len, 0)];
         str.getChars(off, off + len, buf, 0);
         write(buf, 0, len);
     }
