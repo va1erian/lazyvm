@@ -283,7 +283,7 @@ Goal: the everyday `java.util` and `java.io` surface from
       `ReferenceQueue`, behaviour specified in `design/collections.md` like
       the other maps.
       Check: `tests/java/util/WeakMaps` (both).
-- [ ] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
+- [x] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
       Javadoc except `%t` dates, which come with S11), `Double.toString`
       (the shortest form its Javadoc asks for, D9), `Integer.parseInt` and friends,
       `StringJoiner`, `String.split` (literal patterns exist since S5-01;
