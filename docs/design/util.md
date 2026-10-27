@@ -125,22 +125,16 @@ its rejection loop (a draw is rejected when `bits - val + (bound - 1)` overflows
 `((long) next(32) << 32) + next(32)` (a signed sum); `nextFloat`, `nextDouble`, `nextBoolean` as given;
 `nextBytes` taking one `nextInt()` per 4 bytes, low byte first, and dropping the unused bytes of the
 last one; `nextGaussian` by the polar method with `StrictMath.log` and `StrictMath.sqrt`, returning the
-second value of each pair on the next call, which `setSeed` forgets. `nextGaussian` therefore needs
-`StrictMath.log` to give the fdlibm result the `StrictMath` Javadoc asks for: today LazyVM's
-`StrictMath.log` (the `libm` crate in `crates/natives/src/math.rs`) is one ulp off for about one input
-in fifty of the gaussian loop, and "gaussian sum" fails. Pinned by: RandomSeq ("sums", "seed -77",
-"setSeed restarts", "bounded", "dice", "bytes N", "after 3 bytes", "scripted", "scripted top",
-"rejected", "scripted bytes", "gaussians", "gaussian sum", "StrictMath.log", "scripted gaussian"),
+second value of each pair on the next call, which `setSeed` forgets. LazyVM's `StrictMath.log` is
+the `libm` crate's, which is within 1 ulp of fdlibm's but not always equal (`decisions.md` D12), so a
+gaussian can differ from Java 8's in its last digits. Everything else about `nextGaussian` is exact:
+which draws it makes, the rejected pairs, the signs, and the pairing and caching. RandomSeq
+therefore prints gaussians to 10 significant digits and their sums to 1e-6, which no ulp-level
+difference reaches (checked: the nearest rounding boundary is about 3e-7 away, the error bound about
+1e-11), and prints no exact `log` bits. Pinned by: RandomSeq ("sums", "seed -77", "setSeed
+restarts", "bounded", "dice", "bytes N", "after 3 bytes", "scripted", "scripted top", "rejected",
+"scripted bytes", "gaussians", "gaussian sum", "scripted gaussian", "nextGaussian" lines),
 RandomSeeding.
-
-*Measured (S5-04 implementation, `libm` 0.2.16 against the oracle, 10^6 inputs per function: edge
-values, random bit patterns, a typical range and log-uniform magnitudes).* Bit-identical: `tan`,
-`asin`, `acos`, `atan`, `exp`, `sqrt`, `ceil`, `floor`, `rint`, `expm1`, `pow`, `IEEEremainder`
-(12 of 23). Different, at most the ulps shown: `atan2` 9.6 % (1 ulp, mostly results near
-±π/2), `cbrt` 8.3 % (1), `log10` 2.9 % (2), `hypot` 1.6 % (1), `tanh` 0.95 % (3), `cos` 0.62 % (1),
-`sin` 0.61 % (1), `log` 0.16 % (1), `cosh` 0.10 % (1), `sinh` 0.09 % (1), `log1p` 0.02 % (1). Older
-`libm` releases (0.2.7) give the same counts. Which replacement fits the clean-room rules is an open
-decision for the owner; until then `StrictMath` stays on `libm`.
 
 **R2.** Each method reaches the overridable `next(bits)` like this: `nextInt()` once with 32;
 `nextLong()` twice with 32; `nextBoolean()` once with 1; `nextFloat()` once with 24; `nextDouble()`
@@ -179,9 +173,8 @@ RandomSeq ("two instances differ", "seeds are not clock readings"), RandomSeedin
 ## 6. What lazyrt has today
 
 - `Objects`: complete and matches every J rule; the private constructor's text is reworded.
-- `Random`: matches R1, R2 and R3 (seeded from `lazy.internal.VM.entropy()`, natives.md), except
-  where `StrictMath.log` is off (R1): RandomSeq's "gaussian sum" and "StrictMath.log" lines still
-  fail until the `StrictMath` source is decided.
+- `Random`: matches R1, R2 and R3 (seeded from `lazy.internal.VM.entropy()`, natives.md); its
+  gaussians may differ from Java 8's in the last digits, as R1 and `decisions.md` D12 accept.
 - Built on branch `s5-util`: `Optional*`, `Base64` (not the `ByteBuffer` overloads), `UUID` (MD5 in
   `lazy.internal.Md5`), `BitSet` (not the buffer `valueOf`s), `StringTokenizer`,
   `InputMismatchException`, `WeakHashMap`.

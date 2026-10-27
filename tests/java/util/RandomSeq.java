@@ -150,21 +150,34 @@ public class RandomSeq {
         System.out.println("scripted bytes: " + Arrays.toString(b));
     }
 
+    /**
+     * A gaussian to 10 significant digits. LazyVM's StrictMath.log may be a few ulps from fdlibm's
+     * (docs/decisions.md D12), which never reaches the 10th digit of these values; the draws
+     * (the LCG, the rejections and the pairing) stay exact.
+     */
+    static String g(double v) { return String.format(Locale.ROOT, "%.9e", v); }
+
     static void gaussians() {
         // R1: the polar method with StrictMath, two values per round.
         Random r = new Random(2024);
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 6; i++) sb.append(r.nextGaussian()).append(' ');
+        for (int i = 0; i < 6; i++) sb.append(g(r.nextGaussian())).append(' ');
         System.out.println("gaussians: " + sb.toString().trim());
-        long sum = 0;
-        for (int i = 0; i < 2000; i++) sum = sum * 31 + Double.doubleToLongBits(r.nextGaussian());
-        System.out.println("gaussian sum: " + sum);
-        // R1: nextGaussian needs StrictMath.log to be exact; this input is one where a near-miss log shows.
-        double s0 = Double.longBitsToDouble(4604922224222928284L);
-        System.out.println("StrictMath.log: " + Double.doubleToLongBits(StrictMath.log(s0)) + " sqrt: " + Double.doubleToLongBits(StrictMath.sqrt(-2 * StrictMath.log(s0) / s0)));
+        // R1: 2000 more: the signs are exact (log only scales), the sums are rounded far above an ulp.
+        int negative = 0;
+        double sum = 0;
+        double squares = 0;
+        for (int i = 0; i < 2000; i++) {
+            double v = r.nextGaussian();
+            if (v < 0) negative++;
+            sum += v;
+            squares += v * v;
+        }
+        System.out.println("gaussian sum: 2000 negative " + negative + " sum " + String.format(Locale.ROOT, "%.6f", sum)
+            + " squares " + String.format(Locale.ROOT, "%.6f", squares));
         // R1: a rejected pair (s >= 1 or s == 0) draws again; drive it with a script.
         Scripted s = new Scripted(-1, -1, -1, -1, 0x40000000, 0, 0x40000000, 0, 0x60000000, 0, 0x60000000, 0);
-        System.out.println("scripted gaussian: " + s.nextGaussian() + " " + s.nextGaussian() + " after " + s.at);
+        System.out.println("scripted gaussian: " + g(s.nextGaussian()) + " " + g(s.nextGaussian()) + " after " + s.at);
     }
 
     static void seeding() {

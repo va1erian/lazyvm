@@ -69,7 +69,8 @@ The VM reads and writes these fields by name. Keep their names and types.
 `public static native double` `sin`, `cos`, `tan`, `asin`, `acos`, `atan`,
 `exp`, `log`, `log10`, `sqrt`, `cbrt`, `ceil`, `floor`, `rint`, `sinh`,
 `cosh`, `tanh`, `expm1`, `log1p` (one `double`), and `atan2`, `pow`,
-`hypot`, `IEEEremainder` (two `double`s).
+`hypot`, `IEEEremainder` (two `double`s). They call the `libm` crate, which
+is not bit-identical to fdlibm (see "Known differences from Java 8").
 
 ### `java.lang.Float` and `java.lang.Double`
 - `public static native int floatToRawIntBits(float value)`
@@ -151,6 +152,12 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
 
 ## Known differences from Java 8
 
+- `StrictMath` (and `Math`, which delegates to it) gives `libm`'s results, not
+  fdlibm's: 11 functions differ from Java 8 by 1 to 3 ulps on a small share of
+  inputs (`atan2`, `cbrt`, `log10`, `hypot`, `tanh`, `cos`, `sin`, `log`,
+  `cosh`, `sinh`, `log1p`); the other 12 matched on every input measured.
+  The table and how it was measured are in [`decisions.md`](../decisions.md)
+  D12.
 - A `NoClassDefFoundError` for a class missing from the class path has no
   cause; Java 8's carries a `ClassNotFoundException` from its class loader.
   Tests print only the error's class and message.
