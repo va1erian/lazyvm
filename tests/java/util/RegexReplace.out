@@ -1,0 +1,73 @@
+a | banana | o => 'bonono'
+a | banana |  => 'bnn'
+an | banana | [$0] => 'b[an][an]a'
+(a)(n) | banana | $2$1 => 'bnanaa'
+(a)(n) | banana | <$1><$2><$3> => java.lang.IndexOutOfBoundsException: No group 3
+(a)(n) | banana | $10 => 'ba0a0a'
+(a)(n) | banana | $01 => 'baaa'
+(a)(n) | banana | $12 => 'ba2a2a'
+(?<first>a)(?<second>n) | banana | ${second}${first} => 'bnanaa'
+(?<first>a)(n) | banana | ${first}-$2 => 'ba-na-na'
+a | banana | \$ => 'b$n$n$'
+a | banana | \\ => 'b\n\n\'
+a | banana | $$ => java.lang.IllegalArgumentException: Illegal group reference
+(a)?b | ab b | [$1] => '[a] []'
+x* | abc | - => '-a-b-c-'
+ | abc | - => '-a-b-c-'
+^ | a\nb | > => '>a\nb'
+(?m)^ | a\nb | > => '>a\n>b'
+$ | a\nb | < => 'a\nb<'
+(?m)$ | a\nb | < => 'a<\nb<'
+\b | ab cd | | => '|ab| |cd|'
+\s+ |   a   b   |   => ' a b '
+(\w+) (\w+) | hello world foo bar | $2 $1 => 'world hello bar foo'
+(.)\1 | aabbcd | <$1> => '<a><b>cd'
+\d+ | a1b22 | {$0} => 'a{1}b{22}'
+(?i)A | aAa | x => 'xxx'
+b+ | abbbc | $0$0 => 'abbbbbbc'
+é | café | e => 'cafe'
+. | a😀b | x => 'xxx'
+a | a | é😀 => 'é😀'
+a | a | $ => java.lang.IllegalArgumentException: Illegal group reference: group index is missing
+a | a | $x => java.lang.IllegalArgumentException: Illegal group reference
+a | a | $ 1 => java.lang.IllegalArgumentException: Illegal group reference
+a | a | $9 => java.lang.IndexOutOfBoundsException: No group 9
+a | a | $1 => java.lang.IndexOutOfBoundsException: No group 1
+(a) | a | ${ => java.lang.IllegalArgumentException: named capturing group has 0 length name
+(a) | a | ${} => java.lang.IllegalArgumentException: named capturing group has 0 length name
+(a) | a | ${x => java.lang.IllegalArgumentException: named capturing group is missing trailing '}'
+(a) | a | ${x} => java.lang.IllegalArgumentException: No group with name {x}
+(a) | a | ${1} => java.lang.IllegalArgumentException: capturing group name {1} starts with digit character
+(a) | a | \ => java.lang.IllegalArgumentException: character to be escaped is missing
+(a) | a | x\ => java.lang.IllegalArgumentException: character to be escaped is missing
+b | a | $ => 'a'
+b | a | \ => 'a'
+a | banana | o => 'bonana'
+a | banana | $0$0 => 'baanana'
+(a)(n) | banana | $2$1 => 'bnaana'
+z | banana | o => 'banana'
+z | banana | $ => 'banana'
+a | banana | $ => java.lang.IllegalArgumentException: Illegal group reference: group index is missing
+^ | abc | > => '>abc'
+ | abc | - => '-abc'
+(?<n>a) | banana | ${n}! => 'ba!nana'
+a<2>b<44>c<666>d
+aX
+IOOBE start 2, end 1, s.length() 10 sb=aX
+aXb2222c333d
+aXb2222c333dc333d
+a1bZ
+ISE No match available
+IOOBE No group 5 sb=
+NPE
+NPE replaceAll
+NPE replaceFirst replacement
+b
+a\$1\\b\$ plain 
+a$1\b$
+NPE quote
+a-b-c ----- a/b/c
+heLo heLo _ell_
+b a XX X
+-a-b-c- a$1 a/b
+done

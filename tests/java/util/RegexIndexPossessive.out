@@ -1,0 +1,9 @@
+(?<=a[xb]{0,2100}+)b reset() first:
+(?<=a[xb]{0,2100}+)b reset() longer:
+(?<=a[xb]{0,2100}+)b reset() same length:
+(?<=a[xb]{0,2100}+)b reset() shorter:
+(?<=a[xb]{0,2100}+)b reset(input) first:
+(?<=a[xb]{0,2100}+)b reset(input) longer:
+(?<=a[xb]{0,2100}+)b reset(input) same length:
+(?<=a[xb]{0,2100}+)b reset(input) shorter:
+done

@@ -1,0 +1,86 @@
+
+1 3 [1,2)[2,3) true false
+ false
+[1,2)[2,3) true
+[1,2)[3,4)
+[3,4)
+false true
+false true
+true false
+true false
+true true false true
+2 5 5
+java.lang.IndexOutOfBoundsException: start
+java.lang.IndexOutOfBoundsException: end
+java.lang.IndexOutOfBoundsException: start > end
+java.lang.IndexOutOfBoundsException: start
+[0,1)[1,2) true 1 false false
+[0,1)[1,2)
+1 true 0 true 1
+true 1 false true
+0 3
+true 1 true 4 b (b)
+false true 0 b
+java.lang.IllegalArgumentException: Pattern cannot be null
+12a
+a | a : matches=true hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+a |  : matches=false hit=true req=false ; lookingAt=false hit=true req=false ; find=false hit=true req=false
+a | ab : matches=false hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+a+ | aa : matches=true hit=true req=false ; lookingAt=true hit=true req=false ; find=true hit=true req=false
+a+ | aab : matches=false hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+ab | a : matches=false hit=true req=false ; lookingAt=false hit=true req=false ; find=false hit=true req=false
+ab | ba : matches=false hit=false req=false ; lookingAt=false hit=false req=false ; find=false hit=true req=false
+a|ab | a : matches=true hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+a|ab | ab : matches=true hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+a* |  : matches=true hit=true req=false ; lookingAt=true hit=true req=false ; find=true hit=true req=false
+a? | a : matches=true hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+a$ | a : matches=true hit=true req=true ; lookingAt=true hit=true req=true ; find=true hit=true req=true
+a$ | ab : matches=false hit=false req=false ; lookingAt=false hit=false req=false ; find=false hit=true req=false
+a\z | a : matches=true hit=true req=false ; lookingAt=true hit=true req=false ; find=true hit=true req=false
+a\Z | aN : matches=false hit=true req=true ; lookingAt=true hit=true req=true ; find=true hit=true req=true
+a\b | a : matches=true hit=true req=true ; lookingAt=true hit=true req=true ; find=true hit=true req=true
+a\b | ab : matches=false hit=false req=false ; lookingAt=false hit=false req=false ; find=false hit=true req=false
+\b |  : matches=false hit=true req=true ; lookingAt=false hit=true req=true ; find=false hit=true req=true
+(?m)a$ | aNa : matches=false hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+(?m)^ |  : matches=false hit=true req=false ; lookingAt=false hit=true req=false ; find=false hit=true req=false
+(?m)^a | bNa : matches=false hit=false req=false ; lookingAt=false hit=false req=false ; find=true hit=false req=false
+(?!a) |  : matches=true hit=true req=true ; lookingAt=true hit=true req=true ; find=true hit=true req=true
+(?!a) | b : matches=false hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+a(?!b) | a : matches=true hit=true req=true ; lookingAt=true hit=true req=true ; find=true hit=true req=true
+a(?=b) | a : matches=false hit=true req=false ; lookingAt=false hit=true req=false ; find=false hit=true req=false
+(?<=a) | a : matches=false hit=false req=false ; lookingAt=false hit=false req=false ; find=true hit=false req=false
+\R | R : matches=true hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+\R | RN : matches=true hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+(a)\1 | a : matches=false hit=true req=false ; lookingAt=false hit=true req=false ; find=false hit=true req=false
+(a)\1 | aa : matches=true hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+.* | abc : matches=true hit=true req=false ; lookingAt=true hit=true req=false ; find=true hit=true req=false
+.*c | abc : matches=true hit=true req=false ; lookingAt=true hit=true req=false ; find=true hit=true req=false
+\d{2,3} | 12 : matches=true hit=true req=false ; lookingAt=true hit=true req=false ; find=true hit=true req=false
+\d{2,3} | 123 : matches=true hit=false req=false ; lookingAt=true hit=false req=false ; find=true hit=false req=false
+java.util.regex.Matcher[pattern=a region=0,2 lastmatch=]
+skipped search false hit=true req=false
+matches false hit=true req=true false hit=true req=true
+transparent true hit=false req=false true hit=false req=false false hit=false req=false
+opaque true hit=true req=true true hit=true req=true false hit=true req=true
+pair transparent=false: 2- 2- 2- 2- 2h- 2- 2- -1h- 0-
+pair transparent=true: 2- 2- 2- 2- 2h- 2- 2- -1h- 0-
+\G+ region(2,5): matches=no lookingAt=2-2 find=no matches=no lookingAt=2-2
+\G region(2,5): matches=no lookingAt=no find=no matches=no lookingAt=no
+\Ga region(2,5): matches=no lookingAt=no find=no matches=no lookingAt=no
+a*\G region(2,5): matches=no lookingAt=no find=no matches=no lookingAt=no
+\G+a region(2,5): matches=no lookingAt=no find=no matches=no lookingAt=no
+(?:\Ga)+ region(2,5): matches=no lookingAt=no find=no matches=no lookingAt=no
+a*\G true false true 2-2
+anchored ^a false hit=false req=false
+anchored \Aa false hit=false req=false
+anchored (?i)^a false hit=false req=false
+anchored (?:^a) false hit=true req=false
+anchored (?:\A)a false hit=true req=false
+anchored (?x:\A)b true hit=false req=false
+anchored (^a) false hit=true req=false
+anchored ^*a false hit=true req=false
+anchored ^(?:a) false hit=false req=false
+anchored ^a|b true hit=false req=false
+anchored (?>^)a false hit=true req=false
+anchored (?=^)a false hit=true req=false
+done
