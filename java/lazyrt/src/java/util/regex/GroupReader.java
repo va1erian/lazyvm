@@ -20,6 +20,8 @@ abstract class GroupReader extends ClassReader {
         int branchCount;
         Node[] items = new Node[4];
         int itemCount;
+        /** Index in the pattern of the '(' that opened the group. */
+        int start;
 
         Frame(int kind, int savedFlags, int number, boolean positive) {
             this.kind = kind;

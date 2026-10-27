@@ -109,6 +109,31 @@ public class RegexLimits {
         }
         m = Pattern.compile(rep("(", 200) + "a" + rep(")", 200)).matcher("a");
         System.out.println(m.matches() + " " + m.groupCount() + " " + m.group(1) + " " + m.group(200) + " " + m.start(100));
+        // find(int), region and reset over one String keep what a long lookbehind learned about
+        // the text (an index of the starts it can use), so this finishes in a moment; with the
+        // index rebuilt every time it takes minutes.
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < 60000; i++) {
+            text.append(i % 100 == 99 ? 'Z' : 'x');
+        }
+        String longText = text.toString();
+        Matcher look = Pattern.compile("Z(?<=x[^q]{0,3000})").matcher(longText);
+        long start = System.nanoTime();
+        int found = 0;
+        for (int pos = 2500; pos < 52500; pos += 500) {
+            if (look.find(pos)) {
+                found++;
+            }
+            if (look.region(pos, 60000).find()) {
+                found++;
+            }
+            look.reset();
+            if (look.find()) {
+                found++;
+            }
+        }
+        long millis = (System.nanoTime() - start) / 1000000;
+        System.out.println("repeated resets over a String " + found + (millis < 5000 ? " fast" : " slow"));
         System.out.println("done");
     }
 }

@@ -84,7 +84,11 @@ public final class Matcher implements MatchResult {
         clearGroups();
         lastAppendPosition = 0;
         textLength = text.length();
-        starts = new StartIndex[parentPattern.lookCount];
+        if (!(text instanceof String)) {
+            // Only text that can change makes the starts cached for lookbehinds stale; find(int),
+            // region and replaceAll reset a matcher over a String again and again.
+            starts = new StartIndex[parentPattern.lookCount];
+        }
         regionStart = 0;
         regionEnd = textLength;
         return this;
@@ -95,6 +99,7 @@ public final class Matcher implements MatchResult {
             throw new NullPointerException();
         }
         text = input;
+        starts = new StartIndex[parentPattern.lookCount];
         return reset();
     }
 

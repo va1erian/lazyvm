@@ -80,6 +80,10 @@ high half just before the end is followed by the end, not by the end minus one
 - A region that ends between the halves of a surrogate pair has the pair read
   whole, and `$`, `\Z` and `(?m)$` (not `\z`) hold right after it when the bounds
   anchor (`RegexPairEnd`).
+- A literal run (two or more literal chars, `ab\ud83d`) that ends with a high
+  surrogate does not match when the text goes on with a low surrogate, even past
+  the end of a region; a single `\ud83d`, a class and a run that goes on do
+  (`RegexLookbehindWide`).
 - With case folding, a literal that is part of a run of literals reads one
   char at a time, so at a region end that splits a pair it does not read the
   pair; a single folded literal, or one after a non-literal, reads whole pairs
@@ -128,12 +132,26 @@ high half just before the end is followed by the end, not by the end minus one
 - Only `^` or `\A` written directly at the start of a pattern lets a failed
   search skip the other positions; inside any group it does not (`RegexRegions`).
 
-A lookbehind counts how far back it looks in chars of the pattern, as the oracle
-does (`RegexLookbehindPairs`): a character above U+FFFF counts one, so
-`(?<=\x{1F600})A` and `(?<=\x{1F600}y)A` fail on an emoji followed by `A` or `yA`;
-but in a pattern with a surrogate char written raw anywhere it counts two, so
-`(?<=😀)A` matches. This holds for a literal, a class that holds such a
-character, and an alternation of them; the minimum stays one char.
+A lookbehind looks back in one of two ways, as the oracle does
+(`RegexLookbehindPairs`, `RegexLookbehindWide`, and a fuzz of 45000 cases with
+raw surrogates, whose one difference is the region gap listed below):
+
+- When the pattern text has a surrogate char written raw (a pair, or a lone
+  half) at or after the start of the lookbehind, the starts are found by
+  stepping back whole code points, from the minimum to the maximum number of
+  them. A start never falls between the halves of a pair, so `(?<=😀)A`,
+  `(?<=\x{1F600}y)A`, `(?<=.)A` and `(?<=[^😀])A` all see an emoji as one
+  step, and a lone low surrogate `\uDC00` is not found inside a pair. A raw
+  surrogate written before the lookbehind does not count: `😀|(?<=\x{1F600})A`
+  is the second kind.
+- Otherwise the starts are found by stepping back chars. The reach counts a
+  character above U+FFFF as one, so `(?<=\x{1F600})A` and `(?<=\x{1F600}y)A`
+  fail on an emoji followed by `A` or `yA`.
+
+The reach counts the same in both (a class or a character one, a literal run
+its characters, a repeat that many times), and so does the overflow check:
+`(?<=(?:😀a){715827883})A` is accepted. When the region starts inside a pair
+the step still reads the pair and then has no start left.
 
 ## Lookbehind reach
 
@@ -184,8 +202,10 @@ Two shortcuts keep the start-position loop of `find()` from being quadratic
 A lookbehind over an unbounded body that must begin with one class only tries
 the starts that can begin it, found by jumping through a bit set of the text
 (`StartIndex`), built once the way back is longer than 2048. The index is per
-matcher, and `reset()` and `reset(input)` drop it, since the text may have
-changed (`RegexIndexReset`).
+matcher. `reset(input)` drops it, and so does `reset()` when the text is not a
+`String` (a `StringBuilder` can change); over a `String`, `find(int)`, `region`
+and `replaceAll` keep it, which `RegexLimits` times (`RegexIndexReset` covers
+the dropped case).
 
 Measured with the oracle on the same machine (wall time including the start of
 the VM; the oracle's run is the second figure):
@@ -205,15 +225,18 @@ the VM; the oracle's run is the second figure):
   is rejected by the oracle too; `InSurrogates_Area` is the accepted spelling.
 - **CANON_EQ** is accepted and ignored.
 - Search does not look for a literal prefix; every start position is tried.
+- A lookbehind with a bounded window and a body that backs off (`x.{0,500}`)
+  costs the length of the window for each start tried, in an interpreter: on
+  20000 chars `(?<=x.{0,500})Z` is about 600 times slower than the oracle's
+  compiled code. Only the starts that can begin the body are tried (through
+  `StartIndex` for windows over 2048), but each of those is a full match of the
+  body.
 - `hitEnd` and `requireEnd` were fitted to the oracle (`RegexRegions` and
   randomized runs). A failed search stops where fewer than the pattern's true
   minimum length remains; the oracle's own bound differs for a few shapes (a
   `*`/`+` loop over a group with a variable body) and then reports `hitEnd` and
   `requireEnd` differently after a failed `find()`.
 - Back references do not set `hitEnd` in `matches()` the way the oracle does.
-- A lookbehind over a negated class that holds a supplementary character, in a
-  pattern with a raw surrogate (`(?<=[^😀])A` on `😀A`), matches here and not on
-  the oracle.
 - `hitEnd` on the empty input for `(?:(?<=\xe5|\x{10400}Y)(..|..)(..))*+`, a possessive
   loop whose body begins with a failing lookbehind: the oracle reports true, here
   false. A literal supplementary character at the end of a region that splits a

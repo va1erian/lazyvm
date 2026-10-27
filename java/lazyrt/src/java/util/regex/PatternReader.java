@@ -24,10 +24,8 @@ class PatternReader {
      * in RegexSurrogates.out; mutation: ignore this flag in Matcher.search.
      */
     boolean supplementary;
-    /** The pattern text holds a surrogate char written raw (see Atoms.One.width). */
-    boolean rawSurrogates;
-    /** A class being read holds a character above U+FFFF. */
-    boolean wideClass;
+    /** The index in src of the last surrogate char written raw, or -1 (see LookbehindReach). */
+    int lastRaw = -1;
 
     PatternReader(String pattern, int flags) {
         this.original = pattern;
@@ -37,7 +35,11 @@ class PatternReader {
         for (int i = 0; i < pattern.length(); i++) {
             if (Character.isSurrogate(pattern.charAt(i))) {
                 supplementary = true;
-                rawSurrogates = true;
+            }
+        }
+        for (int i = 0; i < len; i++) {
+            if (Character.isSurrogate(src.charAt(i))) {
+                lastRaw = i;
             }
         }
     }

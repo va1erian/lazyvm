@@ -41,12 +41,6 @@ final class Atoms {
         final CharClass cc;
         /** The code point when this is a plain case-sensitive literal (so runs of them can merge into a Str), else -1. */
         int literal = -1;
-        /**
-         * Chars a lookbehind counts for this node. Observed on the oracle (RegexLookbehind): in a
-         * pattern with a surrogate char written raw anywhere, a character above U+FFFF (a literal
-         * or in a class) counts 2; otherwise it counts 1, so (?<=\x{1F600}y) looks back too little.
-         */
-        int width = 1;
         /** A single character written as a literal under CASE_INSENSITIVE (see Parser.sequenceOf). */
         boolean foldedLiteral;
         /** This class is the union of alternatives, as in (?:a|b); see LookbehindReach. */
@@ -86,15 +80,12 @@ final class Atoms {
     static final class Str extends Node {
         final char[] chars;
 
-        /** Chars a lookbehind counts for the run (a pair written as \x{..} counts one). */
-        final int reach;
         /** The number of characters written, a pair counting one. */
         private final int count;
 
-        Str(char[] chars, int count, int reach) {
+        Str(char[] chars, int count) {
             this.chars = chars;
             this.count = count;
-            this.reach = reach;
         }
 
         boolean match(Matcher m, int i) {
@@ -107,6 +98,12 @@ final class Atoms {
                 if (m.text.charAt(i + k) != chars[k]) {
                     return false;
                 }
+            }
+            // Observed on the oracle (RegexSurrogates): a run that ends with a high surrogate does
+            // not match when the text goes on with a low surrogate (the pair is not split), even
+            // past the end of the region.
+            if (Character.isHighSurrogate(chars[n - 1]) && i + n < m.textLength && Character.isLowSurrogate(m.text.charAt(i + n))) {
+                return false;
             }
             return next.match(m, i + n);
         }

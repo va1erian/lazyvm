@@ -86,14 +86,22 @@ final class GroupNodes {
         private final boolean positive;
         private final int minLen;
         private final int maxLen;
+        /**
+         * Observed on the oracle (RegexLookbehindPairs): when the pattern text has a surrogate char
+         * written raw at or after the start of the lookbehind, the starts tried are found by
+         * stepping back whole code points, minLen to maxLen of them, so a start never falls between
+         * the halves of a pair. Otherwise the way back is counted in chars.
+         */
+        private final boolean byCodePoints;
         /** A class the body must begin with, or null (see SearchHints). */
         private final CharClass firstChars;
         private final int id;
         private Node head;
 
         /** `maxLen` is how far back a lookbehind may look (see LookbehindReach). */
-        Look(Node body, boolean ahead, boolean positive, int maxLen, int id) {
+        Look(Node body, boolean ahead, boolean positive, int maxLen, int id, boolean byCodePoints) {
             this.id = id;
+            this.byCodePoints = byCodePoints;
             this.body = body;
             this.ahead = ahead;
             this.positive = positive;
@@ -145,6 +153,12 @@ final class GroupNodes {
                 m.lo = 0;
             }
             m.behindTarget = i;
+            if (byCodePoints) {
+                boolean found = behindByCodePoints(m, i);
+                m.lo = lo;
+                m.behindTarget = target;
+                return found;
+            }
             int lowest = i - maxLen;
             if (lowest < m.lo) {
                 lowest = m.lo;
@@ -161,7 +175,7 @@ final class GroupNodes {
             }
             for (int start = i - minLen; start >= lowest && !found; start--) {
                 if (index != null) {
-                    start = index.previous(start);
+                    start = index.previous(start, lowest);
                     if (start < lowest) {
                         break;
                     }
@@ -173,6 +187,23 @@ final class GroupNodes {
             m.lo = lo;
             m.behindTarget = target;
             return found;
+        }
+
+        private boolean behindByCodePoints(Matcher m, int i) {
+            int start = i;
+            for (int n = 0; n <= maxLen; n++) {
+                if (n >= minLen && head.match(m, start)) {
+                    return true;
+                }
+                // Observed on the oracle: the step reads a pair that the region start splits, and
+                // then there is no start left to try.
+                boolean pair = start >= 2 && Character.isSurrogatePair(m.text.charAt(start - 2), m.text.charAt(start - 1));
+                start -= pair ? 2 : 1;
+                if (start < m.lo) {
+                    break;
+                }
+            }
+            return false;
         }
 
         int min() {

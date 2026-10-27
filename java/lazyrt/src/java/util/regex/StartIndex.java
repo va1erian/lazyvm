@@ -4,7 +4,8 @@ package java.util.regex;
  * For one matcher and one class: the positions of the text whose code point is in the class, as
  * a bit set, so that a lookbehind can jump back to the previous position it could begin at
  * instead of testing every one (see GroupNodes.Look). The text is read once, when the index is
- * first needed; it is dropped when the matcher gets another input.
+ * first needed; it is dropped when the matcher gets another input that can differ (see
+ * Matcher.reset).
  */
 final class StartIndex {
     private final long[] bits;
@@ -18,15 +19,19 @@ final class StartIndex {
         }
     }
 
-    /** The largest position at or before p that is in the class, or -1. */
-    int previous(int p) {
+    /**
+     * The largest position at or before p that is in the class, or -1 when there is none in the
+     * words from floor on (so the search never reads further back than the caller will look).
+     */
+    int previous(int p, int floor) {
         if (p < 0) {
             return -1;
         }
         int w = p >> 6;
+        int lowestWord = Math.max(floor, 0) >> 6;
         long word = bits[w] & (-1L >>> (63 - (p & 63)));
         while (word == 0) {
-            if (--w < 0) {
+            if (--w < lowestWord) {
                 return -1;
             }
             word = bits[w];

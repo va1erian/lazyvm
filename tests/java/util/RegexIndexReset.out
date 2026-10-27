@@ -24,4 +24,12 @@ b(?<=a[xb]{0,3000}) reset(input) shorter: 101-102
 (?<=a[xb]{0,3000}+)b reset(input) shorter:
 (?<=a[xb]{0,3000})b no reset: 2101
 (?<=a[xb]{0,3000}+)b no reset: -1
+(?<=a[xb]{0,3000})b string first: 2101-2102
+(?<=a[xb]{0,3000})b string longer: 4001-4002
+(?<=a[xb]{0,3000})b string none:
+(?<=a[xb]{0,3000})b string shorter: 101-102
+(?<=a[xb]{0,3000}+)b string first:
+(?<=a[xb]{0,3000}+)b string longer:
+(?<=a[xb]{0,3000}+)b string none:
+(?<=a[xb]{0,3000}+)b string shorter:
 done

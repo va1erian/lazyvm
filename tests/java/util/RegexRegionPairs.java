@@ -17,6 +17,11 @@ public class RegexRegionPairs {
             while (m.find()) {
                 o.append(" [").append(m.start()).append(',').append(m.end()).append(']');
             }
+            o.append(m.hitEnd() ? " hitEnd" : " no hitEnd");
+            // lookingAt stops at the first failure, so hitEnd comes only from where it failed.
+            Matcher at = Pattern.compile(p, flags).matcher(t);
+            at.region(lo, hi).useTransparentBounds(b == 1);
+            o.append(at.lookingAt() ? " looks" : " no look").append(at.hitEnd() ? " hit" : " nohit");
             System.out.println(o);
         }
     }

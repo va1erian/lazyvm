@@ -52,9 +52,10 @@ final class Parser extends GroupReader {
                 cur = stack[--depth];
                 add(cur, quantify(closed));
             } else if (c == '(') {
-                cursor++;
+                int open = cursor++;
                 Frame f = openGroup();
                 if (f != null) {
+                    f.start = open;
                     if (++depth == stack.length) {
                         Frame[] bigger = new Frame[depth * 2];
                         System.arraycopy(stack, 0, bigger, 0, depth);
@@ -140,14 +141,14 @@ final class Parser extends GroupReader {
                 result = new GroupNodes.Group(f.number, body);
                 break;
             case LOOKAHEAD:
-                result = new GroupNodes.Look(body, true, f.positive, 0, lookCount++);
+                result = new GroupNodes.Look(body, true, f.positive, 0, lookCount++, false);
                 break;
             case LOOKBEHIND:
                 LookbehindReach reach = LookbehindReach.of(body);
                 if (!reach.valid) {
                     throw error(NO_MAX_LENGTH);
                 }
-                result = new GroupNodes.Look(body, false, f.positive, reach.max, lookCount++);
+                result = new GroupNodes.Look(body, false, f.positive, reach.max, lookCount++, lastRaw >= f.start);
                 break;
             case ATOMIC:
                 result = atomic(body);
@@ -195,10 +196,7 @@ final class Parser extends GroupReader {
     }
 
     private Atoms.One classAtom() {
-        wideClass = false;
-        Atoms.One one = new Atoms.One(parseClass());
-        one.width = rawSurrogates && wideClass ? 2 : 1;
-        return one;
+        return new Atoms.One(parseClass());
     }
 
     // Atoms other than groups.
@@ -247,9 +245,7 @@ final class Parser extends GroupReader {
     }
 
     private Atoms.One literal(int cp) {
-        Atoms.One one = plainLiteral(cp);
-        one.width = rawSurrogates && cp > 0xFFFF ? 2 : 1;
-        return one;
+        return plainLiteral(cp);
     }
 
     private Atoms.One plainLiteral(int cp) {

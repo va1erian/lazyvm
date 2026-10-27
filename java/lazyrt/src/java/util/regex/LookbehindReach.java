@@ -6,8 +6,9 @@ package java.util.regex;
  * docs/regex.md ("Lookbehind reach") and pinned by RegexLookbehind:
  *
  * <ul>
- * <li>Each piece of the body has a reach: a char or literal its length, a class
- * repeat n times n, an unbounded repeat 2147483647.
+ * <li>Each piece of the body has a reach, counted in characters as written (a character
+ * above U+FFFF written as a pair or as \x{..} is one): a class or a character 1, a literal
+ * run its length, a class repeat n times n, an unbounded repeat 2147483647.
  * <li>Reaches add up along the body with ordinary 32-bit int overflow, no
  * clamping. An alternation contributes its longest branch, counted from -1.
  * <li>A repeat written * + {n} {n,m} or {n,} is rejected when its own reach
@@ -56,12 +57,12 @@ final class LookbehindReach {
 
     private void study(Node n) {
         if (n instanceof Atoms.One) {
-            sum += ((Atoms.One) n).width;
+            sum++;
             if (((Atoms.One) n).fromAlternation) {
                 restart();
             }
         } else if (n instanceof Atoms.Str) {
-            sum += ((Atoms.Str) n).reach;
+            sum += ((Atoms.Str) n).min();
         } else if (n instanceof Atoms.LineBreak) {
             sum += 2;
         } else if (n instanceof Atoms.BackRef) {

@@ -73,6 +73,17 @@ public class RegexIndexReset {
             }
             System.out.println(o);
         }
+        // The same String matcher moved to other Strings keeps no index of the old one.
+        for (String re : new String[] {"(?<=a[xb]{0,3000})b", "(?<=a[xb]{0,3000}+)b"}) {
+            Matcher m = Pattern.compile(re).matcher(rep('x', 2100) + "ab");
+            show(re + " string first", m);
+            m.reset(rep('x', 4000) + "ab");
+            show(re + " string longer", m);
+            m.reset(rep('x', 4000) + "ba");
+            show(re + " string none", m);
+            m.reset(rep('x', 100) + "ab");
+            show(re + " string shorter", m);
+        }
         System.out.println("done");
     }
 }
