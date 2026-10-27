@@ -1,0 +1,11 @@
+(?<=a[xb]{0,2100})b no reset: 2101
+(?<=a[xb]{0,2100}+)b no reset: -1
+(?<=a[xb]{0,2100})b string first: 2101-2102
+(?<=a[xb]{0,2100})b string longer: 2601-2602
+(?<=a[xb]{0,2100})b string none:
+(?<=a[xb]{0,2100})b string shorter: 101-102
+(?<=a[xb]{0,2100}+)b string first:
+(?<=a[xb]{0,2100}+)b string longer:
+(?<=a[xb]{0,2100}+)b string none:
+(?<=a[xb]{0,2100}+)b string shorter:
+done

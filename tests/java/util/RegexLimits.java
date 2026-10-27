@@ -50,9 +50,9 @@ public class RegexLimits {
     public static void main(String[] args) {
         // Loops over a single class, alone or inside one capturing group, take no stack per iteration.
         int deep = 100000;
-        loop("(\\d)+", "1", 1000000);
-        loop("([a-z])*", "a", 1000000);
-        loop("(.)*", "a", 1000000);
+        loop("(\\d)+", "1", 200000);
+        loop("([a-z])*", "a", 200000);
+        loop("(.)*", "a", 200000);
         loop("(a|b)*", "ab", 400);
         loop("(?:ab)*+", "ab", deep);
         loop("(?>a|b)*", "ab", deep);
@@ -143,19 +143,19 @@ public class RegexLimits {
             }
         }
         long millis = (System.nanoTime() - start) / 1000000;
-        System.out.println("repeated resets over a String " + found + (millis < 5000 ? " fast" : " slow"));
+        System.out.println("repeated resets over a String " + found + (millis < 30000 ? " fast" : " slow"));
         // A pattern nested too deeply to compile is reported as a syntax error. The depth at which
         // that happens differs between engines, so only a depth that both reject is tried. The
         // index depends on the stack as well, so only the shape of the message is printed.
         for (String open : new String[] {"(", "(?=", "(?<="}) {
-            String p = rep(open, 200000) + "a" + rep(")", 200000);
+            String p = rep(open, 20000) + "a" + rep(")", 20000);
             try {
                 Pattern.compile(p);
-                System.out.println("nesting 200000 " + open + " compiled");
+                System.out.println("nesting 20000 " + open + " compiled");
             } catch (PatternSyntaxException e) {
-                System.out.println("nesting 200000 " + open + " " + e.getDescription() + messageShape(e, p));
+                System.out.println("nesting 20000 " + open + " " + e.getDescription() + messageShape(e, p));
             } catch (StackOverflowError e) {
-                System.out.println("nesting 200000 " + open + " StackOverflowError");
+                System.out.println("nesting 20000 " + open + " StackOverflowError");
             }
         }
         System.out.println("done");

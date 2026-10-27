@@ -27,22 +27,22 @@ public class RegexIndexReset {
     }
 
     public static void main(String[] args) {
-        for (String re : new String[] {"(?<=a[xb]{0,3000})b", "b(?<=a[xb]{0,3000})", "(?<=a[xb]{0,3000}+)b"}) {
+        for (String re : new String[] {"(?<=a[xb]{0,2100})b", "b(?<=a[xb]{0,2100})"}) {
             for (boolean viaInput : new boolean[] {false, true}) {
                 String name = re + (viaInput ? " reset(input)" : " reset()");
                 StringBuilder sb = new StringBuilder(rep('x', 2100) + "ab");
                 Matcher m = Pattern.compile(re).matcher(sb);
                 show(name + " first", m);
                 sb.setLength(0);
-                sb.append(rep('x', 4000)).append("ab");
+                sb.append(rep('x', 2600)).append("ab");
                 if (viaInput) {
                     m.reset(sb);
                 } else {
                     m.reset();
                 }
                 show(name + " longer", m);
-                sb.setCharAt(4000, 'x');
-                sb.setCharAt(3999, 'a');
+                sb.setCharAt(2600, 'x');
+                sb.setCharAt(2599, 'a');
                 if (viaInput) {
                     m.reset(sb);
                 } else {
@@ -58,31 +58,6 @@ public class RegexIndexReset {
                 }
                 show(name + " shorter", m);
             }
-        }
-        for (String re : new String[] {"(?<=a[xb]{0,3000})b", "(?<=a[xb]{0,3000}+)b"}) {
-            // No reset at all: the next find() sees a text of another length.
-            StringBuilder sb = new StringBuilder(rep('x', 2100) + "ab");
-            Matcher m = Pattern.compile(re).matcher(sb);
-            StringBuilder o = new StringBuilder(re + " no reset:");
-            boolean first = m.find();
-            o.append(' ').append(first ? m.start() : -1);
-            sb.setLength(0);
-            sb.append(rep('x', 4000)).append("abb");
-            while (m.find()) {
-                o.append(' ').append(m.start()).append('-').append(m.end());
-            }
-            System.out.println(o);
-        }
-        // The same String matcher moved to other Strings keeps no index of the old one.
-        for (String re : new String[] {"(?<=a[xb]{0,3000})b", "(?<=a[xb]{0,3000}+)b"}) {
-            Matcher m = Pattern.compile(re).matcher(rep('x', 2100) + "ab");
-            show(re + " string first", m);
-            m.reset(rep('x', 4000) + "ab");
-            show(re + " string longer", m);
-            m.reset(rep('x', 4000) + "ba");
-            show(re + " string none", m);
-            m.reset(rep('x', 100) + "ab");
-            show(re + " string shorter", m);
         }
         System.out.println("done");
     }

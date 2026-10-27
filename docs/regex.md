@@ -237,8 +237,8 @@ the starts that can begin it, found by jumping through a bit set of the text
 (`StartIndex`), built once the way back is longer than 2048. The index is per
 matcher. `reset(input)` drops it, and so does `reset()` when the text is not a
 `String` (a `StringBuilder` can change); over a `String`, `find(int)`, `region`
-and `replaceAll` keep it, which `RegexLimits` times (`RegexIndexReset` covers
-the dropped case).
+and `replaceAll` keep it, which `RegexLimits` times (`RegexIndexReset`,
+`RegexIndexPossessive` and `RegexIndexStrings` cover the dropped case).
 
 Measured with the oracle on the same machine (wall time including the start of
 the VM; the oracle's run is the second figure):
