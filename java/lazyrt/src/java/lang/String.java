@@ -372,18 +372,8 @@ public final class String implements java.io.Serializable, Comparable<String>, C
         return convertCase(true);
     }
 
-    /** Case mapping one code point at a time; locale rules and length changes are ignored. */
     private String convertCase(boolean upper) {
-        StringBuilder sb = new StringBuilder(value.length);
-        boolean changed = false;
-        for (int i = 0; i < value.length; ) {
-            int cp = codePointAt(i);
-            int mapped = upper ? Character.toUpperCase(cp) : Character.toLowerCase(cp);
-            changed |= mapped != cp;
-            sb.appendCodePoint(mapped);
-            i += Character.charCount(cp);
-        }
-        return changed ? sb.toString() : this;
+        return StringCase.convert(this, upper);
     }
 
     public String trim() {

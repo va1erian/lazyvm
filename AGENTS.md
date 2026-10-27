@@ -135,6 +135,7 @@ python tools/lazyos_test.py --lazyos <LazyOS checkout> --filter <area>   # insid
 python tools/sdk.py                    # dist/lazyvm-sdk for IntelliJ (docs/intellij.md)
 python tools/check_rules.py
 python tools/licenses.py
+python tools/unicode.py                # regenerate + verify crates/natives/data/unicode.bin on the Java 8 oracle
 ```
 
 These tools are created by S0. Until then, only `cargo build` exists.

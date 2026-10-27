@@ -1,0 +1,118 @@
+getType 2e84a0cb7c265616
+toUpperCase 4742529c148a1ca0
+toLowerCase eb0e740ca75d824a
+toTitleCase f2b1c30276908f80
+digit36 ac425e32d8d229
+digit10 c1c85c13654a4d79
+digit16 e42b6e7adc2ee61
+digit2 4a7cb90cfd38f8a9
+getNumericValue 2e91f44b857301cd
+isWhitespace 1246af6ef73c1687
+isSpaceChar 1a0521d798cad3dd
+isMirrored 6b26e25f954b8b86
+isIdeographic c5c056939efbcc1e
+isAlphabetic f96c5d4fefbc330b
+isLetter 7e0d0e0e4b7a7d11
+isDigit 86f0f9ee0d60a2b1
+isLetterOrDigit b542a9e3f3bf0d41
+isUpperCase ed2c3420ab6d54c6
+isLowerCase d88f35cbf4718d1
+isTitleCase 28954b1e3dd27a38
+isJavaIdentifierStart 812beaacf6f968a1
+isJavaIdentifierPart 7c2d51b41159aaeb
+isUnicodeIdentifierStart fa3978514e70c1c3
+isUnicodeIdentifierPart c7c56e83d32be561
+isIdentifierIgnorable 14f41b400f7681ac
+isISOControl d7e4b53b70114772
+isDefined 1ca1683da2dba0c0
+getDirectionality 1d656f5342cd58d5
+charToUpperCase 8de13e59d38eca00
+charGetType 7ebc5fc463ec270e
+charIsLetter 243958f42bf43fcc
+charIsJavaPart 828a37559e558cf
+charDirectionality e65ea15043a0b7cf
+probe -1: type=0 upper=-1 lower=-1 digit=-1 num=-1 dir=-1 letter=false ws=false def=false iso=false jpart=false
+probe -2147483648: type=0 upper=-2147483648 lower=-2147483648 digit=-1 num=-1 dir=-1 letter=false ws=false def=false iso=false jpart=false
+probe 1114112: type=0 upper=1114112 lower=1114112 digit=-1 num=-1 dir=-1 letter=false ws=false def=false iso=false jpart=false
+probe 2147483647: type=0 upper=2147483647 lower=2147483647 digit=-1 num=-1 dir=-1 letter=false ws=false def=false iso=false jpart=false
+probe 2147483642: type=0 upper=2147483642 lower=2147483642 digit=-1 num=-1 dir=-1 letter=false ws=false def=false iso=false jpart=false
+spot U+0: type=15 upper=0 lower=0 title=0 digit36=-1 num=-1 dir=9 mirrored=false ideo=false alpha=false
+spot U+9: type=15 upper=9 lower=9 title=9 digit36=-1 num=-1 dir=11 mirrored=false ideo=false alpha=false
+spot U+20: type=12 upper=20 lower=20 title=20 digit36=-1 num=-1 dir=12 mirrored=false ideo=false alpha=false
+spot U+30: type=9 upper=30 lower=30 title=30 digit36=0 num=0 dir=3 mirrored=false ideo=false alpha=false
+spot U+39: type=9 upper=39 lower=39 title=39 digit36=9 num=9 dir=3 mirrored=false ideo=false alpha=false
+spot U+41: type=1 upper=41 lower=61 title=41 digit36=10 num=10 dir=0 mirrored=false ideo=false alpha=true
+spot U+5a: type=1 upper=5a lower=7a title=5a digit36=35 num=35 dir=0 mirrored=false ideo=false alpha=true
+spot U+61: type=2 upper=41 lower=61 title=41 digit36=10 num=10 dir=0 mirrored=false ideo=false alpha=true
+spot U+7a: type=2 upper=5a lower=7a title=5a digit36=35 num=35 dir=0 mirrored=false ideo=false alpha=true
+spot U+7f: type=15 upper=7f lower=7f title=7f digit36=-1 num=-1 dir=9 mirrored=false ideo=false alpha=false
+spot U+85: type=15 upper=85 lower=85 title=85 digit36=-1 num=-1 dir=10 mirrored=false ideo=false alpha=false
+spot U+a0: type=12 upper=a0 lower=a0 title=a0 digit36=-1 num=-1 dir=7 mirrored=false ideo=false alpha=false
+spot U+aa: type=5 upper=aa lower=aa title=aa digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+ad: type=16 upper=ad lower=ad title=ad digit36=-1 num=-1 dir=9 mirrored=false ideo=false alpha=false
+spot U+b2: type=11 upper=b2 lower=b2 title=b2 digit36=-1 num=2 dir=3 mirrored=false ideo=false alpha=false
+spot U+b5: type=2 upper=39c lower=b5 title=39c digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+bc: type=11 upper=bc lower=bc title=bc digit36=-1 num=-2 dir=13 mirrored=false ideo=false alpha=false
+spot U+c0: type=1 upper=c0 lower=e0 title=c0 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+df: type=2 upper=df lower=df title=df digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+ff: type=2 upper=178 lower=ff title=178 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+130: type=1 upper=130 lower=69 title=130 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+131: type=2 upper=49 lower=131 title=49 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+149: type=2 upper=149 lower=149 title=149 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+17f: type=2 upper=53 lower=17f title=53 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+1c5: type=3 upper=1c4 lower=1c6 title=1c5 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+1f2: type=3 upper=1f1 lower=1f3 title=1f2 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+345: type=6 upper=399 lower=345 title=399 digit36=-1 num=-1 dir=8 mirrored=false ideo=false alpha=true
+spot U+370: type=1 upper=370 lower=371 title=370 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+390: type=2 upper=390 lower=390 title=390 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+3a3: type=1 upper=3a3 lower=3c3 title=3a3 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+3c2: type=2 upper=3a3 lower=3c2 title=3a3 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+3f4: type=1 upper=3f4 lower=3b8 title=3f4 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+41f: type=1 upper=41f lower=43f title=41f digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+5d0: type=5 upper=5d0 lower=5d0 title=5d0 digit36=-1 num=-1 dir=1 mirrored=false ideo=false alpha=true
+spot U+627: type=5 upper=627 lower=627 title=627 digit36=-1 num=-1 dir=2 mirrored=false ideo=false alpha=true
+spot U+660: type=9 upper=660 lower=660 title=660 digit36=0 num=0 dir=6 mirrored=false ideo=false alpha=false
+spot U+6f5: type=9 upper=6f5 lower=6f5 title=6f5 digit36=5 num=5 dir=3 mirrored=false ideo=false alpha=false
+spot U+966: type=9 upper=966 lower=966 title=966 digit36=0 num=0 dir=0 mirrored=false ideo=false alpha=false
+spot U+9f4: type=11 upper=9f4 lower=9f4 title=9f4 digit36=-1 num=-2 dir=0 mirrored=false ideo=false alpha=false
+spot U+e50: type=9 upper=e50 lower=e50 title=e50 digit36=0 num=0 dir=0 mirrored=false ideo=false alpha=false
+spot U+1680: type=12 upper=1680 lower=1680 title=1680 digit36=-1 num=-1 dir=12 mirrored=false ideo=false alpha=false
+spot U+180e: type=12 upper=180e lower=180e title=180e digit36=-1 num=-1 dir=12 mirrored=false ideo=false alpha=false
+spot U+1f80: type=2 upper=1f88 lower=1f80 title=1f88 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+1f88: type=3 upper=1f88 lower=1f80 title=1f88 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+2007: type=12 upper=2007 lower=2007 title=2007 digit36=-1 num=-1 dir=12 mirrored=false ideo=false alpha=false
+spot U+2028: type=13 upper=2028 lower=2028 title=2028 digit36=-1 num=-1 dir=12 mirrored=false ideo=false alpha=false
+spot U+202f: type=12 upper=202f lower=202f title=202f digit36=-1 num=-1 dir=7 mirrored=false ideo=false alpha=false
+spot U+2160: type=10 upper=2160 lower=2170 title=2160 digit36=-1 num=1 dir=0 mirrored=false ideo=false alpha=true
+spot U+2170: type=10 upper=2160 lower=2170 title=2160 digit36=-1 num=1 dir=0 mirrored=false ideo=false alpha=true
+spot U+2189: type=11 upper=2189 lower=2189 title=2189 digit36=-1 num=0 dir=13 mirrored=false ideo=false alpha=false
+spot U+24b6: type=28 upper=24b6 lower=24d0 title=24b6 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+2460: type=11 upper=2460 lower=2460 title=2460 digit36=-1 num=1 dir=13 mirrored=false ideo=false alpha=false
+spot U+2ff0: type=28 upper=2ff0 lower=2ff0 title=2ff0 digit36=-1 num=-1 dir=13 mirrored=false ideo=false alpha=false
+spot U+3007: type=10 upper=3007 lower=3007 title=3007 digit36=-1 num=0 dir=0 mirrored=false ideo=true alpha=true
+spot U+3021: type=10 upper=3021 lower=3021 title=3021 digit36=-1 num=1 dir=0 mirrored=false ideo=true alpha=true
+spot U+3400: type=5 upper=3400 lower=3400 title=3400 digit36=-1 num=-1 dir=0 mirrored=false ideo=true alpha=true
+spot U+4e00: type=5 upper=4e00 lower=4e00 title=4e00 digit36=-1 num=-1 dir=0 mirrored=false ideo=true alpha=true
+spot U+9fcc: type=5 upper=9fcc lower=9fcc title=9fcc digit36=-1 num=-1 dir=0 mirrored=false ideo=true alpha=true
+spot U+9fcd: type=5 upper=9fcd lower=9fcd title=9fcd digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+ac00: type=5 upper=ac00 lower=ac00 title=ac00 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+d800: type=19 upper=d800 lower=d800 title=d800 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=false
+spot U+dc00: type=19 upper=dc00 lower=dc00 title=dc00 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=false
+spot U+e000: type=18 upper=e000 lower=e000 title=e000 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=false
+spot U+fb01: type=2 upper=fb01 lower=fb01 title=fb01 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+ff21: type=1 upper=ff21 lower=ff41 title=ff21 digit36=10 num=10 dir=0 mirrored=false ideo=false alpha=true
+spot U+ff10: type=9 upper=ff10 lower=ff10 title=ff10 digit36=0 num=0 dir=3 mirrored=false ideo=false alpha=false
+spot U+fffe: type=0 upper=fffe lower=fffe title=fffe digit36=-1 num=-1 dir=-1 mirrored=false ideo=false alpha=false
+spot U+10400: type=1 upper=10400 lower=10428 title=10400 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+10428: type=2 upper=10400 lower=10428 title=10400 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=true
+spot U+1d7ce: type=9 upper=1d7ce lower=1d7ce title=1d7ce digit36=0 num=0 dir=3 mirrored=false ideo=false alpha=false
+spot U+1f600: type=28 upper=1f600 lower=1f600 title=1f600 digit36=-1 num=-1 dir=13 mirrored=false ideo=false alpha=false
+spot U+20000: type=5 upper=20000 lower=20000 title=20000 digit36=-1 num=-1 dir=0 mirrored=false ideo=true alpha=true
+spot U+2fa1d: type=5 upper=2fa1d lower=2fa1d title=2fa1d digit36=-1 num=-1 dir=0 mirrored=false ideo=true alpha=true
+spot U+e0001: type=16 upper=e0001 lower=e0001 title=e0001 digit36=-1 num=-1 dir=9 mirrored=false ideo=false alpha=false
+spot U+f0000: type=18 upper=f0000 lower=f0000 title=f0000 digit36=-1 num=-1 dir=0 mirrored=false ideo=false alpha=false
+spot U+10ffff: type=0 upper=10ffff lower=10ffff title=10ffff digit36=-1 num=-1 dir=-1 mirrored=false ideo=false alpha=false
+constants 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 18 19 20 21 22 23 24 25 26 27 28 29 30
+directionality -1 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18
+deprecated truefalsetruefalsetruetruefalsetrue
+radix 35 -1 10 3 -1 7 -1 -1 0
