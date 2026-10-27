@@ -4,4 +4,6 @@ trace println(Object): first T rest strings true
 PrintWriter format: formatLocale 
 closed printf: no exception, true
 held close: [a][?]
+close threw boom
+after failed close: [a] true
 done

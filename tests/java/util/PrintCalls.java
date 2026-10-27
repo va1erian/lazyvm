@@ -86,6 +86,32 @@ public class PrintCalls {
         tee.print("a\ud83d");
         tee.close();
         System.out.println("held close: " + tee.seen);
+
+        final ByteArrayOutputStream inner = new ByteArrayOutputStream() {
+            public void close() {
+                System.out.println("inner closed");
+            }
+        };
+        PrintStream thrower = new PrintStream(inner) {
+            boolean thrown;
+
+            public void write(byte[] b, int off, int len) {
+                if (len == 1 && b[off] == '?' && !thrown) {
+                    thrown = true;
+                    throw new IllegalStateException("boom");
+                }
+                super.write(b, off, len);
+            }
+        };
+        thrower.print("a\ud83d");
+        try {
+            thrower.close();
+        } catch (IllegalStateException e) {
+            System.out.println("close threw " + e.getMessage());
+        }
+        thrower.print("b");
+        System.out.println("after failed close: [" + inner + "] " + thrower.checkError());
+        thrower.close();
         System.out.println("done");
     }
 }

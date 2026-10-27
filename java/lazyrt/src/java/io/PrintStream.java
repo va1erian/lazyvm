@@ -50,12 +50,17 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         if (closed) {
             return;
         }
-        if (held != 0) {
-            // Through the overridable write, as observed; a lone half is '?'.
-            held = 0;
-            write(new byte[] {'?'}, 0, 1);
+        try {
+            if (held != 0) {
+                // Through the overridable write, as observed; a lone half is '?'.
+                held = 0;
+                write(new byte[] {'?'}, 0, 1);
+            }
+        } finally {
+            // A subclass's write may throw: the stream is closed regardless,
+            // and the wrapped stream is not closed then (observed).
+            closed = true;
         }
-        closed = true;
         try {
             out.close();
         } catch (IOException e) {

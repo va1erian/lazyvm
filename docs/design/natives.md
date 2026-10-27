@@ -157,4 +157,6 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
     stream is closed twice; LazyVM closes it once;
   - each `write(byte[],int,int)` gets a fresh array, where Java 8 reuses one
     buffer per stream, so a subclass whose `write` prints again sees its
-    array overwritten on Java 8 only.
+    array overwritten on Java 8 only. For the same reason, after a
+    subclass's `write` throws, Java 8 sends the text left in that buffer
+    again on the next call; LazyVM does not.
