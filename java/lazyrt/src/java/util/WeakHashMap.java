@@ -1,256 +1,156 @@
 package java.util;
 
+import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 /**
- * A hash map whose keys are held through weak references (docs/design/weakhashmap.md). Its order
- * rules (W1-W8) differ from HashMap's in every detail, so it shares no code with it.
+ * A hash map whose keys are held weakly (docs/design/weakhashmap.md, rules W1 to W26).
+ *
+ * Design. The table is an array of singly linked chains of {@link WeakLink}s; each link is itself
+ * the weak reference to its key and the {@code Map.Entry} the entry view hands out. All links
+ * share one ReferenceQueue. {@link #drain} runs first in every public method that reads or
+ * changes the table: it polls the queue and cuts each cleared link out of its chain, forgetting
+ * its value. Cutting never touches the cut link's own {@code next}, which is what lets a view
+ * iterator ({@link WeakViews.Cursor}) parked on a dropped link carry on (W22). The iterators walk
+ * the buckets from the top index down (W2) and hold the keys they announce and return (W13);
+ * forEach and replaceAll walk upwards (W8). Growth relinks every chain into a fresh table (W5).
  */
 public class WeakHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
-    private static final int MAX_BUCKETS = 1 << 30;
-    /** Section 6: the null key is stored as this object, never cleared, with the fixed hash 0. */
-    private static final Object NULL_KEY = new Object();
+    private static final int DEFAULT_BUCKETS = 16;
+    private static final float DEFAULT_LOAD = 0.75f;
+    /** Section 7: tables stop growing at 2^30 buckets. */
+    private static final int MOST_BUCKETS = 1 << 30;
 
-    private WeakEntry<K, V>[] table;
-    private int size;
+    /** Read by the view iterators, which walk it directly. */
+    WeakLink<K, V>[] table;
+    /** Links in the table, cleared ones not yet drained included. */
+    private int count;
     private int threshold;
     private final float loadFactor;
-    /** Where the collector delivers the entries whose keys it cleared (W10). */
-    private final ReferenceQueue<Object> queue = new ReferenceQueue<>();
-    /** W18: changed by structural modifications only. */
-    int modCount;
+    /** W18: bumped by every structural change; the iterators and callbacks compare it. */
+    int edits;
+    private final ReferenceQueue<Object> cleared = new ReferenceQueue<>();
     private Set<Map.Entry<K, V>> entryView;
 
-    /** W4, W21. */
     public WeakHashMap(int initialCapacity, float loadFactor) {
+        // W21: the capacity is checked before the load factor.
         if (initialCapacity < 0) {
             throw new IllegalArgumentException("Illegal Initial Capacity: " + initialCapacity);
         }
         if (loadFactor <= 0 || Float.isNaN(loadFactor)) {
             throw new IllegalArgumentException("Illegal Load factor: " + loadFactor);
         }
-        int n = 1;
-        while (n < initialCapacity && n < MAX_BUCKETS) {
-            n <<= 1;
-        }
         this.loadFactor = loadFactor;
-        table = newTable(n);
-        threshold = (int) (n * loadFactor);
+        table = newTable(HashMap.powerOfTwoAtLeast(initialCapacity));
+        threshold = limitFor(table.length);
     }
 
-    public WeakHashMap(int initialCapacity) { this(initialCapacity, 0.75f); }
+    public WeakHashMap(int initialCapacity) { this(initialCapacity, DEFAULT_LOAD); }
+    public WeakHashMap() { this(DEFAULT_BUCKETS, DEFAULT_LOAD); }
 
-    public WeakHashMap() { this(16, 0.75f); }
-
-    /** W6: sized from the source's size, then putAll. */
+    /** W6: sized for m at the default load factor, then filled by putAll. */
     public WeakHashMap(Map<? extends K, ? extends V> m) {
-        this(Math.max((int) (m.size() / 0.75f) + 1, 16), 0.75f);
+        this(Math.max((int) (m.size() / DEFAULT_LOAD) + 1, DEFAULT_BUCKETS), DEFAULT_LOAD);
         putAll(m);
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, V> WeakEntry<K, V>[] newTable(int n) { return (WeakEntry<K, V>[]) new WeakEntry<?, ?>[n]; }
+    private static <K, V> WeakLink<K, V>[] newTable(int n) { return (WeakLink<K, V>[]) new WeakLink<?, ?>[n]; }
 
-    static Object mask(Object key) { return key == null ? NULL_KEY : key; }
+    /** W4: the float product, so an infinite load factor saturates to Integer.MAX_VALUE. */
+    private int limitFor(int buckets) { return (int) (buckets * loadFactor); }
 
-    static Object unmask(Object key) { return key == NULL_KEY ? null : key; }
+    /** W15: the key's hash code, called once per lookup; section 6: the null key hashes to 0. */
+    private static int hashOf(Object key) { return key == null ? 0 : key.hashCode(); }
 
-    /** W1: the bucket function, applied to the stored key's hash code once. */
-    private static int spread(Object maskedKey) {
-        if (maskedKey == NULL_KEY) {
-            return 0;
-        }
-        int h = maskedKey.hashCode();
+    /** W1: the bucket of hash code h in a table of n buckets (n a power of two). */
+    static int bucket(int h, int n) {
         int p = h ^ (h >>> 12) ^ (h >>> 20);
-        return p ^ (p >>> 4) ^ (p >>> 7);
+        return (p ^ (p >>> 4) ^ (p >>> 7)) & (n - 1);
     }
 
-    /** W15: the same object, else the argument's equals with the stored key. */
-    private static boolean matches(Object maskedKey, Object stored) {
-        return maskedKey == stored || stored != null && maskedKey.equals(stored);
-    }
-
-    /** W10: unlinks every entry the collector cleared; not a modification (W13, W18). */
-    private void expunge() {
-        for (Object r; (r = queue.poll()) != null;) {
+    /** W10: cuts every link the collector has cleared out of the table and forgets its value. */
+    void drain() {
+        for (Reference<?> r; (r = cleared.poll()) != null;) {
             @SuppressWarnings("unchecked")
-            WeakEntry<K, V> dead = (WeakEntry<K, V>) r;
-            int i = dead.hash & (table.length - 1);
-            WeakEntry<K, V> prev = null;
-            for (WeakEntry<K, V> e = table[i]; e != null; prev = e, e = e.next) {
-                if (e == dead) {
-                    if (prev == null) {
-                        table[i] = e.next;
-                    } else {
-                        prev.next = e.next;
-                    }
-                    size--;
-                    break;
+            WeakLink<K, V> gone = (WeakLink<K, V>) r;
+            cut(gone);
+            gone.value = null;
+        }
+    }
+
+    /**
+     * Unlinks {@code target} from its chain if it is still there; its own {@code next} is left
+     * alone (W22). Not a modification by itself: callers that remove a mapping bump edits.
+     */
+    private boolean cut(WeakLink<K, V> target) {
+        int b = bucket(target.hash, table.length);
+        WeakLink<K, V> prev = null;
+        for (WeakLink<K, V> l = table[b]; l != null; prev = l, l = l.next) {
+            if (l == target) {
+                if (prev == null) {
+                    table[b] = l.next;
+                } else {
+                    prev.next = l.next;
                 }
+                count--;
+                return true;
             }
-            dead.value = null; // W14: a held entry reads null=null
-            dead.next = null;
         }
+        return false;
     }
 
-    /** The table after dropping cleared entries: every public method starts here. */
-    WeakEntry<K, V>[] liveTable() {
-        expunge();
-        return table;
+    /**
+     * W15: the live link for key, whose hash was h. Links of another hash are passed without
+     * calls; a matching hash compares identity, then key.equals(stored). Cleared links never match.
+     */
+    private WeakLink<K, V> find(Object key, int h) {
+        for (WeakLink<K, V> l = table[bucket(h, table.length)]; l != null; l = l.next) {
+            if (l.hash != h) {
+                continue;
+            }
+            if (key == null) {
+                if (l.holdsNull) {
+                    return l;
+                }
+                continue;
+            }
+            Object stored = l.get();
+            if (stored != null && (stored == key || key.equals(stored))) {
+                return l;
+            }
+        }
+        return null;
     }
 
-    @Override
+    /** The link for key after draining, or null. Used by the entry view (W24). */
+    WeakLink<K, V> linkFor(Object key) {
+        drain();
+        return find(key, hashOf(key));
+    }
+
     public int size() {
-        if (size == 0) {
-            return 0;
-        }
-        expunge();
-        return size;
+        drain();
+        return count;
     }
 
-    @Override
     public boolean isEmpty() { return size() == 0; }
 
-    /** W15: one hashCode call, then the bucket's chain. */
-    WeakEntry<K, V> getEntry(Object key) {
-        Object k = mask(key);
-        int h = spread(k);
-        WeakEntry<K, V>[] tab = liveTable();
-        for (WeakEntry<K, V> e = tab[h & (tab.length - 1)]; e != null; e = e.next) {
-            if (e.hash == h && matches(k, e.get())) {
-                return e;
-            }
-        }
-        return null;
-    }
-
-    @Override
     public V get(Object key) {
-        WeakEntry<K, V> e = getEntry(key);
-        return e == null ? null : e.value;
+        WeakLink<K, V> l = linkFor(key);
+        return l == null ? null : l.value;
     }
 
-    @Override
-    public boolean containsKey(Object key) { return getEntry(key) != null; }
+    public boolean containsKey(Object key) { return linkFor(key) != null; }
 
-    /** W3, W4, W11: a present key keeps its entry and first key object; a new one goes in front. */
-    @Override
-    public V put(K key, V value) {
-        Object k = mask(key);
-        int h = spread(k);
-        WeakEntry<K, V>[] tab = liveTable();
-        int i = h & (tab.length - 1);
-        for (WeakEntry<K, V> e = tab[i]; e != null; e = e.next) {
-            if (e.hash == h && matches(k, e.get())) {
-                V old = e.value;
-                e.value = value;
-                return old;
-            }
-        }
-        modCount++;
-        tab[i] = new WeakEntry<>(k, value, queue, h, tab[i]);
-        if (++size >= threshold) {
-            resize(tab.length * 2);
-        }
-        return null;
-    }
-
-    /** W4, W5: a larger table; each old chain moves front to back onto the new chains' fronts. */
-    private void resize(int buckets) {
-        WeakEntry<K, V>[] old = liveTable();
-        if (old.length == MAX_BUCKETS) {
-            threshold = Integer.MAX_VALUE;
-            return;
-        }
-        WeakEntry<K, V>[] fresh = newTable(buckets);
-        for (int j = 0; j < old.length; j++) {
-            WeakEntry<K, V> e = old[j];
-            old[j] = null;
-            while (e != null) {
-                WeakEntry<K, V> next = e.next;
-                int i = e.hash & (buckets - 1);
-                e.next = fresh[i];
-                fresh[i] = e;
-                e = next;
-            }
-        }
-        table = fresh;
-        threshold = (int) (buckets * loadFactor);
-    }
-
-    /** W6, W7: presize only a map that is at least half its threshold, then put in order. */
-    @Override
-    public void putAll(Map<? extends K, ? extends V> m) {
-        int s = m.size();
-        if (s == 0) {
-            return;
-        }
-        if (s > threshold && size() >= threshold / 2) {
-            int target = (int) (s / loadFactor + 1);
-            int n = table.length;
-            while (n < target && n < MAX_BUCKETS) {
-                n <<= 1;
-            }
-            if (n > table.length) {
-                resize(n);
-            }
-        }
-        for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
-            put(e.getKey(), e.getValue());
-        }
-    }
-
-    @Override
-    public V remove(Object key) {
-        WeakEntry<K, V> e = removeEntry(key);
-        return e == null ? null : e.value;
-    }
-
-    /** Unlinks the key's entry; only a removal that finds it is a modification (W18). */
-    WeakEntry<K, V> removeEntry(Object key) {
-        Object k = mask(key);
-        int h = spread(k);
-        WeakEntry<K, V>[] tab = liveTable();
-        int i = h & (tab.length - 1);
-        WeakEntry<K, V> prev = null;
-        for (WeakEntry<K, V> e = tab[i]; e != null; prev = e, e = e.next) {
-            if (e.hash == h && matches(k, e.get())) {
-                if (prev == null) {
-                    tab[i] = e.next;
-                } else {
-                    prev.next = e.next;
-                }
-                modCount++;
-                size--;
-                return e;
-            }
-        }
-        return null;
-    }
-
-    /** W18: always a modification, even when empty. */
-    @Override
-    public void clear() {
-        while (queue.poll() != null) {
-            // Entries already queued belong to the table being dropped.
-        }
-        modCount++;
-        Arrays.fill(table, null);
-        size = 0;
-        while (queue.poll() != null) {
-            // Nor do any the collector queued meanwhile.
-        }
-    }
-
-    @Override
+    /** W25: in iteration order (W2), argument.equals(stored value), no identity shortcut. */
     public boolean containsValue(Object value) {
-        WeakEntry<K, V>[] tab = liveTable();
-        for (int i = tab.length - 1; i >= 0; i--) {
-            for (WeakEntry<K, V> e = tab[i]; e != null; e = e.next) {
-                if (e.get() != null && (value == null ? e.value == null : value.equals(e.value))) {
+        drain();
+        for (int i = table.length - 1; i >= 0; i--) {
+            for (WeakLink<K, V> l = table[i]; l != null; l = l.next) {
+                if (l.live() && Support.eq(value, l.value)) {
                     return true;
                 }
             }
@@ -258,116 +158,173 @@ public class WeakHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V> {
         return false;
     }
 
-    /** W8, W19: buckets upward, checking for changes after every call. */
-    @Override
+    /** W3, W11: a present key keeps its link and key object; a new key goes to the chain's front. */
+    public V put(K key, V value) {
+        drain();
+        int h = hashOf(key);
+        WeakLink<K, V> l = find(key, h);
+        if (l != null) {
+            return l.setValue(value);
+        }
+        int b = bucket(h, table.length);
+        table[b] = new WeakLink<>(key, h, value, table[b], cleared);
+        edits++;
+        if (++count >= threshold) {
+            grow(table.length << 1);
+        }
+        return null;
+    }
+
+    public V remove(Object key) {
+        WeakLink<K, V> l = linkFor(key);
+        if (l == null) {
+            return null;
+        }
+        unmap(l);
+        return l.value;
+    }
+
+    /** Removes a link known to be in the table, as a modification (W18). */
+    private void unmap(WeakLink<K, V> l) {
+        cut(l);
+        edits++;
+    }
+
+    /**
+     * W16, W24: entrySet().remove. Hashes the entry's key once, then asks each live link of that
+     * hash whether it equals the entry: the stored key's equals, never the argument's.
+     */
+    boolean removeEntry(Map.Entry<?, ?> e) {
+        drain();
+        int h = hashOf(e.getKey());
+        for (WeakLink<K, V> l = table[bucket(h, table.length)]; l != null; l = l.next) {
+            if (l.hash == h && l.live() && l.equals(e)) {
+                unmap(l);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** W6, W7: presize once for a large m, then put each entry in m's iteration order. */
+    public void putAll(Map<? extends K, ? extends V> m) {
+        int s = m.size();
+        if (s == 0) {
+            return;
+        }
+        drain();
+        if (s > threshold) {
+            presize(s);
+        }
+        for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
+            put(e.getKey(), e.getValue());
+        }
+    }
+
+    private void presize(int incoming) {
+        int target = (int) (incoming / loadFactor + 1);
+        int n = table.length;
+        while (n < target && n < MOST_BUCKETS) {
+            n <<= 1;
+        }
+        // W7: a map less than half way to its threshold keeps its table.
+        if (n > table.length && count >= threshold / 2) {
+            grow(n);
+        }
+    }
+
+    /**
+     * W4, W5: moves every link (cleared ones too: drain finds them in their new bucket) into a
+     * table of n buckets, each old chain front to back onto the front of its new bucket.
+     */
+    private void grow(int n) {
+        if (table.length >= MOST_BUCKETS) {
+            threshold = Integer.MAX_VALUE;
+            return;
+        }
+        WeakLink<K, V>[] fresh = newTable(n);
+        for (WeakLink<K, V> l : table) {
+            while (l != null) {
+                WeakLink<K, V> after = l.next;
+                int b = bucket(l.hash, n);
+                l.next = fresh[b];
+                fresh[b] = l;
+                l = after;
+            }
+        }
+        table = fresh;
+        threshold = n >= MOST_BUCKETS ? Integer.MAX_VALUE : limitFor(n);
+    }
+
+    /**
+     * W18: always a modification. Only the bucket heads are emptied: an iterator that has
+     * already taken a link's successor still sees it (W23). Queued links are discarded too.
+     */
+    public void clear() {
+        Arrays.fill(table, null);
+        count = 0;
+        edits++;
+        while (cleared.poll() != null) {
+            // Their links are no longer in the table; nothing else to do.
+        }
+    }
+
+    /** W8, W19: buckets upwards, chains front to back, checking for changes after each call. */
     public void forEach(BiConsumer<? super K, ? super V> action) {
         Objects.requireNonNull(action);
-        int expected = modCount;
-        WeakEntry<K, V>[] tab = liveTable();
-        for (WeakEntry<K, V> head : tab) {
-            for (WeakEntry<K, V> e = head; e != null; e = e.next) {
-                Object key = e.get();
-                if (key != null) {
-                    action.accept(e.getKey(), e.value);
-                    if (modCount != expected) {
-                        throw new ConcurrentModificationException();
-                    }
+        drain();
+        int expected = edits;
+        for (WeakLink<K, V> head : table) {
+            for (WeakLink<K, V> l = head; l != null; l = l.next) {
+                K key = l.getKey();
+                if (key != null || l.holdsNull) {
+                    action.accept(key, l.value);
+                    unchanged(expected);
                 }
             }
         }
     }
 
-    /** W8, W19: each new value is stored before the check. */
-    @Override
+    /** W8, W19: as forEach; each new value is stored before the check. */
     public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
         Objects.requireNonNull(function);
-        int expected = modCount;
-        WeakEntry<K, V>[] tab = liveTable();
-        for (WeakEntry<K, V> head : tab) {
-            for (WeakEntry<K, V> e = head; e != null; e = e.next) {
-                Object key = e.get();
-                if (key != null) {
-                    e.value = function.apply(e.getKey(), e.value);
-                    if (modCount != expected) {
-                        throw new ConcurrentModificationException();
-                    }
+        drain();
+        int expected = edits;
+        for (WeakLink<K, V> head : table) {
+            for (WeakLink<K, V> l = head; l != null; l = l.next) {
+                K key = l.getKey();
+                if (key != null || l.holdsNull) {
+                    l.value = function.apply(key, l.value);
+                    unchanged(expected);
                 }
             }
         }
     }
 
-    /** W17: one view object each. */
-    @Override
+    private void unchanged(int expected) {
+        if (edits != expected) {
+            throw new ConcurrentModificationException();
+        }
+    }
+
     public Set<K> keySet() {
         if (keyView == null) {
-            keyView = new WeakHashViews.Keys<>(this);
+            keyView = new WeakViews.Keys<>(this);
         }
         return keyView;
     }
 
-    @Override
     public Collection<V> values() {
         if (valueView == null) {
-            valueView = new WeakHashViews.Values<>(this);
+            valueView = new WeakViews.Values<>(this);
         }
         return valueView;
     }
 
-    @Override
     public Set<Map.Entry<K, V>> entrySet() {
         if (entryView == null) {
-            entryView = new WeakHashViews.Entries<>(this);
+            entryView = new WeakViews.Entries<>(this);
         }
         return entryView;
-    }
-
-    /** An entry is the weak reference to its key (W10, W14, W16). */
-    static final class WeakEntry<K, V> extends WeakReference<Object> implements Map.Entry<K, V> {
-        V value;
-        final int hash;
-        WeakEntry<K, V> next;
-
-        WeakEntry(Object maskedKey, V value, ReferenceQueue<Object> queue, int hash, WeakEntry<K, V> next) {
-            super(maskedKey, queue);
-            this.value = value;
-            this.hash = hash;
-            this.next = next;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public K getKey() { return (K) unmask(get()); }
-
-        @Override
-        public V getValue() { return value; }
-
-        @Override
-        public V setValue(V newValue) {
-            V old = value;
-            value = newValue;
-            return old;
-        }
-
-        /** W16: the same key object or this key's equals, and equal values. */
-        @Override
-        public boolean equals(Object o) {
-            if (!(o instanceof Map.Entry)) {
-                return false;
-            }
-            Map.Entry<?, ?> other = (Map.Entry<?, ?>) o;
-            K k1 = getKey();
-            Object k2 = other.getKey();
-            if (k1 == k2 || k1 != null && k1.equals(k2)) {
-                Object v2 = other.getValue();
-                return value == v2 || value != null && value.equals(v2);
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() { return Support.hash(getKey()) ^ Support.hash(value); }
-
-        @Override
-        public String toString() { return getKey() + "=" + value; }
     }
 }

@@ -117,7 +117,9 @@ WeakMaps ("W12 settled", "W12 a value that is another key keeps it").
 the key the last `next()` returned are held strongly by the iterator until it moves on, so they
 stay in the map even when nothing else refers to them, and `next()` and `remove()` still work on
 them. Keys cleared before the walk reaches them are skipped silently. Dropping cleared entries is
-not a modification: it never causes a `ConcurrentModificationException`. Pinned by: WeakMaps ("W13
+not a modification: it never causes a `ConcurrentModificationException`. Once `hasNext()` has
+reported the end of the walk (also inside a `next()` that throws `NoSuchElementException`), the
+iterator lets go of the key it returned last, so that key can go too (W26). Pinned by: WeakMaps ("W13
 …" lines).
 
 **W14.** *A held entry after its key goes.* An entry object obtained from the entry iterator stays
@@ -135,14 +137,14 @@ is true (the argument's `equals`, stored key as argument); entries with another 
 without calls. `containsValue` and `toString` call no `hashCode` or `equals` of keys. `hashCode()`
 of the map sums the entries' hash codes in iteration order, calling each key's `hashCode()` again.
 `equals` follows `AbstractMap` (collections.md). The `null` key is accepted everywhere; its bucket
-is not fixed (section 6). Pinned by: WeakMaps ("W15 …" lines), WeakMaps ("W12 null key …").
+is not fixed (section 7). Pinned by: WeakMaps ("W15 …" lines), WeakMaps ("W12 null key …").
 
 **W16.** *Entries.* An entry equals any `Map.Entry` whose key is the same object or for which
 `thisKey.equals(otherKey)`, and whose value is equal (both null, or `equals`); `null` and
 non-entries are unequal. `hashCode()` is `hash(key) ^ hash(value)` (0 for null), calling the key's
 `hashCode()`; `toString()` is `key=value`. `setValue` returns the old value and writes through.
-The null key's entry reports `null` as its key. `entrySet().contains(e)` and `remove(e)` look the
-key up (W15) and compare the value; anything that is not an entry gives `false`. A map may hold
+The null key's entry reports `null` as its key. `entrySet().contains(e)` and `remove(e)` find the
+key and compare the value, with the calls of W24; anything that is not an entry gives `false`. A map may hold
 itself as a value. Pinned by: WeakMaps ("W16 …" lines).
 
 **W17.** *Views.* `keySet()`, `values()` and `entrySet()` return the same object on every call and
@@ -190,7 +192,72 @@ lines).
 
 Pinned by: WeakMaps ("W21 …" lines).
 
-## 6. Not observable: the implementation may choose
+## 6. Walks under change, and the calls the views make
+
+These rules were found after the first implementation, by probing the oracle with keys and
+values that log their `hashCode` and `equals` calls (`P` is the probe, `S` the stored key or
+value, `X.eq(Y)` means `X.equals(Y)`), and by differential fuzzing: random operation sequences,
+with and without the collector, compared with the oracle.
+
+**W22.** *A walk survives the collector.* When the collector clears some keys while an iterator
+is part way through a walk, the iterator still visits every entry it has not reached yet whose
+key is still strongly reachable, in W2 order; only the cleared ones are missing. This holds
+inside one chain too: ten keys of one hash code put from 9 down to 0 (so `k0` heads the chain),
+strong references kept to the even ones only, `entrySet().iterator().next()` gives `k0=v0`, and
+once the collector has brought `size()` to 5 the rest of the walk is `k2=v2 k4=v4 k6=v6 k8=v8`.
+Pinned by: WeakMaps ("W22 one chain", "W22 many buckets").
+
+**W23.** *What `hasNext()` sees after a change.* The iterator moves along each chain by taking a
+link's successor at the moment it visits that link, and reads a bucket's head only when it gets
+to that bucket. So, after a change that `next()` would report (W18):
+- an iterator made while the map was empty reports `false` for good, whatever is added later;
+- a key added at the head of a bucket the walk has not reached yet is seen (`true`); one added to
+  a bucket already passed, or to the front of the chain the iterator is in, is not;
+- removing the key that follows the last returned one in its chain still leaves `hasNext()`
+  `true`, and so does `clear()` when the last returned key had a successor in its chain;
+  without one, `clear()` leaves nothing to find;
+- once `hasNext()` has answered `false`, it stays `false`, even if keys are added;
+- after growth it goes on from the link and the bucket index it had reached, now reading the
+  new table.
+
+Pinned by: WeakMapViews ("W23 …" lines), the fuzzer.
+
+**W24.** *Calls made by the key and entry views.*
+
+| Call | Calls on the keys, in order |
+|---|---|
+| `keySet().contains(P)` | as `containsKey` (W15): `P.h P.eq(S)`; the same object: `S.h` |
+| `keySet().remove(P)`, `P` present | `containsKey` then `remove`: `P.h P.eq(S) P.h P.eq(S)`; same object `S.h S.h` |
+| `keySet().remove(P)`, absent | one lookup only: `P.h` and `P.eq` of stored keys with the same hash |
+| `entrySet().contains(e)` | the lookup of W15 by `e`'s key, then the stored entry's `equals(e)`: `P.h P.eq(S) S.eq(P) SV.eq(PV)` |
+| `entrySet().contains(e)`, same key object | `S.h`, then the value: `SV.eq(PV)`, or nothing when it is the same value too |
+| `entrySet().remove(e)` | `P.h`, then for each live entry of that hash code in its chain, the stored entry's `equals(e)`: `P.h S.eq(P) SV.eq(PV)`; never `P.eq` |
+| `entrySet().remove(e)`, same objects | `S.h` only |
+| stored entry `equals(o)` | key identity or `S.eq(otherKey)`, then value identity or `SV.eq(otherValue)` |
+| stored entry `hashCode()` | `S.h SV.h`; `toString` and `setValue` call nothing |
+
+`removeAll`, `retainAll` and `containsAll` on the views behave as `AbstractSet` and
+`AbstractCollection` do (collections.md 1.H11): they call the views' own `contains` and `remove`
+above, or walk the view and ask the argument collection, removing through the iterator (W26). The
+views' `hashCode` sums in iteration order. Pinned by: WeakMapViews ("W24 …" lines).
+
+**W25.** *Value comparisons.* `containsValue(v)` and `values().contains(v)` call `v.equals(stored)`
+on each value in iteration order (W2) until one is true, with no identity shortcut (a stored value
+that is the argument itself is still asked through `v.equals`); for `v == null` they call nothing
+and look for a null value. `values().remove(v)` makes the same calls, stops at the first match and
+removes that entry through the iterator (W26), which then calls that entry's key's `hashCode()`.
+Keys are never compared. Pinned by: WeakMapViews ("W25 …" lines).
+
+**W26.** *Iterator `remove()`.* It throws `IllegalStateException` when there is nothing to remove
+(before any `next()`, or twice in a row), checked before the modification count; otherwise it
+throws `ConcurrentModificationException` if the map changed since the iterator was made or last
+removed (W18). It removes as `map.remove(key)` would with the key the iterator holds: it calls that
+key's `hashCode()` and, for stored keys of the same hash code ahead of it in the chain, `key.equals`
+on them. Once the walk has reported its end (W13), the iterator holds no key any more, and
+`remove()` then removes the mapping of the `null` key if the map has one, and nothing otherwise,
+without an exception. Pinned by: WeakMapViews ("W26 …" lines), WeakMaps ("W26 …" lines).
+
+## 7. Not observable: the implementation may choose
 
 - *The bucket of the null key.* The oracle stores `null` as a hidden placeholder object whose
   identity hash code picks the bucket, so its position among other keys changes with the VM's
@@ -204,11 +271,11 @@ Pinned by: WeakMaps ("W21 …" lines).
   undone cannot be told apart, nor in which order buckets are walked while undoing it.
 - *Tables above 2^30 buckets* and capacities near `Integer.MAX_VALUE`: no test heap holds them.
   Clamp to 2^30 buckets, never fail with an overflow.
-- *Iteration while the collector clears keys* beyond W13: which of the not-yet-reached keys are
+- *Iteration while the collector clears keys* beyond W13 and W22: which of the not-yet-reached keys are
   still seen depends on when the collection happens.
 - Whether the map keeps the hash code or `g(h)` per entry; how `clear` empties the queue.
 
-## 7. API to provide
+## 8. API to provide
 
 From the Java SE 8 API; members WeakHashMap declares itself; parameter types erased.
 `WeakHashMap` is neither `Cloneable` nor `Serializable`.

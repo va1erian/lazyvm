@@ -282,7 +282,7 @@ Goal: the everyday `java.util` and `java.io` surface from
       held through `WeakReference`, with entries expunged through a
       `ReferenceQueue`, behaviour specified in `design/collections.md` like
       the other maps ([`design/weakhashmap.md`](design/weakhashmap.md)).
-      Check: `tests/java/util/WeakMaps`, `WeakMapOrder` (both).
+      Check: `tests/java/util/WeakMaps`, `WeakMapOrder`, `WeakMapViews` (both).
 - [ ] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
       Javadoc except `%t` dates, which come with S11), `Double.toString`
       (the shortest form its Javadoc asks for, D9), `Integer.parseInt` and friends,

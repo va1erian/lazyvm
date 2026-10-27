@@ -7,7 +7,7 @@ import java.util.*;
 
 /**
  * WeakHashMap with the collector: when entries go, what holds them, and the map, entry, view and
- * iterator contracts (docs/design/weakhashmap.md sections 1 and 3 to 6). Lines print only what
+ * iterator contracts (docs/design/weakhashmap.md sections 2 to 7). Lines print only what
  * both VMs must agree on once the collector has run: never how many tries a wait took.
  */
 public class WeakMaps {
@@ -82,6 +82,7 @@ public class WeakMaps {
         disappearing();
         holders();
         iteratorsAndGc();
+        walkAcrossGc();
         equality();
         entries();
         views();
@@ -206,6 +207,57 @@ public class WeakMaps {
         System.out.println("W14 held entry " + e + " settled " + settle(m6, 0) + " key " + e.getKey() + " value " + e.getValue()
                 + " " + e + " hash " + e.hashCode());
         System.out.println("W14 setValue on it " + e.setValue("x") + " " + e + " map " + m6);
+    }
+
+    /** Keys that all share one hash code, so they sit in one chain; equal by number. */
+    static final class Same {
+        final int n;
+        Same(int n) { this.n = n; }
+        public int hashCode() { return 7; }
+        public boolean equals(Object o) { return o instanceof Same && ((Same) o).n == n; }
+        public String toString() { return "k" + n; }
+    }
+
+    /** W22, W26: a walk keeps every survivor when the collector clears keys in the middle of it. */
+    static void walkAcrossGc() throws Exception {
+        WeakHashMap<Same, String> m = new WeakHashMap<>();
+        Same[] keep = new Same[10];
+        // From 9 down, so the chain (newest first) starts with k0, which stays.
+        for (int i = 9; i >= 0; i--) {
+            if (i % 2 == 0) keep[i] = new Same(i);
+            m.put(i % 2 == 0 ? keep[i] : new Same(i), "v" + i);
+        }
+        Iterator<Map.Entry<Same, String>> it = m.entrySet().iterator();
+        System.out.print("W22 one chain first " + it.next());
+        List<String> rest = new ArrayList<>();
+        System.out.print(" settled " + settle(m, 5));
+        while (it.hasNext()) rest.add(String.valueOf(it.next()));
+        System.out.println(" rest " + rest + " kept " + Arrays.toString(keep));
+
+        WeakHashMap<Key, String> spread = new WeakHashMap<>();
+        Key[] kept = new Key[20];
+        for (int i = 0; i < 20; i++) {
+            if (i % 3 == 0) kept[i] = new Key(i);
+            spread.put(i % 3 == 0 ? kept[i] : new Key(i), "v" + i);
+        }
+        Iterator<Key> ki = spread.keySet().iterator();
+        StringBuilder sb = new StringBuilder();
+        int last = -1;
+        // Only numbers go in locals: a dropped key must not sit in a frame slot.
+        for (int i = 0; i < 3; i++) sb.append('k').append(last = ki.next().n).append(' ');
+        // The iterator holds the key it returned last, kept or not (W13).
+        int want = 7 + (last % 3 == 0 ? 0 : 1);
+        System.out.print("W22 many buckets first " + sb + "settled " + settle(spread, want));
+        sb.setLength(0);
+        while (ki.hasNext()) sb.append(ki.next()).append(' ');
+        System.out.println(" rest " + sb + "kept " + Arrays.toString(kept));
+
+        WeakHashMap<Key, Integer> end = new WeakHashMap<>();
+        end.put(new Key(1), 1);
+        Iterator<Key> ei = end.keySet().iterator();
+        ei.next();
+        System.out.println("W26 the end of a walk lets go of the last key " + ei.hasNext() + " " + settle(end, 0));
+        t("W26 remove then", () -> { ei.remove(); System.out.print(end.size() + " | "); });
     }
 
     /** W15: lookups hash once and call the argument's equals on stored keys of the same hash. */

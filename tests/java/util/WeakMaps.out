@@ -21,6 +21,10 @@ W13 cleared true
 W13 a walk skips cleared keys k50=0 size 1
 W14 held entry k7=seven settled true key null value null null=null hash 0
 W14 setValue on it null null=x map {}
+W22 one chain first k0=v0 settled true rest [k2=v2, k4=v4, k6=v6, k8=v8] kept [k0, null, k2, null, k4, null, k6, null, k8, null]
+W22 many buckets first k18 k19 k16 settled true rest k15 k12 k9 k6 k3 k0 kept [k0, null, null, k3, null, null, k6, null, null, k9, null, null, k12, null, null, k15, null, null, k18, null]
+W26 the end of a walk lets go of the last key false true
+0 | W26 remove then ok
 W15 puts h10 h20 20.eq(10) h30 h40 h50 
 W15 get 1 h11 11.eq(20) 11.eq(10) 
 W15 get same object 2 h20 
