@@ -52,6 +52,11 @@ Paths (no handle):
 - `static native boolean createNew(String path)`: atomically creates an empty file; false if it exists
 - `static native String canonicalize(String path)`: absolute, `.`/`..` resolved, links followed for the existing part
 - `static native boolean setReadOnly(String path)`
+- `static native boolean setAccess(String path, int access, boolean enable, boolean ownerOnly)`:
+  `access` is 4 read, 2 write, 1 execute, as in a Unix mode digit, for the
+  owner or for everyone. Windows has only the read-only flag: write access
+  maps to it, and read and execute access can be granted but not taken away
+  (taking them away returns false), as Java 8 reports there.
 - `static native String tempDir()`
 
 Bounds of `b`, `off`, `len` are checked again by every native

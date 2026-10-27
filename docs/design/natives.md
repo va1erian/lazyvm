@@ -138,7 +138,12 @@ like the oracle.
 - `private static native void write0(int fd, byte[] b, int off, int len)` (fd 1 or 2)
 - `private static native void flush0(int fd)`
 - `private static native int read0(int fd, byte[] b, int off, int len)` (fd 0; -1 at end)
-- `private static native int available0(int fd)`
+- `private static native int available0(int fd)`: always 0, since a console or
+  pipe cannot say how much is ready without blocking.
+
+`System.in` is a `java.io.BufferedInputStream` over `ConsoleInputStream(0)`,
+as on Java 8 (io.md I1): it supports mark and reset, returns -1 at every
+read after the end, and is "Stream closed" after `close()`.
 
 Bounds are checked in Java before the native is called; the VM checks them
 again and throws `IndexOutOfBoundsException` rather than trusting them.

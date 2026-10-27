@@ -16,6 +16,11 @@ isr read after close: !java.io.IOException: Stream closed log=close;
 isr ready after close: !java.io.IOException: Stream closed log=close;
 isr skip 3: 3 7 log=r8192=10;av;
 isr bounds: !java.lang.IndexOutOfBoundsException
+isr spare, more ready: 3 log=r8192=2;av;r8192=2;
+isr spare, none ready: 1 log=r8192=2;av;
+isr spare, len 2: 2 2 log=r8192=2;av;r8192=2;av;r8192=2;
+isr full buffer asks nothing: 3 log=r8192=3;
+isr error after chars: !java.nio.charset.MalformedInputException: Input length = 1
 osw write char: 
 osw write char flush:  log=w1;fl;
 osw write 8192: 
@@ -33,8 +38,8 @@ PrintWriter autoflush println:  log=w[ab$];fl;
 PrintWriter autoflush print: 
 PrintWriter close: true log=w[x];close;
 PrintStream println:  log=w[ab];w[$];
-PrintStream autoflush:  log=w[a\nb];fl;fl;
-PrintStream write byte autoflush:  log=w[a];w[\n];fl;
+PrintStream autoflush:  log=w[a$b];fl;fl;
+PrintStream write byte autoflush:  log=w1[97];w1[10];fl;
 PrintStream write(b) autoflush:  log=w[abc];fl;
 PrintStream close: true log=w[x];close;
 PrintStream encoding: 2

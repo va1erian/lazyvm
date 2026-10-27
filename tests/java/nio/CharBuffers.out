@@ -18,6 +18,8 @@ wrap(String) compact: !java.nio.ReadOnlyBufferException
 put(String): pos=2 lim=6 cap=6 [bc]
 [pos=0 lim=2 cap=2] put(String) overflow: !java.nio.BufferOverflowException
 put(String,start,end) bounds: !java.lang.IndexOutOfBoundsException
+put(String) bounds before read-only: !java.lang.IndexOutOfBoundsException
+put(String) read-only: !java.nio.ReadOnlyBufferException
 append: [abnullcxy]
 append overflow: !java.nio.BufferOverflowException
 get(char[]) underflow: !java.nio.BufferUnderflowException

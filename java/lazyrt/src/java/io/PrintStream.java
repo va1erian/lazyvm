@@ -1,9 +1,15 @@
 package java.io;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CodingErrorAction;
 import java.util.Formatter;
 import java.util.Locale;
+import lazy.internal.Encodings;
 
-/** A stream that formats values as UTF-8 text and never throws IOException. */
+/** A stream that formats values as text in its charset and never throws IOException. */
 public class PrintStream extends FilterOutputStream implements Appendable, Closeable {
     private final boolean autoFlush;
     private boolean trouble;
@@ -11,28 +17,79 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     private boolean closed;
     /** A high surrogate printed last, held for its low half (observed on the oracle). */
     private char held;
+    /** The charset, or null for the default one, looked up at the first text. */
+    private final Charset charset;
+    /** One encoder for the stream's life, so UTF-16 writes its byte order mark once. */
+    private CharsetEncoder encoder;
 
     public PrintStream(OutputStream out) {
         this(out, false);
     }
 
     public PrintStream(OutputStream out, boolean autoFlush) {
+        this(out, autoFlush, (Charset) null);
+    }
+
+    public PrintStream(OutputStream out, boolean autoFlush, String encoding)
+            throws UnsupportedEncodingException {
+        this(out, autoFlush, charset(encoding));
+    }
+
+    public PrintStream(String fileName) throws FileNotFoundException {
+        this(new FileOutputStream(fileName), false);
+    }
+
+    /** The charset is looked up before the file is opened, so a bad name creates no file. */
+    public PrintStream(String fileName, String csn) throws FileNotFoundException, UnsupportedEncodingException {
+        this(charset(csn), new FileOutputStream(fileName));
+    }
+
+    public PrintStream(File file) throws FileNotFoundException {
+        this(new FileOutputStream(file), false);
+    }
+
+    public PrintStream(File file, String csn) throws FileNotFoundException, UnsupportedEncodingException {
+        this(charset(csn), new FileOutputStream(file));
+    }
+
+    private PrintStream(Charset cs, OutputStream out) {
+        this(out, false, cs);
+    }
+
+    private PrintStream(OutputStream out, boolean autoFlush, Charset cs) {
         super(out);
         if (out == null) {
             throw new NullPointerException("Null output stream");
         }
         this.autoFlush = autoFlush;
+        this.charset = cs;
     }
 
-    public PrintStream(OutputStream out, boolean autoFlush, String encoding)
-            throws UnsupportedEncodingException {
-        this(out, autoFlush);
-        if (encoding == null) {
+    private static Charset charset(String name) throws UnsupportedEncodingException {
+        if (name == null) {
             throw new NullPointerException("Null charset name");
         }
-        if (!encoding.equalsIgnoreCase("UTF-8") && !encoding.equalsIgnoreCase("UTF8")) {
-            throw new UnsupportedEncodingException(encoding);
+        return Encodings.forName(name);
+    }
+
+    /** `in` in the stream's charset; `end` at close, when a held surrogate is replaced. */
+    private byte[] encode(CharBuffer in, boolean end) {
+        if (encoder == null) {
+            // Not in the constructor: System.out exists before the charsets can be set up.
+            Charset cs = charset != null ? charset : Charset.defaultCharset();
+            encoder = cs.newEncoder().onMalformedInput(CodingErrorAction.REPLACE)
+                    .onUnmappableCharacter(CodingErrorAction.REPLACE);
         }
+        ByteBuffer bb = ByteBuffer.allocate((int) (in.remaining() * encoder.maxBytesPerChar()) + 8);
+        while (encoder.encode(in, bb, end).isOverflow()) {
+            ByteBuffer bigger = ByteBuffer.allocate(bb.capacity() * 2);
+            bb.flip();
+            bb = bigger.put(bb);
+        }
+        byte[] bytes = new byte[bb.position()];
+        bb.flip();
+        bb.get(bytes);
+        return bytes;
     }
 
     public void flush() {
@@ -52,9 +109,10 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         }
         try {
             if (held != 0) {
-                // Through the overridable write, as observed; a lone half is '?'.
+                // Through the overridable write, as observed; a lone half is the replacement.
+                byte[] bytes = encode(CharBuffer.wrap(new char[] {held}), true);
                 held = 0;
-                write(new byte[] {'?'}, 0, 1);
+                write(bytes, 0, bytes.length);
             }
         } finally {
             // A subclass's write may throw: the stream is closed regardless,
@@ -146,8 +204,12 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
                 return;
             }
         }
-        byte[] bytes = s.getBytes();
+        byte[] bytes = encode(CharBuffer.wrap(s), false);
         write(bytes, 0, bytes.length);
+        // Spec R5: with auto-flush, text with a newline flushes again after the write's own flush.
+        if (autoFlush && s.indexOf('\n') >= 0) {
+            flush();
+        }
     }
 
     public void print(boolean b) {

@@ -42,6 +42,8 @@ public class CharBuffers {
         t("put(String)", () -> { CharBuffer x = CharBuffer.allocate(6); x.put("abcdef", 1, 3); return st(x) + " [" + x.flip() + "]"; });
         t("put(String) overflow", () -> { CharBuffer x = CharBuffer.allocate(2); try { x.put("abc"); } finally { System.out.print("[" + st(x) + "] "); } return "?"; });
         t("put(String,start,end) bounds", () -> CharBuffer.allocate(6).put("abc", 2, 5));
+        t("put(String) bounds before read-only", () -> CharBuffer.wrap("abc").put("xy", 1, 5));
+        t("put(String) read-only", () -> CharBuffer.wrap("abc").put("xy", 0, 0));
         t("append", () -> { CharBuffer x = CharBuffer.allocate(16); x.append("ab").append(null).append('c').append("wxyz", 1, 3); return "[" + x.flip() + "]"; });
         t("append overflow", () -> CharBuffer.allocate(2).append("abc"));
         t("get(char[]) underflow", () -> CharBuffer.wrap("ab").get(new char[3]));

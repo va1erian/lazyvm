@@ -37,6 +37,7 @@ public class FilePathsWin {
         {"a:b", "a:b", "b", "a:", "false"}, {"1:", "1:", "1:", "null", "false"}, {"C:|a:b", "C:|a:b", "a:b", "C:|", "true"},
         {"||?|C:|x", "||?|C:|x", "x", "||?|C:", "true"}, {"||.|x", "||.|x", "x", "||.", "true"},
         {"a ", "a ", "a ", "null", "false"}, {"a.", "a.", "a.", "null", "false"},
+        {"|C:b", "C:b", "b", "C:", "false"}, {"//c:", "c:", "", "null", "false"}, {" :/", " :|", "", " :", "false"}, {"/:/", "|:|", "", "|:", "false"},
     };
 
     // parent, child, getPath of new File(parent, child)
@@ -44,6 +45,7 @@ public class FilePathsWin {
         {"", "b", "|b"}, {"", "/b", "|b"}, {"", "C:b", "|C:b"}, {"", "", "|"}, {"", ".", "|."}, {"C:", "b", "C:|b"}, {"C:|", "b", "C:|b"},
         {"C:", "", "C:"}, {"|", "", "|"}, {"/", "b", "|b"}, {"a", "C:|b", "a|C:|b"}, {"||s|h", "b", "||s|h|b"}, {"a", "||b", "a|b"},
         {"a|", "|b", "a|b"}, {"a", ".", "a|."}, {"a", "..", "a|.."},
+        {"a", "|", "a|"}, {"a", "||", "a"}, {"|", "||", ""}, {"||", "||", "|"}, {"C:|", "|", "C:|"}, {"a", "C:/", "a|C:|"},
     };
 
     public static void main(String[] args) throws IOException {

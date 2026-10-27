@@ -210,6 +210,8 @@ reader UTF-16 [FE FF 00 41 FE FF 00 42] = 0041 FEFF 0042
 reader UTF-16 [FF FE 41 00 42 00] = 0041 0042
 reader UTF-16 [00 41 00] = 0041 FFFD
 reader UTF-16 [D8 3D] = FFFD
+reader UTF-16 [FF FE 41 00 3D D8] = 0041 3DD8
+reader UTF-16 [FE FF 00 41 D8 3D] = 0041 FFFD
 reader with REPORT decoder: java.nio.charset.MalformedInputException: Input length = 1
 writer with REPORT encoder: java.nio.charset.MalformedInputException: Input length = 1
 getBytes bad name: no-such-charset

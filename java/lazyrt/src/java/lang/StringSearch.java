@@ -139,13 +139,13 @@ final class StringSearch {
     }
 
     /**
-     * String.split for patterns that match one literal string. Regular expressions come with
-     * java.util.regex (S5-03); until then any other pattern is refused.
+     * String.split, with a fast path for patterns that match one literal string; others go to
+     * StringRegex.
      */
     static String[] split(String s, String regex, int limit) {
         String sep = literal(regex);
         if (sep == null) {
-            throw new UnsupportedOperationException("split by a regular expression: " + regex);
+            return StringRegex.split(s, regex, limit);
         }
         java.util.ArrayList<String> parts = new java.util.ArrayList<>();
         int from = 0;
@@ -176,5 +176,41 @@ final class StringSearch {
             }
         }
         return regex.isEmpty() ? null : regex;
+    }
+
+    /** String.replace(CharSequence, CharSequence): every occurrence, left to right. */
+    static String replace(String s, String target, String replacement) {
+        StringBuilder sb = new StringBuilder();
+        if (target.isEmpty()) {
+            for (int i = 0; i < s.length(); i++) {
+                sb.append(replacement).append(s.charAt(i));
+            }
+            return sb.append(replacement).toString();
+        }
+        int from = 0;
+        int at;
+        while ((at = s.indexOf(target, from)) >= 0) {
+            sb.append(s, from, at).append(replacement);
+            from = at + target.length();
+        }
+        return sb.append(s, from, s.length()).toString();
+    }
+
+    /** The chars of code points codePoints[offset, offset + count). */
+    static char[] fromCodePoints(int[] codePoints, int offset, int count) {
+        int n = 0;
+        for (int i = offset; i < offset + count; i++) {
+            int cp = codePoints[i];
+            if (!Character.isValidCodePoint(cp)) {
+                throw new IllegalArgumentException(Integer.toString(cp));
+            }
+            n += Character.charCount(cp);
+        }
+        char[] value = new char[n];
+        int pos = 0;
+        for (int i = offset; i < offset + count; i++) {
+            pos += Character.toChars(codePoints[i], value, pos);
+        }
+        return value;
     }
 }

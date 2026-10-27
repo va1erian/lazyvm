@@ -117,6 +117,18 @@ Charset.decode: A�B
 default actions: REPORT REPORT [�]
 decoder averages: 1.0 1.0
 utf16 decoder averages: 0.5 1.0
+utf16be/le decoder averages: 0.5 0.5
+utf8 no room [C2 41]: OVERFLOW 0
+utf8 no room [E2 82 41]: OVERFLOW 0
+utf8 no room [ED A0 80]: OVERFLOW 0
+utf8 no room [E0 A0 41]: OVERFLOW 0
+utf8 no room [F0 9F 98 41]: OVERFLOW 0
+utf8 no room [F0 9F 41 41]: MALFORMED[2] 0
+utf8 no room [80]: MALFORMED[1] 0
+utf8 no room [E2 41]: MALFORMED[1] 0
+utf8 no room [E0 80 80]: MALFORMED[1] 0
+utf8 no room [F0 80 80 80]: MALFORMED[1] 0
+utf8 no room [C3]: MALFORMED[1] 0
 replaceWith empty: !java.lang.IllegalArgumentException: Empty replacement
 replaceWith null: !java.lang.IllegalArgumentException: Null replacement
 onMalformedInput null: !java.lang.IllegalArgumentException: Null action

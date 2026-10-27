@@ -31,7 +31,9 @@ public class Files1 {
         File f = new File(p);
         String abs = f.getAbsolutePath();
         String ud = System.getProperty("user.dir");
-        String absRel = abs.equals(ud) ? "<cwd>" : abs.startsWith(ud + File.separator) ? "<cwd>/" + abs.substring(ud.length() + 1) : abs;
+        // user.dir may be a root ("/" inside LazyOS), which already ends with the separator.
+        String base = ud.endsWith(File.separator) ? ud : ud + File.separator;
+        String absRel = abs.equals(ud) ? "<cwd>" : abs.startsWith(base) ? "<cwd>/" + abs.substring(base.length()) : abs;
         System.out.println("[" + p + "] path=" + rel(f.getPath()) + " name=" + rel(f.getName()) + " parent=" + rel(f.getParent())
             + " abs=" + f.isAbsolute() + " absPath=" + rel(absRel) + " str=" + rel(f));
     }

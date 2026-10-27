@@ -14,7 +14,8 @@ public final class System {
     private static String lineSeparator;
 
     static {
-        in = new ConsoleInputStream(0);
+        // Spec I1: stdin is a BufferedInputStream, so it supports mark and reset.
+        in = new java.io.BufferedInputStream(new ConsoleInputStream(0));
         out = new PrintStream(new ConsoleOutputStream(1), true);
         err = new PrintStream(new ConsoleOutputStream(2), true);
     }

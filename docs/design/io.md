@@ -77,7 +77,9 @@ no mark, bis read 9000 after mark]
 
 **B6.** `BufferedOutputStream`: `write(int)` on a full buffer writes it out first; `write(b, off, len)` with `len ≥`
 size → out the buffer (if any), then one direct write; `len` > free → out the buffer, then copy. `flush()` = out +
-`fl`; `close()` = `flush()` + `close`, on every call. [BufferedCalls: bos…]
+`fl`; `close()` = `flush()` + `close`, on every call. It checks no bounds itself: a bad range with `len ≥` size goes
+to the wrapped stream as is, a shorter one fails in the copy (`ArrayIndexOutOfBoundsException`). [BufferedCalls: bos…,
+bos bad range…]
 
 **B7.** `BufferedReader` refills ask for the free space. `read(c, off, len)`: first step direct when the buffer is
 empty, `len ≥` size, no mark and no `\n` to skip; else refill and copy; more steps while short and `in.ready()`.
@@ -107,10 +109,15 @@ above the size grows the buffer; a mark survives repeated resets. [ReadLines: br
 
 ## 4. InputStreamReader, OutputStreamWriter, PrintStream, PrintWriter
 
-**R1.** `InputStreamReader` reads into an 8192-byte buffer, each read asking for the free space after leftovers
-move to the front (`r8192` throughout the tests). `read(c, off, len)` decodes buffered bytes; when they run out
-with ≥ 1 char produced it calls `av` and returns if ≤ 0; with none it reads again. At the end each call reads again
-and returns −1. `len` 0 → 0, no calls. [ReaderCalls: isr read…, isr eof]
+**R1.** `InputStreamReader` reads into an 8192-byte buffer, each read asking for the free space after leftovers move
+to the front (`r8192` throughout the tests). `read(c, off, len)` decodes buffered bytes; when they run out with ≥ 1
+char produced it calls `av` and returns if ≤ 0; with none it reads again. At the end each call reads again and returns
+−1. `len` 0 → 0, no calls. A full buffer returns at once, without `av`. A read of one char decodes two and keeps the
+second; the next call returns that char first, and decodes more only if bytes are buffered or `in.available() > 0`
+(one `av`), the kept char not counting as produced. A coding error is thrown as soon as it is met, even after chars
+were produced in the same call (they are lost). At the end the decoder is reset before what is left is decoded, so
+`UTF-16` reads a dangling last unit big-endian even after `FF FE` (`FF FE 41 00 3D D8` → `A`, U+3DD8). [ReaderCalls:
+isr read…, isr eof, isr spare…, isr full buffer…, isr error after chars; CharsetsEncode: reader UTF-16]
 
 **R2.** `ready()`: bytes or chars left → true, else `in.available() > 0`. `mark` → `IOException("mark() not
 supported")`. `close()` once; then `read`, `ready` → `IOException("Stream closed")`. Sequences split between
@@ -192,18 +199,21 @@ US-ASCII and UTF-16, UTF-16LE contains UTF-8, ISO-8859-1 contains US-ASCII, US-A
 `availableCharsets()` keys ignore case. [CharsetNames]
 
 **K1.** `CharsetDecoder.decode(in, out, end)` reports each unit of §5 as `MALFORMED[n]` with `in` at its first byte.
-With `end` false a valid prefix at the end stays unconsumed (UNDERFLOW); a unit already known bad is reported.
-A char, or a pair, that does not fit → OVERFLOW with `in` before it. [CharsetCoders: utf8…, decode overflow,
-decode pair into 1 char]
+With `end` false a valid prefix at the end stays unconsumed (UNDERFLOW); a unit already known bad is reported. A char,
+or a pair, that does not fit → OVERFLOW with `in` before it. UTF-8 judges a whole sequence in this order: the lead,
+the bytes before the last (the second's range included), then the room, then the last byte (and, for 3 bytes, the
+surrogate check): so with no room `C2 41`, `E2 82 41` and `ED A0 80` are OVERFLOW while `80`, `E2 41` and `E0 80 80`
+are MALFORMED[1]. A lone invalid lead is MALFORMED[1] even with no room. [CharsetCoders: utf8…, decode overflow,
+decode pair into 1 char, utf8 no room…]
 
 **K2.** Encoders: unmappable char → `UNMAPPABLE[1]`, unmappable pair → `UNMAPPABLE[2]`, lone surrogate →
 `MALFORMED[1]`; a final high surrogate with `end` false → UNDERFLOW, unconsumed. [CharsetCoders: … encode…,
 encode lone high, not at end]
 
 **K3.** Defaults: actions REPORT; decoder replacement `"\uFFFD"`; encoder replacement `{63}`, UTF-16 and UTF-16BE
-`{-1, -3}`, UTF-16LE `{-3, -1}`. Chars per byte (average/max): UTF-16 0.5/1.0, others 1.0/1.0. Bytes per char:
-US-ASCII, ISO-8859-1 1.0/1.0; UTF-8 1.1/3.0; UTF-16 2.0/4.0; BE, LE 2.0/2.0. `canEncode`: never a lone surrogate,
-a pair only in the UTF charsets. [CharsetCoders: default actions, … averages, … encoder]
+`{-1, -3}`, UTF-16LE `{-3, -1}`. Chars per byte (average/max): UTF-16, UTF-16BE, UTF-16LE 0.5/1.0, the others 1.0/1.0.
+Bytes per char: US-ASCII, ISO-8859-1 1.0/1.0; UTF-8 1.1/3.0; UTF-16 2.0/4.0; BE, LE 2.0/2.0. `canEncode`: never a lone
+surrogate, a pair only in the UTF charsets. [CharsetCoders: default actions, … averages, … encoder]
 
 **K4.** `replaceWith(null)` → IAE `"Null replacement"`, empty → `"Empty replacement"`, longer than the max per unit
 → `"Replacement too long"`, bytes the charset cannot decode → `"Illegal replacement"`; null action → IAE `"Null
@@ -247,10 +257,15 @@ test names; on a file → null. `listFiles` entries are `new File(this, name)`. 
 toURI…]
 
 **W1.** Windows, pinned by FilePathsWin (table there): `/` and `\` are separators, normalised to `\`; two or more
-leading separators make an absolute UNC path (`///a` → `\\a`); `\a` and `C:a` are relative, `C:\` absolute; `C:`
-has name `""`; `C:a` has parent `C:`; `1:` is a name, `a:b` is drive `a:`; `File("C:", "b")` → `C:\b`, `File("",
-"C:b")` → `\C:b`; trailing dots and spaces stay in the path but not in `getCanonicalPath`, which also takes the
-on-disk case and an upper-case drive; canonical of `\\` → `IOException`.
+leading separators make an absolute UNC path (`///a` → `\\a`); `\a` and `C:a` are relative, `C:\` absolute; `C:` has
+name `""`; `C:a` has parent `C:`; `1:` is a name, `a:b` is drive `a:`; `File("C:", "b")` → `C:\b`, `File("", "C:b")` →
+`\C:b`; trailing dots and spaces stay in the path but not in `getCanonicalPath`, which also takes the on-disk case and
+an upper-case drive; canonical of `\\` → `IOException`. Found by the implementation's fuzz and pinned by the later
+rows: separators before a drive go (`\C:b` → `C:b`, `//c:` → `c:`); any char before `:\` keeps that separator as a
+root (`" :\"`, `\:\`) though only a letter is a drive; `File(p, c)` drops one trailing `\` of `p`, a leading `\` or
+`\\` of `c`, and joins with one `\` unless what is left of `c` starts with one, a `c` of only `\\` giving the
+shortened `p` (`File("\", "\\")` → `""`, `File("a", "\")` → `a\`); the absolute path of `c:x` on the current drive
+keeps the drive's case, on another drive that exists is `D:\\x`, on a missing one `B:\x` (`a:` stays `a:`).
 
 ## 8. File streams and RandomAccessFile
 
@@ -332,10 +347,10 @@ compareTo, hashCode…, toString; CharBuffers]
 
 **NB6.** `CharBuffer` as `CharSequence`: `length()` = remaining; `charAt(i)` from the position, IOOBE outside;
 `subSequence(s, e)` shares content, position + s to position + e, same capacity and read-only state.
-`wrap(CharSequence[, s, e])`: read-only live view (later `StringBuilder` edits show), `hasArray()` false, `array()`
-→ `UnsupportedOperationException`, `put`/`compact` → `ReadOnlyBufferException`. `put(String, s, e)` indexes the
-string; overflow leaves the position. `read(t)`: copies the smaller remaining, −1 when empty, 0 when `t` is full,
-IAE for itself. [CharBuffers]
+`wrap(CharSequence[, s, e])`: read-only live view (later `StringBuilder` edits show), `hasArray()` false, `array()` →
+`UnsupportedOperationException`, `put`/`compact` → `ReadOnlyBufferException`. `put(String, s, e)` indexes the string,
+checking the range before the read-only state; overflow leaves the position. `read(t)`: copies the smaller remaining,
+−1 when empty, 0 when `t` is full, IAE for itself. [CharBuffers: … put(String)…]
 
 ## 12. Paths
 
@@ -359,7 +374,12 @@ colon → IAE. Glob: `*`, `?` within a name, `**` across names, `[…]`, `[!…]
 `"'other' has different root"`, absolute vs relative → `"'other' is different type of Path"`; comparison, hash,
 `startsWith`, glob and regex ignore case; `InvalidPathException` messages `"Illegal char <c> at index i: input"`,
 `"Trailing char < > at index i: input"`, `"UNC path is missing hostname: input"` (or `sharename`), `getInput()` the
-original; `toUri` → `file:///C:/x%20y/z`, `file://host/share/x`.
+original; `toUri` → `file:///C:/x%20y/z`, `file://host/share/x`. Found by the implementation's fuzz (the resolve and
+relativize ones pinned by the later rows): a drive-relative path's `toAbsolutePath` keeps a trailing separator when it
+has no names (`C:` → `C:\cwd\`), and on a missing drive throws `IOError(IOException("Unable to get working directory
+of drive 'B'"))`; `resolve` of a drive-relative argument joins only an absolute base on the same drive, appended as
+written (`c:\b` + `C:` → `c:\b\`), else the argument wins; for `relativize` a drive root and a UNC root are different
+types; a `/` in a glob matches the separator.
 
 ## 13. Files
 

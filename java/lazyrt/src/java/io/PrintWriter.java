@@ -25,11 +25,33 @@ public class PrintWriter extends Writer {
         this(out, false);
     }
 
+    // Spec R5: over a stream, a BufferedWriter over an OutputStreamWriter.
     public PrintWriter(OutputStream out, boolean autoFlush) {
-        this(new StreamWriter(out), autoFlush);
+        this(new BufferedWriter(new OutputStreamWriter(out)), autoFlush);
         if (out instanceof PrintStream) {
             printStream = (PrintStream) out;
         }
+    }
+
+    public PrintWriter(String fileName) throws FileNotFoundException {
+        this(new FileOutputStream(fileName), false);
+    }
+
+    /** The charset is looked up before the file is opened, so a bad name creates no file. */
+    public PrintWriter(String fileName, String csn) throws FileNotFoundException, UnsupportedEncodingException {
+        this(lazy.internal.Encodings.forName(csn), new FileOutputStream(fileName));
+    }
+
+    public PrintWriter(File file) throws FileNotFoundException {
+        this(new FileOutputStream(file), false);
+    }
+
+    public PrintWriter(File file, String csn) throws FileNotFoundException, UnsupportedEncodingException {
+        this(lazy.internal.Encodings.forName(csn), new FileOutputStream(file));
+    }
+
+    private PrintWriter(java.nio.charset.Charset cs, OutputStream out) {
+        this(new BufferedWriter(new OutputStreamWriter(out, cs)), false);
     }
 
     private void ensureOpen() throws IOException {

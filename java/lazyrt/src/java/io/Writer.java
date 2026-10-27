@@ -2,6 +2,8 @@ package java.io;
 
 public abstract class Writer implements Appendable, Closeable, Flushable {
     protected Object lock;
+    /** Spec S5: write(int) and short strings go through this one reused array. */
+    private char[] small;
 
     protected Writer() {
         this.lock = this;
@@ -14,8 +16,19 @@ public abstract class Writer implements Appendable, Closeable, Flushable {
         this.lock = lock;
     }
 
+    private char[] small() {
+        if (small == null) {
+            small = new char[1024];
+        }
+        return small;
+    }
+
     public void write(int c) throws IOException {
-        write(new char[] {(char) c}, 0, 1);
+        synchronized (lock) {
+            char[] buf = small();
+            buf[0] = (char) c;
+            write(buf, 0, 1);
+        }
     }
 
     public void write(char[] cbuf) throws IOException {
@@ -28,11 +41,14 @@ public abstract class Writer implements Appendable, Closeable, Flushable {
         write(str, 0, str.length());
     }
 
+    // Spec S5: up to 1024 chars through the reused array, longer ones in an array of exactly len.
     public void write(String str, int off, int len) throws IOException {
-        // Bounds first: a negative len is an index error, not an array size.
-        char[] buf = new char[Math.max(len, 0)];
-        str.getChars(off, off + len, buf, 0);
-        write(buf, 0, len);
+        synchronized (lock) {
+            // Bounds first: a negative len is an index error, not an array size.
+            char[] buf = len <= 1024 ? small() : new char[len];
+            str.getChars(off, off + len, buf, 0);
+            write(buf, 0, len);
+        }
     }
 
     public Writer append(CharSequence csq) throws IOException {

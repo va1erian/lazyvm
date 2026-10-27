@@ -1,6 +1,7 @@
 package java.lang;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.util.Comparator;
 import java.util.Formatter;
 import java.util.Iterator;
@@ -40,25 +41,7 @@ public final class String implements java.io.Serializable, Comparable<String>, C
 
     public String(int[] codePoints, int offset, int count) {
         checkRange(offset, count, codePoints.length);
-        int n = 0;
-        for (int i = offset; i < offset + count; i++) {
-            int cp = codePoints[i];
-            if (!Character.isValidCodePoint(cp)) {
-                throw new IllegalArgumentException(Integer.toString(cp));
-            }
-            n += Character.charCount(cp);
-        }
-        value = new char[n];
-        int pos = 0;
-        for (int i = offset; i < offset + count; i++) {
-            int cp = codePoints[i];
-            if (cp < Character.MIN_SUPPLEMENTARY_CODE_POINT) {
-                value[pos++] = (char) cp;
-            } else {
-                value[pos++] = Character.highSurrogate(cp);
-                value[pos++] = Character.lowSurrogate(cp);
-            }
-        }
+        value = StringSearch.fromCodePoints(codePoints, offset, count);
     }
 
     public String(byte[] bytes) {
@@ -66,21 +49,29 @@ public final class String implements java.io.Serializable, Comparable<String>, C
     }
 
     public String(byte[] bytes, int offset, int length) {
-        checkRange(offset, length, bytes.length);
-        value = StringCoding.decodeUtf8(bytes, offset, length);
+        this(bytes, offset, length, Charset.defaultCharset());
     }
 
     public String(byte[] bytes, String charsetName) throws UnsupportedEncodingException {
-        value = StringCoding.decode(bytes, 0, bytes.length, charsetName);
+        this(bytes, 0, bytes.length, StringCoding.lookup(charsetName));
     }
 
     public String(byte[] bytes, int offset, int length, String charsetName)
             throws UnsupportedEncodingException {
-        if (charsetName == null) {
-            throw new NullPointerException("charsetName");
+        this(bytes, offset, length, StringCoding.lookup(charsetName));
+    }
+
+    public String(byte[] bytes, Charset charset) {
+        this(bytes, 0, bytes.length, charset);
+    }
+
+    // Spec E2: a bad window is StringIndexOutOfBoundsException(off + len) after the charset check.
+    public String(byte[] bytes, int offset, int length, Charset charset) {
+        if (charset == null) {
+            throw new NullPointerException("charset");
         }
         checkRange(offset, length, bytes.length);
-        value = StringCoding.decode(bytes, offset, length, charsetName);
+        value = StringCoding.decode(charset, bytes, offset, length);
     }
 
     public String(StringBuilder builder) {
@@ -171,11 +162,22 @@ public final class String implements java.io.Serializable, Comparable<String>, C
     }
 
     public byte[] getBytes() {
-        return StringCoding.encodeUtf8(value, 0, value.length);
+        return getBytes(Charset.defaultCharset());
     }
 
     public byte[] getBytes(String charsetName) throws UnsupportedEncodingException {
-        return StringCoding.encode(value, 0, value.length, charsetName);
+        if (charsetName == null) {
+            // Observed: unlike new String(bytes, null), no message.
+            throw new NullPointerException();
+        }
+        return getBytes(StringCoding.lookup(charsetName));
+    }
+
+    public byte[] getBytes(Charset charset) {
+        if (charset == null) {
+            throw new NullPointerException();
+        }
+        return StringCoding.encode(charset, value);
     }
 
     public boolean equals(Object anObject) {
@@ -344,22 +346,19 @@ public final class String implements java.io.Serializable, Comparable<String>, C
     }
 
     public String replace(CharSequence target, CharSequence replacement) {
-        String t = target.toString();
-        String r = replacement.toString();
-        StringBuilder sb = new StringBuilder();
-        if (t.value.length == 0) {
-            for (int i = 0; i < value.length; i++) {
-                sb.append(r).append(value[i]);
-            }
-            return sb.append(r).toString();
-        }
-        int from = 0;
-        int at;
-        while ((at = indexOf(t, from)) >= 0) {
-            sb.append(value, from, at - from).append(r);
-            from = at + t.value.length;
-        }
-        return sb.append(value, from, value.length - from).toString();
+        return StringSearch.replace(this, target.toString(), replacement.toString());
+    }
+
+    public boolean matches(String regex) {
+        return StringRegex.matches(this, regex);
+    }
+
+    public String replaceAll(String regex, String replacement) {
+        return StringRegex.replace(this, regex, replacement, true);
+    }
+
+    public String replaceFirst(String regex, String replacement) {
+        return StringRegex.replace(this, regex, replacement, false);
     }
 
     public boolean contains(CharSequence s) {

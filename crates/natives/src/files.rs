@@ -164,7 +164,12 @@ fn register_paths(vm: &mut Vm) {
             .open(&path)
         {
             Ok(_) => ret_bool(true),
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => ret_bool(false),
+            // Windows reports a directory in the way as access denied: it is "exists".
+            Err(e)
+                if e.kind() == std::io::ErrorKind::AlreadyExists || Path::new(&path).exists() =>
+            {
+                ret_bool(false)
+            }
             Err(e) => Err(io_exception(files::reason(&e))),
         }
     });
@@ -182,6 +187,11 @@ fn register_paths(vm: &mut Vm) {
             std::fs::set_permissions(&path, perms)
         });
         ret_bool(ok.is_ok())
+    });
+    vm.register_native(FS, "setAccess", "(Ljava/lang/String;IZZ)Z", |vm, a| {
+        let path = path_arg(vm, a, 0)?;
+        let (access, enable, owner_only) = (int(a, 1)?, int(a, 2)? != 0, int(a, 3)? != 0);
+        ret_bool(set_access(&path, access, enable, owner_only))
     });
     vm.register_native(FS, "tempDir", "()Ljava/lang/String;", |vm, _| {
         let dir = std::env::temp_dir().display().to_string();
@@ -236,6 +246,40 @@ fn hidden(m: &std::fs::Metadata) -> bool {
 #[cfg(not(windows))]
 fn hidden(_: &std::fs::Metadata) -> bool {
     false
+}
+
+/// `access` is 4 read, 2 write, 1 execute, as in a Unix mode digit.
+#[cfg(unix)]
+fn set_access(path: &str, access: i32, enable: bool, owner_only: bool) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    let Ok(m) = std::fs::metadata(path) else {
+        return false;
+    };
+    let digit = (access & 7) as u32;
+    let bits = if owner_only {
+        digit << 6
+    } else {
+        (digit << 6) | (digit << 3) | digit
+    };
+    let mut perms = m.permissions();
+    let mode = perms.mode();
+    perms.set_mode(if enable { mode | bits } else { mode & !bits });
+    std::fs::set_permissions(path, perms).is_ok()
+}
+
+/// Windows has only a read-only flag: write access maps to it; read and
+/// execute access cannot be taken away, so only granting them succeeds.
+#[cfg(not(unix))]
+fn set_access(path: &str, access: i32, enable: bool, _owner_only: bool) -> bool {
+    let Ok(m) = std::fs::metadata(path) else {
+        return false;
+    };
+    if access & 2 == 0 {
+        return enable;
+    }
+    let mut perms = m.permissions();
+    perms.set_readonly(!enable);
+    std::fs::set_permissions(path, perms).is_ok()
 }
 
 fn modified_millis(path: &str) -> i64 {

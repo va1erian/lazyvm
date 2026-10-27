@@ -43,9 +43,10 @@ public class ReaderCalls {
         public void close() { log.append("close;"); }
     }
 
-    /** Logs the bytes written as text, with the platform line separator shown as '$'. */
+    /** Logs the bytes written as text, with the platform line separator shown as '$'; a single
+     *  byte as its number, since a lone '\n' is the separator on Unix but not on Windows. */
     static class TextSink extends Sink {
-        public void write(int b) { log.append("w[" + text(new byte[]{(byte) b}, 0, 1) + "];"); }
+        public void write(int b) { log.append("w1[" + b + "];"); }
         public void write(byte[] b, int off, int len) { log.append("w[" + text(b, off, len) + "];"); }
         static String text(byte[] b, int off, int len) {
             return new String(b, off, len, java.nio.charset.StandardCharsets.ISO_8859_1).replace(System.lineSeparator(), "$").replace("\n", "\\n");
@@ -72,6 +73,12 @@ public class ReaderCalls {
         t("isr ready after close", () -> { Reader r = new InputStreamReader(new Src(10, 7), "UTF-8"); r.close(); return r.ready(); });
         t("isr skip 3", () -> { Reader r = new InputStreamReader(new Src(10, 100), "UTF-8"); return r.skip(3) + " " + r.read(c, 0, 20); });
         t("isr bounds", () -> new InputStreamReader(new Src(10, 100), "UTF-8").read(c, 19999, 2));
+        t("isr spare, more ready", () -> { Reader r = new InputStreamReader(new Src(4, 2), "UTF-8"); r.read(); return r.read(c, 0, 3); });
+        t("isr spare, none ready", () -> { Reader r = new InputStreamReader(new Src(2, 2), "UTF-8"); r.read(); return r.read(c, 0, 3); });
+        t("isr spare, len 2", () -> { Reader r = new InputStreamReader(new Src(6, 2), "UTF-8"); r.read(); return r.read(c, 0, 2) + " " + r.read(c, 0, 2); });
+        t("isr full buffer asks nothing", () -> new InputStreamReader(new Src(10, 3), "UTF-8").read(c, 0, 3));
+        t("isr error after chars", () -> new InputStreamReader(new ByteArrayInputStream(new byte[]{0x41, (byte) 0xC3, 0x42}),
+            java.nio.charset.StandardCharsets.UTF_8.newDecoder()).read(c, 0, 10));
 
         t("osw write char", () -> { Writer w = new OutputStreamWriter(new Sink(), "UTF-8"); w.write('a'); return ""; });
         t("osw write char flush", () -> { Writer w = new OutputStreamWriter(new Sink(), "UTF-8"); w.write('a'); w.flush(); return ""; });
@@ -91,7 +98,7 @@ public class ReaderCalls {
         t("PrintWriter autoflush print", () -> { PrintWriter p = new PrintWriter(new TextSink(), true); p.print("ab\n"); return ""; });
         t("PrintWriter close", () -> { PrintWriter p = new PrintWriter(new TextSink()); p.print('x'); p.close(); p.close(); p.print('y'); return p.checkError(); });
         t("PrintStream println", () -> { PrintStream p = new PrintStream(new TextSink()); p.println("ab"); return ""; });
-        t("PrintStream autoflush", () -> { PrintStream p = new PrintStream(new TextSink(), true); p.print("a\nb"); return ""; });
+        t("PrintStream autoflush", () -> { PrintStream p = new PrintStream(new TextSink(), true); p.print("a" + System.lineSeparator() + "b"); return ""; });
         t("PrintStream write byte autoflush", () -> { PrintStream p = new PrintStream(new TextSink(), true); p.write('a'); p.write('\n'); return ""; });
         t("PrintStream write(b) autoflush", () -> { PrintStream p = new PrintStream(new TextSink(), true); p.write("abc".getBytes(), 0, 3); return ""; });
         t("PrintStream close", () -> { PrintStream p = new PrintStream(new TextSink()); p.print('x'); p.close(); p.close(); p.print('y'); return p.checkError(); });

@@ -81,6 +81,10 @@ public class CharsetCoders {
         t("default actions", () -> { CharsetDecoder d = u8.newDecoder(); return d.malformedInputAction() + " " + d.unmappableCharacterAction() + " [" + d.replacement() + "]"; });
         t("decoder averages", () -> { CharsetDecoder d = u8.newDecoder(); return d.averageCharsPerByte() + " " + d.maxCharsPerByte(); });
         t("utf16 decoder averages", () -> { CharsetDecoder d = StandardCharsets.UTF_16.newDecoder(); return d.averageCharsPerByte() + " " + d.maxCharsPerByte(); });
+        t("utf16be/le decoder averages", () -> StandardCharsets.UTF_16BE.newDecoder().averageCharsPerByte() + " " + StandardCharsets.UTF_16LE.newDecoder().averageCharsPerByte());
+        for (String c : new String[]{"C2 41", "E2 82 41", "ED A0 80", "E0 A0 41", "F0 9F 98 41", "F0 9F 41 41", "80", "E2 41", "E0 80 80", "F0 80 80 80", "C3"}) {
+            t("utf8 no room [" + c + "]", () -> { ByteBuffer in = ByteBuffer.wrap(hex(c)); CoderResult r = u8.newDecoder().decode(in, CharBuffer.allocate(0), true); return r + " " + in.position(); });
+        }
         t("replaceWith empty", () -> u8.newDecoder().replaceWith("").replacement().length());
         t("replaceWith null", () -> u8.newDecoder().replaceWith(null));
         t("onMalformedInput null", () -> u8.newDecoder().onMalformedInput(null));

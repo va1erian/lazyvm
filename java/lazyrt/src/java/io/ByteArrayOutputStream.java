@@ -63,14 +63,22 @@ public class ByteArrayOutputStream extends OutputStream {
         return count;
     }
 
-    /** Decodes the bytes as UTF-8, the platform charset of LazyVM. */
     public synchronized String toString() {
         return new String(buf, 0, count);
     }
 
+    /** Each byte as a char whose high byte is `hibyte` (the deprecated form). */
+    @Deprecated
+    public synchronized String toString(int hibyte) {
+        char[] c = new char[count];
+        for (int i = 0; i < count; i++) {
+            c[i] = (char) (((hibyte & 0xff) << 8) | (buf[i] & 0xff));
+        }
+        return new String(c);
+    }
+
     public synchronized String toString(String charsetName) throws UnsupportedEncodingException {
-        byte[] copy = toByteArray();
-        return new String(copy, charsetName);
+        return new String(buf, 0, count, charsetName);
     }
 
     public void close() throws IOException {

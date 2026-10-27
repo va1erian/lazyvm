@@ -49,12 +49,14 @@ public class PathsWin {
     static final String[][] RESOLVE = {
         {"C:|a", "b", "C:|a|b"}, {"C:|a", "|b", "C:|b"}, {"C:|a", "D:b", "D:b"}, {"C:|a", "D:|b", "D:|b"}, {"C:|a", "C:b", "C:|a|b"},
         {"|a", "b", "|a|b"}, {"a", "C:|b", "C:|b"}, {"a", "|b", "|b"}, {"||s|h", "x", "||s|h|x"}, {"C:", "x", "C:x"},
+        {"c:|b", "C:", "c:|b|"}, {"c:", "C:x", "C:x"}, {"c:a", "c:b", "c:b"},
     };
 
     // base, other, base.relativize(other) or the exception message
     static final String[][] RELATIVIZE = {
         {"C:|a|b", "C:|a|c", "..|c"}, {"C:|a", "c:|A|b", "b"}, {"|a", "|b", "..|b"},
         {"C:|a", "D:|a", "!'other' has different root"}, {"C:|a", "|a", "!'other' is different type of Path"}, {"a", "C:|a", "!'other' is different type of Path"},
+        {"D:|", "||B|x", "!'other' is different type of Path"},
     };
 
     public static void main(String[] args) {

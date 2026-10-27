@@ -124,6 +124,8 @@ public class BufferedCalls {
         t("bos close", () -> { BufferedOutputStream o = new BufferedOutputStream(new Sink(), 4); o.write(1); o.close(); o.close(); return ""; });
         t("bos default size", () -> { BufferedOutputStream o = new BufferedOutputStream(new Sink()); o.write(new byte[8191]); o.write(1); o.write(1); return ""; });
         t("bos size 0", () -> new BufferedOutputStream(new Sink(), 0));
+        t("bos bad range, short", () -> { new BufferedOutputStream(new Sink(), 4).write(new byte[2], 1, 2); return ""; });
+        t("bos bad range, long", () -> { new BufferedOutputStream(new Sink(), 4).write(new byte[2], 1, 9); return ""; });
 
         char[] c = new char[20000];
         t("br read()", () -> new BufferedReader(new RSrc(100000, 100000)).read());

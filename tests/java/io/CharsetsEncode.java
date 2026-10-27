@@ -59,7 +59,7 @@ public class CharsetsEncode {
             System.out.println(n + " writer two parts: " + viaWriter(n, new String[]{"A", "B"}));
         }
         // InputStreamReader over UTF-16 reads the BOM once, at the start.
-        for (String d : new String[]{"FE FF 00 41 FE FF 00 42", "FF FE 41 00 42 00", "00 41 00", "D8 3D"}) {
+        for (String d : new String[]{"FE FF 00 41 FE FF 00 42", "FF FE 41 00 42 00", "00 41 00", "D8 3D", "FF FE 41 00 3D D8", "FE FF 00 41 D8 3D"}) {
             InputStreamReader r = new InputStreamReader(new ByteArrayInputStream(hex(d)), "UTF-16");
             StringBuilder sb = new StringBuilder();
             int c;

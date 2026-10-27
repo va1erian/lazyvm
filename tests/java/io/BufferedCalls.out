@@ -32,6 +32,8 @@ bos flush:  log=w1;fl;fl;
 bos close:  log=w1;fl;close;fl;close;
 bos default size:  log=w8192;
 bos size 0: !java.lang.IllegalArgumentException: Buffer size <= 0
+bos bad range, short: !java.lang.ArrayIndexOutOfBoundsException
+bos bad range, long:  log=w9;
 br read(): 120 log=r8192=8192;
 br read 9000 direct: 9000 log=r9000=9000;
 br read 9000 after mark: 9000 log=r8192=8192;ready;r8192=8192;
