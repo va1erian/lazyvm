@@ -133,8 +133,9 @@ high half just before the end is followed by the end, not by the end minus one
   search skip the other positions; inside any group it does not (`RegexRegions`).
 
 A lookbehind looks back in one of two ways, as the oracle does
-(`RegexLookbehindPairs`, `RegexLookbehindWide`, and a fuzz of 45000 cases with
-raw surrogates, whose one difference is the region gap listed below):
+(`RegexLookbehindPairs`, `RegexLookbehindWide`, and a fuzz of about 63000
+cases with raw surrogates, where the few seeds that differ all hit the region
+gap listed below):
 
 - When the pattern text has a surrogate char written raw (a pair, or a lone
   half) at or after the start of the lookbehind, the starts are found by
