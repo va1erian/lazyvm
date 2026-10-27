@@ -3,7 +3,8 @@
 The answers to the open points raised before planning. [`plan.md`](plan.md)
 builds on them; [`../AGENTS.md`](../AGENTS.md) turns the ones that bind every
 change into rules. A decision marked **(default)** was proposed and not yet
-confirmed by the owner. It holds until someone changes it here.
+confirmed by the owner. It holds until someone changes it here. A row or
+decision marked **(proposed)** is not in force until the owner confirms it.
 
 ## D1. Target level
 
@@ -131,7 +132,7 @@ confirmed by the owner. It holds until someone changes it here.
 | `java.util.logging` | S11 | `Logger`, `Level`, `ConsoleHandler` |
 | `java.awt` on xui | S12 (explore) | Drawing, images, events, containers and layouts with no native peers; see plan-2 S12 |
 | Swing and media | S13 (explore) | A `javax.swing` subset with one look and feel, `javax.imageio` (PNG, JPEG, BMP) and `javax.sound.sampled`; see plan-2 S13 |
-| Compiler support | S14 (proposed) | Only if S14 is confirmed, and as far as javac 8 uses them: `javax.lang.model`, `javax.tools`, `javax.annotation.processing`; `java.util.zip` and `java.util.jar` readers; `ResourceBundle` with locale fallback, `ServiceLoader`, `MessageFormat` and the `java.text` it needs, `LinkedHashSet`, `URLClassLoader`, `Package`. See [`compiler.md`](compiler.md) section 5 |
+| Compiler support | S14 (proposed) | Only if S14 is confirmed, and as far as javac 8 uses them: `javax.lang.model`, `javax.tools`, `javax.annotation.processing`; `java.util.zip` and `java.util.jar` readers; `ResourceBundle` and `ListResourceBundle` with locale fallback, `ServiceLoader`, `MessageFormat` and the `java.text` it needs, `LinkedHashSet`, `URLClassLoader`, `Package`. Confirming it narrows "other `javax.*`" in the "Out" row. See [`compiler.md`](compiler.md) section 5 |
 | Out | never | JavaFX, applets, RMI, CORBA, JNDI, JMX, `javax.sound.midi`, other `javax.*`, `SecurityManager`, serialization, `Calendar`/`TimeZone` beyond UTC, JNI, `System.loadLibrary` |
 
 ## D7. Native interface

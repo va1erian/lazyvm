@@ -47,7 +47,9 @@ and can be any version, emitting `--release 8` for LazyVM.
   be presented as a developer tool for building, never as the way apps run.
   It is GPLv2 with the Classpath Exception: shipped beside the GPLv3 OS as a
   separate program (aggregation, no linking), with the source offer GPLv2
-  requires.
+  requires. The staging strips the JDK's `src.zip`, and the source offer is
+  kept outside both repos and the image: agents read LazyOS, and shared rule
+  1 forbids them OpenJDK source.
 - **Where:** entirely in the LazyOS repo (a `LOS-` item and a staging script
   modelled on `tools/selfhost/`). Nothing in this repo changes.
 - **Unknowns:** whether HotSpot's startup probes (cgroups, `/proc`, `/sys`,
@@ -69,14 +71,16 @@ Run an existing Java 8-bytecode compiler with `lazyvm`. Candidates:
   runs, a strong end-to-end test of the interpreter, the verifier and the
   class library; the same jar works on Windows and LazyOS.
 - **Against:** it cannot start before S8 (D1: the verifier comes before any
-  jar we did not build) and needs S4, S5, S7 and S11 as well, plus three
-  `javax` packages that D6 rules out today (section 5). The compiler's internals are
-  opaque to us under the clean room, so failures are found by differential
+  jar we did not build) and needs S4, S5 and S7 (`URLClassLoader` builds on
+  `java.net.URL`) as well, plus three `javax` packages that D6 rules out today
+  (section 5). It is placed after S11 so the S11-05 performance pass comes
+  first: an interpreted javac's speed is the main risk. The compiler's
+  internals are opaque to us under the clean room, so failures are found by differential
   output only. And LazyVM is an interpreter, so compiles are slower than on
   HotSpot.
 - **Shipping:** this repo would not carry `tools.jar`. The test harness takes
-  it from the oracle JDK 8 (`LAZYVM_ORACLE_JAVA`). Whether LazyOS ships it in an image is a separate
-  license decision (the same GPLv2 source offer as A).
+  it from the oracle JDK 8 (`LAZYVM_ORACLE_JAVA`). Whether LazyOS ships it in
+  an image is a separate license decision (the same GPLv2 source offer as A).
 
 ### C. Our own compiler
 
@@ -111,7 +115,8 @@ same JVM were then subtracted.
 | `rt.jar` and locale data, beyond the baseline | 327 |
 | total | 1,625 |
 
-No `sun.*` class in the 327 points at a direct call from javac. The likely
+None of the `sun.*` classes in the 327 appears to come from a direct call by
+javac. The likely
 cause of each, inferred from the load order only (not checked; running javac
 on LazyVM in S14-01 is the real test):
 
@@ -161,7 +166,8 @@ The SE 8 API it used beyond the baseline, by area:
    LazyVM.
 2. **B with javac 8 as LazyVM's long-term target**, a new stage after S11
    (`plan-2.md` S14), judged by byte-identical class files against javac 8 on
-   the oracle JVM. It needs the D6 proposal in section 5.
+   the oracle JVM on Windows, and on LazyOS by running what it compiled
+   against the tests' goldens. It needs the D6 proposal in section 5.
 3. **Not C**, unless S14 finds javac 8 blocked by an internal class.
 
 ## 5. Class library changes B needs
@@ -177,8 +183,9 @@ these, as far as javac 8 uses them. It is not confirmed.
   `-bootclasspath` jar through them (the probe cannot separate this from the
   class loader opening `tools.jar`; S14-01 shows it). S3-01 reads jars inside
   the VM, which javac cannot use.
-- `ResourceBundle` with locale fallback, `ServiceLoader`, `MessageFormat` and
-  the `java.text` it needs (`DecimalFormatSymbols`), `LinkedHashSet`,
-  `URLClassLoader` and `java.lang.Package`.
+- `ResourceBundle` and `ListResourceBundle` with locale fallback,
+  `ServiceLoader`, `MessageFormat` and the `java.text` it needs
+  (`DecimalFormatSymbols`), `LinkedHashSet`, `URLClassLoader` and
+  `java.lang.Package`.
 
 `java.util.regex` is needed too, but S5-03 already plans it.
