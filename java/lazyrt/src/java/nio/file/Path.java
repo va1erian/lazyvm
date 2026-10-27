@@ -5,8 +5,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Iterator;
 
-/** A path in the default file system (watch services are out of scope, io.md section 15). */
-public interface Path extends Comparable<Path>, Iterable<Path> {
+/** A path in the default file system (watch services are out of scope, io.md section 15; no register methods). */
+public interface Path extends Comparable<Path>, Iterable<Path>, Watchable {
     FileSystem getFileSystem();
 
     boolean isAbsolute();

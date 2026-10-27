@@ -27,6 +27,16 @@ public abstract class ByteBuffer extends Buffer implements Comparable<ByteBuffer
         }
     }
 
+    /** Observed: views over direct bytes of one order copy as if through a temporary. */
+    static boolean sameDirectOrder(ByteBuffer a, ByteBuffer b) {
+        return a != null && b != null && a.direct && b.direct && a.bigEndian == b.bigEndian;
+    }
+
+    /** Copies `n` bytes from `src` index `from` to this buffer's index `to`, overlap allowed. */
+    final void copyElements(ByteBuffer src, int from, int to, int n) {
+        System.arraycopy(src.store, src.storeOffset + from, store, storeOffset + to, n);
+    }
+
     ByteBuffer(byte[] store, int storeOffset, int mark, int pos, int lim, int cap, boolean readOnly, boolean direct) {
         super(mark, pos, lim, cap);
         this.store = store;

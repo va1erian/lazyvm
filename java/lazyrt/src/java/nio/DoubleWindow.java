@@ -35,21 +35,6 @@ final class DoubleWindow extends DoubleBuffer {
         return bytes == null ? ByteOrder.nativeOrder() : bytes.order();
     }
 
-    private double load(int i) {
-        return store != null ? store[storeOffset + i] : bytes.getDouble((storeOffset + i) * 8);
-    }
-
-    private void save(int i, double x) {
-        if (readOnly) {
-            throw new ReadOnlyBufferException();
-        }
-        if (store != null) {
-            store[storeOffset + i] = x;
-        } else {
-            bytes.putDouble((storeOffset + i) * 8, x);
-        }
-    }
-
     public double get() {
         return load(takeForGet(1));
     }

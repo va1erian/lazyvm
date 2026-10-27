@@ -21,6 +21,12 @@ abstract class Codec {
     int out;
     /** Whether the coder runs on the buffers' own arrays (an observed difference for ISO-8859-1). */
     boolean arrays;
+    /**
+     * When set, a decoder that knows it puts these chars in place of each
+     * malformed unit and goes on (empty: drops the unit), as REPLACE and IGNORE
+     * would; a stop with the error is still the answer when they do not fit.
+     */
+    char[] fill;
 
     int decode(byte[] src, int sp, int sl, char[] dst, int dp, int dl) {
         throw new UnsupportedOperationException();
@@ -71,6 +77,14 @@ abstract class Codec {
         // Spec C1: US-ASCII calls 80-FF malformed; ISO-8859-1 maps every byte.
         int decode(byte[] src, int sp, int sl, char[] dst, int dp, int dl) {
             while (sp < sl) {
+                // Runs of mapped bytes with room first; the checks below judge the byte after.
+                int run = sp + Math.min(sl - sp, dl - dp);
+                while (sp < run && (src[sp] & 0xff) <= max) {
+                    dst[dp++] = (char) (src[sp++] & 0xff);
+                }
+                if (sp >= sl) {
+                    break;
+                }
                 int b = src[sp] & 0xff;
                 if (b > max) {
                     return stop(sp, dp, 1);
@@ -87,6 +101,13 @@ abstract class Codec {
         // Spec K2: an unmappable char is UNMAPPABLE[1], a pair UNMAPPABLE[2].
         int encode(char[] src, int sp, int sl, byte[] dst, int dp, int dl) {
             while (sp < sl) {
+                int run = sp + Math.min(sl - sp, dl - dp);
+                while (sp < run && src[sp] <= max) {
+                    dst[dp++] = (byte) src[sp++];
+                }
+                if (sp >= sl) {
+                    break;
+                }
                 char c = src[sp];
                 // Observed: on arrays ISO-8859-1 reports a full output before the char after it.
                 if (arrays && max == 0xFF && dp >= dl) {

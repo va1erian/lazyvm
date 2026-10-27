@@ -139,7 +139,9 @@ the encoder, not on an earlier flush. Built from a REPORT `CharsetEncoder`, a lo
 returned zero bytes")` from `InputStreamReader` (`BufferedReader` retries). After `close`, `read()` still returns a
 kept second char of a pair, `read(char[]…)` throws. `OutputStreamWriter.write(char[]…)` checks the closed state
 first; `write(String, off, len)`: `len < 0` → IOOBE, then `String.getChars` judges the range, then the closed
-state. `Writer.write(String)` uses its reused 1024-char array for up to 1024 chars. [IoEdges: isr…, osw…, write…]
+state. `Writer.write(String)` uses its reused 1024-char array for up to 1024 chars. `CharsetEncoder.canEncode`
+during a coding, or after a convenience `encode` that failed, → `IllegalStateException("Current state = CODING_END,
+new state = CODING")`; it leaves the coder reset. [IoEdges: isr…, osw…, write…; NioEdges: canEncode…]
 
 **R5.** `PrintWriter(OutputStream)` buffers (a `BufferedWriter` over an `OutputStreamWriter`); `checkError()`
 flushes; auto-flush acts on `println` only. `PrintStream(OutputStream)` writes each `print` at once; `println(s)`
@@ -268,10 +270,16 @@ toURI…]
 name → `IOException("Unable to create temporary file, <path>")`, so the file stays in the directory.
 `renameTo` onto the same file (itself, or another case on Windows) → true; onto another existing file on Windows →
 false. `getParentFile` keeps the parent string as it is (`\C:\` → `\C:`). `setLastModified` takes milliseconds to
-microseconds; a time that does not fit → false. A directory's time can be set; `setReadOnly` and
-`setWritable(false)` of a directory on Windows → false. `toURI` escapes as nio-file.md P4 (`u[v]` → `u%5Bv%5D`). Canonical
-forms drop Windows' `\\?\` and `\\?\UNC\` (→ `\\`) prefixes; a wildcard or a `:` past the drive has none
-(`IOException`). [IoEdges: temp…, renameTo…, … setLastModified, toURI…]
+microseconds; a time that does not fit → false; on Windows the first instant of 1601 leaves the time as it is and an
+earlier one is "The parameter is incorrect.". On Windows a directory's write access cannot change (`setReadOnly`,
+`setWritable` either way → false), and read and execute access can be granted (true, even for a missing file) but not
+taken. `toURI` escapes as nio-file.md P4 (`u[v]` → `u%5Bv%5D`). Canonical
+forms drop Windows' `\\?\` and `\\?\UNC\` (→ `\\`) prefixes and keep a UNC host and share as given; `.` and `..`
+are applied by name and the rest past what exists is appended as written; the last name loses trailing dots and
+spaces; `NUL` anywhere is `\\.\NUL`. No canonical form (`IOException`): a wildcard; outside a share, a `:` in the first
+name (`"The filename, directory name, or volume label syntax is incorrect"`); a name of three or more dots (and
+spaces) before another (`"Bad pathname"`). `toURI` of `""` ends with `/`. A lone surrogate never names the file of U+FFFD (on Windows it names its own).
+[IoEdges: temp…, renameTo…, … setLastModified, toURI…, lone surrogate names; FilePathsWin: NUL…, dir…, unc…]
 
 **W1.** Windows, pinned by FilePathsWin (table there): `/` and `\` are separators, normalised to `\`; two or more
 leading separators make an absolute UNC path (`///a` → `\\a`); `\a` and `C:a` are relative, `C:\` absolute; `C:` has
@@ -371,15 +379,18 @@ compareTo, hashCode…, toString; CharBuffers]
 checking the range before the read-only state; overflow leaves the position. `read(t)`: copies the smaller remaining,
 −1 when empty, 0 when `t` is full, IAE for itself (−1 first when it is empty). [CharBuffers: … put(String)…]
 
-**NB7.** Found by review. Bulk `put` between overlapping windows of one array copies as if through a temporary
-(`System.arraycopy`); views over bytes copy element by element in order. Read-only is checked before `put(self)`
-(→ ROBE). `compact` on a view of a heap buffer → IAE when the view's start in the array plus its limit in bytes
+**NB7.** Found by review. Bulk `put` between overlapping windows of one array, or between views of one order over
+direct bytes, copies as if through a temporary; other views copy element by element in order. Arrays, direct views
+and byte buffers check the read-only state first (`put(self)`, `read(self)` → ROBE); views of heap bytes and text
+buffers check for themselves first (IAE) and find the read-only state only at an element, so `put` of no elements
+does nothing. `read(t)` into a read-only `t` throws before the source moves. A text buffer's `toString`, bulk `get`
+and `subSequence` copy in bulk. `compact` on a view of a heap buffer → IAE when the view's start in the array plus its limit in bytes
 passes the capacity of the buffer it was made from, which needs an array offset (zero-capacity views included);
-direct views never fail. [NioEdges: overlapping…, … of itself, view compact…]
+direct views never fail. [NioEdges: overlapping…, view overlap table, … of itself, … read-only…, view compact…]
 
 ## 12. Paths and 13. Files
 
-Moved to [`nio-file.md`](nio-file.md) (rules P1–P4, PW1, NF1–NF9), with the `java.nio.file` rows of §18.
+Moved to [`nio-file.md`](nio-file.md) (rules P1–P4, PW1, U1–U3, NF1–NF10), with the `java.nio.file` rows of §18.
 
 ## 14. LazyOS
 
@@ -403,23 +414,7 @@ behaviour after close beyond NF7.
 
 ## 17. Known differences
 
-Where LazyVM knowingly differs from the oracle; the reviewer's probes show each one.
-
-- The default charset is UTF-8 everywhere (D12, N3).
-- Huge times: `File.setLastModified(Long.MAX_VALUE)` and `Files.setLastModifiedTime` of a time Windows cannot hold
-  are false or `FileSystemException("The parameter is incorrect.")`; the oracle reports success and stores a wrong
-  time.
-- `Files.exists(Paths.get("NUL"))` is false (the oracle says true; `new File("NUL").exists()` is false on both).
-- The `dos` attribute view is not provided (`UnsupportedOperationException("View 'dos' not available")`).
-- The index and pattern of the `PatternSyntaxException` for an empty glob class (nio-file.md P4).
-- `URI.getHost` is the whole authority until S7-02 parses server authorities.
-- An array too large for the heap is `OutOfMemoryError("Java heap space")`, not `"Requested array size exceeds VM
-  limit"`.
-- Stack traces show LazyVM's line numbers and frames.
-- How often a wrapped stream is called is matched only where a rule above pins it; LazyVM has no finalizers, so an
-  unreferenced stream is not closed; a file open in `java.io` cannot be deleted on Windows (nio streams allow it).
-- Speed: LazyVM's interpreter runs about 15–25 times slower than the oracle with `-Xint`; bulk buffer copies and
-  file copies are close to it.
+Listed in [`nio-file.md`](nio-file.md) section 3, for both halves.
 
 ## 18. API to provide
 

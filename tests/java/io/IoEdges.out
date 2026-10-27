@@ -14,6 +14,7 @@ isr closed, pending char by read(): 56832
 isr closed, pending char by read(char[]): !java.io.IOException: Stream closed
 dis readLine over many CRs: 30000
 dis read len 0 after readLine: 0 log=r@0+0;
+dis read after a pushed-back byte: a 3 bcd -1
 dis skipBytes(-2) then readByte: 0 1
 renameTo itself: true true
 renameTo other case: true true
@@ -24,4 +25,5 @@ dir setLastModified: true 1000000000000
 file setLastModified: true 1234567890000
 toURI brackets: /u%5Bv%5D
 toURI nbsp and line separator: /a%C2%A0b%E2%80%A8c
+lone surrogate names: no aliasing
 cleaned true

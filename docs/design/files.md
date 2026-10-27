@@ -3,8 +3,12 @@
 `java.io` and `java.nio.file` in `lazyrt` reach the file system through
 `lazy.internal.FileSystem`, whose natives are below. Paths are passed as
 the strings Java code built (relative paths resolve against the process's
-current directory, which is `user.dir`). On LazyOS the same calls go
-through the Linux ABI.
+current directory, which is `user.dir`), converted exactly (`vm::wtf`): on
+Windows the UTF-16 units as they are, lone surrogates included; on Unix
+their generalized UTF-8, so a lone surrogate is its own three-byte form.
+Names the OS gives back (listings, canonical forms) convert the other way;
+bytes that are not of that form read as U+FFFD. Distinct strings never name
+the same file. On LazyOS the same calls go through the Linux ABI.
 
 Open files are numbered handles in a process-wide table
 (`platform::files`), like descriptors. A handle that is never closed stays
@@ -20,7 +24,8 @@ error number (`The system cannot find the file specified` on Windows,
 `No such file or directory` on Linux). Where `java.nio.file` shows the
 reason itself (a `FileSystemException`'s reason), it is the full text as
 Java 8 gives it: on Windows with its period and the line break the OS
-message ends in (`...another process.
+message ends in (`...another process.
+
 `).
 
 ## `lazy.internal.FileSystem` natives
@@ -42,6 +47,8 @@ Handles:
 - `static native long position(long h)`, `static native void seek(long h, long pos)`
 - `static native long size(long h)`, `static native void truncate(long h, long len)`
 - `static native int available(long h)`: bytes from the position to the end, capped at `Integer.MAX_VALUE`
+- A device (NUL: no length) has position and size 0, and seek and truncate do
+  nothing; on Windows its `available` is the OS error "Incorrect function".
 - `static native void sync(long h)`
 - `static native void close(long h)`: closing twice is not an error.
 
@@ -63,12 +70,15 @@ Paths (no handle):
   `DirectoryNotEmptyException` with the path, else an `IOException` with
   the OS text (`File.delete` turns any of them into false).
 - `static native boolean rename(String from, String to)`
-- `static native boolean move(String from, String to)`: a rename that
-  replaces nothing; false when the target is on another volume (the caller
-  copies), else an `IOException` with the OS text.
+- `static native boolean move(String from, String to)`: a rename, which
+  replaces a file in the way; false when the target is on another volume
+  (the caller copies); a failure is thrown as `delete`'s are.
 - `static native boolean mkdir(String path)`
 - `static native boolean createNew(String path)`: atomically creates an empty file; false if it exists
-- `static native String canonicalize(String path)`: absolute, `.`/`..` resolved, links followed for the existing part
+- `static native String canonicalize(String path)`: of an absolute path:
+  `.`/`..` resolved by name, the longest existing part resolved by the OS
+  (links, on-disk case), the rest appended as written; Windows rules in
+  io.md F7.
 - `static native boolean setReadOnly(String path)`: `setAccess(path, 2,
   false, …)`; on Windows false for a directory, as Java 8 reports.
 - `static native boolean setAccess(String path, int access, boolean enable, boolean ownerOnly)`:

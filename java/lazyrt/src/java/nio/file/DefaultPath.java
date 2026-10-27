@@ -253,12 +253,24 @@ final class DefaultPath implements Path {
         return new DefaultPath(fs, abs, p.root, p.names);
     }
 
+    // Observed: a missing path is reported absolute and normalized; on Windows one below a
+    // file is "The directory name is invalid." (with the OS's line break).
     public Path toRealPath(LinkOption... options) throws IOException {
-        String abs = toAbsolutePath().toString();
-        if (lazy.internal.FileSystem.attributes(abs) == 0) {
-            throw new NoSuchFileException(string);
+        Path abs = toAbsolutePath().normalize();
+        String name = abs.toString();
+        if (lazy.internal.FileSystem.attributes(name) == 0) {
+            for (Path p = abs.getParent(); p != null; p = p.getParent()) {
+                int bits = lazy.internal.FileSystem.attributes(p.toString());
+                if (bits != 0) {
+                    if ((bits & lazy.internal.FileSystem.DIRECTORY) == 0 && SYNTAX.ignoresCase()) {
+                        throw new FileSystemException(name, null, "The directory name is invalid.\r\n");
+                    }
+                    break;
+                }
+            }
+            throw new NoSuchFileException(name);
         }
-        return parse(fs, SYNTAX.canonical(abs));
+        return parse(fs, SYNTAX.canonical(name));
     }
 
     public File toFile() {

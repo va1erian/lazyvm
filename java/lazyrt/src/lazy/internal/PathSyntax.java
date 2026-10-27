@@ -59,6 +59,10 @@ public abstract class PathSyntax {
     }
 
     /** The canonical form of an absolute path: checks, the native, then the platform's touches. */
+    /** File.getCanonicalPath's checks of the path as given, before it is made absolute. */
+    public void checkGiven(String path) throws java.io.IOException {
+    }
+
     public String canonical(String absolute) throws java.io.IOException {
         String checked = precanonical(absolute);
         return postcanonical(checked, FileSystem.canonicalize(checked));

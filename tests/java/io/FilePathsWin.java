@@ -1,6 +1,9 @@
 package io;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.RandomAccessFile;
 import java.io.IOException;
 
 /** Windows-only java.io.File path rules (drive letters, UNC, backslashes, case-insensitive
@@ -48,6 +51,50 @@ public class FilePathsWin {
         {"a", "|", "a|"}, {"a", "||", "a"}, {"|", "||", ""}, {"||", "||", "|"}, {"C:|", "|", "C:|"}, {"a", "C:/", "a|C:|"},
     };
 
+    /** NUL is a device: it opens, takes writes, and has no length or position. */
+    static void devices() throws IOException {
+        try (FileOutputStream o = new FileOutputStream("NUL")) {
+            o.write(new byte[10]);
+        }
+        try (RandomAccessFile r = new RandomAccessFile("NUL", "rw")) {
+            r.write(1);
+            check("NUL length and pointer", r.length() + " " + r.getFilePointer(), "0 0");
+        }
+        try (FileInputStream in = new FileInputStream("NUL")) {
+            check("NUL read", in.read(), "-1");
+            try {
+                check("NUL available", in.available(), "an IOException");
+            } catch (IOException e) {
+                check("NUL available", e.getMessage(), "Incorrect function");
+            }
+        }
+        check("NUL readAllBytes", java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("NUL")).length, "0");
+        File dir = java.nio.file.Files.createTempDirectory("lazyio").toFile();
+        check("dir setWritable(false)", dir.setWritable(false), "false");
+        check("dir setWritable(true)", dir.setWritable(true), "false");
+        check("dir setReadOnly", dir.setReadOnly(), "false");
+        check("dir still writable", dir.canWrite(), "true");
+        File missing = new File(dir, "missing");
+        check("missing setReadable(true)", missing.setReadable(true), "true");
+        check("missing setExecutable(false)", missing.setExecutable(false), "false");
+        check("missing setWritable(true)", missing.setWritable(true), "false");
+        check("cleanup dir", dir.delete(), "true");
+    }
+
+    /** UNC host and share keep the case they are given; `\\?\UNC\` is not shown. */
+    static void unc() throws IOException {
+        if (!new File(b("||localhost|C$")).exists()) {
+            // The administrative share is not reachable here: nothing to check.
+            return;
+        }
+        String p = b("||LOCALHOST|c$|windows|..|Windows|System32");
+        check("unc canonical", new File(p).getCanonicalPath(), "||LOCALHOST|c$|Windows|System32");
+        check("unc real", java.nio.file.Paths.get(p).toRealPath(), "||LOCALHOST|c$|Windows|System32");
+        check("unc real root", java.nio.file.Paths.get(b("||localhost|C$")).toRealPath(), "||localhost|C$|");
+        check("unc canonical missing", new File(b("||localhost|C$|nope|x")).getCanonicalPath(), "||localhost|C$|nope|x");
+        check("unc uri", new File(b("||localhost|C$|Windows")).toURI(), "file:////localhost/C$/Windows/");
+    }
+
     public static void main(String[] args) throws IOException {
         boolean windows = File.separatorChar == '\\';
         if (windows) {
@@ -81,6 +128,8 @@ public class FilePathsWin {
             check("hashCode is of lower case", new File("ABC").hashCode() == ("abc".hashCode() ^ 1234321), "true");
             check("toURI", new File("C:\\x y\\z").toURI(), "file:/C:/x%20y/z");
             check("separators", File.separator + File.pathSeparator, "|;");
+            devices();
+            unc();
             File tmp = File.createTempFile("lazyio", ".d");
             File mixed = new File(tmp.getParentFile(), "LazyIO-Mixed" + System.nanoTime() + ".TXT");
             mixed.createNewFile();

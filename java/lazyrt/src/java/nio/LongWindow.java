@@ -35,21 +35,6 @@ final class LongWindow extends LongBuffer {
         return bytes == null ? ByteOrder.nativeOrder() : bytes.order();
     }
 
-    private long load(int i) {
-        return store != null ? store[storeOffset + i] : bytes.getLong((storeOffset + i) * 8);
-    }
-
-    private void save(int i, long x) {
-        if (readOnly) {
-            throw new ReadOnlyBufferException();
-        }
-        if (store != null) {
-            store[storeOffset + i] = x;
-        } else {
-            bytes.putLong((storeOffset + i) * 8, x);
-        }
-    }
-
     public long get() {
         return load(takeForGet(1));
     }

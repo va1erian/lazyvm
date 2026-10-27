@@ -247,5 +247,5 @@ become issues on the LazyOS repo.
   the same on LazyOS, every char can be written, and LazyVM ships no legacy
   code page tables. Java 18 made the same choice (JEP 400).
 - **Tests** name their charsets wherever output depends on it, so goldens
-  blessed on Windows hold on LazyOS too. `design/io.md` (N3 and section 17)
+  blessed on Windows hold on LazyOS too. `design/io.md` (N3) and `design/nio-file.md` (section 3)
   lists the difference.

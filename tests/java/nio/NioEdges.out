@@ -14,8 +14,27 @@ view compact table:  s2:ooo,ooo,Xoo,Xoo,XXo,XXo,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,
 direct view compact: 5
 zero-capacity view compact: !java.lang.IllegalArgumentException
 read-only view compact: !java.nio.ReadOnlyBufferException
+view overlap table:  hc0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,5e78d4a,a82bd28d,a57b3850,4bf1b20d,20118112,ea3e614d, hc1:facfa985,b0169215,371e4685,8f067515,b1dbe385,30af5815,f9911ea1,fb8b97c9,46d38311,1ec3a6c9,554bfbd3,7ee51627, hs0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,5e78d4a,a82bd28d,a57b3850,4bf1b20d,20118112,ea3e614d, hs1:facfa985,b0169215,371e4685,8f067515,b1dbe385,30af5815,f9911ea1,fb8b97c9,46d38311,1ec3a6c9,554bfbd3,7ee51627, hi0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,88af02cc,9f20b3cd,2b47512a,4bf1b20d,20118112,ea3e614d, hi1:6a118985,6118b215,4d582685,da109515,cd0dc385,f7c17815,4ef6a799,426d6b67,c4449299,46d496c9,6bf52c11,5147b5e7, dc0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,1d93b58d,b03c740d,be6ad68d,c61b130d,28e2778d,ea41320d, dc1:facfa985,b0169215,371e4685,8f067515,b1dbe385,30af5815,f9911ea1,fb8b97c9,46d38311,1ec3a6c9,554bfbd3,7ee51627, ds0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,1d93b58d,b03c740d,be6ad68d,c61b130d,28e2778d,ea41320d, ds1:facfa985,b0169215,371e4685,8f067515,b1dbe385,30af5815,f9911ea1,fb8b97c9,46d38311,1ec3a6c9,554bfbd3,7ee51627, di0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,1d93b58d,b03c740d,be6ad68d,c61b130d,28e2778d,ea41320d, di1:6a118985,6118b215,4d582685,da109515,cd0dc385,f7c17815,4ef6a799,426d6b67,c4449299,46d496c9,6bf52c11,5147b5e7,
+heap view, read-only, put of itself: !java.lang.IllegalArgumentException
+direct view, read-only, put of itself: !java.nio.ReadOnlyBufferException
+text buffer put of itself: !java.lang.IllegalArgumentException
+heap view, read-only, put of no ints: 0
+heap view, read-only, bad bounds: !java.lang.IndexOutOfBoundsException
+heap view, read-only, too many: !java.nio.BufferOverflowException
+array, read-only, put of no ints: !java.nio.ReadOnlyBufferException
+direct view, read-only, read of itself: !java.nio.ReadOnlyBufferException
+array, read-only, read of itself: !java.nio.ReadOnlyBufferException
+read into a read-only buffer: ROBE, source at 0
+text buffer toString: cXef Xe
+text buffer bulk get: wxyz
 latin1 encode, full then unmappable: UNMAPPABLE[1] in=2 out=2
 latin1 encode, full then mappable: OVERFLOW in=2 out=2
+latin1 encode on arrays, full then unmappable: OVERFLOW in=2 out=2
+latin1 encode on arrays, room then unmappable: UNMAPPABLE[1] in=2 out=2
+canEncode after a failed encode: !java.lang.IllegalStateException: Current state = CODING_END, new state = CODING
+canEncode after an encode: true UNDERFLOW
+replace in place, heap: -574769440
+replace until the output is full: OVERFLOW in=2 ?a
 ascii encode, full then unmappable: UNMAPPABLE[1] in=2 out=2
 direct decode with errors: 300 �a
 string encode with errors: 300 63 97
@@ -37,6 +56,7 @@ FileTime 100 ms: 1970-01-01T00:00:00.1Z
 FileTime 1 ms: 1970-01-01T00:00:00.001Z
 FileTime 1234567 us: 1970-01-01T00:00:01.234567Z
 dir set modified time: 1000000000000
+small negative time: -1000
 set access time: 2008-01-10T21:20:00Z
 getAttribute *: !java.lang.IllegalArgumentException: *
 getAttribute two names: !java.lang.IllegalArgumentException: size,isDirectory
@@ -45,6 +65,7 @@ temp prefix with a separator: !java.lang.IllegalArgumentException: Invalid prefi
 temp suffix with a separator: !java.lang.IllegalArgumentException: Invalid prefix or suffix
 temp dir prefix climbing: !java.lang.IllegalArgumentException: Invalid prefix or suffix
 move into itself: java.nio.file.FileSystemException sub=false d=true
+move into a missing directory: !java.nio.file.NoSuchFileException: <T>/f -> <T>/missing/x
 newInputStream null option: !java.lang.NullPointerException
 newOutputStream copy option: !java.lang.UnsupportedOperationException
 copy stream atomic: !java.lang.UnsupportedOperationException: ATOMIC_MOVE not supported

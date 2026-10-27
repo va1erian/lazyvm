@@ -216,9 +216,12 @@ impl Vm {
 
     fn alloc_array(&mut self, class: ClassId, len: usize) -> VmResult<()> {
         let count = self.top()?.peek(0)?.int()?;
-        let bytes = usize::try_from(count)
-            .unwrap_or(0)
-            .saturating_mul(self.element_bytes(class));
+        // A length past the VM limit is new_array's error, not a lack of room.
+        let elements = usize::try_from(count)
+            .ok()
+            .filter(|&n| n <= crate::objects::MAX_ARRAY)
+            .unwrap_or(0);
+        let bytes = elements.saturating_mul(self.element_bytes(class));
         self.ensure_room(bytes)?;
         let count = self.top()?.pop_int()?;
         let r = self.new_array(class, count)?;

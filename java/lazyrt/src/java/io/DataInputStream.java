@@ -123,22 +123,30 @@ public class DataInputStream extends FilterInputStream implements DataInput {
      */
     @Deprecated
     public final String readLine() throws IOException {
-        return DataFormat.readLine(new DataFormat.LineSource() {
-            private int last;
+        if (lines == null) {
+            lines = new Lines();
+        }
+        return DataFormat.readLine(lines);
+    }
 
-            public int read() throws IOException {
-                last = in.read();
-                return last;
-            }
+    /** readLine's bytes, made once per stream. */
+    private DataFormat.LineSource lines;
 
-            public void unread() {
-                if (in instanceof Pushback) {
-                    ((Pushback) in).pending = last;
-                } else {
-                    in = new Pushback(in, last);
-                }
+    private final class Lines implements DataFormat.LineSource {
+        private int last;
+
+        public int read() throws IOException {
+            last = in.read();
+            return last;
+        }
+
+        public void unread() {
+            if (in instanceof Pushback) {
+                ((Pushback) in).pending = last;
+            } else {
+                in = new Pushback(in, last);
             }
-        });
+        }
     }
 
     public final String readUTF() throws IOException {

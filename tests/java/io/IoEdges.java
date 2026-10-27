@@ -109,6 +109,7 @@ public class IoEdges {
             return lines;
         });
         t("dis read len 0 after readLine", () -> { DataInputStream d = new DataInputStream(new Src(10)); d.readLine(); log.setLength(0); return d.read(b, 0, 0); });
+        t("dis read after a pushed-back byte", () -> { DataInputStream d = new DataInputStream(new ByteArrayInputStream(new byte[] {'a', '\r', 'b', 'c', 'd'})); String l = d.readLine(); byte[] x = new byte[3]; return l + " " + d.read(x) + " " + new String(x, "ISO-8859-1") + " " + d.read(x, 0, 3); });
     }
 
     static void files() throws IOException {
@@ -127,6 +128,38 @@ public class IoEdges {
         t("file setLastModified", () -> new File(root, "F").setLastModified(1234567890000L) + " " + new File(root, "F").lastModified());
         t("toURI brackets", () -> { String u = new File(root, "u[v]").toURI().getRawPath(); return u.substring(u.lastIndexOf('/')); });
         t("toURI nbsp and line separator", () -> { String u = new File(root, "a b c").toURI().getRawPath(); return u.substring(u.lastIndexOf('/')); });
+        t("lone surrogate names", IoEdges::lone);
+    }
+
+    /**
+     * Lone surrogates never name the file of U+FFFD. Windows names are UTF-16, so there each
+     * lone surrogate is a file of its own that a listing gives back; a Unix file system may
+     * refuse such names, which is not checked.
+     */
+    static String lone() throws IOException {
+        File d = new File(root, "lone");
+        d.mkdir();
+        String[] names = {"x" + (char) 0xD800, "x" + (char) 0xDC00, "x" + (char) 0xFFFD};
+        new File(d, names[2]).createNewFile();
+        if (new File(d, names[0]).exists() || new File(d, names[1]).exists()) {
+            return "aliased";
+        }
+        if (File.separatorChar == '\\') {
+            new File(d, names[0]).createNewFile();
+            new File(d, names[1]).createNewFile();
+            String[] list = d.list();
+            java.util.Arrays.sort(list);
+            StringBuilder sb = new StringBuilder();
+            for (String n : list) sb.append(Integer.toHexString(n.charAt(1))).append(' ');
+            for (String n : names) {
+                File f = new File(d, n);
+                sb.append(f.getCanonicalFile().getName().equals(n)).append(f.toPath().getFileName().toString().equals(n)).append(' ');
+            }
+            if (!sb.toString().equals("d800 dc00 fffd truetrue truetrue truetrue ")) {
+                return sb.toString();
+            }
+        }
+        return "no aliasing";
     }
 
     static String tempName(File f) {

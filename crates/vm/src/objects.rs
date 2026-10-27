@@ -5,8 +5,9 @@ use crate::heap::{Array, Body, Object, array::ElemKind};
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
-/// Arrays may not exceed `Integer.MAX_VALUE - 8` elements, like HotSpot.
-const MAX_ARRAY: usize = i32::MAX as usize - 8;
+/// Observed on Java 8: from `Integer.MAX_VALUE - 1` elements an array is
+/// "Requested array size exceeds VM limit", whatever the heap.
+pub(crate) const MAX_ARRAY: usize = i32::MAX as usize - 2;
 
 impl Vm {
     /// A new instance with default field values. The class must be an

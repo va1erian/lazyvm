@@ -1,7 +1,7 @@
 //! `lazy.internal.FileSystem`: files by handle and path operations
 //! (docs/design/files.md).
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use platform::files::{self, Mode};
 use vm::heap::Array;
@@ -50,32 +50,18 @@ pub fn register(vm: &mut Vm) {
     register_paths(vm);
 }
 
-/// The OS's text for an error as Java 8 puts it in a FileSystemException
-/// reason: without Rust's "(os error N)", keeping the final period.
-pub(crate) fn os_text(e: &std::io::Error) -> String {
-    let text = e.to_string();
-    let mut text = match text.rfind(" (os error ") {
-        Some(i) => text[..i].to_owned(),
-        None => text,
-    };
-    // Windows' message texts end in a line break, which Java 8 keeps.
-    if cfg!(windows) && e.raw_os_error().is_some() {
-        text.push_str("\r\n");
-    }
-    text
-}
-
 fn io_exception(msg: impl Into<String>) -> VmError {
     VmError::exception("java/io/IOException", msg)
 }
 
 /// Errors on an open handle carry no path; a closed handle is "Stream Closed".
 fn handle_error(e: std::io::Error) -> VmError {
-    io_exception(files::reason(&e))
+    io_exception(files::os_text(&e, true))
 }
 
-fn path_arg(vm: &Vm, args: &[Value], i: usize) -> VmResult<String> {
-    vm.string_arg(arg(args, i)?)
+/// A path argument as the OS name for exactly that string (`vm::wtf`).
+fn path_arg(vm: &Vm, args: &[Value], i: usize) -> VmResult<PathBuf> {
+    vm.path_arg(arg(args, i)?)
 }
 
 fn open(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
@@ -93,7 +79,7 @@ fn open(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     match files::open(&path, mode, shared_delete) {
         Ok(h) => Ok(Some(Value::Long(h))),
         Err(e) => {
-            let msg = format!("{path} ({})", files::reason(&e));
+            let msg = format!("{} ({})", path.display(), files::os_text(&e, true));
             Err(VmError::exception("java/io/FileNotFoundException", msg))
         }
     }
@@ -156,11 +142,11 @@ fn register_paths(vm: &mut Vm) {
         "(Ljava/lang/String;Ljava/lang/String;)Z",
         |vm, a| {
             let (from, to) = (path_arg(vm, a, 0)?, path_arg(vm, a, 1)?);
-            match std::fs::rename(from, to) {
+            match std::fs::rename(&from, to) {
                 Ok(()) => ret_bool(true),
                 // Another volume: the caller copies instead.
                 Err(e) if e.kind() == std::io::ErrorKind::CrossesDevices => ret_bool(false),
-                Err(e) => Err(io_exception(os_text(&e))),
+                Err(e) => Err(path_error(&e, &from)),
             }
         },
     );
@@ -176,23 +162,21 @@ fn register_paths(vm: &mut Vm) {
         {
             Ok(_) => ret_bool(true),
             // Windows reports a directory in the way as access denied: it is "exists".
-            Err(e)
-                if e.kind() == std::io::ErrorKind::AlreadyExists || Path::new(&path).exists() =>
-            {
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists || path.exists() => {
                 ret_bool(false)
             }
-            Err(e) => Err(io_exception(files::reason(&e))),
+            Err(e) => Err(io_exception(files::os_text(&e, true))),
         }
     });
     vm.register_native(
         FS,
         "canonicalize",
         "(Ljava/lang/String;)Ljava/lang/String;",
-        canonicalize,
+        crate::canonical::canonicalize,
     );
     vm.register_native(FS, "tempDir", "()Ljava/lang/String;", |vm, _| {
-        let dir = std::env::temp_dir().display().to_string();
-        ret_ref(Some(vm.new_string(&dir)?))
+        let dir = std::env::temp_dir();
+        ret_ref(Some(vm.new_string_os(dir.as_os_str())?))
     });
 }
 
@@ -201,7 +185,7 @@ fn register_paths(vm: &mut Vm) {
 /// or an IOException with the OS's text.
 fn delete(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let path = path_arg(vm, args, 0)?;
-    let p = Path::new(&path);
+    let p = path.as_path();
     let result = std::fs::symlink_metadata(p).and_then(|m| {
         if m.is_dir() {
             std::fs::remove_dir(p)
@@ -209,16 +193,22 @@ fn delete(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
             std::fs::remove_file(p)
         }
     });
-    let Err(e) = result else {
-        return ret_void();
-    };
+    match result {
+        Ok(()) => ret_void(),
+        Err(e) => Err(path_error(&e, p)),
+    }
+}
+
+/// The java.nio.file exception for an OS error on `path`: no such file,
+/// access denied, not empty, or an IOException with the OS's text.
+fn path_error(e: &std::io::Error, path: &Path) -> VmError {
     let class = match e.kind() {
         std::io::ErrorKind::NotFound => "java/nio/file/NoSuchFileException",
         std::io::ErrorKind::PermissionDenied => "java/nio/file/AccessDeniedException",
         std::io::ErrorKind::DirectoryNotEmpty => "java/nio/file/DirectoryNotEmptyException",
-        _ => return Err(io_exception(os_text(&e))),
+        _ => return io_exception(files::os_text(e, false)),
     };
-    Err(VmError::exception(class, path))
+    VmError::exception(class, path.display().to_string())
 }
 
 fn list(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
@@ -226,56 +216,19 @@ fn list(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let Ok(entries) = std::fs::read_dir(&path) else {
         return ret_ref(None);
     };
-    let mut names: Vec<String> = entries
+    // Sorted by UTF-16 units, the order of String.compareTo.
+    let mut names: Vec<Vec<u16>> = entries
         .filter_map(|e| e.ok())
-        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .map(|e| vm::wtf::to_units(&e.file_name()))
         .collect();
     names.sort();
     let len = i32::try_from(names.len()).map_err(|_| VmError::OutOfMemory)?;
     let array = vm.new_array_of("Ljava/lang/String;", len)?;
     for (i, n) in names.iter().enumerate() {
-        let s: Ref = vm.new_string(n)?;
+        let s: Ref = vm.new_string_utf16(n)?;
         vm.heap
             .array_mut(array)?
             .store(i, Value::Ref(Some(s)), false)?;
     }
     ret_ref(Some(array))
-}
-
-/// Absolute, with `.` and `..` resolved and links followed for the part
-/// that exists; the rest is appended by name, as `File.getCanonicalPath`.
-fn canonicalize(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let path = path_arg(vm, args, 0)?;
-    let absolute = std::path::absolute(&path).map_err(|e| io_exception(files::reason(&e)))?;
-    let mut existing = absolute.clone();
-    let mut rest = Vec::new();
-    while !existing.exists() {
-        match (
-            existing.file_name().map(|n| n.to_owned()),
-            existing.parent().map(Path::to_path_buf),
-        ) {
-            (Some(name), Some(parent)) => {
-                rest.push(name);
-                existing = parent;
-            }
-            _ => break,
-        }
-    }
-    let mut out = std::fs::canonicalize(&existing).unwrap_or(existing);
-    for name in rest.into_iter().rev() {
-        out.push(name);
-    }
-    let mut text = out.display().to_string();
-    // Windows' canonical form has a `\\?\` prefix Java does not show, `\\?\UNC\` for a share.
-    if let Some(share) = text.strip_prefix(r"\\?\UNC\") {
-        text = format!(r"\\{share}");
-    } else if let Some(stripped) = text.strip_prefix(r"\\?\") {
-        text = stripped.to_owned();
-    }
-    // Observed: a separator the absolute form ends with stays (`dir\...` is `Dir\`).
-    let sep = std::path::MAIN_SEPARATOR;
-    if absolute.as_os_str().to_string_lossy().ends_with(sep) && !text.ends_with(sep) {
-        text.push(sep);
-    }
-    ret_ref(Some(vm.new_string(&text)?))
 }

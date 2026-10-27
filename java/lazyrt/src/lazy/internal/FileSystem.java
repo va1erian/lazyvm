@@ -75,8 +75,8 @@ public final class FileSystem {
     public static native boolean rename(String from, String to);
 
     /**
-     * Renames: false when the target is on another volume (copy instead),
-     * else IOException whose message is the OS's text (with its final period).
+     * Renames, replacing a file in the way: false when the target is on another
+     * volume (copy instead). A failure is thrown as delete's are.
      */
     public static native boolean move(String from, String to) throws IOException;
 

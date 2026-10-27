@@ -12,34 +12,35 @@ const FS: &str = "lazy/internal/FileSystem";
 
 pub fn register(vm: &mut Vm) {
     vm.register_native(FS, "attributes", "(Ljava/lang/String;)I", |vm, a| {
-        ret_int(attributes(&vm.string_arg(arg(a, 0)?)?))
+        ret_int(attributes(&vm.path_arg(arg(a, 0)?)?))
     });
     vm.register_native(FS, "length", "(Ljava/lang/String;)J", |vm, a| {
-        let len = std::fs::metadata(vm.string_arg(arg(a, 0)?)?).map_or(0, |m| m.len());
+        let len = std::fs::metadata(vm.path_arg(arg(a, 0)?)?).map_or(0, |m| m.len());
         Ok(Some(Value::Long(i64::try_from(len).unwrap_or(i64::MAX))))
     });
     vm.register_native(FS, "fileTime", "(Ljava/lang/String;I)J", |vm, a| {
-        let path = vm.string_arg(arg(a, 0)?)?;
+        let path = vm.path_arg(arg(a, 0)?)?;
         Ok(Some(Value::Long(file_time(&path, int(a, 1)?))))
     });
     vm.register_native(FS, "setFileTime", "(Ljava/lang/String;IJ)V", |vm, a| {
-        let path = vm.string_arg(arg(a, 0)?)?;
-        set_file_time(&path, int(a, 1)?, long(a, 2)?)
-            .map_err(|e| VmError::exception("java/io/IOException", crate::files::os_text(&e)))?;
+        let path = vm.path_arg(arg(a, 0)?)?;
+        set_file_time(&path, int(a, 1)?, long(a, 2)?).map_err(|e| {
+            VmError::exception("java/io/IOException", platform::files::os_text(&e, false))
+        })?;
         ret_void()
     });
     vm.register_native(FS, "setAccess", "(Ljava/lang/String;IZZ)Z", |vm, a| {
-        let path = vm.string_arg(arg(a, 0)?)?;
+        let path = vm.path_arg(arg(a, 0)?)?;
         let (access, enable, owner_only) = (int(a, 1)?, int(a, 2)? != 0, int(a, 3)? != 0);
         ret_bool(set_access(&path, access, enable, owner_only))
     });
     vm.register_native(FS, "setReadOnly", "(Ljava/lang/String;)Z", |vm, a| {
-        ret_bool(set_access(&vm.string_arg(arg(a, 0)?)?, 2, false, false))
+        ret_bool(set_access(&vm.path_arg(arg(a, 0)?)?, 2, false, false))
     });
 }
 
-pub(crate) fn attributes(path: &str) -> i32 {
-    let p = Path::new(path);
+pub(crate) fn attributes(path: &Path) -> i32 {
+    let p = path;
     let Ok(m) = std::fs::metadata(p) else {
         // A dangling link exists as a link.
         return if std::fs::symlink_metadata(p).is_ok() {
@@ -89,7 +90,7 @@ fn hidden(_: &std::fs::Metadata) -> bool {
 
 /// `access` is 4 read, 2 write, 1 execute, as in a Unix mode digit.
 #[cfg(unix)]
-fn set_access(path: &str, access: i32, enable: bool, owner_only: bool) -> bool {
+fn set_access(path: &Path, access: i32, enable: bool, owner_only: bool) -> bool {
     use std::os::unix::fs::PermissionsExt;
     let Ok(m) = std::fs::metadata(path) else {
         return false;
@@ -106,16 +107,20 @@ fn set_access(path: &str, access: i32, enable: bool, owner_only: bool) -> bool {
     std::fs::set_permissions(path, perms).is_ok()
 }
 
-/// Windows has only a read-only flag, for files: write access maps to it,
-/// a directory's cannot be changed, and read and execute access cannot be
-/// taken away, so only granting them succeeds (as Java 8 reports).
+/// Windows has only a read-only flag, for files: write access maps to it and
+/// a directory's cannot be changed either way; read and execute access cannot
+/// be taken away, so granting them succeeds, even for a missing file, and
+/// taking them fails (as Java 8 reports).
 #[cfg(not(unix))]
-fn set_access(path: &str, access: i32, enable: bool, _owner_only: bool) -> bool {
+fn set_access(path: &Path, access: i32, enable: bool, _owner_only: bool) -> bool {
+    if access & 2 == 0 {
+        return enable;
+    }
     let Ok(m) = std::fs::metadata(path) else {
         return false;
     };
-    if access & 2 == 0 || m.is_dir() {
-        return enable;
+    if m.is_dir() {
+        return false;
     }
     let mut perms = m.permissions();
     perms.set_readonly(!enable);
@@ -132,7 +137,7 @@ fn micros(t: SystemTime) -> i64 {
 
 /// `which` is 0 modified, 1 accessed, 2 created; `i64::MIN` when the file is
 /// missing or the platform does not keep that time.
-fn file_time(path: &str, which: i32) -> i64 {
+fn file_time(path: &Path, which: i32) -> i64 {
     let Ok(m) = std::fs::metadata(path) else {
         return i64::MIN;
     };
@@ -154,15 +159,15 @@ fn at_micros(us: i64) -> Option<SystemTime> {
 }
 
 /// Sets one time stamp; a time the platform cannot hold is an error.
-fn set_file_time(path: &str, which: i32, us: i64) -> std::io::Result<()> {
-    // The OS's own text for a time it rejects.
-    let text = if cfg!(windows) {
-        "The parameter is incorrect."
-    } else {
-        "Invalid argument"
-    };
-    let when =
-        at_micros(us).ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, text))?;
+fn set_file_time(path: &Path, which: i32, us: i64) -> std::io::Result<()> {
+    // Observed on Windows: the first instant of 1601 is the "leave it" time stamp.
+    const WINDOWS_EPOCH_US: i64 = -11_644_473_600_000_000;
+    if cfg!(windows) && us == WINDOWS_EPOCH_US {
+        return open_for_times(path).map(|_| ());
+    }
+    // A time the system cannot hold is the OS's own error for a bad parameter.
+    let invalid = if cfg!(windows) { 87 } else { 22 };
+    let when = at_micros(us).ok_or_else(|| std::io::Error::from_raw_os_error(invalid))?;
     let mut times = std::fs::FileTimes::new();
     times = match which {
         0 => times.set_modified(when),
@@ -189,7 +194,7 @@ fn created(_: std::fs::FileTimes, _: SystemTime) -> std::io::Result<std::fs::Fil
 /// Windows opens directories only with backup semantics, and attribute
 /// access works on read-only files too.
 #[cfg(windows)]
-fn open_for_times(path: &str) -> std::io::Result<std::fs::File> {
+fn open_for_times(path: &Path) -> std::io::Result<std::fs::File> {
     use std::os::windows::fs::OpenOptionsExt;
     const FILE_WRITE_ATTRIBUTES: u32 = 0x100;
     const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
@@ -200,6 +205,6 @@ fn open_for_times(path: &str) -> std::io::Result<std::fs::File> {
 }
 
 #[cfg(not(windows))]
-fn open_for_times(path: &str) -> std::io::Result<std::fs::File> {
+fn open_for_times(path: &Path) -> std::io::Result<std::fs::File> {
     std::fs::File::open(path)
 }

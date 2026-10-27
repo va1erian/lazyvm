@@ -37,8 +37,9 @@ final class FileAccess {
             return new NoSuchFileException(file, o, null);
         }
         if (other != null) {
+            // Observed: a target whose parent is missing or a file is NoSuchFileException.
             Path parent = other.toAbsolutePath().getParent();
-            if (parent != null && !exists(parent)) {
+            if (parent != null && !isDirectory(parent)) {
                 return new NoSuchFileException(file, o, null);
             }
         }
@@ -88,6 +89,10 @@ final class FileAccess {
         String name = p.toString();
         if (opts.contains(StandardOpenOption.CREATE_NEW)) {
             if (!createNew(p)) {
+                // Observed on Windows: a directory in the way is AccessDeniedException.
+                if (isDirectory(p) && "\\".equals(p.getFileSystem().getSeparator())) {
+                    throw new AccessDeniedException(name);
+                }
                 throw new FileAlreadyExistsException(name);
             }
         } else if (!exists(p) && !opts.contains(StandardOpenOption.CREATE)) {
@@ -143,8 +148,9 @@ final class FileAccess {
             return FileSystem.read(h, b, off, len);
         }
 
+        // Observed: what is left by size and position, so a device (NUL) has 0.
         public int available() throws IOException {
-            return FileSystem.available(h);
+            return (int) Math.min(Integer.MAX_VALUE, Math.max(0, FileSystem.size(h) - FileSystem.position(h)));
         }
 
         public long skip(long n) throws IOException {

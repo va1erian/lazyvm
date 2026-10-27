@@ -17,49 +17,92 @@ final class Utf8Codec extends Codec {
                 break;
             }
             int b0 = src[sp] & 0xff;
+            // Whole valid 2- and 3-byte sequences with room take a short path; the general
+            // one below judges everything else in the order the rules give.
+            if (b0 >= 0xC2 && b0 < 0xF0 && dp < dl) {
+                if (b0 < 0xE0 && sp + 1 < sl && (src[sp + 1] & 0xC0) == 0x80) {
+                    dst[dp++] = (char) (((b0 & 0x1F) << 6) | (src[sp + 1] & 0x3F));
+                    sp += 2;
+                    continue;
+                }
+                if (b0 >= 0xE0 && sp + 2 < sl) {
+                    int b1 = src[sp + 1] & 0xff;
+                    int c = ((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (src[sp + 2] & 0x3F);
+                    if ((b1 & 0xC0) == 0x80 && (src[sp + 2] & 0xC0) == 0x80 && (b0 != 0xE0 || b1 >= 0xA0)
+                            && (c < 0xD800 || c > 0xDFFF)) {
+                        dst[dp++] = (char) c;
+                        sp += 3;
+                        continue;
+                    }
+                }
+            }
             int n = length(b0);
-            if (n == 0) {
-                return stop(sp, dp, 1);
-            }
-            // A bad byte ends the unit before it. Observed: when the whole sequence is there,
-            // its last byte is judged only after the output is found to have room.
-            int avail = Math.min(n, sl - sp);
-            int early = avail < n ? avail : n - 1;
-            for (int k = 1; k < early; k++) {
-                if (!valid(b0, k, src[sp + k] & 0xff)) {
-                    return stop(sp, dp, k);
+            int bad = n == 0 ? 1 : 0;
+            if (n > 0) {
+                // A bad byte ends the unit before it. Observed: when the whole sequence is there,
+                // its last byte is judged only after the output is found to have room.
+                int avail = sl - sp < n ? sl - sp : n;
+                int early = avail < n ? avail : n - 1;
+                for (int k = 1; k < early && bad == 0; k++) {
+                    if (!valid(b0, k, src[sp + k] & 0xff)) {
+                        bad = k;
+                    }
+                }
+                if (bad == 0) {
+                    if (avail < n) {
+                        // Spec U5: a valid prefix cut by the end of the input waits for more.
+                        return stop(sp, dp, UNDERFLOW);
+                    }
+                    if (dl - dp < (n == 4 ? 2 : 1)) {
+                        return stop(sp, dp, OVERFLOW);
+                    }
+                    if (n > 1 && !valid(b0, n - 1, src[sp + n - 1] & 0xff)) {
+                        bad = n - 1;
+                    } else {
+                        dp = put(src, sp, n, b0, dst, dp);
+                        if (dp >= 0) {
+                            sp += n;
+                            continue;
+                        }
+                        // Spec U3: ED A0-BF xx encodes a surrogate, one unit of 3.
+                        dp = -dp - 1;
+                        bad = 3;
+                    }
                 }
             }
-            if (avail < n) {
-                // Spec U5: a valid prefix cut by the end of the input waits for more.
-                return stop(sp, dp, UNDERFLOW);
+            if (fill == null || dl - dp < fill.length) {
+                return stop(sp, dp, bad);
             }
-            if (dl - dp < (n == 4 ? 2 : 1)) {
-                return stop(sp, dp, OVERFLOW);
-            }
-            if (n > 1 && !valid(b0, n - 1, src[sp + n - 1] & 0xff)) {
-                return stop(sp, dp, n - 1);
-            }
-            if (n == 1) {
-                dst[dp++] = (char) b0;
-            } else if (n == 2) {
-                dst[dp++] = (char) (((b0 & 0x1F) << 6) | (src[sp + 1] & 0x3F));
-            } else if (n == 3) {
-                int c = ((b0 & 0x0F) << 12) | ((src[sp + 1] & 0x3F) << 6) | (src[sp + 2] & 0x3F);
-                if (Character.isSurrogate((char) c)) {
-                    // Spec U3: ED A0-BF xx encodes a surrogate, one unit of 3.
-                    return stop(sp, dp, 3);
-                }
-                dst[dp++] = (char) c;
-            } else {
-                int cp = ((b0 & 0x07) << 18) | ((src[sp + 1] & 0x3F) << 12) | ((src[sp + 2] & 0x3F) << 6)
-                        | (src[sp + 3] & 0x3F);
-                dst[dp++] = Character.highSurrogate(cp);
-                dst[dp++] = Character.lowSurrogate(cp);
-            }
-            sp += n;
+            System.arraycopy(fill, 0, dst, dp, fill.length);
+            dp += fill.length;
+            sp += bad;
         }
         return stop(sp, dp, UNDERFLOW);
+    }
+
+    /** Writes the char(s) of a valid sequence: the new `dp`, or `-dp - 1` for a surrogate. */
+    private static int put(byte[] src, int sp, int n, int b0, char[] dst, int dp) {
+        if (n == 1) {
+            dst[dp] = (char) b0;
+            return dp + 1;
+        }
+        if (n == 2) {
+            dst[dp] = (char) (((b0 & 0x1F) << 6) | (src[sp + 1] & 0x3F));
+            return dp + 1;
+        }
+        if (n == 3) {
+            int c = ((b0 & 0x0F) << 12) | ((src[sp + 1] & 0x3F) << 6) | (src[sp + 2] & 0x3F);
+            if (c >= 0xD800 && c <= 0xDFFF) {
+                return -dp - 1;
+            }
+            dst[dp] = (char) c;
+            return dp + 1;
+        }
+        int cp = ((b0 & 0x07) << 18) | ((src[sp + 1] & 0x3F) << 12) | ((src[sp + 2] & 0x3F) << 6)
+                | (src[sp + 3] & 0x3F);
+        dst[dp] = (char) ((cp >>> 10) + 0xD7C0);
+        dst[dp + 1] = (char) ((cp & 0x3FF) + 0xDC00);
+        return dp + 2;
     }
 
     /** Byte `k` (from 1) of a sequence led by `b0`: a continuation, in range for the second. */

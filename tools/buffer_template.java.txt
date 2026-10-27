@@ -51,6 +51,23 @@ public abstract class $CLS extends Buffer implements Comparable<$CLS> {
 
     public abstract $CLS asReadOnlyBuffer();
 
+    /** Element `i` from the start of the window, unchecked. */
+    final $T load(int i) {
+        return store != null ? store[storeOffset + i] : bytes.get$ACC((storeOffset + i) * $SIZE);
+    }
+
+    /** Writes element `i` from the start of the window; only the read-only state is checked. */
+    final void save(int i, $T x) {
+        if (readOnly) {
+            throw new ReadOnlyBufferException();
+        }
+        if (store != null) {
+            store[storeOffset + i] = x;
+        } else {
+            bytes.put$ACC((storeOffset + i) * $SIZE, x);
+        }
+    }
+
     public abstract $T get();
 
     public abstract $CLS put($T x);
@@ -72,7 +89,7 @@ public abstract class $CLS extends Buffer implements Comparable<$CLS> {
             System.arraycopy(store, storeOffset + p, dst, offset, length);
         } else {
             for (int i = 0; i < length; i++) {
-                dst[offset + i] = get(p + i);
+                dst[offset + i] = load(p + i);
             }
         }
         return this;
@@ -82,39 +99,60 @@ public abstract class $CLS extends Buffer implements Comparable<$CLS> {
         return get(dst, 0, dst.length);
     }
 
-    // Observed: read-only is checked before the source being this buffer. Between arrays the
-    // copy moves overlapping windows as if through a temporary; views copy element by element.
+    /**
+     * Observed: views of heap bytes report themselves (IAE) and find the read-only state
+     * only at an element; arrays and direct views check the read-only state first.
+     */
+    private boolean lazyReadOnly() {
+        return bytes != null && !bytes.isDirect();
+    }
+
+    // Observed: between arrays, and between direct views of one order, overlapping windows
+    // copy as if through a temporary; other views copy element by element.
     public $CLS put($CLS src) {
+        if (src == this) {
+            if (readOnly && !lazyReadOnly()) {
+                throw new ReadOnlyBufferException();
+            }
+            throw new IllegalArgumentException();
+        }
         if (readOnly) {
             throw new ReadOnlyBufferException();
-        }
-        if (src == this) {
-            throw new IllegalArgumentException();
         }
         int n = src.remaining();
         int p = takeForPut(n);
         int s = src.takeForGet(n);
         if (store != null && src.store != null) {
             System.arraycopy(src.store, src.storeOffset + s, store, storeOffset + p, n);
+        } else if (ByteBuffer.sameDirectOrder(bytes, src.bytes)) {
+            bytes.copyElements(src.bytes, (src.storeOffset + s) * $SIZE, (storeOffset + p) * $SIZE, n * $SIZE);
         } else {
             for (int i = 0; i < n; i++) {
-                put(p + i, src.get(s + i));
+                save(p + i, src.load(s + i));
             }
         }
         return this;
     }
 
     public $CLS put($T[] src, int offset, int length) {
-        if (readOnly) {
+        if (readOnly && !lazyReadOnly()) {
             throw new ReadOnlyBufferException();
         }
         checkRange(offset, length, src.length);
+        if (length > 0) {
+            if (length > remaining()) {
+                throw new BufferOverflowException();
+            }
+            if (readOnly) {
+                throw new ReadOnlyBufferException();
+            }
+        }
         int p = takeForPut(length);
         if (store != null) {
             System.arraycopy(src, offset, store, storeOffset + p, length);
         } else {
             for (int i = 0; i < length; i++) {
-                put(p + i, src[offset + i]);
+                save(p + i, src[offset + i]);
             }
         }
         return this;
@@ -228,21 +266,6 @@ final class $WIN extends $CLS {
     // Spec NB4: arrays report the native order, views the order of their bytes.
     public ByteOrder order() {
         return bytes == null ? ByteOrder.nativeOrder() : bytes.order();
-    }
-
-    private $T load(int i) {
-        return store != null ? store[storeOffset + i] : bytes.get$ACC((storeOffset + i) * $SIZE);
-    }
-
-    private void save(int i, $T x) {
-        if (readOnly) {
-            throw new ReadOnlyBufferException();
-        }
-        if (store != null) {
-            store[storeOffset + i] = x;
-        } else {
-            bytes.put$ACC((storeOffset + i) * $SIZE, x);
-        }
     }
 
     public $T get() {

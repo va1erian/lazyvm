@@ -16,6 +16,7 @@ mod objects;
 mod strings;
 mod throw;
 pub mod value;
+pub mod wtf;
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;

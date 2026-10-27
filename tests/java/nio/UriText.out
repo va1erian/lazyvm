@@ -34,3 +34,70 @@ file:/a%c3%a9 vs file:/a%C3%A9: equals=true hash=true compare=1
 file:/A vs file:/a: equals=false hash=false compare=-1
 file:/a#X vs file:/a#x: equals=false hash=false compare=-1
 toASCII file:/a%C3%A9%20b
+authority h -> auth=h decoded=h user=null host=h port=-1
+authority host.com. -> auth=host.com. decoded=host.com. user=null host=host.com. port=-1
+authority -a.b -> auth=-a.b decoded=-a.b user=null host=null port=-1 (server: Illegal character in hostname at 7)
+authority a-.b -> auth=a-.b decoded=a-.b user=null host=null port=-1 (server: Illegal character in hostname at 8)
+authority a..b -> auth=a..b decoded=a..b user=null host=null port=-1 (server: Illegal character in hostname at 9)
+authority 1.2.3.4 -> auth=1.2.3.4 decoded=1.2.3.4 user=null host=1.2.3.4 port=-1
+authority 1.2.3 -> auth=1.2.3 decoded=1.2.3 user=null host=null port=-1 (server: Illegal character in hostname at 11)
+authority 256.1.1.1 -> auth=256.1.1.1 decoded=256.1.1.1 user=null host=null port=-1 (server: Illegal character in hostname at 15)
+authority 1.2.3.a -> auth=1.2.3.a decoded=1.2.3.a user=null host=1.2.3.a port=-1
+authority a.1 -> auth=a.1 decoded=a.1 user=null host=null port=-1 (server: Illegal character in hostname at 9)
+authority 1a -> auth=1a decoded=1a user=null host=1a port=-1
+authority h_1 -> auth=h_1 decoded=h_1 user=null host=null port=-1 (server: Illegal character in hostname at 8)
+authority é -> auth=é decoded=é user=null host=null port=-1 (server: Illegal character in hostname at 7)
+authority h%41 -> auth=h%41 decoded=hA user=null host=null port=-1 (server: Illegal character in hostname at 8)
+authority h%4 -> ! Malformed escape pair at 8
+authority u@h -> auth=u@h decoded=u@h user=u host=h port=-1
+authority u:p@h -> auth=u:p@h decoded=u:p@h user=u:p host=h port=-1
+authority @h -> auth=@h decoded=@h user= host=h port=-1
+authority u@ -> auth=u@ decoded=u@ user=null host=null port=-1 (server: Expected hostname at 9)
+authority u@@h -> auth=u@@h decoded=u@@h user=null host=null port=-1 (server: Illegal character in hostname at 9)
+authority : -> auth=: decoded=: user=null host=null port=-1 (server: Expected hostname at 7)
+authority h: -> auth=h: decoded=h: user=null host=h port=-1
+authority h:0080 -> auth=h:0080 decoded=h:0080 user=null host=h port=80
+authority h:x -> auth=h:x decoded=h:x user=null host=null port=-1 (server: Illegal character in port number at 9)
+authority h:99999999999 -> auth=h:99999999999 decoded=h:99999999999 user=null host=null port=-1 (server: Malformed port number at 9)
+authority h:80:90 -> auth=h:80:90 decoded=h:80:90 user=null host=null port=-1 (server: Illegal character in port number at 11)
+authority u%41@h -> auth=u%41@h decoded=uA@h user=u%41 host=h port=-1
+authority u%4@h -> ! Malformed escape pair at 8
+authority u h@h -> ! Illegal character in authority at 7
+authority u[@h -> ! Illegal character in user info at 8
+authority [::1] -> auth=[::1] decoded=[::1] user=null host=[::1] port=-1
+authority [::1]:8 -> auth=[::1]:8 decoded=[::1]:8 user=null host=[::1] port=8
+authority [::1 -> ! Expected closing bracket for IPv6 address at 11
+authority [::1]x -> ! Expected port number at 12
+authority [] -> ! Expected closing bracket for IPv6 address at 8
+authority [1:2:3:4:5:6:7:8:9] -> ! IPv6 address too long at 8
+authority [::ffff:1.2.3.4] -> auth=[::ffff:1.2.3.4] decoded=[::ffff:1.2.3.4] user=null host=[::ffff:1.2.3.4] port=-1
+authority [::g] -> ! Expected hex digits or IPv4 address at 10
+authority [fe80::1%25eth0] -> auth=[fe80::1%25eth0] decoded=[fe80::1%25eth0] user=null host=[fe80::1%25eth0] port=-1
+authority [v1.x] -> ! Malformed IPv6 address at 8
+authority u@[::1]:8 -> auth=u@[::1]:8 decoded=u@[::1]:8 user=u host=[::1] port=8
+authority [::1]:8%zz -> ! Illegal character in port number at 14
+authority a b -> ! Illegal character in authority at 7
+authority a;b -> auth=a;b decoded=a;b user=null host=null port=-1 (server: Illegal character in hostname at 8)
+authority a b -> ! Illegal character in authority at 7
+authority a b%zz -> ! Illegal character in authority at 7
+authority a%zzb c -> ! Malformed escape pair at 8
+authority a[b -> ! Illegal character in hostname at 8
+authority user@example.com:8080 -> auth=user@example.com:8080 decoded=user@example.com:8080 user=user host=example.com port=8080
+ctor host check: ! Illegal character in authority at 4 | //[::1]/p host=[::1]
+http:// -> ! Expected authority at 7
+// -> ! Expected authority at 2
+//?q -> scheme=null auth=null path= query=q frag=null opaque=false decoded=
+http://?q -> scheme=http auth=null path= query=q frag=null opaque=false decoded=
+file:#f -> ! Expected scheme-specific part at 5
+a:# -> ! Expected scheme-specific part at 2
+a:?q -> scheme=a auth=null path=null query=null frag=null opaque=true decoded=null
+x://#a -> scheme=x auth=null path= query=null frag=a opaque=false decoded=
+http://U@H:80/x vs http://u@h:80/x: equals=false hash=false compare=-1
+http://u@H:80/x vs http://u@h:80/x: equals=true hash=true compare=0
+http://a_B/x vs http://a_b/x: equals=false hash=false compare=-1
+file:/b vs x: equals=false hash=false compare=1
+file:/b vs file://a/: equals=false hash=false compare=-1
+http://h:80/ vs http://h:81/: equals=false hash=false compare=-1
+mailto:a vs file:/a: equals=false hash=false compare=1
+http://u%41@h/ vs http://u%41@H/: equals=true hash=true compare=0
+x:/a?Q vs x:/a?q: equals=false hash=false compare=-1

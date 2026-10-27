@@ -133,6 +133,7 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public String getCanonicalPath() throws IOException {
+        SYNTAX.checkGiven(path);
         return SYNTAX.canonical(getAbsolutePath());
     }
 
@@ -151,7 +152,8 @@ public class File implements Serializable, Comparable<File> {
             // Observed: a UNC path keeps an empty authority before it, file:////host/share.
             p = "//" + p;
         }
-        if (!p.endsWith("/") && isDirectory()) {
+        // Observed: judged on the absolute path, so "" (the current directory) ends with '/'.
+        if (!p.endsWith("/") && new File(getAbsolutePath()).isDirectory()) {
             p += "/";
         }
         try {

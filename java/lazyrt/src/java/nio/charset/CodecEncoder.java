@@ -26,14 +26,7 @@ final class CodecEncoder extends CharsetEncoder {
 
     protected CoderResult encodeLoop(CharBuffer in, ByteBuffer out) {
         if (in.hasArray() && out.hasArray()) {
-            int ib = in.arrayOffset();
-            int ob = out.arrayOffset();
-            codec.arrays = true;
-            int r = codec.encode(in.array(), ib + in.position(), ib + in.limit(),
-                    out.array(), ob + out.position(), ob + out.limit());
-            in.position(codec.in - ib);
-            out.position(codec.out - ob);
-            return result(r);
+            return onArrays(in, out);
         }
         codec.arrays = false;
         if (src.length < CHUNK) {
@@ -41,6 +34,7 @@ final class CodecEncoder extends CharsetEncoder {
         }
         while (true) {
             // A chunk about twice what the last call took: errors one by one copy little.
+            // At least 16 chars, so a chunk never ends inside the first pair.
             int n = Math.min(in.remaining(), Math.min(src.length, Math.max(16, 2 * hint)));
             int m = Math.min(out.remaining(), dst.length);
             int start = in.position();
@@ -55,16 +49,42 @@ final class CodecEncoder extends CharsetEncoder {
                     || (r == Codec.OVERFLOW && out.hasRemaining() && codec.out > 0)) {
                 continue;
             }
-            if (r == Codec.UNDERFLOW && moreIn) {
-                // A high surrogate at the edge of a chunk: take more input with it.
-                if (n == src.length) {
-                    src = new char[src.length * 2];
-                }
-                hint = 2 * n;
-                continue;
-            }
             return result(r);
         }
+    }
+
+    /** As CodecDecoder.onArrays: the errors the actions settle are settled here. */
+    private CoderResult onArrays(CharBuffer in, ByteBuffer out) {
+        int ib = in.arrayOffset();
+        int ob = out.arrayOffset();
+        char[] a = in.array();
+        byte[] b = out.array();
+        int sp = ib + in.position();
+        int sl = ib + in.limit();
+        int dp = ob + out.position();
+        int dl = ob + out.limit();
+        byte[] rep = replacementBytes();
+        codec.arrays = true;
+        int r;
+        while (true) {
+            r = codec.encode(a, sp, sl, b, dp, dl);
+            sp = codec.in;
+            dp = codec.out;
+            if (r <= 0) {
+                break;
+            }
+            CodingErrorAction action = (r & Codec.UNMAPPABLE) != 0 ? unmappableCharacterAction() : malformedInputAction();
+            if (action == CodingErrorAction.REPLACE && rep.length <= dl - dp) {
+                System.arraycopy(rep, 0, b, dp, rep.length);
+                dp += rep.length;
+            } else if (action != CodingErrorAction.IGNORE) {
+                break;
+            }
+            sp += r & ~Codec.UNMAPPABLE;
+        }
+        in.position(sp - ib);
+        out.position(dp - ob);
+        return result(r);
     }
 
     /** A {@link Codec} step result as a CoderResult. */

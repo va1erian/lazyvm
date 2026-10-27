@@ -35,21 +35,6 @@ final class FloatWindow extends FloatBuffer {
         return bytes == null ? ByteOrder.nativeOrder() : bytes.order();
     }
 
-    private float load(int i) {
-        return store != null ? store[storeOffset + i] : bytes.getFloat((storeOffset + i) * 4);
-    }
-
-    private void save(int i, float x) {
-        if (readOnly) {
-            throw new ReadOnlyBufferException();
-        }
-        if (store != null) {
-            store[storeOffset + i] = x;
-        } else {
-            bytes.putFloat((storeOffset + i) * 4, x);
-        }
-    }
-
     public float get() {
         return load(takeForGet(1));
     }

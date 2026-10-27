@@ -51,6 +51,23 @@ public abstract class DoubleBuffer extends Buffer implements Comparable<DoubleBu
 
     public abstract DoubleBuffer asReadOnlyBuffer();
 
+    /** Element `i` from the start of the window, unchecked. */
+    final double load(int i) {
+        return store != null ? store[storeOffset + i] : bytes.getDouble((storeOffset + i) * 8);
+    }
+
+    /** Writes element `i` from the start of the window; only the read-only state is checked. */
+    final void save(int i, double x) {
+        if (readOnly) {
+            throw new ReadOnlyBufferException();
+        }
+        if (store != null) {
+            store[storeOffset + i] = x;
+        } else {
+            bytes.putDouble((storeOffset + i) * 8, x);
+        }
+    }
+
     public abstract double get();
 
     public abstract DoubleBuffer put(double x);
@@ -72,7 +89,7 @@ public abstract class DoubleBuffer extends Buffer implements Comparable<DoubleBu
             System.arraycopy(store, storeOffset + p, dst, offset, length);
         } else {
             for (int i = 0; i < length; i++) {
-                dst[offset + i] = get(p + i);
+                dst[offset + i] = load(p + i);
             }
         }
         return this;
@@ -82,39 +99,60 @@ public abstract class DoubleBuffer extends Buffer implements Comparable<DoubleBu
         return get(dst, 0, dst.length);
     }
 
-    // Observed: read-only is checked before the source being this buffer. Between arrays the
-    // copy moves overlapping windows as if through a temporary; views copy element by element.
+    /**
+     * Observed: views of heap bytes report themselves (IAE) and find the read-only state
+     * only at an element; arrays and direct views check the read-only state first.
+     */
+    private boolean lazyReadOnly() {
+        return bytes != null && !bytes.isDirect();
+    }
+
+    // Observed: between arrays, and between direct views of one order, overlapping windows
+    // copy as if through a temporary; other views copy element by element.
     public DoubleBuffer put(DoubleBuffer src) {
+        if (src == this) {
+            if (readOnly && !lazyReadOnly()) {
+                throw new ReadOnlyBufferException();
+            }
+            throw new IllegalArgumentException();
+        }
         if (readOnly) {
             throw new ReadOnlyBufferException();
-        }
-        if (src == this) {
-            throw new IllegalArgumentException();
         }
         int n = src.remaining();
         int p = takeForPut(n);
         int s = src.takeForGet(n);
         if (store != null && src.store != null) {
             System.arraycopy(src.store, src.storeOffset + s, store, storeOffset + p, n);
+        } else if (ByteBuffer.sameDirectOrder(bytes, src.bytes)) {
+            bytes.copyElements(src.bytes, (src.storeOffset + s) * 8, (storeOffset + p) * 8, n * 8);
         } else {
             for (int i = 0; i < n; i++) {
-                put(p + i, src.get(s + i));
+                save(p + i, src.load(s + i));
             }
         }
         return this;
     }
 
     public DoubleBuffer put(double[] src, int offset, int length) {
-        if (readOnly) {
+        if (readOnly && !lazyReadOnly()) {
             throw new ReadOnlyBufferException();
         }
         checkRange(offset, length, src.length);
+        if (length > 0) {
+            if (length > remaining()) {
+                throw new BufferOverflowException();
+            }
+            if (readOnly) {
+                throw new ReadOnlyBufferException();
+            }
+        }
         int p = takeForPut(length);
         if (store != null) {
             System.arraycopy(src, offset, store, storeOffset + p, length);
         } else {
             for (int i = 0; i < length; i++) {
-                put(p + i, src[offset + i]);
+                save(p + i, src[offset + i]);
             }
         }
         return this;

@@ -3,8 +3,8 @@
 The `Path`, `Files` and `java.nio.file.attribute` half of the behavioural specification whose `java.io`,
 buffer and charset half is [`io.md`](io.md). The conventions are io.md's: rules read *input → observable
 result*, the bracket names the test in `tests/java/nio` and its labels, and the tests follow io.md's platform
-independence rules. io.md §14 (LazyOS), §15 (deferred), §16 (free) and §17 (known differences) cover this half
-too.
+independence rules. io.md §14 (LazyOS), §15 (deferred) and §16 (free) cover this half too; section 3 lists the
+known differences of both halves.
 
 ## 1. Paths
 
@@ -26,7 +26,7 @@ colon → IAE. Glob: `*`, `?` within a name, `**` across names, `[…]`, `[!…]
 **P4.** Glob classes (found by review): `[!…]` never matches the separator; `/` (or the separator) inside a class →
 `PatternSyntaxException("Explicit 'name separator' in class")` at its index; `]` right after `[` or `[!` closes an
 empty class, which no name matches and which the oracle rejects as `"Unclosed character class"` from its own regex
-(index and pattern are that regex's: not copied, io.md §17); an unclosed `[` or `{` → `"Missing ']"` or `"Missing '}"`
+(index and pattern are that regex's: not copied, section 3); an unclosed `[` or `{` → `"Missing ']"` or `"Missing '}"`
 (no closing quote) at the end. `toUri` escapes, through the one helper `lazy.internal.UriText`, what a URI path
 cannot hold (`[`, `]`, space) and the non-ASCII space and control chars (U+00A0, U+2028), as UTF-8 `%XX`; other
 non-ASCII chars stay. [NioEdges: glob…, toUri…]
@@ -42,6 +42,25 @@ has no names (`C:` → `C:\cwd\`), and on a missing drive throws `IOError(IOExce
 of drive 'B'"))`; `resolve` of a drive-relative argument joins only an absolute base on the same drive, appended as
 written (`c:\b` + `C:` → `c:\b\`), else the argument wins; for `relativize` a drive root and a UNC root are different
 types; a `/` in a glob matches the separator.
+
+**U1.** `java.net.URI` (the part file names need; S7-02 adds the rest) parses left to right, so the leftmost bad
+component is reported: scheme (`"Expected scheme name"` for a leading `:`, `"Illegal character in scheme name"`),
+`"Expected scheme-specific part"` for nothing (or only a fragment) after it, then the opaque part, or `//` and the
+authority (`"Expected authority"` when nothing follows), path, query, fragment, each `"Illegal character in <part>"`
+at the char, `"Malformed escape pair"` at a bad `%`. [UriText]
+
+**U2.** An authority is a server authority when it parses as `[userinfo@]host[:port]` (host: IPv4, a host name of
+letters, digits and inner `-` whose last label starts with a letter when there are several, or a bracketed IPv6
+literal with an optional zone); else, if its chars allow, a registry name with no host and port -1; chars legal for
+neither → `"Illegal character in authority"` at its start. `parseServerAuthority` and the four-argument constructor
+(which brackets an IPv6 host) require a server authority and report its error (`"Expected hostname"`, `"Illegal
+character in hostname/user info/port number"`, `"Malformed port number"`, the IPv6 messages). `getAuthority` decodes
+escapes except inside a literal. [UriText: authority…, ctor host check]
+
+**U3.** `equals` and `hashCode`: scheme and host ignoring case, user info, port, path, query, fragment and other
+parts by raw form with escapes' hex digits ignoring case; a registry authority as a whole. `compareTo`: scheme
+ignoring case (undefined first), opaque after hierarchical, then user info, host ignoring case and port (or the
+authority), path, query, fragment, case-sensitive, undefined first. [UriText: … vs …]
 
 ## 2. Files
 
@@ -100,7 +119,47 @@ option → NPE; an unknown `OpenOption` → `UnsupportedOperationException` (no 
 `REPLACE_EXISTING` only (`"ATOMIC_MOVE not supported"`). `FileTime.toString` trims the fraction (`.1Z` for 100 ms).
 [NioEdges: temp…, move into itself, getAttribute…, … option…, FileTime…]
 
-## 3. API to provide
+**NF10.** Found by the second review. A failed rename is `NoSuchFileException`, `AccessDeniedException` (both with
+source and target) or `FileSystemException` with the OS's reason, as the OS reports it (a missing target directory
+is NSFE; a source open in `java.io` is the sharing violation). `ATOMIC_MOVE` is the rename alone: no existence or
+same-file check first (a missing source is `"source -> target"`; a case-only one renames), and a directory in the way
+(not inside the source) → AccessDenied. `copy` into a parent that is a file → NSFE. On Windows `CREATE_NEW` onto a
+directory → AccessDenied. `toRealPath` reports a missing path absolute and normalized; on Windows one below a file is
+`FileSystemException(path, null, "The directory name is invalid.\r\n")`. `available()` of a `Files` stream is size
+minus position, so `readAllBytes(NUL)` is empty. [NioEdges: move into a missing directory…; FilePathsWin: NUL…]
+
+## 3. Known differences
+
+Where LazyVM knowingly differs from the oracle; the reviewer's probes show each one.
+
+- The default charset is UTF-8 everywhere (D12, N3).
+- Huge times: `File.setLastModified(Long.MAX_VALUE)` and `Files.setLastModifiedTime` of a time Windows cannot hold
+  are false or `FileSystemException("The parameter is incorrect.")`; the oracle reports success and stores a wrong
+  time.
+- `Files.exists(Paths.get("NUL"))` is false (the oracle says true; `new File("NUL").exists()` is false on both).
+- The `dos` attribute view is not provided (`UnsupportedOperationException("View 'dos' not available")`).
+- The index and pattern of the `PatternSyntaxException` for an empty glob class (nio-file.md P4).
+- An array too large for LazyVM's heap is `"Java heap space"` where the oracle's larger default heap allocates it
+  (from `Integer.MAX_VALUE - 1` elements both say `"Requested array size exceeds VM limit"`).
+- NUL through `java.nio.file`: `Files.write` and `newOutputStream` succeed (the oracle: `"Incorrect function."`), and
+  `Files.size` is `NoSuchFileException` (the oracle: `"The parameter is incorrect."`).
+- Windows junctions are symbolic links to LazyVM (the oracle: not a link, "other").
+- `Files.delete` of a read-only file that another handle holds is `AccessDeniedException` (the oracle reports the
+  sharing violation first).
+- Canonical forms: a `<` or `>` in a name is not matched as a wildcard (the oracle's `C:\<` can come back as a real
+  directory), and some names of dots that the oracle refuses with `"Invalid argument"` are `"Bad pathname"`.
+- `getFileAttributeView` and the attribute view classes are not provided (out of scope with the non-basic views).
+- The length of a directory is what the file system reports (0 on NTFS, often 4096 on Linux).
+- On Unix, file names are bytes: a string becomes its generalized UTF-8, so a lone surrogate is its own name and
+  comes back from a listing (LazyOS's file system, which takes UTF-8 names only, refuses it: "No such file or
+  directory"); bytes that are not of that form (made by another program) read as U+FFFD.
+- Stack traces show LazyVM's line numbers and frames.
+- How often a wrapped stream is called is matched only where a rule above pins it; LazyVM has no finalizers, so an
+  unreferenced stream is not closed; a file open in `java.io` cannot be deleted on Windows (nio streams allow it).
+- Speed: LazyVM's interpreter runs about 15–30 times slower than the oracle with `-Xint`; bulk buffer copies and
+  file copies are close to it.
+
+## 4. API to provide
 
 The `java.nio.file` rows of io.md §18's table, with the same conventions.
 

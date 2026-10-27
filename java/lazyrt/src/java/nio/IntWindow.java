@@ -35,21 +35,6 @@ final class IntWindow extends IntBuffer {
         return bytes == null ? ByteOrder.nativeOrder() : bytes.order();
     }
 
-    private int load(int i) {
-        return store != null ? store[storeOffset + i] : bytes.getInt((storeOffset + i) * 4);
-    }
-
-    private void save(int i, int x) {
-        if (readOnly) {
-            throw new ReadOnlyBufferException();
-        }
-        if (store != null) {
-            store[storeOffset + i] = x;
-        } else {
-            bytes.putInt((storeOffset + i) * 4, x);
-        }
-    }
-
     public int get() {
         return load(takeForGet(1));
     }

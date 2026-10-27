@@ -130,10 +130,42 @@ final class WindowsPaths extends PathSyntax {
                 || absolute.indexOf('*') >= 0 || absolute.indexOf('?') >= 0) {
             throw new IOException("Invalid argument");
         }
-        if (absolute.indexOf(':', 2) >= 0) {
-            throw new IOException("The filename, directory name, or volume label syntax is incorrect");
+        // Observed: once "." and ".." are applied, a name of three or more dots before another
+        // name has no canonical form.
+        List<String> names = resolved(absolute, 0);
+        for (int i = 0; i < names.size() - 1; i++) {
+            if (names.get(i).length() >= 3 && names.get(i).replace(".", "").trim().isEmpty() && names.get(i).contains(".")) {
+                throw new IOException("Bad pathname");
+            }
         }
         return absolute;
+    }
+
+    /** The names of `path` from `from`, with "." dropped and ".." taking the name before it. */
+    private static List<String> resolved(String path, int from) {
+        List<String> names = new java.util.ArrayList<>();
+        for (String n : split(path, from, '\\')) {
+            if (n.equals("..")) {
+                if (!names.isEmpty()) {
+                    names.remove(names.size() - 1);
+                }
+            } else if (!n.equals(".")) {
+                names.add(n);
+            }
+        }
+        return names;
+    }
+
+    // Observed: outside a UNC share, a ':' in the first name (after "." and ".." are applied)
+    // has no canonical form.
+    public void checkGiven(String path) throws IOException {
+        if (path.startsWith("\\\\")) {
+            return;
+        }
+        List<String> names = resolved(path, prefixLength(path));
+        if (!names.isEmpty() && names.get(0).indexOf(':') >= 0) {
+            throw new IOException("The filename, directory name, or volume label syntax is incorrect");
+        }
     }
 
     // Spec W1: the canonical drive letter is upper case.

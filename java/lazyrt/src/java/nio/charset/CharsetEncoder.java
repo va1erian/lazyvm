@@ -42,6 +42,11 @@ public abstract class CharsetEncoder {
         return replacement.clone();
     }
 
+    /** The replacement itself, for the coders here that only read it. */
+    final byte[] replacementBytes() {
+        return replacement;
+    }
+
     // Spec K4: the checks of replaceWith, in this order.
     public final CharsetEncoder replaceWith(byte[] newReplacement) {
         if (newReplacement == null) {
@@ -204,14 +209,20 @@ public abstract class CharsetEncoder {
         return canEncode(CharBuffer.wrap(new char[] {c}));
     }
 
-    // Javadoc: a trial encoding with REPORT, on a fresh coder so this one keeps its state.
+    // Javadoc: a trial encoding with REPORT, refused while an encoding is in progress
+    // (observed: also after a convenience encode that failed); this coder ends reset.
     public boolean canEncode(CharSequence cs) {
+        if (state == CharsetDecoder.CODING || state == CharsetDecoder.CODING_END) {
+            throw CharsetDecoder.badState(state, CharsetDecoder.CODING);
+        }
         CharsetEncoder e = charset.newEncoder();
         try {
             e.encode(CharBuffer.wrap(cs));
             return true;
         } catch (CharacterCodingException x) {
             return false;
+        } finally {
+            reset();
         }
     }
 }

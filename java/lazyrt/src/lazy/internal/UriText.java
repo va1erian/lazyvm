@@ -9,13 +9,12 @@ import java.nio.charset.StandardCharsets;
  * Non-ASCII chars that are neither controls nor spaces ("other") may stay.
  */
 public final class UriText {
-    private static final String UNRESERVED = "-_.!~*'()";
+    /** Letters and digits are always legal; these marks too. */
+    public static final String UNRESERVED = "-_.!~*'()";
     /** What a path may hold besides letters, digits and escapes. */
     public static final String PATH = UNRESERVED + ";:@&=+$,/";
     /** A query, a fragment or an opaque part. */
     public static final String QUERY = PATH + "?[]";
-    /** A server-based or registry authority. */
-    public static final String AUTHORITY = UNRESERVED + ";:@&=+$,[]";
     /** Everything printable in ASCII except '%', for toASCIIString. */
     public static final String ASCII;
 
@@ -65,26 +64,32 @@ public final class UriText {
         return sb.toString();
     }
 
-    /** The index in `s[from, to)` of the first char a component cannot hold, or -1. */
-    public static int illegal(String s, int from, int to, String legal) {
-        for (int i = from; i < to; i++) {
-            char c = s.charAt(i);
-            if (c == '%' || (c < 0x80 ? ascii(c, legal) : other(c))) {
-                continue;
-            }
-            return i;
-        }
-        return -1;
+    /** Whether `c` is a letter, a digit, in `legal` or an "other" char. */
+    public static boolean legal(char c, String legal) {
+        return c < 0x80 ? ascii(c, legal) : other(c);
     }
 
-    /** The index in `s[from, to)` of a '%' not followed by two hex digits, or -1. */
-    public static int badEscape(String s, int from, int to) {
-        for (int i = from; i < to; i++) {
-            if (s.charAt(i) == '%' && !(i + 2 < to && hex(s.charAt(i + 1)) && hex(s.charAt(i + 2)))) {
+    /**
+     * Scans `s[from, to)` while its chars are legal (letters, digits, `legal`, "other" chars
+     * and escapes): the index of the first that is not, or `to`. A '%' not followed by two
+     * hex digits is a "Malformed escape pair" where it stands.
+     */
+    public static int scan(String s, int from, int to, String legal) throws java.net.URISyntaxException {
+        int i = from;
+        while (i < to) {
+            char c = s.charAt(i);
+            if (c == '%') {
+                if (!(i + 2 < to && hex(s.charAt(i + 1)) && hex(s.charAt(i + 2)))) {
+                    throw new java.net.URISyntaxException(s, "Malformed escape pair", i);
+                }
+                i += 3;
+            } else if (legal(c, legal)) {
+                i++;
+            } else {
                 return i;
             }
         }
-        return -1;
+        return to;
     }
 
     private static boolean hex(char c) {
@@ -93,14 +98,23 @@ public final class UriText {
 
     /** %XX escapes decoded as UTF-8; malformed bytes become U+FFFD. */
     public static String decode(String s) {
+        return decode(s, false);
+    }
+
+    /** With `literals`, escapes inside `[...]` (an IPv6 zone) stay as they are (observed). */
+    public static String decode(String s, boolean literals) {
         if (s == null || s.indexOf('%') < 0) {
             return s;
         }
         StringBuilder sb = new StringBuilder();
         java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        boolean inside = false;
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
-            if (c == '%' && i + 2 < s.length() && hex(s.charAt(i + 1)) && hex(s.charAt(i + 2))) {
+            if (literals && (c == '[' || c == ']')) {
+                inside = c == '[';
+            }
+            if (c == '%' && !inside && i + 2 < s.length() && hex(s.charAt(i + 1)) && hex(s.charAt(i + 2))) {
                 bytes.write(Character.digit(s.charAt(i + 1), 16) * 16 + Character.digit(s.charAt(i + 2), 16));
                 i += 2;
                 continue;

@@ -89,15 +89,17 @@ public abstract class CharBuffer extends Buffer
             return -1;
         }
         if (target == this) {
-            throw new IllegalArgumentException();
+            refuseSelf();
         }
         n = Math.min(n, target.remaining());
         if (n == 0) {
             return 0;
         }
+        // Observed: a read-only target is refused before this buffer's position moves.
+        target.writable();
         int p = takeForGet(n);
-        if (store != null && target.store != null && !target.readOnly) {
-            System.arraycopy(store, storeOffset + p, target.store, target.storeOffset + target.takeForPut(n), n);
+        if (target.store != null) {
+            copyOut(p, target.store, target.storeOffset + target.takeForPut(n), n);
         } else {
             for (int i = 0; i < n; i++) {
                 target.put(get(p + i));
@@ -109,34 +111,61 @@ public abstract class CharBuffer extends Buffer
     public CharBuffer get(char[] dst, int offset, int length) {
         checkRange(offset, length, dst.length);
         int p = takeForGet(length);
+        copyOut(p, dst, offset, length);
+        return this;
+    }
+
+    /** Copies `n` chars from index `p` into `dst` at `at`, in bulk where the backing allows. */
+    private void copyOut(int p, char[] dst, int at, int n) {
+        int from = storeOffset + p;
         if (store != null) {
-            System.arraycopy(store, storeOffset + p, dst, offset, length);
+            System.arraycopy(store, from, dst, at, n);
         } else if (text instanceof String) {
-            ((String) text).getChars(storeOffset + p, storeOffset + p + length, dst, offset);
+            ((String) text).getChars(from, from + n, dst, at);
+        } else if (text instanceof StringBuilder) {
+            ((StringBuilder) text).getChars(from, from + n, dst, at);
+        } else if (text instanceof StringBuffer) {
+            ((StringBuffer) text).getChars(from, from + n, dst, at);
         } else {
-            for (int i = 0; i < length; i++) {
-                dst[offset + i] = get(p + i);
+            for (int i = 0; i < n; i++) {
+                dst[at + i] = get(p + i);
             }
         }
-        return this;
+    }
+
+    /**
+     * Observed: views of heap bytes and text views report themselves (IAE) before their
+     * read-only state; arrays and direct views the read-only state first.
+     */
+    private boolean lazyReadOnly() {
+        return text != null || (bytes != null && !bytes.direct);
+    }
+
+    private void refuseSelf() {
+        if (!lazyReadOnly()) {
+            writable();
+        }
+        throw new IllegalArgumentException();
     }
 
     public CharBuffer get(char[] dst) {
         return get(dst, 0, dst.length);
     }
 
-    // Observed: read-only is checked before the source being this buffer. Between arrays the
-    // copy moves overlapping windows as if through a temporary; other backings go char by char.
+    // Observed: between arrays, and between direct views of one order, overlapping windows
+    // copy as if through a temporary; other backings go char by char.
     public CharBuffer put(CharBuffer src) {
-        writable();
         if (src == this) {
-            throw new IllegalArgumentException();
+            refuseSelf();
         }
+        writable();
         int n = src.remaining();
         int p = takeForPut(n);
         int s = src.takeForGet(n);
-        if (store != null && src.store != null) {
-            System.arraycopy(src.store, src.storeOffset + s, store, storeOffset + p, n);
+        if (store != null) {
+            src.copyOut(s, store, storeOffset + p, n);
+        } else if (ByteBuffer.sameDirectOrder(bytes, src.bytes)) {
+            bytes.copyElements(src.bytes, (src.storeOffset + s) * 2, (storeOffset + p) * 2, n * 2);
         } else {
             for (int i = 0; i < n; i++) {
                 put(p + i, src.get(s + i));
@@ -145,9 +174,18 @@ public abstract class CharBuffer extends Buffer
         return this;
     }
 
+    // Observed: views of heap bytes and text views find the read-only state only at a char.
     public CharBuffer put(char[] src, int offset, int length) {
-        writable();
+        if (!lazyReadOnly()) {
+            writable();
+        }
         checkRange(offset, length, src.length);
+        if (length > 0) {
+            if (length > remaining()) {
+                throw new BufferOverflowException();
+            }
+            writable();
+        }
         int p = takeForPut(length);
         if (store != null) {
             System.arraycopy(src, offset, store, storeOffset + p, length);
@@ -245,6 +283,9 @@ public abstract class CharBuffer extends Buffer
     public String toString() {
         if (store != null) {
             return new String(store, storeOffset + position(), remaining());
+        }
+        if (text != null) {
+            return text.subSequence(storeOffset + position(), storeOffset + limit()).toString();
         }
         StringBuilder sb = new StringBuilder(remaining());
         for (int i = position(); i < limit(); i++) {

@@ -28,10 +28,16 @@ impl Mode {
     }
 }
 
+/// An open file; `device` marks one with no length or position (NUL).
+struct Handle {
+    file: File,
+    device: bool,
+}
+
 #[derive(Default)]
 struct Table {
     next: i64,
-    open: HashMap<i64, File>,
+    open: HashMap<i64, Handle>,
 }
 
 fn table() -> MutexGuard<'static, Table> {
@@ -54,7 +60,7 @@ pub fn closed() -> io::Error {
 
 /// Opens `path`; `shared_delete` lets others rename or delete it while it is
 /// open (java.nio.file's streams; java.io's are opened without it).
-pub fn open(path: &str, mode: Mode, shared_delete: bool) -> io::Result<i64> {
+pub fn open(path: &std::path::Path, mode: Mode, shared_delete: bool) -> io::Result<i64> {
     let mut o = OpenOptions::new();
     match mode {
         Mode::Read => o.read(true),
@@ -68,7 +74,8 @@ pub fn open(path: &str, mode: Mode, shared_delete: bool) -> io::Result<i64> {
     }
     let file = o.open(path)?;
     // A device such as NUL has no metadata; only a directory is refused.
-    if file.metadata().is_ok_and(|m| m.is_dir()) {
+    let meta = file.metadata();
+    if meta.as_ref().is_ok_and(|m| m.is_dir()) {
         return Err(io::Error::new(
             io::ErrorKind::IsADirectory,
             if cfg!(windows) {
@@ -81,7 +88,8 @@ pub fn open(path: &str, mode: Mode, shared_delete: bool) -> io::Result<i64> {
     let mut t = table();
     let h = t.next;
     t.next += 1;
-    t.open.insert(h, file);
+    let device = meta.map_or(true, |m| !m.is_file());
+    t.open.insert(h, Handle { file, device });
     Ok(h)
 }
 
@@ -100,8 +108,19 @@ fn share_like_java(_: &mut OpenOptions) {}
 
 fn with<T>(h: i64, f: impl FnOnce(&mut File) -> io::Result<T>) -> io::Result<T> {
     let mut t = table();
-    let file = t.open.get_mut(&h).ok_or_else(closed)?;
-    f(file)
+    let handle = t.open.get_mut(&h).ok_or_else(closed)?;
+    f(&mut handle.file)
+}
+
+/// Observed: a device (NUL) has length and position 0, and seeking or
+/// truncating it does nothing; `f` runs only for other files.
+fn positioned<T>(h: i64, device: T, f: impl FnOnce(&mut File) -> io::Result<T>) -> io::Result<T> {
+    let mut t = table();
+    let handle = t.open.get_mut(&h).ok_or_else(closed)?;
+    if handle.device {
+        return Ok(device);
+    }
+    f(&mut handle.file)
 }
 
 pub fn read(h: i64, buf: &mut [u8]) -> io::Result<usize> {
@@ -113,23 +132,29 @@ pub fn write(h: i64, buf: &[u8]) -> io::Result<()> {
 }
 
 pub fn position(h: i64) -> io::Result<u64> {
-    with(h, |f| f.stream_position())
+    positioned(h, 0, |f| f.stream_position())
 }
 
 pub fn seek(h: i64, pos: u64) -> io::Result<()> {
-    with(h, |f| f.seek(SeekFrom::Start(pos)).map(|_| ()))
+    positioned(h, (), |f| f.seek(SeekFrom::Start(pos)).map(|_| ()))
 }
 
 pub fn size(h: i64) -> io::Result<u64> {
-    with(h, |f| f.metadata().map(|m| m.len()))
+    positioned(h, 0, |f| f.metadata().map(|m| m.len()))
 }
 
 pub fn truncate(h: i64, len: u64) -> io::Result<()> {
-    with(h, |f| f.set_len(len))
+    positioned(h, (), |f| f.set_len(len))
 }
 
+/// Observed: on Windows `available` of a device is the OS's error for asking
+/// a device its size ("Incorrect function").
 pub fn available(h: i64) -> io::Result<u64> {
-    with(h, |f| {
+    if cfg!(windows) && table().open.get(&h).is_some_and(|d| d.device) {
+        const ERROR_INVALID_FUNCTION: i32 = 1;
+        return Err(io::Error::from_raw_os_error(ERROR_INVALID_FUNCTION));
+    }
+    positioned(h, 0, |f| {
         let pos = f.stream_position()?;
         Ok(f.metadata()?.len().saturating_sub(pos))
     })
@@ -144,15 +169,25 @@ pub fn close(h: i64) {
     table().open.remove(&h);
 }
 
-/// The OS's text for an error, as Java 8 shows it inside parentheses:
-/// without the trailing period and the "(os error N)" Rust appends.
-pub fn reason(e: &io::Error) -> String {
+/// The OS's text for an error without the "(os error N)" Rust appends.
+/// `parenthesized`: as Java 8 shows it inside parentheses (`FileNotFound`
+/// messages), without the final period; else whole, as a
+/// FileSystemException's reason, which on Windows keeps the period and the
+/// line break the OS message ends in.
+pub fn os_text(e: &io::Error, parenthesized: bool) -> String {
     let text = e.to_string();
     let text = match text.rfind(" (os error ") {
         Some(i) => &text[..i],
         None => &text,
     };
-    text.trim_end_matches('.').to_owned()
+    if parenthesized {
+        return text.trim_end_matches('.').to_owned();
+    }
+    let mut text = text.to_owned();
+    if cfg!(windows) && e.raw_os_error().is_some() {
+        text.push_str("\r\n");
+    }
+    text
 }
 
 #[cfg(test)]
@@ -162,11 +197,10 @@ mod tests {
     #[test]
     fn round_trip_through_a_handle() {
         let path = std::env::temp_dir().join(format!("lazyvm-files-{}.txt", std::process::id()));
-        let p = path.to_string_lossy().into_owned();
-        let h = open(&p, Mode::Write, false).unwrap_or_else(|e| panic!("{e}"));
+        let h = open(&path, Mode::Write, false).unwrap_or_else(|e| panic!("{e}"));
         assert!(write(h, b"hello").is_ok());
         close(h);
-        let h = open(&p, Mode::Read, false).unwrap_or_else(|e| panic!("{e}"));
+        let h = open(&path, Mode::Read, false).unwrap_or_else(|e| panic!("{e}"));
         let mut buf = [0u8; 16];
         assert_eq!(read(h, &mut buf).ok(), Some(5));
         assert_eq!(size(h).ok(), Some(5));
@@ -179,7 +213,7 @@ mod tests {
     #[test]
     fn reasons_lose_the_os_error_number() {
         let e = io::Error::from_raw_os_error(2);
-        let r = reason(&e);
+        let r = os_text(&e, true);
         assert!(!r.contains("os error") && !r.ends_with('.'), "{r}");
     }
 }

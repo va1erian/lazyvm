@@ -5,6 +5,7 @@
 //! Java side is not trusted to be correct.
 
 mod boxing;
+mod canonical;
 mod char_props;
 mod file_attrs;
 mod files;

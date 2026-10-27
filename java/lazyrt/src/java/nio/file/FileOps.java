@@ -104,11 +104,19 @@ final class FileOps {
     static Path move(Path source, Path target, CopyOption... options) throws IOException {
         check(options, "Unsupported copy option", StandardCopyOption.REPLACE_EXISTING,
                 StandardCopyOption.ATOMIC_MOVE, LinkOption.NOFOLLOW_LINKS);
-        FileAccess.requireExists(source);
-        if (FileAccess.exists(target) && isSameFile(source, target)) {
-            return target;
-        }
         boolean atomic = has(options, StandardCopyOption.ATOMIC_MOVE);
+        // Observed: ATOMIC_MOVE is the rename alone (a case-only one renames), and replaces
+        // no directory.
+        if (atomic && FileAccess.isDirectory(target) && FileAccess.exists(source)
+                && !target.toAbsolutePath().normalize().startsWith(source.toAbsolutePath().normalize())) {
+            throw new AccessDeniedException(source.toString(), target.toString(), null);
+        }
+        if (!atomic) {
+            FileAccess.requireExists(source);
+            if (FileAccess.exists(target) && isSameFile(source, target)) {
+                return target;
+            }
+        }
         // Observed: whatever is in the way is deleted before the rename, so a rename that then
         // fails (an open source) leaves the target gone.
         if (!atomic && FileAccess.exists(target)) {
@@ -120,14 +128,13 @@ final class FileOps {
         boolean moved;
         try {
             moved = FileSystem.move(source.toString(), target.toString());
+        } catch (NoSuchFileException e) {
+            throw new NoSuchFileException(source.toString(), target.toString(), null);
+        } catch (AccessDeniedException e) {
+            throw new AccessDeniedException(source.toString(), target.toString(), null);
+        } catch (FileSystemException e) {
+            throw new FileSystemException(source.toString(), target.toString(), e.getReason());
         } catch (IOException e) {
-            if (!FileAccess.exists(source)) {
-                throw new NoSuchFileException(source.toString());
-            }
-            Path parent = target.toAbsolutePath().getParent();
-            if (parent != null && !FileAccess.isDirectory(parent)) {
-                throw new NoSuchFileException(source.toString(), target.toString(), null);
-            }
             throw new FileSystemException(source.toString(), target.toString(), e.getMessage());
         }
         if (moved) {

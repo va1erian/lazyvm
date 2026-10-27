@@ -35,21 +35,6 @@ final class ShortWindow extends ShortBuffer {
         return bytes == null ? ByteOrder.nativeOrder() : bytes.order();
     }
 
-    private short load(int i) {
-        return store != null ? store[storeOffset + i] : bytes.getShort((storeOffset + i) * 2);
-    }
-
-    private void save(int i, short x) {
-        if (readOnly) {
-            throw new ReadOnlyBufferException();
-        }
-        if (store != null) {
-            store[storeOffset + i] = x;
-        } else {
-            bytes.putShort((storeOffset + i) * 2, x);
-        }
-    }
-
     public short get() {
         return load(takeForGet(1));
     }

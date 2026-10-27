@@ -137,26 +137,30 @@ final class DataFormat {
 
     // Spec FS4, D4: bytes as Latin-1 up to '\n', '\r' or "\r\n"; null at the end.
     static String readLine(LineSource in) throws IOException {
-        StringBuilder sb = null;
+        char[] buf = null;
+        int n = 0;
         while (true) {
             int c = in.read();
             if (c < 0) {
-                return sb == null ? null : sb.toString();
+                return buf == null ? null : new String(buf, 0, n);
             }
-            if (sb == null) {
-                sb = new StringBuilder();
+            if (buf == null) {
+                buf = new char[128];
             }
             if (c == '\n') {
-                return sb.toString();
+                return new String(buf, 0, n);
             }
             if (c == '\r') {
                 int d = in.read();
                 if (d >= 0 && d != '\n') {
                     in.unread();
                 }
-                return sb.toString();
+                return new String(buf, 0, n);
             }
-            sb.append((char) c);
+            if (n == buf.length) {
+                buf = java.util.Arrays.copyOf(buf, n * 2);
+            }
+            buf[n++] = (char) c;
         }
     }
 }

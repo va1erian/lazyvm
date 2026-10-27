@@ -1,31 +1,52 @@
 package java.net;
 
+import lazy.internal.UriParser;
 import lazy.internal.UriText;
 
 /**
- * The part of URI that file names need before java.net (S7-02): parsing
- * into scheme, authority, path, query and fragment (RFC 2396's shape, with
- * the component checks and messages of the Javadoc), the component getters,
- * comparison, and the (scheme, host, path, fragment) constructor.
- * Server-based authority parsing (user info, port), normalize, resolve and
- * relativize come with S7-02. Escaping is lazy.internal.UriText's.
+ * A URI reference: parsing into scheme, scheme-specific part, authority
+ * (user info, host and port when it is a server authority), path, query and
+ * fragment (lazy.internal.UriParser), the component getters, comparison in
+ * the Javadoc's component order, and the (scheme, host, path, fragment)
+ * constructor. normalize, resolve, relativize and toURL come with S7-02.
+ * Escaping is lazy.internal.UriText's.
  */
 public final class URI implements Comparable<URI>, java.io.Serializable {
     private final String string;
-    private String scheme;
-    private String authority;
-    private String path;
-    private String query;
-    private String fragment;
-    private boolean opaque;
+    private final String scheme;
+    private final String ssp;
+    private final String authority;
+    private final String userInfo;
+    private final String host;
+    private final int port;
+    private final String path;
+    private final String query;
+    private final String fragment;
 
     public URI(String str) throws URISyntaxException {
-        this.string = str;
-        parse();
+        this(str, false);
     }
 
+    private URI(String str, boolean server) throws URISyntaxException {
+        this(str, UriParser.parse(str, server));
+    }
+
+    private URI(String str, UriParser p) {
+        string = str;
+        scheme = p.scheme;
+        ssp = p.ssp;
+        authority = p.authority;
+        userInfo = p.userInfo;
+        host = p.host;
+        port = p.port;
+        path = p.path;
+        query = p.query;
+        fragment = p.fragment;
+    }
+
+    // Javadoc: built from the components, quoted, then parsed with a server authority required.
     public URI(String scheme, String host, String path, String fragment) throws URISyntaxException {
-        this(build(scheme, host, path, fragment));
+        this(build(scheme, host, path, fragment), true);
     }
 
     public static URI create(String str) {
@@ -43,7 +64,8 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
             sb.append(scheme).append(':');
         }
         if (host != null) {
-            sb.append("//").append(host);
+            boolean literal = host.indexOf(':') >= 0 && !host.startsWith("[");
+            sb.append("//").append(literal ? "[" + host + "]" : host);
         }
         if (path != null) {
             sb.append(UriText.escape(path, UriText.PATH, true));
@@ -58,85 +80,11 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
         return s;
     }
 
-    private URISyntaxException fail(String what, int at) {
-        return new URISyntaxException(string, what, at);
-    }
-
-    /** Checks `string[from, to)` as the named component may hold it. */
-    private void check(int from, int to, String legal, String component) throws URISyntaxException {
-        int bad = UriText.illegal(string, from, to, legal);
-        if (bad >= 0) {
-            // Observed: an authority is reported at its start, other components at the char.
-            throw fail("Illegal character in " + component, component.equals("authority") ? from : bad);
+    public URI parseServerAuthority() throws URISyntaxException {
+        if (authority == null || host != null) {
+            return this;
         }
-        bad = UriText.badEscape(string, from, to);
-        if (bad >= 0) {
-            throw fail("Malformed escape pair", bad);
-        }
-    }
-
-    private void parse() throws URISyntaxException {
-        String s = string;
-        int end = s.length();
-        int hash = s.indexOf('#');
-        if (hash >= 0) {
-            check(hash + 1, end, UriText.QUERY, "fragment");
-            fragment = s.substring(hash + 1);
-            end = hash;
-        }
-        int colon = s.indexOf(':');
-        int stop = firstOf(s, "/?#");
-        int start = 0;
-        if (colon == 0) {
-            throw fail("Expected scheme name", 0);
-        }
-        if (colon > 0 && (stop < 0 || colon < stop)) {
-            checkScheme(colon);
-            scheme = s.substring(0, colon);
-            start = colon + 1;
-            if (start == end) {
-                throw fail("Expected scheme-specific part", start);
-            }
-            if (s.charAt(start) != '/') {
-                check(start, end, UriText.QUERY, "opaque part");
-                opaque = true;
-                return;
-            }
-        }
-        int q = s.indexOf('?', start);
-        if (q >= 0 && q < end) {
-            check(q + 1, end, UriText.QUERY, "query");
-            query = s.substring(q + 1, end);
-            end = q;
-        }
-        if (s.startsWith("//", start)) {
-            int slash = s.indexOf('/', start + 2);
-            int authEnd = slash < 0 || slash > end ? end : slash;
-            check(start + 2, authEnd, UriText.AUTHORITY, "authority");
-            authority = authEnd > start + 2 ? s.substring(start + 2, authEnd) : null;
-            start = authEnd;
-        }
-        check(start, end, UriText.PATH, "path");
-        path = s.substring(start, end);
-    }
-
-    private void checkScheme(int colon) throws URISyntaxException {
-        for (int i = 0; i < colon; i++) {
-            char c = string.charAt(i);
-            boolean letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-            if (!letter && (i == 0 || !((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.'))) {
-                throw fail("Illegal character in scheme name", i);
-            }
-        }
-    }
-
-    private static int firstOf(String s, String chars) {
-        for (int i = 0; i < s.length(); i++) {
-            if (chars.indexOf(s.charAt(i)) >= 0) {
-                return i;
-            }
-        }
-        return -1;
+        return new URI(string, true);
     }
 
     public String getScheme() {
@@ -148,7 +96,15 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public boolean isOpaque() {
-        return opaque;
+        return path == null;
+    }
+
+    public String getRawSchemeSpecificPart() {
+        return ssp;
+    }
+
+    public String getSchemeSpecificPart() {
+        return UriText.decode(ssp);
     }
 
     public String getRawAuthority() {
@@ -156,12 +112,23 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String getAuthority() {
-        return UriText.decode(authority);
+        return UriText.decode(authority, true);
     }
 
-    /** The authority as a host name; user info and ports come with S7-02. */
+    public String getRawUserInfo() {
+        return userInfo;
+    }
+
+    public String getUserInfo() {
+        return UriText.decode(userInfo);
+    }
+
     public String getHost() {
-        return authority;
+        return host;
+    }
+
+    public int getPort() {
+        return port;
     }
 
     public String getRawPath() {
@@ -196,29 +163,91 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
         return UriText.escape(string, UriText.ASCII + "%", false);
     }
 
-    /**
-     * Javadoc of equals: the scheme and host ignore case, and so do the hex digits of escapes.
-     * Observed: compareTo ignores case in the scheme and host only.
-     */
-    private String comparable(boolean escapes) {
-        String rest = scheme == null ? string : string.substring(scheme.length());
-        String lower = scheme == null ? "" : scheme.toLowerCase();
-        if (authority != null) {
-            int at = rest.indexOf(authority);
-            rest = rest.substring(0, at) + authority.toLowerCase() + rest.substring(at + authority.length());
-        }
-        return lower + (escapes ? UriText.normalEscapes(rest) : rest);
+    /** Javadoc of equals: raw forms, escapes' hex digits ignoring case. */
+    private static boolean same(String a, String b) {
+        return a == null ? b == null : b != null && UriText.normalEscapes(a).equals(UriText.normalEscapes(b));
     }
 
+    private static boolean sameIgnoringCase(String a, String b) {
+        return a == null ? b == null : a.equalsIgnoreCase(b);
+    }
+
+    // Javadoc: scheme and host ignore case; a server authority compares user info, host, port.
     public boolean equals(Object ob) {
-        return ob instanceof URI && comparable(true).equals(((URI) ob).comparable(true));
+        if (!(ob instanceof URI)) {
+            return false;
+        }
+        URI that = (URI) ob;
+        if (isOpaque() != that.isOpaque() || !sameIgnoringCase(scheme, that.scheme) || !same(fragment, that.fragment)) {
+            return false;
+        }
+        if (isOpaque()) {
+            return same(ssp, that.ssp);
+        }
+        if (!same(path, that.path) || !same(query, that.query)) {
+            return false;
+        }
+        if (host != null && that.host != null) {
+            return same(userInfo, that.userInfo) && host.equalsIgnoreCase(that.host) && port == that.port;
+        }
+        return same(authority, that.authority);
+    }
+
+    private static int hash(int h, String s) {
+        return 31 * h + (s == null ? 0 : UriText.normalEscapes(s).hashCode());
     }
 
     public int hashCode() {
-        return comparable(true).hashCode();
+        int h = scheme == null ? 0 : scheme.toLowerCase().hashCode();
+        h = hash(h, fragment);
+        if (isOpaque()) {
+            return hash(h, ssp);
+        }
+        h = hash(hash(h, path), query);
+        if (host != null) {
+            return 31 * hash(hash(h, userInfo), host.toLowerCase()) + port;
+        }
+        return hash(h, authority);
     }
 
+    /** Undefined sorts first; strings in their natural, case-sensitive order. */
+    private static int order(String a, String b, boolean ignoreCase) {
+        if (a == null || b == null) {
+            return a == b ? 0 : a == null ? -1 : 1;
+        }
+        return ignoreCase ? a.compareToIgnoreCase(b) : a.compareTo(b);
+    }
+
+    // Javadoc of compareTo: scheme, then opaque after hierarchical, then component by component.
     public int compareTo(URI that) {
-        return comparable(false).compareTo(that.comparable(false));
+        int c = order(scheme, that.scheme, true);
+        if (c != 0) {
+            return c;
+        }
+        if (isOpaque() || that.isOpaque()) {
+            if (isOpaque() != that.isOpaque()) {
+                return isOpaque() ? 1 : -1;
+            }
+            c = order(ssp, that.ssp, false);
+            return c != 0 ? c : order(fragment, that.fragment, false);
+        }
+        if (host != null && that.host != null) {
+            c = order(userInfo, that.userInfo, false);
+            if (c == 0) {
+                c = order(host, that.host, true);
+            }
+            if (c == 0) {
+                c = port - that.port;
+            }
+        } else {
+            c = order(authority, that.authority, false);
+        }
+        if (c == 0) {
+            c = order(path, that.path, false);
+        }
+        if (c == 0) {
+            c = order(query, that.query, false);
+        }
+        return c != 0 ? c : order(fragment, that.fragment, false);
     }
 }

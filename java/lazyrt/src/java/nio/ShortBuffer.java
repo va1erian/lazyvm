@@ -51,6 +51,23 @@ public abstract class ShortBuffer extends Buffer implements Comparable<ShortBuff
 
     public abstract ShortBuffer asReadOnlyBuffer();
 
+    /** Element `i` from the start of the window, unchecked. */
+    final short load(int i) {
+        return store != null ? store[storeOffset + i] : bytes.getShort((storeOffset + i) * 2);
+    }
+
+    /** Writes element `i` from the start of the window; only the read-only state is checked. */
+    final void save(int i, short x) {
+        if (readOnly) {
+            throw new ReadOnlyBufferException();
+        }
+        if (store != null) {
+            store[storeOffset + i] = x;
+        } else {
+            bytes.putShort((storeOffset + i) * 2, x);
+        }
+    }
+
     public abstract short get();
 
     public abstract ShortBuffer put(short x);
@@ -72,7 +89,7 @@ public abstract class ShortBuffer extends Buffer implements Comparable<ShortBuff
             System.arraycopy(store, storeOffset + p, dst, offset, length);
         } else {
             for (int i = 0; i < length; i++) {
-                dst[offset + i] = get(p + i);
+                dst[offset + i] = load(p + i);
             }
         }
         return this;
@@ -82,39 +99,60 @@ public abstract class ShortBuffer extends Buffer implements Comparable<ShortBuff
         return get(dst, 0, dst.length);
     }
 
-    // Observed: read-only is checked before the source being this buffer. Between arrays the
-    // copy moves overlapping windows as if through a temporary; views copy element by element.
+    /**
+     * Observed: views of heap bytes report themselves (IAE) and find the read-only state
+     * only at an element; arrays and direct views check the read-only state first.
+     */
+    private boolean lazyReadOnly() {
+        return bytes != null && !bytes.isDirect();
+    }
+
+    // Observed: between arrays, and between direct views of one order, overlapping windows
+    // copy as if through a temporary; other views copy element by element.
     public ShortBuffer put(ShortBuffer src) {
+        if (src == this) {
+            if (readOnly && !lazyReadOnly()) {
+                throw new ReadOnlyBufferException();
+            }
+            throw new IllegalArgumentException();
+        }
         if (readOnly) {
             throw new ReadOnlyBufferException();
-        }
-        if (src == this) {
-            throw new IllegalArgumentException();
         }
         int n = src.remaining();
         int p = takeForPut(n);
         int s = src.takeForGet(n);
         if (store != null && src.store != null) {
             System.arraycopy(src.store, src.storeOffset + s, store, storeOffset + p, n);
+        } else if (ByteBuffer.sameDirectOrder(bytes, src.bytes)) {
+            bytes.copyElements(src.bytes, (src.storeOffset + s) * 2, (storeOffset + p) * 2, n * 2);
         } else {
             for (int i = 0; i < n; i++) {
-                put(p + i, src.get(s + i));
+                save(p + i, src.load(s + i));
             }
         }
         return this;
     }
 
     public ShortBuffer put(short[] src, int offset, int length) {
-        if (readOnly) {
+        if (readOnly && !lazyReadOnly()) {
             throw new ReadOnlyBufferException();
         }
         checkRange(offset, length, src.length);
+        if (length > 0) {
+            if (length > remaining()) {
+                throw new BufferOverflowException();
+            }
+            if (readOnly) {
+                throw new ReadOnlyBufferException();
+            }
+        }
         int p = takeForPut(length);
         if (store != null) {
             System.arraycopy(src, offset, store, storeOffset + p, length);
         } else {
             for (int i = 0; i < length; i++) {
-                put(p + i, src[offset + i]);
+                save(p + i, src[offset + i]);
             }
         }
         return this;
