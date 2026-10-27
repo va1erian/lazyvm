@@ -172,6 +172,8 @@ final class Checked {
                 public void remove() { it.remove(); }
                 public void set(E e) { it.set(check(e)); }
                 public void add(E e) { it.add(check(e)); }
+                // Spec 10.X7: unlike iterator(), the list iterator hands its forEachRemaining on.
+                public void forEachRemaining(java.util.function.Consumer<? super E> action) { it.forEachRemaining(action); }
             };
         }
     }
@@ -307,6 +309,7 @@ final class Checked {
         public void clear() { s.clear(); }
 
         // Spec 10.X4: the element is cast to Map.Entry before add refuses it; addAll always refuses.
+        // Both override Set's methods (the element type is Map.Entry), so they stay public.
         public boolean add(Map.Entry<K, V> e) { throw Unmodifiable.refused(); }
         public boolean addAll(Collection<? extends Map.Entry<K, V>> c) { throw Unmodifiable.refused(); }
 

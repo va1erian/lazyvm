@@ -229,7 +229,20 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
             }
             return true;
         }
-        return super.equals(o);
+        // Spec 8.C3: another map is compared through its entries, each looked up here by identity.
+        if (!(o instanceof Map)) {
+            return false;
+        }
+        Map<?, ?> m = (Map<?, ?>) o;
+        if (m.size() != size) {
+            return false;
+        }
+        for (Map.Entry<?, ?> e : m.entrySet()) {
+            if (!hasMapping(e.getKey(), e.getValue())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public int hashCode() {

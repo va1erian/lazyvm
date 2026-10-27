@@ -196,11 +196,14 @@ public class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E>, Cl
 
     public boolean remove(Object o) { return removeFirstOccurrence(o); }
 
-    // Spec 4.D3: clearing empties every slot and moves both ends to slot 0.
+    // Spec 4.D3: clearing empties every slot and moves both ends to slot 0; an empty deque's ends
+    // stay where they are.
     public void clear() {
-        Arrays.fill(slots, null);
-        front = 0;
-        back = 0;
+        if (front != back) {
+            Arrays.fill(slots, null);
+            front = 0;
+            back = 0;
+        }
     }
 
     public Object[] toArray() { return toArray(new Object[0]); }

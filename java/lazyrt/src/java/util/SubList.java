@@ -6,6 +6,8 @@ class SubList<E> extends AbstractList<E> {
     /** The list whose count an ArrayList window compares with: the ArrayList itself. */
     private final AbstractList<E> root;
     private final int start;
+    /** Where this window starts in the root list, fixed when it is made. */
+    private final int offset;
     private int size;
     /** Spec 9.F2: a window of an ArrayList (or of such a window) iterates like ArrayList itself. */
     private final boolean indexed;
@@ -16,18 +18,16 @@ class SubList<E> extends AbstractList<E> {
         this.size = to - start;
         this.indexed = backing instanceof ArrayList || (backing instanceof SubList && ((SubList<E>) backing).indexed);
         this.root = indexed && backing instanceof SubList ? ((SubList<E>) backing).root : backing;
+        this.offset = start + (backing instanceof SubList ? ((SubList<E>) backing).offset : 0);
         // Spec 9.F2: an ArrayList window starts in step with the ArrayList, even under a stale window.
         this.modCount = (indexed ? root : backing).modCount;
     }
-
-    /** Where this window starts in the root list. */
-    private int offset() { return start + (backing instanceof SubList ? ((SubList<E>) backing).offset() : 0); }
 
     // Spec 9.F2: an ArrayList window's iterator sets through the ArrayList, so after forEachRemaining
     // it may write the element just past the window.
     void iteratorSet(int i, E e) {
         if (indexed) {
-            root.set(offset() + i, e);
+            root.set(offset + i, e);
         } else {
             set(i, e);
         }
@@ -41,21 +41,18 @@ class SubList<E> extends AbstractList<E> {
      * the walk began and watches only the window's own count, so a change made to the ArrayList
      * directly shows only in the check at the end.
      */
-    @SuppressWarnings("unchecked")
-    int walkRest(int i, int end, int expected, java.util.function.Consumer<? super E> action) {
+    Object[] walkStorage(int i) {
         if (!indexed) {
-            return super.walkRest(i, end, expected, action);
+            return null;
         }
         Object[] slots = slots();
-        int at = offset();
-        if (at + i >= slots.length) {
+        if (offset + i >= slots.length) {
             throw new ConcurrentModificationException();
         }
-        while (i != end && modCount == expected) {
-            action.accept((E) slots[at + i++]);
-        }
-        return i;
+        return slots;
     }
+
+    int walkOffset() { return offset; }
     int remainingStyle() { return indexed ? 2 : 0; }
 
     int cursorLimit() { return size; }
@@ -76,7 +73,7 @@ class SubList<E> extends AbstractList<E> {
     public E get(int index) {
         Support.checkIndex(index, size);
         checkUnchanged();
-        return indexed ? (E) slots()[offset() + index] : backing.get(index + start);
+        return indexed ? (E) slots()[offset + index] : backing.get(index + start);
     }
 
     @SuppressWarnings("unchecked")
@@ -87,7 +84,7 @@ class SubList<E> extends AbstractList<E> {
             return backing.set(index + start, element);
         }
         Object[] slots = slots();
-        int at = offset() + index;
+        int at = offset + index;
         E old = (E) slots[at];
         slots[at] = element;
         return old;

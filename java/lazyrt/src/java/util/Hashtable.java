@@ -73,6 +73,17 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
 
     private int bucket(int hash) { return (hash & 0x7FFFFFFF) % table.length; }
 
+    /** Spec 8.C3: the entry equal to e, comparing e once with each entry of its key's chain. */
+    Link<K, V> linkEqualTo(Map.Entry<?, ?> e) {
+        int h = e.getKey().hashCode();
+        for (Link<K, V> l = table[bucket(h)]; l != null; l = l.next) {
+            if (l.hash == h && l.equals(e)) {
+                return l;
+            }
+        }
+        return null;
+    }
+
     private Link<K, V> find(Object key) {
         int h = key.hashCode();
         for (Link<K, V> e = table[bucket(h)]; e != null; e = e.next) {
@@ -137,7 +148,8 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         Objects.requireNonNull(value);
         for (int i = table.length - 1; i >= 0; i--) {
             for (Link<K, V> e = table[i]; e != null; e = e.next) {
-                if (value.equals(e.value)) {
+                // Spec 8.C3: the stored value's equals is asked.
+                if (e.value.equals(value)) {
                     return true;
                 }
             }
@@ -301,7 +313,6 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     }
 
     void removeEntry(Link<K, V> e) { unlink(e); }
-    Link<K, V> entryFor(Object key) { return find(key); }
 
     // ---- Map defaults: forEach and replaceAll go from bucket 0 up (spec 2.T1) ----
 

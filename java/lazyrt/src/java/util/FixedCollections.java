@@ -56,7 +56,10 @@ final class FixedCollections {
         public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> f) { throw Unmodifiable.refused(); }
     }
 
+    // Spec 10.X7: all three views of the empty map are the empty set itself.
     static final class EmptyMap<K, V> extends FixedMap<K, V> {
+        public Set<K> keySet() { return Collections.emptySet(); }
+        public Collection<V> values() { return Collections.emptySet(); }
         public Set<Map.Entry<K, V>> entrySet() { return Collections.emptySet(); }
     }
 
@@ -151,8 +154,30 @@ final class FixedCollections {
         public boolean containsValue(Object v) { return Support.eq(v, value); }
         public V get(Object k) { return containsKey(k) ? value : null; }
 
+        // Spec 10.X7: each view is a one-element set, made once (values() too is a set).
+        private transient Set<K> keys;
+        private transient Set<V> vals;
+        private transient Set<Map.Entry<K, V>> pairs;
+
+        public Set<K> keySet() {
+            if (keys == null) {
+                keys = new One<K>(key);
+            }
+            return keys;
+        }
+
+        public Collection<V> values() {
+            if (vals == null) {
+                vals = new One<V>(value);
+            }
+            return vals;
+        }
+
         public Set<Map.Entry<K, V>> entrySet() {
-            return new One<Map.Entry<K, V>>(new AbstractMap.SimpleImmutableEntry<K, V>(key, value));
+            if (pairs == null) {
+                pairs = new One<Map.Entry<K, V>>(new AbstractMap.SimpleImmutableEntry<K, V>(key, value));
+            }
+            return pairs;
         }
     }
 

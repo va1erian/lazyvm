@@ -102,7 +102,9 @@ final class HashtableViews {
 
         Entries(Hashtable<K, V> t) { this.t = t; }
 
-        // Spec 2.T5: the element is cast to Map.Entry before add refuses it.
+        // Spec 2.T5: the element is cast to Map.Entry before add refuses it. This overrides Set.add
+        // (the element type is Map.Entry), so it must stay public; the compiler's add(Object) bridge
+        // makes the cast, and the class itself is package-private.
         public boolean add(Map.Entry<K, V> e) { return super.add(e); }
         public Iterator<Map.Entry<K, V>> iterator() { return t.iterator(e -> e); }
         public int size() { return t.size(); }
@@ -113,8 +115,7 @@ final class HashtableViews {
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
             synchronized (t) {
-                Hashtable.Link<K, V> found = t.entryFor(e.getKey());
-                return found != null && found.equals(e);
+                return t.linkEqualTo(e) != null;
             }
         }
 
@@ -124,8 +125,8 @@ final class HashtableViews {
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
             synchronized (t) {
-                Hashtable.Link<K, V> found = t.entryFor(e.getKey());
-                if (found == null || !found.equals(e)) {
+                Hashtable.Link<K, V> found = t.linkEqualTo(e);
+                if (found == null) {
                     return false;
                 }
                 t.removeEntry(found);

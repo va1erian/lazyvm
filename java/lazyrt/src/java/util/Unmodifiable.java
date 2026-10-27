@@ -139,6 +139,8 @@ final class Unmodifiable {
                 public void remove() { throw refused(); }
                 public void set(E e) { throw refused(); }
                 public void add(E e) { throw refused(); }
+                // Spec 10.X7: the list iterator hands its forEachRemaining on.
+                public void forEachRemaining(java.util.function.Consumer<? super E> action) { it.forEachRemaining(action); }
             };
         }
     }

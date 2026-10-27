@@ -211,7 +211,9 @@ it); otherwise it removes whatever that slot now holds. Pinned by: Deques ("iter
 `removeLastOccurrence` or an iterator) shifts the `i` elements before it one slot toward the end if
 `i < n - i`, else shifts the elements after it one slot toward the front. Iterator removal adjusts
 the iterator, which then continues correctly. `clear()` empties every slot and moves both ends to
-slot 0. Pinned by: Deques ("remove index …", "remove at the middle (tie)", "clear").
+slot 0, except that on an empty deque it does nothing, so the ends stay where they were (an open
+iterator can tell). Pinned by: Deques ("remove index …", "remove at the middle (tie)", "clear"),
+ReentrantWalks ("clear of an empty deque", "deque remove after the walked slot left").
 
 ## 5. PriorityQueue
 
@@ -337,6 +339,14 @@ step; `hashCode`, `contains`, `toString`, `toArray` use `iterator()`; `indexOf` 
 `set(i)` call the parent's with `i + from`; its iterators come from the parent's
 `listIterator(from + i)` (except an ArrayList's, F2). A list iterator whose `add` throws leaves its
 cursor where it was. Pinned by: CollectionsCallLog, FailFast ("failed listIterator add").
+ArrayList itself, by contrast, works on its storage and its size field: on a subclass that overrides
+`get`, `size`, `isEmpty` or `set`, its iterators, `forEachRemaining`, `forEach`, `toString`,
+`hashCode`, `equals`, `indexOf`, `contains`, `toArray`, `subList` (and the window's `get`), `sort`,
+`clone` and the copy constructor call none of them, and `set(i, e)` and `remove(i)` do not call
+`get`. The calls that do reach a subclass are those the iterators make to change the list
+(`remove(i)`, `set(i, e)`, `add(i, e)`) and those of the Collections algorithms as C2 lists them
+(`reverse`: `size`, then `get` and two `set`s per swap; `binarySearch`: `size`, then `get`).
+Pinned by: ArrayListSubclass.
 
 **C2.** The calls each algorithm makes on a list `l` of size `n` (indexed form unless noted; "RA"
 means `l instanceof RandomAccess`). Pinned by: CollectionsCallLog, CollectionsCalls.
@@ -362,8 +372,21 @@ means `l instanceof RandomAccess`). Pinned by: CollectionsCallLog, CollectionsCa
 list's element in `List.equals`. HashMap and HashSet keys, `HashMap.containsValue`, `remove(k, v)` and
 `replace(k, old, new)` test identity first (`a == b`, then `equals`); ArrayList's `contains` and
 `indexOf` and `TreeMap.containsValue` call `equals` alone, so an element unequal to itself is not
-found. Pinned by: CollectionsCallLog ("receiver …"), Lists ("HashMap values compared by identity
-first").
+found. Per map type:
+- HashMap and LinkedHashMap entries: `equals` is true for the entry itself and otherwise compares key
+  and value identity first, so `entrySet().contains` finds an entry whose key is unequal to itself
+  when given the same objects; the unmodifiable and checked entry sets hand `contains` on and agree.
+- TreeMap entries: key and value are compared with the stored object's `equals` alone, without a
+  shortcut for the entry itself, so such an entry is not even equal to itself. `values().remove(o)`
+  asks each stored value's `equals(o)`, where other maps' value views ask `o.equals(stored)`.
+- Hashtable: `contains`, `containsValue` and `values().contains` ask the stored value's
+  `equals(probe)`; `entrySet().contains` and `remove` compare the given entry once with each entry
+  of its key's chain (the stored key's and value's `equals`), without a separate key lookup.
+- IdentityHashMap `equals(m)` for a map that is not an IdentityHashMap compares sizes, then looks up
+  each of `m`'s entries here by identity, calling no `equals`.
+
+Pinned by: CollectionsCallLog ("receiver …"), Lists ("HashMap values compared by identity first"),
+EntryEquality.
 
 ## 9. Fail-fast iterators and modification counts
 
@@ -406,7 +429,17 @@ check reaches further up only when it is called; `subList()` on a stale one asks
 and so throws ConcurrentModificationException before any range check. Their iterators answer `hasNext()` by `nextIndex() < size` and fail with
 NoSuchElementException at their end.
 `forEachRemaining` at the end of the walk: ArrayList and Vector return quietly even after a change;
-LinkedList checks and throws ConcurrentModificationException. After a completed `forEachRemaining`,
+LinkedList checks and throws ConcurrentModificationException. LinkedList gives each element to the
+action before stepping past it, so an action that throws leaves `next()` returning that element
+again, and `remove`, `set` and `nextIndex` called from the action see the iterator as it was before
+that element. If the action itself runs the iterator to its end (say by a nested
+`forEachRemaining`), the outer walk then throws `NullPointerException`, leaving the index at the end
+and nothing to remove. ArrayList, Vector and ArrayList windows step past the whole walk only at its end:
+during the walk the iterator still stands where `forEachRemaining` began. Their walk reads the
+storage taken when it began (so after the action grew the list it reads the old storage, and after
+a shift it may read a moved element or a cleared slot), up to the size taken then, and it compares
+the iterator's own expected count afresh at each step, so the iterator's own `add` or `remove`
+called from the action lets the walk go on. After a completed `forEachRemaining`,
 `set` and `remove` act on the last element visited, except in an ArrayList sublist, whose
 `remove()` then throws ConcurrentModificationException while `set` writes the list element just past
 the sublist. LinkedList's list iterator checks for a change before it checks for a missing `next()`
@@ -470,8 +503,12 @@ empty Hashtable's view iterators are Iterators only, and its `keys()` and `eleme
 only. `iterator()` is a ListIterator for LinkedList and for every sublist, and a plain Iterator for
 ArrayList, Vector, Stack, `Arrays.asList`, `nCopies`, `singletonList`, AbstractList's default and the
 unmodifiable and checked wrappers; the synchronized wrappers hand out the wrapped list's own. A checked
-collection's iterator steps through `next()` in `forEachRemaining` instead of forwarding it. A range
-of `nCopies` is again an `nCopies` list. Pinned by: CollectionsUtil ("empty iterator kinds", "list
+collection's iterator steps through `next()` in `forEachRemaining` instead of forwarding it, while
+the list iterators of the checked and unmodifiable lists hand it on. A range of `nCopies` is again
+an `nCopies` list. `emptyList().iterator()` and `emptySet().iterator()` are `emptyIterator()` itself
+and `emptyList().listIterator()` is `emptyListIterator()`. All three views of `emptyMap()` are
+`emptySet()` itself; `singletonMap`'s three views are one-element sets (`values()` included), each
+made once. Pinned by: CollectionsUtil ("empty iterator kinds", "list
 iterator kinds", "checked iterator forEachRemaining").
 
 ## 11. Exception types and messages
@@ -517,6 +554,15 @@ Also left free: what a HashMap compute-family call (`computeIfAbsent`, `computeI
 example clears it or adds keys). The oracle can bring back entries that were removed, or store a key
 that its lookups then miss; LazyVM keeps the map consistent (every key a walk shows is found), and
 which entries it then holds is its own.
+
+Re-entrant changes. Fail-fast checking is best effort (the Javadoc says so). When a callback (an
+action, a comparator, a function) changes the very collection being walked, LazyVM matches the
+oracle's order and timing of ConcurrentModificationException wherever this specification describes
+and a test pins it. Beyond that, the exact point at which such a walk notices the change, and so
+whether one more element is visited or the exception comes one call later, is left free, on three
+conditions: the change never yields wrong data (a wrong element removed or returned, an element
+lost or seen twice beyond what the walk's description allows), never a crash or a hang, and never
+leaves the collection in a broken state without a ConcurrentModificationException.
 
 ## 13. API to provide
 

@@ -319,14 +319,22 @@ public class LinkedList<E> extends AbstractSequentialList<E>
             expected = modCount;
         }
 
-        // Spec 9.F2: walks while nothing changed, then checks, even with nothing left to visit.
+        // Spec 9.F2: walks while nothing changed, then checks, even with nothing left to visit. Each
+        // element goes to the action before the iterator steps past it, so an action that throws
+        // leaves the iterator on that element.
         public void forEachRemaining(java.util.function.Consumer<? super E> action) {
             Objects.requireNonNull(action);
             while (modCount == expected && index < size) {
+                action.accept(next.element);
+                // Spec 9.F2: an action that ran this iterator to the end leaves nothing to step past;
+                // the walk then fails with NullPointerException and nothing removable.
+                if (next == ring) {
+                    last = null;
+                    throw new NullPointerException();
+                }
                 last = next;
                 next = next.ahead;
                 index++;
-                action.accept(last.element);
             }
             checkUnchanged();
         }

@@ -67,13 +67,17 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
     /** The index iterator's set(e) at index i; an ArrayList window may write past its end (F2). */
     void iteratorSet(int i, E e) { set(i, e); }
 
-    /** forEachRemaining's walk from i to end while this list's count stays `expected`; returns where it stopped. */
-    int walkRest(int i, int end, int expected, java.util.function.Consumer<? super E> action) {
-        while (i != end && modCount == expected) {
-            action.accept(get(i++));
-        }
-        return i;
-    }
+    /** The index iterator's element at i; ArrayList reads its storage, so a subclass's get is not called. */
+    E cursorGet(int i) { return get(i); }
+
+    /**
+     * Spec 9.F2: the storage forEachRemaining reads from index i on, taken once when the walk begins
+     * (ArrayList and its windows), or null to read through cursorGet. Fails when i lies past it.
+     */
+    Object[] walkStorage(int i) { return null; }
+
+    /** Where index 0 of this list sits in walkStorage. */
+    int walkOffset() { return 0; }
 
     /**
      * Spec 9.F2: how the index iterator's forEachRemaining runs: 0 one next() at a time; 1 as
@@ -147,7 +151,7 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
         public E next() {
             checkUnchanged();
             try {
-                E e = get(next);
+                E e = cursorGet(next);
                 last = next++;
                 return e;
             } catch (IndexOutOfBoundsException end) {
@@ -156,6 +160,7 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
             }
         }
 
+        @SuppressWarnings("unchecked")
         public void forEachRemaining(java.util.function.Consumer<? super E> action) {
             int style = remainingStyle();
             if (style == 0) {
@@ -168,7 +173,14 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
             if (i >= end) {
                 return;
             }
-            i = walkRest(i, end, expected, action);
+            Object[] slots = walkStorage(i);
+            int at = walkOffset();
+            // Spec 9.F2: the count is read afresh at each step, so the iterator's own add or remove
+            // made from the action lets the walk go on.
+            while (i != end && modCount == expected) {
+                action.accept(slots == null ? cursorGet(i) : (E) slots[at + i]);
+                i++;
+            }
             next = i;
             last = style == 1 ? i - 1 : i;
             checkUnchanged();
@@ -207,7 +219,7 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
         public E previous() {
             checkUnchanged();
             try {
-                E e = get(next - 1);
+                E e = cursorGet(next - 1);
                 last = --next;
                 return e;
             } catch (IndexOutOfBoundsException end) {

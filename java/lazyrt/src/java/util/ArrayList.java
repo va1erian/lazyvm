@@ -77,14 +77,27 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
     public Object[] toArray() { return Arrays.copyOf(items, size); }
     public <T> T[] toArray(T[] a) { return Support.toArray(items, size, a); }
 
+    public E get(int index) { return at(index); }
+
+    // ArrayList's own methods read the storage, never an overriding get or size (spec 8.C1).
     @SuppressWarnings("unchecked")
-    public E get(int index) {
+    private E at(int index) {
         checkElement(index);
         return (E) items[index];
     }
 
+    E cursorGet(int i) { return at(i); }
+    int cursorLimit() { return size; }
+
+    Object[] walkStorage(int i) {
+        if (i >= items.length) {
+            throw new ConcurrentModificationException();
+        }
+        return items;
+    }
+
     public E set(int index, E element) {
-        E old = get(index);
+        E old = at(index);
         items[index] = element;
         return old;
     }
@@ -110,7 +123,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
         if (index < 0) {
             modCount++;
         }
-        E old = get(index);
+        E old = at(index);
         modCount++;
         removeSlots(index, index + 1);
         return old;
@@ -200,10 +213,19 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
         modCount++;
     }
 
-    public ListIterator<E> listIterator(int index) { return indexOnlyListIterator(index); }
+    // Spec 11: a bad start names only the index; the size is read from the field (spec 8.C1).
+    public ListIterator<E> listIterator(int index) {
+        if (index < 0 || index > size) {
+            throw new IndexOutOfBoundsException("Index: " + index);
+        }
+        return cursorAt(index);
+    }
     public ListIterator<E> listIterator() { return listIterator(0); }
     public Iterator<E> iterator() { return super.iterator(); }
-    public List<E> subList(int fromIndex, int toIndex) { return super.subList(fromIndex, toIndex); }
+    public List<E> subList(int fromIndex, int toIndex) {
+        Support.checkSubList(fromIndex, toIndex, size);
+        return SubList.of(this, fromIndex, toIndex);
+    }
 
     // Spec 11: an index past the end names the size; a negative one fails in the array access.
     private void checkElement(int index) {

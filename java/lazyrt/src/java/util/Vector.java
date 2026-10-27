@@ -312,4 +312,12 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
     }
 
     int remainingStyle() { return 1; }
+
+    // Spec 9.F2: forEachRemaining reads the storage as it was when the walk began.
+    Object[] walkStorage(int i) {
+        if (i >= elementData.length) {
+            throw new ConcurrentModificationException();
+        }
+        return elementData;
+    }
 }

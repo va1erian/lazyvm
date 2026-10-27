@@ -26,7 +26,9 @@ class MapNode<K, V> implements Map.Entry<K, V> {
         return old;
     }
 
-    public final boolean equals(Object o) { return o == this || AbstractMap.entryEquals(this, o); }
+    // Spec 8.C3: a TreeMap entry asks its own key's and value's equals, even about itself; a
+    // HashMap entry compares identity first (HashMap.Cell).
+    public boolean equals(Object o) { return AbstractMap.entryEquals(this, o); }
     public final int hashCode() { return AbstractMap.entryHash(this); }
     public final String toString() { return key + "=" + value; }
 

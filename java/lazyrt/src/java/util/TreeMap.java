@@ -271,7 +271,25 @@ public class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     }
 
     public NavigableSet<K> descendingKeySet() { return descendingMap().navigableKeySet(); }
-    public Collection<V> values() { return super.values(); }
+    public Collection<V> values() {
+        if (valueView == null) {
+            valueView = new Values();
+        }
+        return valueView;
+    }
+
+    // Spec 8.C3: TreeMap's values().remove asks each stored value's equals, unlike other maps.
+    private final class Values extends ValueView {
+        public boolean remove(Object o) {
+            for (Iterator<V> it = iterator(); it.hasNext();) {
+                if (Support.eq(it.next(), o)) {
+                    it.remove();
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 
     public Set<Map.Entry<K, V>> entrySet() {
         if (entryView == null) {

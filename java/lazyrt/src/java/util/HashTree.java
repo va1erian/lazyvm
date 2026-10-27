@@ -180,6 +180,14 @@ final class HashTree {
         }
     }
 
+    /** Spec 1.H7: bin i becomes a tree of new entries; returns the roots table, made if needed. */
+    static <K, V> HashMap.Cell<K, V>[] plant(HashMap<K, V> owner, HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots, int i) {
+        HashMap.Cell<K, V>[] r = roots == null ? HashMap.newTable(table.length) : roots;
+        renew(owner, table, i);
+        growTree(table, r, i);
+        return r;
+    }
+
     /**
      * Spec 1.H15: when bin i turns from a list into a tree or back, its entries are replaced by new
      * ones in the same order; the old ones keep their links, so a walk standing on one goes on

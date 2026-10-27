@@ -220,5 +220,14 @@ public abstract class AbstractMap<K, V> implements Map<K, V> {
         return Support.eq(e.getKey(), other.getKey()) && Support.eq(e.getValue(), other.getValue());
     }
 
+    /** Spec 8.C3: entryEquals, but each pair is compared for identity before equals. */
+    static boolean entrySame(Map.Entry<?, ?> e, Object o) {
+        if (!(o instanceof Map.Entry)) {
+            return false;
+        }
+        Map.Entry<?, ?> other = (Map.Entry<?, ?>) o;
+        return Objects.equals(e.getKey(), other.getKey()) && Objects.equals(e.getValue(), other.getValue());
+    }
+
     static int entryHash(Map.Entry<?, ?> e) { return Support.hash(e.getKey()) ^ Support.hash(e.getValue()); }
 }

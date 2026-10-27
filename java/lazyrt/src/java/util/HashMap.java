@@ -24,6 +24,8 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     static class Cell<K, V> extends MapNode<K, V> {
         final int hash;
         Cell<K, V> next;
+        // Spec 8.C3: identity first, for the key and for the value.
+        public final boolean equals(Object o) { return o == this || AbstractMap.entrySame(this, o); }
 
         Cell(int hash, K key, V value) {
             super(key, value);
@@ -173,21 +175,17 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
             length++;
         }
         if (length >= (front ? TREE_AT_COMPUTE : TREE_AT_PUT)) {
-            treeifyOrGrow(i);
+            crowded(i);
         }
     }
 
-    // Spec 1.H3c: a small table grows instead of making a tree.
-    private void treeifyOrGrow(int i) {
+    // Spec 1.H7, H3c: a crowded bin becomes a tree, except that a small table grows instead.
+    private void crowded(int i) {
         if (table.length < MIN_TREE_TABLE) {
             widen();
-            return;
+        } else {
+            roots = HashTree.plant(this, table, roots, i);
         }
-        if (roots == null) {
-            roots = newTable(table.length);
-        }
-        HashTree.renew(this, table, i);
-        HashTree.growTree(table, roots, i);
     }
 
     /** compute-style insertion (spec 1.H3b, H5): the caller grew the table first. */
