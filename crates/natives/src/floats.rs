@@ -58,31 +58,46 @@ pub fn register(vm: &mut Vm) {
 /// least two significant digits considered (the Javadoc's rule), shown in
 /// plain notation for 1e-3 <= |x| < 1e7 and computerized notation otherwise.
 pub fn double_to_string(x: f64) -> String {
+    let a = x.abs();
     format_java(
         x.is_nan(),
         x.is_infinite(),
         x == 0.0,
         x.is_sign_negative(),
-        || (format!("{:e}", x.abs()), format!("{:.1e}", x.abs())),
+        |p| match p {
+            None => format!("{a:e}"),
+            Some(p) => format!("{a:.p$e}"),
+        },
+        |s| s.parse::<f64>().is_ok_and(|v| v == a),
     )
 }
 
 pub fn float_to_string(x: f32) -> String {
+    let a = x.abs();
     format_java(
         x.is_nan(),
         x.is_infinite(),
         x == 0.0,
         x.is_sign_negative(),
-        || (format!("{:e}", x.abs()), format!("{:.1e}", x.abs())),
+        |p| match p {
+            None => format!("{a:e}"),
+            Some(p) => format!("{a:.p$e}"),
+        },
+        |s| s.parse::<f32>().is_ok_and(|v| v == a),
     )
 }
 
+/// `sci(None)` is the shortest round-tripping form, `sci(Some(p))` the
+/// value correctly rounded (half-even) to `p` digits after the point.
+/// Of the shortest decimals the one closest to the value is chosen, and an
+/// exact tie goes to the even digit, as the Javadoc's rule requires.
 fn format_java(
     nan: bool,
     inf: bool,
     zero: bool,
     neg: bool,
-    sci: impl Fn() -> (String, String),
+    sci: impl Fn(Option<usize>) -> String,
+    round_trips: impl Fn(&str) -> bool,
 ) -> String {
     let sign = if neg { "-" } else { "" };
     if nan {
@@ -94,13 +109,16 @@ fn format_java(
     if zero {
         return format!("{sign}0.0");
     }
-    let (shortest, two) = sci();
+    let shortest = sci(None);
     let (mut digits, mut exp) = split_sci(&shortest);
-    if digits.len() == 1 {
-        (digits, exp) = split_sci(&two);
-        while digits.len() > 1 && digits.ends_with('0') {
-            digits.pop();
-        }
+    // At least two significant digits are considered (the Javadoc's rule).
+    let wanted = digits.len().max(2);
+    let closest = sci(Some(wanted - 1));
+    if round_trips(&closest) {
+        (digits, exp) = split_sci(&closest);
+    }
+    while digits.len() > 1 && digits.ends_with('0') {
+        digits.pop();
     }
     format!("{sign}{}", layout(&digits, exp))
 }
@@ -244,6 +262,8 @@ mod tests {
             (1e23, "1.0E23"),
             (0.5, "0.5"),
             (9999999.0, "9999999.0"),
+            // An exact tie between ...312 and ...313: the even digit wins.
+            (512.90997314453125, "512.9099731445312"),
         ];
         for (x, want) in cases {
             assert_eq!(double_to_string(x), want, "{x:e}");
