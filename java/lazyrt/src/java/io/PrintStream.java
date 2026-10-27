@@ -34,7 +34,7 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     }
 
     public void flush() {
-        if (closed) {
+        if (refused()) {
             return;
         }
         try {
@@ -56,8 +56,14 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         }
     }
 
+    /** Observed on the oracle: a PrintStream over a PrintStream reports the inner one's state. */
     public boolean checkError() {
-        flush();
+        if (!closed) {
+            flush();
+        }
+        if (out instanceof PrintStream) {
+            return ((PrintStream) out).checkError();
+        }
         return trouble;
     }
 

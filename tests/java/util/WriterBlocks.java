@@ -87,5 +87,38 @@ public class WriterBlocks {
         ps.println("after");
         ps.write('y');
         System.out.println(o.log + "| " + ps.checkError());
+
+        Quiet q = new Quiet(new Log(0));
+        q.print("a");
+        q.close();
+        q.clear();
+        q.flush();
+        System.out.println("flush after close: " + q.checkError());
+
+        pw = new PrintWriter(new PrintStream(new Log(1)));
+        pw.print("d");
+        System.out.println("PrintWriter over failing PrintStream: " + pw.checkError());
+
+        ps = new PrintStream(new PrintStream(new Log(1)));
+        ps.print("c");
+        System.out.println("PrintStream over failing PrintStream: " + ps.checkError());
+
+        System.out.println("clean after close: " + new Quiet(new Log(0)).closedCheck());
+    }
+
+    static class Quiet extends PrintStream {
+        Quiet(OutputStream out) {
+            super(out);
+        }
+
+        void clear() {
+            clearError();
+        }
+
+        boolean closedCheck() {
+            print("z");
+            close();
+            return checkError();
+        }
     }
 }

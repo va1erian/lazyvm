@@ -31,3 +31,7 @@
 X3 w3:def C | true
 X3 | true
 w1:x C | true
+flush after close: true
+PrintWriter over failing PrintStream: true
+PrintStream over failing PrintStream: true
+clean after close: false

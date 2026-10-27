@@ -7,6 +7,8 @@ public class PrintWriter extends Writer {
     protected Writer out;
     private final boolean autoFlush;
     private boolean trouble;
+    /** The stream given to the constructor, when it is a PrintStream: checkError asks it. */
+    private PrintStream printStream;
     private Formatter formatter;
 
     public PrintWriter(Writer out) {
@@ -25,6 +27,9 @@ public class PrintWriter extends Writer {
 
     public PrintWriter(OutputStream out, boolean autoFlush) {
         this(new StreamWriter(out), autoFlush);
+        if (out instanceof PrintStream) {
+            printStream = (PrintStream) out;
+        }
     }
 
     private void ensureOpen() throws IOException {
@@ -61,8 +66,13 @@ public class PrintWriter extends Writer {
         if (out != null) {
             flush();
         }
+        // Observed on the oracle: a wrapped PrintWriter or PrintStream
+        // reports its own state.
         if (out instanceof PrintWriter) {
             return ((PrintWriter) out).checkError();
+        }
+        if (printStream != null) {
+            return printStream.checkError();
         }
         return trouble;
     }
