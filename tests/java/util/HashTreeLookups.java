@@ -49,6 +49,23 @@ public class HashTreeLookups {
         public String toString() { return "O" + v; }
     }
 
+    /** Two Comparable classes with one hash: between them H6 falls to class names, never identity. */
+    static final class TieC implements Comparable<TieC> {
+        final int v;
+        TieC(int v) { this.v = v; }
+        public int hashCode() { return 7; }
+        public boolean equals(Object o) { return o instanceof TieC && ((TieC) o).v == v; }
+        public int compareTo(TieC o) { compareCalls++; return Integer.compare(v, o.v); }
+    }
+
+    static final class TieD implements Comparable<TieD> {
+        final int v;
+        TieD(int v) { this.v = v; }
+        public int hashCode() { return 7; }
+        public boolean equals(Object o) { return o instanceof TieD && ((TieD) o).v == v; }
+        public int compareTo(TieD o) { compareCalls++; return Integer.compare(v, o.v); }
+    }
+
     static long counted(Runnable r) {
         compareCalls = 0;
         r.run();
@@ -112,6 +129,43 @@ public class HashTreeLookups {
         String change;
         try { walk.next(); change = "no CME"; } catch (ConcurrentModificationException e) { change = "CME"; }
         System.out.println("re-put of 50 keys that never order: size " + ties.size() + ", overwritten " + overwritten + ", a new key then " + change);
+        // Spec 1.H8: a put searches both sides for its key once, at the first node where compareTo
+        // cannot decide, and no more at later such nodes; per-seed counts, folded into a digest.
+        long digest = 0, total = 0;
+        StringBuilder firstSeeds = new StringBuilder();
+        for (int seed = 0; seed < 600; seed++) {
+            Random r = new Random(seed);
+            HashMap<Object, Integer> tm = new HashMap<>(64);
+            List<Object> keys = new ArrayList<>();
+            for (int i = 9 + r.nextInt(40); i > 0; i--) {
+                Object k = r.nextInt(3) == 0 ? new TieD(r.nextInt(100)) : new TieC(r.nextInt(100));
+                if (!tm.containsKey(k)) keys.add(k);
+                tm.put(k, i);
+            }
+            StringBuilder row = new StringBuilder();
+            for (Object k : keys) row.append(counted(() -> tm.put(k, 1))).append(' ');
+            for (int i = 0; i < 5; i++) {
+                Object k = new TieC(100 + r.nextInt(50));
+                row.append('n').append(counted(() -> tm.put(k, 2))).append(' ');
+            }
+            for (char ch : row.toString().toCharArray()) digest = digest * 31 + ch;
+            for (String t : row.toString().trim().split(" ")) total += Long.parseLong(t.replace("n", ""));
+            if (seed < 3) firstSeeds.append(" seed ").append(seed).append(": ").append(row.toString().trim()).append(';');
+        }
+        System.out.println("puts past two classes of tie nodes, 600 seeds: total compareTo calls " + total + ", digest " + digest + ";" + firstSeeds);
+        // Spec 1.H7: building the tree (the 9th put) makes only H6's calls, with no search for the key.
+        StringBuilder build = new StringBuilder("compareTo calls of the put that makes the tree, mixed classes:");
+        for (int pattern = 0; pattern < 8; pattern++) {
+            HashMap<Object, Integer> tm = new HashMap<>(64);
+            Random r = new Random(100 + pattern);
+            long last = 0;
+            for (int i = 0; i < 9; i++) {
+                Object k = r.nextBoolean() ? new TieD(i * 7 % 23) : new TieC(i * 11 % 29);
+                last = counted(() -> tm.put(k, 0));
+            }
+            build.append(' ').append(last);
+        }
+        System.out.println(build);
         System.out.println("done");
     }
 }
