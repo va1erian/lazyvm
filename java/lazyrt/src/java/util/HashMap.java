@@ -116,7 +116,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     // Spec 8.C3: the probe key's equals is called, after a cheap identity test.
     private Cell<K, V> findIn(int i, int h, Object key) {
         for (Cell<K, V> e = table[i]; e != null; e = e.next) {
-            if (e.hash == h && (e.key == key || (key != null && key.equals(e.key)))) {
+            if (e.hash == h && Objects.equals(key, e.key)) {
                 return e;
             }
         }
@@ -220,7 +220,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     /** Removes the node for key (if `matchValue`, only when its value equals value), map-style. */
     final Cell<K, V> removeMapping(Object key, Object value, boolean matchValue) {
         Cell<K, V> e = find(key);
-        if (e == null || (matchValue && !(e.value == value || (value != null && value.equals(e.value))))) {
+        if (e == null || (matchValue && !Objects.equals(value, e.value))) {
             return null;
         }
         unlink(e, true);
@@ -335,7 +335,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
     public boolean containsValue(Object value) {
         for (Cell<K, V> e = firstNode(); e != null; e = nextNode(e)) {
-            if (Support.eq(value, e.value)) {
+            if (Objects.equals(value, e.value)) {
                 return true;
             }
         }
@@ -373,7 +373,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
     public boolean replace(K key, V oldValue, V newValue) {
         Cell<K, V> e = find(key);
-        if (e == null || !(e.value == oldValue || (oldValue != null && oldValue.equals(e.value)))) {
+        if (e == null || !Objects.equals(oldValue, e.value)) {
             return false;
         }
         e.value = newValue;

@@ -9,27 +9,34 @@ final class FixedCollections {
     private FixedCollections() {
     }
 
-    /** The shared iterator, list iterator and enumeration over nothing. */
-    static final Object NO_ELEMENTS = new Nothing<Object>();
+    // Spec 10.X7: three distinct objects; the plain iterator is not a ListIterator.
+    static final Object NO_ITERATOR = new NoIterator<Object>();
+    static final Object NO_LIST_ITERATOR = new NoListIterator<Object>();
+    static final Object NO_ENUMERATION = new Enumeration<Object>() {
+        public boolean hasMoreElements() { return false; }
+        public Object nextElement() { throw new NoSuchElementException(); }
+    };
 
-    private static final class Nothing<E> implements ListIterator<E>, Enumeration<E> {
+    private static class NoIterator<E> implements Iterator<E> {
         public boolean hasNext() { return false; }
         public E next() { throw new NoSuchElementException(); }
+        public void remove() { throw new IllegalStateException(); }
+    }
+
+    private static final class NoListIterator<E> extends NoIterator<E> implements ListIterator<E> {
         public boolean hasPrevious() { return false; }
         public E previous() { throw new NoSuchElementException(); }
         public int nextIndex() { return 0; }
         public int previousIndex() { return -1; }
-        public void remove() { throw new IllegalStateException(); }
         public void set(E e) { throw new IllegalStateException(); }
         public void add(E e) { throw new UnsupportedOperationException(); }
-        public boolean hasMoreElements() { return false; }
-        public E nextElement() { throw new NoSuchElementException(); }
     }
 
-    /** The empty list; AbstractList's iterator already fails as an empty one should. */
     static final class EmptyList<E> extends AbstractList<E> implements RandomAccess, java.io.Serializable {
         public int size() { return 0; }
         public E get(int index) { throw new IndexOutOfBoundsException("Index: " + index); }
+        public Iterator<E> iterator() { return Collections.emptyIterator(); }
+        public ListIterator<E> listIterator() { return Collections.emptyListIterator(); }
     }
 
     static final class EmptySet<E> extends AbstractSet<E> implements java.io.Serializable {
@@ -73,6 +80,12 @@ final class FixedCollections {
         public boolean contains(Object o) { return n != 0 && Support.eq(o, element); }
         public int indexOf(Object o) { return contains(o) ? 0 : -1; }
         public int lastIndexOf(Object o) { return contains(o) ? n - 1 : -1; }
+
+        // Spec 10.X7: a range of copies is again a list of copies, with its plain iterator.
+        public List<E> subList(int fromIndex, int toIndex) {
+            Support.checkSubList(fromIndex, toIndex, n);
+            return new Copies<E>(toIndex - fromIndex, element);
+        }
     }
 
     /** An iterator over one element that cannot remove it. */

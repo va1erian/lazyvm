@@ -112,6 +112,31 @@ public class Deques {
         for (int i = 0; i < 39; i++) grown.poll();
         System.out.println(caps + " default " + slots(new ArrayDeque<>(Collections.singleton(1))) + "/" + slots(addOne(new ArrayDeque<Integer>())) + " grown-then-drained " + slots(grown));
         t("remove at the middle (tie)", () -> { ArrayDeque<String> d = new ArrayDeque<>(Arrays.asList("a", "b", "c", "d")); Iterator<String> it = d.iterator(); it.next(); d.remove("c"); StringBuilder sb = new StringBuilder(); try { while (it.hasNext()) sb.append(it.next()); } catch (ConcurrentModificationException e) { sb.append("CME"); } return sb + " " + d; });
+        StringBuilder stale = new StringBuilder("iterator remove after a change:");
+        for (String change : new String[]{"none", "pollFirst", "pollLast", "remove 3", "remove 1", "clear and refill"}) {
+            ArrayDeque<Integer> d = new ArrayDeque<>(Arrays.asList(1, 2, 3, 4, 5, 6));
+            Iterator<Integer> it = d.iterator();
+            it.next();
+            if (change.equals("pollFirst")) d.pollFirst(); else if (change.equals("pollLast")) d.pollLast(); else if (change.equals("remove 3")) d.remove(3);
+            else if (change.equals("remove 1")) d.remove(1); else if (change.equals("clear and refill")) { d.clear(); for (int i = 1; i <= 6; i++) d.add(i * 10); }
+            String r;
+            try { it.remove(); r = "ok"; } catch (ConcurrentModificationException e) { r = "CME"; }
+            stale.append(' ').append(change).append('=').append(r).append(d);
+        }
+        System.out.println(stale);
+        StringBuilder back = new StringBuilder("descending next after pollLast:");
+        ArrayDeque<Integer> d5 = new ArrayDeque<>(Arrays.asList(1, 2, 3, 4, 5));
+        Iterator<Integer> di5 = d5.descendingIterator();
+        d5.pollLast();
+        for (int i = 0; i < 6; i++) { try { back.append(' ').append(di5.next()); } catch (RuntimeException e) { back.append(' ').append(e.getClass().getSimpleName()); } }
+        ArrayDeque<Integer> d6 = new ArrayDeque<>(Arrays.asList(1, 2, 3, 4, 5));
+        Iterator<Integer> di6 = d6.descendingIterator();
+        d6.pollLast();
+        StringBuilder rest = new StringBuilder();
+        try { di6.forEachRemaining(rest::append); } catch (ConcurrentModificationException e) { rest.append("CME"); }
+        back.append(" | then forEachRemaining ").append(rest).append(", then ");
+        try { rest.setLength(0); di6.forEachRemaining(rest::append); back.append(rest); } catch (ConcurrentModificationException e) { back.append("CME"); }
+        System.out.println(back);
         System.out.println("done");
     }
 

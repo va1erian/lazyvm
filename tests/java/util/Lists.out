@@ -76,4 +76,6 @@ nulls: [null, null] 0 1 true [null]
 growth: 1000 499500
 AbstractList listIterator bad: !java.lang.IndexOutOfBoundsException: Index: 5, Size: 3
 HashSet toArray bad type: !java.lang.ArrayStoreException: java.lang.Integer
+capacity through a sort that adds: 7 1 0 1 0 1 0 | 0 0 3 5 4 7 6 | 2 1 0 1 0 1 0 | 0 0 0 0 0 0 0 | 0 0 0 0 0 0 0 | 9 3 2 4 3 6 5 | 
+HashMap values compared by identity first: true true true false false
 done

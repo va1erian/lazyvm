@@ -287,11 +287,12 @@ public class LinkedList<E> extends AbstractSequentialList<E>
         public int nextIndex() { return index; }
         public int previousIndex() { return index - 1; }
 
+        // Spec 9.F2: remove() checks for a change first, set() for a missing element first.
         public void remove() {
+            checkUnchanged();
             if (last == null) {
                 throw new IllegalStateException();
             }
-            checkUnchanged();
             if (next == last) {
                 next = last.ahead;
             } else {
@@ -316,6 +317,18 @@ public class LinkedList<E> extends AbstractSequentialList<E>
             insertBefore(e, next);
             index++;
             expected = modCount;
+        }
+
+        // Spec 9.F2: walks while nothing changed, then checks, even with nothing left to visit.
+        public void forEachRemaining(java.util.function.Consumer<? super E> action) {
+            Objects.requireNonNull(action);
+            while (modCount == expected && index < size) {
+                last = next;
+                next = next.ahead;
+                index++;
+                action.accept(last.element);
+            }
+            checkUnchanged();
         }
 
         private void checkUnchanged() {

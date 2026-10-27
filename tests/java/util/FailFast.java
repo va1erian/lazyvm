@@ -16,6 +16,10 @@ public class FailFast {
         try { it.next(); return r + "ok"; } catch (ConcurrentModificationException e) { return r + "CME"; } catch (NoSuchElementException e) { return r + "end"; }
     }
 
+    static String tr(java.util.function.Supplier<Object> s) {
+        try { return String.valueOf(s.get()); } catch (RuntimeException e) { return e.getClass().getSimpleName(); }
+    }
+
     static String after2(Iterator<?> it) {
         try { it.next(); return "ok"; } catch (ConcurrentModificationException e) { return "CME"; } catch (NoSuchElementException e) { return "end"; }
     }
@@ -199,6 +203,86 @@ public class FailFast {
         String added;
         try { failed.add(9); added = "added"; } catch (UnsupportedOperationException e) { added = "UnsupportedOperationException"; }
         System.out.println("failed listIterator add: " + added + ", then nextIndex " + failed.nextIndex() + " previousIndex " + failed.previousIndex());
+        StringBuilder nested = new StringBuilder("stale nested sublists:");
+        for (String kind : new String[]{"ArrayList", "LinkedList", "Vector"}) {
+            List<Integer> l = new ArrayList<>();
+            for (int i = 0; i < 10; i++) l.add(i);
+            List<Integer> base = kind.equals("ArrayList") ? new ArrayList<>(l) : kind.equals("LinkedList") ? new LinkedList<>(l) : new Vector<>(l);
+            List<Integer> mid = base.subList(1, 8);
+            List<Integer> inner = mid.subList(1, 5);
+            base.add(99);
+            nested.append(' ').append(kind).append(": size ").append(tr(inner::size)).append(", subList ").append(tr(() -> inner.subList(0, 9)));
+            List<Integer> mid2 = (kind.equals("ArrayList") ? new ArrayList<>(l) : kind.equals("LinkedList") ? new LinkedList<>(l) : new Vector<Integer>(l)).subList(1, 8);
+            List<Integer> inner2 = mid2.subList(1, 5);
+            mid2.add(0, 77);
+            nested.append(", after a change to its parent: subList ").append(tr(() -> inner2.subList(0, 9))).append(" size ").append(tr(inner2::size));
+            List<Integer> inner3 = (kind.equals("ArrayList") ? new ArrayList<>(l) : kind.equals("LinkedList") ? new LinkedList<>(l) : new Vector<Integer>(l)).subList(1, 8).subList(1, 4);
+            Iterator<Integer> it3 = inner3.iterator();
+            it3.next(); it3.next(); it3.next();
+            inner3.remove(0);
+            nested.append(", nested iterator after a remove: hasNext ").append(it3.hasNext()).append(' ').append(tr(it3::next));
+        }
+        System.out.println(nested);
+        StringBuilder rest = new StringBuilder("forEachRemaining:");
+        for (String kind : new String[]{"ArrayList", "LinkedList", "Vector", "ArrayList window"}) {
+            List<Integer> c = kind.equals("ArrayList window") ? new ArrayList<>(Arrays.asList(0, 3, 1, 4, 1, 5, 9)).subList(1, 6) : list(kind);
+            Iterator<Integer> it = c.iterator();
+            while (it.hasNext()) it.next();
+            c.remove((Integer) 5);
+            rest.append(' ').append(kind).append(": at the end after a removal ").append(tr(() -> { StringBuilder b = new StringBuilder("["); it.forEachRemaining(b::append); return b.append(']'); }));
+            List<Integer> c2 = kind.equals("ArrayList window") ? new ArrayList<>(Arrays.asList(0, 3, 1, 4, 1, 5, 9)).subList(1, 6) : list(kind);
+            ListIterator<Integer> li = c2.listIterator();
+            li.next();
+            li.forEachRemaining(x -> { });
+            String set = tr(() -> { li.set(8); return "ok"; });
+            String rem = tr(() -> { li.remove(); return "ok"; });
+            rest.append(", then set ").append(set).append(" remove ").append(rem).append(' ').append(kind.equals("ArrayList window") ? "" : String.valueOf(c2));
+        }
+        System.out.println(rest);
+        StringBuilder order = new StringBuilder("LinkedList iterator checks:");
+        for (String st : new String[]{"fresh", "after next and remove"}) {
+            LinkedList<Integer> ll = new LinkedList<>(five());
+            ListIterator<Integer> li = ll.listIterator();
+            if (st.startsWith("after")) { li.next(); li.remove(); }
+            ll.add(2);
+            order.append(' ').append(st).append(": remove ").append(tr(() -> { li.remove(); return "ok"; })).append(" set ").append(tr(() -> { li.set(1); return "ok"; }));
+        }
+        System.out.println(order);
+        StringBuilder bad = new StringBuilder("failed index calls that count:");
+        String[] what = {"add(9, x)", "add(-1, x)", "remove(9)", "remove(-1)", "set(9, x)", "insertElementAt(x, 9)", "removeElementAt(9)", "removeElementAt(-1)"};
+        for (String kind : new String[]{"ArrayList", "LinkedList", "Vector"}) {
+            bad.append(' ').append(kind).append(':');
+            for (int w = 0; w < what.length; w++) {
+                if (w >= 5 && !kind.equals("Vector")) continue;
+                List<Integer> l = list(kind);
+                Iterator<Integer> it = l.iterator();
+                while (it.hasNext()) it.next();
+                final int op = w;
+                String r = tr(() -> { switch (op) {
+                    case 0: l.add(9, 1); break; case 1: l.add(-1, 1); break; case 2: l.remove(9); break; case 3: l.remove(-1); break;
+                    case 4: l.set(9, 1); break; case 5: ((Vector<Integer>) l).insertElementAt(1, 9); break;
+                    case 6: ((Vector<Integer>) l).removeElementAt(9); break; default: ((Vector<Integer>) l).removeElementAt(-1); }
+                    return "ok"; });
+                bad.append(' ').append(what[w]).append(' ').append(r).append(r.equals("ok") ? "" : "/" + tr(it::next));
+            }
+        }
+        System.out.println(bad);
+        StringBuilder win = new StringBuilder("ArrayList window after a direct change:");
+        List<Integer> root = new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7));
+        List<Integer> w1 = root.subList(2, 6);
+        Iterator<Integer> wi = w1.iterator();
+        wi.next();
+        root.add(0, 99);
+        StringBuilder walked = new StringBuilder();
+        win.append(" forEachRemaining ").append(tr(() -> { wi.forEachRemaining(walked::append); return "ok"; })).append(" after visiting ").append(walked);
+        List<Integer> root2 = new ArrayList<>(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7));
+        List<Integer> outer = root2.subList(1, 7);
+        root2.add(3, 99);
+        List<Integer> inner = outer.subList(1, 4);
+        win.append("; window of a stale window: get ").append(tr(() -> inner.get(1))).append(" set ").append(tr(() -> inner.set(0, 50))).append(" contains ")
+            .append(tr(() -> inner.contains(1))).append(" remove(Object) ").append(tr(() -> inner.remove((Object) 77))).append(" sort ")
+            .append(tr(() -> { inner.sort(Comparator.reverseOrder()); return inner; })).append(" add ").append(tr(() -> inner.add(5))).append(" root ").append(root2);
+        System.out.println(win);
         System.out.println("done");
     }
 }

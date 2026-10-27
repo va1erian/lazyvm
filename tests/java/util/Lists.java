@@ -13,6 +13,19 @@ public class Lists {
         }
     }
 
+    /** Whether the list built as in "capacity …" keeps its sorted prefix when the comparator adds k elements. */
+    static boolean fits(int how, int n, int k) {
+        ArrayList<Integer> l = how == 0 ? new ArrayList<>() : how == 1 ? new ArrayList<>(0) : how == 2 ? new ArrayList<>(5) : new ArrayList<>(Collections.nCopies(how == 3 ? n : 1, 0));
+        if (how == 3) l.clear();
+        if (how == 4) l.ensureCapacity(n + 1);
+        if (how == 5) { l.addAll(Collections.nCopies(11, 0)); l.clear(); }
+        for (int i = 0; i < n; i++) l.add(n - i);
+        boolean[] done = {false};
+        try { l.sort((a, b) -> { if (!done[0]) { done[0] = true; for (int i = 0; i < k; i++) l.add(-1); } return Integer.compare(a, b); }); } catch (ConcurrentModificationException e) { }
+        for (int i = 1; i < n; i++) if (l.get(i - 1) > l.get(i)) return false;
+        return true;
+    }
+
     static List<Integer> list(int... xs) {
         List<Integer> l = new ArrayList<>();
         for (int x : xs) l.add(x);
@@ -129,6 +142,23 @@ public class Lists {
         t("growth", () -> { List<Integer> g = new ArrayList<>(); for (int i = 0; i < 1000; i++) g.add(i); long s = 0; for (int x : g) s += x; return g.size() + " " + s; });
         t("AbstractList listIterator bad", () -> new AbstractList<Integer>() { public Integer get(int i) { return i; } public int size() { return 3; } }.listIterator(5));
         t("HashSet toArray bad type", () -> new HashSet<Integer>(list(1)).toArray(new String[0]));
+        t("capacity through a sort that adds", () -> { StringBuilder out = new StringBuilder();
+            for (int how = 0; how < 6; how++) {
+                for (int n : new int[]{3, 9, 10, 14, 15, 21, 22}) {
+                    ArrayList<Integer> l = how == 0 ? new ArrayList<>() : how == 1 ? new ArrayList<>(0) : how == 2 ? new ArrayList<>(5) : new ArrayList<>(Collections.nCopies(how == 3 ? n : 1, 0));
+                    if (how == 3) l.clear();
+                    if (how == 4) l.ensureCapacity(n + 1);
+                    if (how == 5) { l.addAll(Collections.nCopies(11, 0)); l.clear(); }
+                    for (int i = 0; i < n; i++) l.add(n - i);
+                    int room = 0;
+                    for (int k = 1; k <= 40; k++) { if (fits(how, n, k)) room = k; else break; }
+                    out.append(room).append(n == 22 ? " | " : " ");
+                }
+            }
+            return out; });
+        t("HashMap values compared by identity first", () -> { Object odd = new Object() { public boolean equals(Object o) { return false; } public int hashCode() { return 1; } };
+            HashMap<String, Object> m = new HashMap<>(); m.put("k", odd); ArrayList<Object> l = new ArrayList<>(); l.add(odd);
+            return m.containsValue(odd) + " " + m.replace("k", odd, odd) + " " + m.remove("k", odd) + " " + l.contains(odd) + " " + new TreeMap<>(Collections.singletonMap("k", odd)).containsValue(odd); });
         System.out.println("done");
     }
 }

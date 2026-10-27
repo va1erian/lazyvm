@@ -8,8 +8,13 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
     /** Storage of a list made by new ArrayList() before anything needed room (spec 9.F1). */
     private static final Object[] UNSIZED = {};
     private static final Object[] NONE = {};
+    // Spec 3.V2: the capacity new ArrayList() takes when it first needs storage.
+    private static final int FIRST_CAPACITY = 10;
 
     private transient Object[] items;
+
+    /** The storage itself, for a window's forEachRemaining (spec 9.F2). */
+    Object[] storage() { return items; }
     private int size;
 
     public ArrayList(int initialCapacity) {
@@ -37,15 +42,17 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
     // Spec 9.F1: any positive request counts as a change, except that an unsized list counts only
     // requests above its default capacity of 10.
     public void ensureCapacity(int minCapacity) {
-        if (minCapacity > (items == UNSIZED ? 10 : 0)) {
+        if (minCapacity > (items == UNSIZED ? FIRST_CAPACITY : 0)) {
             modCount++;
             makeRoom(minCapacity);
         }
     }
 
+    // Spec 3.V2: storage grows by half (at least to what is needed); an unsized list's first storage holds 10.
     private void makeRoom(int needed) {
         if (needed > items.length) {
-            items = Arrays.copyOf(items, Math.max(needed, items.length * 2));
+            int grown = items == UNSIZED ? FIRST_CAPACITY : items.length + (items.length >> 1);
+            items = Arrays.copyOf(items, Math.max(grown, needed));
         }
     }
 
@@ -99,6 +106,10 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
     }
 
     public E remove(int index) {
+        // Spec 9.F1: an index past the end is refused first; a negative one counts, then fails.
+        if (index < 0) {
+            modCount++;
+        }
         E old = get(index);
         modCount++;
         removeSlots(index, index + 1);
@@ -200,4 +211,6 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
             throw Support.badIndex(index, size);
         }
     }
+
+    int remainingStyle() { return 1; }
 }

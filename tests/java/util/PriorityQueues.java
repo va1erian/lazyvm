@@ -101,6 +101,9 @@ public class PriorityQueues {
         t("comparator adding to its own queue", () -> { List<PriorityQueue<Integer>> box = new ArrayList<>(); int[] n = {0};
             PriorityQueue<Integer> p = new PriorityQueue<>((x, y) -> { if (n[0]++ < 3) box.get(0).add(n[0] + 100); return Integer.compare(x, y); });
             box.add(p); p.add(1); p.add(2); p.add(3); return p + " " + n[0]; });
+        t("size seen by the first comparison", () -> { List<PriorityQueue<Integer>> box = new ArrayList<>(); StringBuilder seen = new StringBuilder();
+            PriorityQueue<Integer> p = new PriorityQueue<>((x, y) -> { seen.append(box.get(0).size()).append(' '); return Integer.compare(x, y); });
+            box.add(p); p.add(5); p.add(3); p.add(8); p.add(1); return seen; });
         System.out.println("done");
     }
 }

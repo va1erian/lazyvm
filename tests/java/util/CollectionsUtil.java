@@ -13,6 +13,10 @@ public class CollectionsUtil {
         }
     }
 
+    static String tr(Supplier<Object> s) {
+        try { return String.valueOf(s.get()); } catch (RuntimeException e) { return e.getClass().getSimpleName() + ": " + e.getMessage(); }
+    }
+
     static List<Integer> list(boolean linked, int... xs) {
         List<Integer> l = linked ? new LinkedList<Integer>() : new ArrayList<Integer>();
         for (int x : xs) l.add(x);
@@ -114,6 +118,30 @@ public class CollectionsUtil {
         t("disjoint", () -> Collections.disjoint(Arrays.asList(1, 2), Arrays.asList(3, 4)) + " " + Collections.disjoint(Arrays.asList(1, 2), Arrays.asList(2, 4)) + " " + Collections.disjoint(new HashSet<Integer>(Arrays.asList(1)), Arrays.asList(1)) + " " + Collections.disjoint(Arrays.asList(1), new ArrayList<Integer>()) + " " + Collections.disjoint(new ArrayList<Integer>(), new ArrayList<Integer>()));
         t("reverseOrder", () -> { List<String> l = new ArrayList<>(Arrays.asList("b", "c", "a")); Collections.sort(l, Collections.reverseOrder()); Comparator<String> c = Collections.reverseOrder(String.CASE_INSENSITIVE_ORDER); return l + " " + c.compare("a", "B") + " " + Collections.reverseOrder(c).compare("a", "B") + " " + Collections.reverseOrder(null).compare("a", "b") + " " + Collections.<String>reverseOrder().reversed().compare("a", "b"); });
         t("singletonList sort", () -> { List<Integer> one = Collections.singletonList(1); one.sort(null); return one; });
+        t("empty iterator kinds", () -> { StringBuilder sb = new StringBuilder();
+            Object[] its = {Collections.emptyIterator(), Collections.emptyListIterator(), Collections.emptyEnumeration(), Collections.emptyList().iterator(), Collections.emptyList().listIterator(),
+                Collections.emptySet().iterator(), new Hashtable<String, String>().keySet().iterator(), new Hashtable<String, String>().keys(), new Hashtable<String, String>().elements()};
+            for (Object o : its) sb.append(o instanceof ListIterator ? 'L' : '-').append(o instanceof Iterator ? 'I' : '-').append(o instanceof Enumeration ? 'E' : '-').append(' ');
+            return sb + "" + (Collections.emptyIterator() == (Object) Collections.emptyListIterator()) + " " + (Collections.emptyIterator() == (Object) Collections.emptyEnumeration()); });
+        t("list iterator kinds", () -> { StringBuilder sb = new StringBuilder(); List<Integer> five = Arrays.asList(1, 2, 3, 4, 5);
+            List<List<Integer>> ls = Arrays.asList(new ArrayList<>(five), new LinkedList<>(five), new Vector<>(five), new Stack<Integer>(), five,
+                new ArrayList<>(five).subList(1, 4), new ArrayList<>(five).subList(1, 4).subList(0, 2), new LinkedList<>(five).subList(1, 4), new Vector<>(five).subList(1, 4),
+                Collections.unmodifiableList(new LinkedList<>(five)), Collections.synchronizedList(new LinkedList<>(five)), Collections.synchronizedList(new ArrayList<>(five)),
+                Collections.checkedList(new LinkedList<>(five), Integer.class), Collections.nCopies(3, 1), Collections.nCopies(3, 1).subList(0, 2), five.subList(0, 2),
+                Collections.singletonList(1), new AbstractList<Integer>() { public Integer get(int i) { return i; } public int size() { return 2; } });
+            for (List<Integer> l : ls) sb.append(l.iterator() instanceof ListIterator ? 'L' : 'I');
+            List<Integer> c = Collections.nCopies(3, 7);
+            return sb + " " + (c.subList(0, 2).getClass() == c.getClass()) + " " + tr(() -> c.subList(2, 1)) + " " + tr(() -> c.subList(0, 4)); });
+        t("checked iterator forEachRemaining", () -> { StringBuilder sb = new StringBuilder();
+            for (int w = 0; w < 3; w++) {
+                List<Integer> l = new ArrayList<>(Arrays.asList(1, 2, 3));
+                Collection<Integer> v = w == 0 ? l : w == 1 ? Collections.checkedList(l, Integer.class) : Collections.unmodifiableList(l);
+                Iterator<Integer> it = v.iterator();
+                while (it.hasNext()) it.next();
+                l.remove(0);
+                sb.append(tr(() -> { it.forEachRemaining(x -> { }); return "quiet"; })).append(' ');
+            }
+            return sb; });
         System.out.println("done");
     }
 }

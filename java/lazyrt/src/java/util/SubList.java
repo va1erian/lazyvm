@@ -3,6 +3,8 @@ package java.util;
 /** The view returned by AbstractList.subList: a window of the parent, offset by `from`. */
 class SubList<E> extends AbstractList<E> {
     private final AbstractList<E> backing;
+    /** The list whose count an ArrayList window compares with: the ArrayList itself. */
+    private final AbstractList<E> root;
     private final int start;
     private int size;
     /** Spec 9.F2: a window of an ArrayList (or of such a window) iterates like ArrayList itself. */
@@ -12,9 +14,49 @@ class SubList<E> extends AbstractList<E> {
         this.backing = backing;
         this.start = start;
         this.size = to - start;
-        this.modCount = backing.modCount;
         this.indexed = backing instanceof ArrayList || (backing instanceof SubList && ((SubList<E>) backing).indexed);
+        this.root = indexed && backing instanceof SubList ? ((SubList<E>) backing).root : backing;
+        // Spec 9.F2: an ArrayList window starts in step with the ArrayList, even under a stale window.
+        this.modCount = (indexed ? root : backing).modCount;
     }
+
+    /** Where this window starts in the root list. */
+    private int offset() { return start + (backing instanceof SubList ? ((SubList<E>) backing).offset() : 0); }
+
+    // Spec 9.F2: an ArrayList window's iterator sets through the ArrayList, so after forEachRemaining
+    // it may write the element just past the window.
+    void iteratorSet(int i, E e) {
+        if (indexed) {
+            root.set(offset() + i, e);
+        } else {
+            set(i, e);
+        }
+    }
+
+    /** The ArrayList's storage, which an ArrayList window reads and writes at its offset. */
+    private Object[] slots() { return ((ArrayList<E>) root).storage(); }
+
+    /**
+     * Spec 9.F2: an ArrayList window's forEachRemaining reads the ArrayList's storage as it was when
+     * the walk began and watches only the window's own count, so a change made to the ArrayList
+     * directly shows only in the check at the end.
+     */
+    @SuppressWarnings("unchecked")
+    int walkRest(int i, int end, int expected, java.util.function.Consumer<? super E> action) {
+        if (!indexed) {
+            return super.walkRest(i, end, expected, action);
+        }
+        Object[] slots = slots();
+        int at = offset();
+        if (at + i >= slots.length) {
+            throw new ConcurrentModificationException();
+        }
+        while (i != end && modCount == expected) {
+            action.accept((E) slots[at + i++]);
+        }
+        return i;
+    }
+    int remainingStyle() { return indexed ? 2 : 0; }
 
     int cursorLimit() { return size; }
     void checkFresh() { checkUnchanged(); }
@@ -29,16 +71,26 @@ class SubList<E> extends AbstractList<E> {
         return backing instanceof RandomAccess ? new Fast<E>(backing, start, to) : new SubList<E>(backing, start, to);
     }
 
+    // Spec 9.F2: an ArrayList window reads and writes the ArrayList's storage, not through its parent.
+    @SuppressWarnings("unchecked")
     public E get(int index) {
         Support.checkIndex(index, size);
         checkUnchanged();
-        return backing.get(index + start);
+        return indexed ? (E) slots()[offset() + index] : backing.get(index + start);
     }
 
+    @SuppressWarnings("unchecked")
     public E set(int index, E element) {
         Support.checkIndex(index, size);
         checkUnchanged();
-        return backing.set(index + start, element);
+        if (!indexed) {
+            return backing.set(index + start, element);
+        }
+        Object[] slots = slots();
+        int at = offset() + index;
+        E old = (E) slots[at];
+        slots[at] = element;
+        return old;
     }
 
     public int size() {
@@ -129,7 +181,8 @@ class SubList<E> extends AbstractList<E> {
     }
 
     public List<E> subList(int fromIndex, int toIndex) {
-        Support.checkSubList(fromIndex, toIndex, size);
+        // Spec 9.F2: a window that is not an ArrayList's asks its own size(), which checks for a change.
+        Support.checkSubList(fromIndex, toIndex, fromIndex < 0 || indexed ? size : size());
         return of(this, fromIndex, toIndex);
     }
 
@@ -139,8 +192,11 @@ class SubList<E> extends AbstractList<E> {
         size += delta;
     }
 
+    // Spec 9.F2: an ArrayList window compares with the ArrayList; other windows with their parent.
+    private boolean stale() { return (indexed ? root : backing).modCount != modCount; }
+
     private void checkUnchanged() {
-        if (backing.modCount != modCount) {
+        if (stale()) {
             throw new ConcurrentModificationException();
         }
     }

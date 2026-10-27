@@ -108,4 +108,5 @@ inconsistent n 1000: ok@6659 ok@6014 IAE@5853 ok@6846 IAE@1748
 inconsistent n 3000: IAE@970 IAE@4028 IAE@1641 IAE@993 IAE@755
 never equal: Comparison method violates its general contract!
 final merging of 30 runs: calls 51031 log 1056417089 order -105634517
+final merging with a tie: calls 49954 log -885160965 order 663174124
 done

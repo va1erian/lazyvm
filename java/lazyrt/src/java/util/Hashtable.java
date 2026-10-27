@@ -30,8 +30,9 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         public V getValue() { return value; }
         public V setValue(V value) { V old = this.value; this.value = Objects.requireNonNull(value); return old; }
         public boolean equals(Object o) { return AbstractMap.entryEquals(this, o); }
-        public int hashCode() { return hash ^ value.hashCode(); }
-        public String toString() { return key + "=" + value; }
+        public int hashCode() { return hash ^ Support.hash(value); }
+        // Spec 2.T5: a removed entry's value is null; its text then fails as the oracle's does.
+        public String toString() { return key.toString() + "=" + value.toString(); }
     }
 
     private transient Link<K, V>[] table;

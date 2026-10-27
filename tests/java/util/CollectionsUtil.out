@@ -101,4 +101,7 @@ addAll null: !java.lang.NullPointerException
 disjoint: true false false true true
 reverseOrder: [c, b, a] 1 -1 1 -1
 singletonList sort: [1]
+empty iterator kinds: -I- LI- --E -I- LI- -I- -I- --E --E false false
+list iterator kinds: ILIIILLLLILIIIILII true IllegalArgumentException: fromIndex(2) > toIndex(1) IndexOutOfBoundsException: toIndex = 4
+checked iterator forEachRemaining: quiet ConcurrentModificationException: null quiet 
 done

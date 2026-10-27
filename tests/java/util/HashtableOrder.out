@@ -21,4 +21,5 @@ cycle toString: StackOverflowError
 iterator of an empty table after a put: end false false
 empty hashCode 0
 enumerator: Hashtable Enumerator | Hashtable Enumerator | UnsupportedOperationException | held after remove(k) 1=null, after iterator remove 2=20
+removed entry: b hashCode 98 toString NullPointerException | entrySet().add(String) ClassCastException
 done

@@ -249,19 +249,29 @@ public class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E>, Cl
             if (pos == stop) {
                 throw new NoSuchElementException();
             }
+            // Spec 4.D2: a descending walk steps back before it checks, so it moves on even when it fails.
             int at = down ? (pos - 1) & mask() : pos;
+            if (down) {
+                pos = at;
+            }
             E e = (E) slots[at];
             if ((down ? front : back) != stop || e == null) {
                 throw new ConcurrentModificationException();
             }
             last = at;
-            pos = down ? at : (at + 1) & mask();
+            if (!down) {
+                pos = (at + 1) & mask();
+            }
             return e;
         }
 
         public void remove() {
             if (last < 0) {
                 throw new IllegalStateException();
+            }
+            // Spec 4.D2: the slot to remove must still lie between the ends.
+            if (((last - front) & mask()) >= size()) {
+                throw new ConcurrentModificationException();
             }
             boolean tailMoved = closeGap(last);
             if (tailMoved != down) {

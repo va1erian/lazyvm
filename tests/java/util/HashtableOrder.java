@@ -91,6 +91,15 @@ public class HashtableOrder {
         h2.remove(1);
         for (Iterator<Integer> it2 = h2.keySet().iterator(); it2.hasNext();) if (it2.next() == 2) it2.remove();
         System.out.println("enumerator: " + m1 + " | " + m2 + " | " + m3 + " | held after remove(k) " + held1.getKey() + "=" + held1.getValue() + ", after iterator remove " + held2);
+        Hashtable<String, Integer> h3 = new Hashtable<>();
+        h3.put("a", 1); h3.put("b", 2);
+        Map.Entry<String, Integer> gone = h3.entrySet().iterator().next();
+        h3.remove(gone.getKey());
+        String text;
+        try { text = gone.toString(); } catch (NullPointerException x) { text = "NullPointerException"; }
+        String added;
+        try { ((Set) h3.entrySet()).add("x"); added = "added"; } catch (ClassCastException x) { added = "ClassCastException"; } catch (UnsupportedOperationException x) { added = "UnsupportedOperationException"; }
+        System.out.println("removed entry: " + gone.getKey() + " hashCode " + gone.hashCode() + " toString " + text + " | entrySet().add(String) " + added);
         System.out.println("done");
     }
 }

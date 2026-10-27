@@ -43,4 +43,5 @@ merge of an absent key is not type-checked: str 7 5 {x=str, 7=7, y=5}
 merge of a present key checks the result: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
 computeIfAbsent checks: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
 compute on absent checks: !java.lang.ClassCastException: Attempt to insert class java.lang.String value into map with value type class java.lang.Integer
+entrySet add: ClassCastException UnsupportedOperationException UnsupportedOperationException
 done

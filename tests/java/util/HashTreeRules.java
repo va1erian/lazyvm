@@ -186,6 +186,38 @@ public class HashTreeRules {
         for (int i = 0; i < 8; i++) grows.put(new K(i, 0), i);
         try { grows.forEach((k, v) -> { walked.append(k).append(' '); if (k.equals(new K(2, 0))) { grows.put(new K(20, 0), 0); grows.put(new K(1, 64), 0); } }); } catch (ConcurrentModificationException e) { walked.append("CME"); }
         System.out.println("entries replaced: held through treeify " + before + " map " + held.get(new K(0, 0)) + "; held through untreeify " + inTree + " map " + held + "; forEach as the bin becomes a tree: " + walked);
+        Map<Object, Integer> shrink = new HashMap<>(64);
+        for (int i = 0; i < 12; i++) shrink.put(new K(i, 0), i);
+        Map.Entry<Object, Integer> keep = null;
+        for (Map.Entry<Object, Integer> e : shrink.entrySet()) if (e.getKey().equals(new K(0, 0))) keep = e;
+        for (int i = 1; i < 12 && shrink.size() > 2; i++) shrink.remove(new K(i, 0));
+        keep.setValue(55);
+        Map<Object, Integer> split = new HashMap<>(64);
+        for (int i = 0; i < 9; i++) split.put(new K(i, i % 2 == 0 ? 0 : 64), i);
+        Map.Entry<Object, Integer> held2 = null;
+        for (Map.Entry<Object, Integer> e : split.entrySet()) if (e.getKey().equals(new K(0, 0))) held2 = e;
+        for (int i = 0; i < 60; i++) split.put(new K(100 + i, 1 + i), i);
+        held2.setValue(66);
+        System.out.println("held through untreeify by removal: map " + shrink.get(new K(0, 0)) + " entry " + keep + "; held through a split into lists: map " + split.get(new K(0, 0)) + " entry " + held2);
+        for (int side = 0; side < 2; side++) {
+            LinkedHashMap<Object, Integer> lm = new LinkedHashMap<>(64);
+            lm.put(new K(500, 3), 0);
+            for (int i = 0; i < 8; i++) lm.put(new K(i, 0), i);
+            lm.put(new K(501, 5), 0);
+            lm.put(new K(8, 0), 8);
+            lm.put(new K(502, 7), 0);
+            if (side == 0) {
+                for (Map.Entry<Object, Integer> e : lm.entrySet()) e.setValue(e.getValue() + 1000);
+                StringBuilder got = new StringBuilder();
+                for (int i = 0; i < 9; i++) got.append(lm.get(new K(i, 0))).append(' ');
+                System.out.println("LinkedHashMap after the bin became a tree, values set through iteration: " + lm.values() + ", by get: " + got);
+            } else {
+                lm.remove(new K(501, 5));
+                lm.remove(new K(500, 3));
+                lm.remove(new K(502, 7));
+                System.out.println("LinkedHashMap after the bin became a tree, neighbours removed: " + lm.keySet());
+            }
+        }
         System.out.println("done");
     }
 

@@ -48,7 +48,8 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
         return changed;
     }
 
-    public Iterator<E> iterator() { return new Cursor(0); }
+    // Spec 10.X7: the plain iterator is not a ListIterator.
+    public Iterator<E> iterator() { return new Walk(0); }
     public ListIterator<E> listIterator() { return listIterator(0); }
 
     public ListIterator<E> listIterator(int index) {
@@ -62,6 +63,24 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
     /** Fails if this list is a view whose backing list changed; the index iterator checks it. */
     void checkFresh() {
     }
+
+    /** The index iterator's set(e) at index i; an ArrayList window may write past its end (F2). */
+    void iteratorSet(int i, E e) { set(i, e); }
+
+    /** forEachRemaining's walk from i to end while this list's count stays `expected`; returns where it stopped. */
+    int walkRest(int i, int end, int expected, java.util.function.Consumer<? super E> action) {
+        while (i != end && modCount == expected) {
+            action.accept(get(i++));
+        }
+        return i;
+    }
+
+    /**
+     * Spec 9.F2: how the index iterator's forEachRemaining runs: 0 one next() at a time; 1 as
+     * ArrayList and Vector (nothing at the end, then the last element visited is removable); 2 as a
+     * window of an ArrayList (the same, but nothing is removable afterwards).
+     */
+    int remainingStyle() { return 0; }
 
     /** The index iterator, started at an index the caller checked. */
     final ListIterator<E> cursorAt(int index) { return new Cursor(index); }
@@ -117,12 +136,12 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
      * The iterator of an indexed list: one get(i) per step (spec 8.C1), and a modCount check
      * before the end check (spec 9.F2).
      */
-    private class Cursor implements ListIterator<E> {
+    private class Walk implements Iterator<E> {
         int next;
         int last = -1;
         int expected = modCount;
 
-        Cursor(int start) { next = start; }
+        Walk(int start) { next = start; }
         public boolean hasNext() { return next != cursorLimit(); }
 
         public E next() {
@@ -137,22 +156,23 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
             }
         }
 
-        public boolean hasPrevious() { return next != 0; }
-
-        public E previous() {
-            checkUnchanged();
-            try {
-                E e = get(next - 1);
-                last = --next;
-                return e;
-            } catch (IndexOutOfBoundsException end) {
-                checkUnchanged();
-                throw new NoSuchElementException();
+        public void forEachRemaining(java.util.function.Consumer<? super E> action) {
+            int style = remainingStyle();
+            if (style == 0) {
+                Iterator.super.forEachRemaining(action);
+                return;
             }
+            Objects.requireNonNull(action);
+            int end = cursorLimit();
+            int i = next;
+            if (i >= end) {
+                return;
+            }
+            i = walkRest(i, end, expected, action);
+            next = i;
+            last = style == 1 ? i - 1 : i;
+            checkUnchanged();
         }
-
-        public int nextIndex() { return next; }
-        public int previousIndex() { return next - 1; }
 
         public void remove() {
             if (last < 0) {
@@ -171,13 +191,41 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
             expected = modCount;
         }
 
+        final void checkUnchanged() {
+            checkFresh();
+            if (modCount != expected) {
+                throw new ConcurrentModificationException();
+            }
+        }
+    }
+
+    /** The list iterator: the walk plus moving back, set and add. */
+    private final class Cursor extends Walk implements ListIterator<E> {
+        Cursor(int start) { super(start); }
+        public boolean hasPrevious() { return next != 0; }
+
+        public E previous() {
+            checkUnchanged();
+            try {
+                E e = get(next - 1);
+                last = --next;
+                return e;
+            } catch (IndexOutOfBoundsException end) {
+                checkUnchanged();
+                throw new NoSuchElementException();
+            }
+        }
+
+        public int nextIndex() { return next; }
+        public int previousIndex() { return next - 1; }
+
         public void set(E e) {
             if (last < 0) {
                 throw new IllegalStateException();
             }
             checkUnchanged();
             try {
-                AbstractList.this.set(last, e);
+                iteratorSet(last, e);
             } catch (IndexOutOfBoundsException gone) {
                 throw new ConcurrentModificationException();
             }
@@ -194,13 +242,6 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
             }
             last = -1;
             expected = modCount;
-        }
-
-        final void checkUnchanged() {
-            checkFresh();
-            if (modCount != expected) {
-                throw new ConcurrentModificationException();
-            }
         }
     }
 }

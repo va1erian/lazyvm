@@ -157,7 +157,11 @@ tables hash finitely. Empty: 0. Pinned by: HashtableOrder, SelfReference.
 cast to `Iterator` refuses `remove()` with `UnsupportedOperationException`. `remove(k)`,
 `remove(k, v)`, `keySet().remove` and `entrySet().remove` clear the removed entry's value, so an
 entry held from iteration then shows `null`; iterator removal, the compute family and `clear()` do
-not. Pinned by: HashtableOrder ("enumerator").
+not. Such an entry's `hashCode()` is then its key's hash (a null value counts 0) and its
+`toString()` throws `NullPointerException`. `entrySet().add(x)` casts `x` to `Map.Entry` first, so a
+non-entry gives `ClassCastException` and an entry `UnsupportedOperationException`. The empty
+table's `keys()` and `elements()` are Enumerations only, and its view iterators are Iterators only
+(X7). Pinned by: HashtableOrder ("enumerator", "removed entry").
 
 ## 3. Vector, Stack and ArrayList sizes
 
@@ -166,7 +170,17 @@ not. Pinned by: HashtableOrder ("enumerator").
 elements and `r` > capacity, the new capacity is `capacity + increment` (increment > 0) or
 `2 * capacity` (increment ≤ 0), raised to `r` if still smaller. `r` is `size + 1` for single adds,
 `size + c.size()` for `addAll`, the argument of `ensureCapacity` (only if > 0) and of `setSize`
-(only if > size). ArrayList's capacity shows only through F1. Pinned by: Vectors (capacity lines).
+(only if > size). Pinned by: Vectors (capacity lines).
+
+**V2.** ArrayList capacity shows through F1 and through a `sort` whose comparator adds elements: the
+sort works on the storage it began with, so while the additions fit, the list ends sorted (and the
+sort then throws); once they do not fit, the list is copied and the sort's work is lost.
+`new ArrayList()` has no storage; its first growth makes `max(10, r)` slots. `new ArrayList(c)` has
+`c` slots and `new ArrayList(coll)` `coll.size()`. When `r` elements are needed and do not fit, the
+new capacity is `max(capacity + (capacity >> 1), r)`. `ensureCapacity(r)` grows only when `r`
+exceeds the capacity, and on a list without storage only when `r` > 10. `trimToSize()` and `clone()`
+leave exactly `size` slots; removals and `clear()` never shrink. Pinned by: Lists ("capacity
+through a sort that adds"), FailFast.
 
 ## 4. ArrayDeque
 
@@ -183,9 +197,15 @@ first. `hasNext()` compares with the remembered end. `next()`: at the remembered
 `NoSuchElementException`; otherwise, if the deque's end has moved or the slot is empty,
 `ConcurrentModificationException`; otherwise it returns the slot's element. A descending iterator is
 the mirror: it remembers the front, walks backward from the end and fails when the front has moved.
-So changes at the side the iterator does not watch go unseen, and shifted elements may be seen
-twice. `forEachRemaining` on a forward iterator visits up to the remembered end and does not notice
-additions. Pinned by: Deques ("iterator …" lines).
+It steps back before it checks, so after a failed `next()` the following calls go on with the slots
+below (in a deque of 1..5 after `pollLast()`: CME, 4, 3, 2, 1, then `NoSuchElementException`), and
+its `forEachRemaining` likewise fails once and leaves the walk moved on. So changes at the side the
+iterator does not watch go unseen, and shifted elements may be seen twice. `forEachRemaining` on a
+forward iterator visits up to the remembered end and does not notice additions. `remove()` throws
+`ConcurrentModificationException` when the slot of the last returned element no longer lies between
+the deque's current ends (as after a `pollFirst()` or a middle removal that moved the front past
+it); otherwise it removes whatever that slot now holds. Pinned by: Deques ("iterator …" lines,
+"descending next after pollLast").
 
 **D3.** Removing the element at index `i` of `n` (by `remove(Object)`, `removeFirstOccurrence`,
 `removeLastOccurrence` or an iterator) shifts the `i` elements before it one slot toward the end if
@@ -339,7 +359,11 @@ means `l instanceof RandomAccess`). Pinned by: CollectionsCallLog, CollectionsCa
 **C3.** Equality tests call `equals` on the argument or target object: `o.equals(e)` for `indexOf`,
 `lastIndexOf`, `contains`, `remove(Object)`, `frequency`, `replaceAll` and hashed lookups;
 `t.equals(s)` with the target's element for the sublist searches; `e1.equals(e2)` with the receiver
-list's element in `List.equals`. Pinned by: CollectionsCallLog ("receiver …").
+list's element in `List.equals`. HashMap and HashSet keys, `HashMap.containsValue`, `remove(k, v)` and
+`replace(k, old, new)` test identity first (`a == b`, then `equals`); ArrayList's `contains` and
+`indexOf` and `TreeMap.containsValue` call `equals` alone, so an element unequal to itself is not
+found. Pinned by: CollectionsCallLog ("receiver …"), Lists ("HashMap values compared by identity
+first").
 
 ## 9. Fail-fast iterators and modification counts
 
@@ -349,7 +373,9 @@ next `next()` throws `ConcurrentModificationException`):
   `subList(i, i).clear()`, `trimToSize()`, `clear()` even when empty, and `ensureCapacity(r)` for
   any `r` > 0, except that a list made by `new ArrayList()` that has not yet allocated storage
   (nothing added, no earlier counted `ensureCapacity`) counts only `r` > 10. Vector also:
-  `remove(Object)` / `removeElement` even when nothing is removed, and every `setSize`.
+  `remove(Object)` / `removeElement` even when nothing is removed, every `setSize`, and `add(i, e)`,
+  `insertElementAt`, `remove(i)` and `removeElementAt` even when the index is bad and they throw.
+  ArrayList's `remove(i)` with a negative `i` counts, then throws `ArrayIndexOutOfBoundsException`.
 - LinkedList, ArrayList, Vector, PriorityQueue, HashMap, HashSet, LinkedHashMap, IdentityHashMap:
   `clear()` even when empty.
 - Not counted: `set`, `Collections.reverse`/`swap`, LinkedList's `sort` and `replaceAll`,
@@ -357,18 +383,36 @@ next `next()` throws `ConcurrentModificationException`):
   in every map, `put`/`replace`/`compute`/`merge` on an existing key, `putAll` of existing keys,
   `replaceAll`, `Entry.setValue`, and compute-family calls that add nothing (except H13).
 
-Pinned by: FailFast, Lists ("… modCount", "… CME", "sub stale …"), Iterators.
+Pinned by: FailFast (… "failed index calls that count"), Lists ("… modCount", "… CME", "sub stale
+…"), Iterators.
 
 **F2.** `next()` checks for modification before checking for the end in ArrayList, LinkedList,
 Vector, PriorityQueue, HashMap/HashSet/LinkedHashMap, Hashtable and IdentityHashMap; TreeMap and
 TreeSet check the end first; ArrayDeque follows D2. `hasNext()` never throws: ArrayList and Vector
 answer `cursor != size()`, LinkedList `cursor < size()`, PriorityQueue `cursor < size()` or
 displaced elements remain (P2); the hashed and tree maps report whether a next node was found.
-Sublists: those of an ArrayList (and their own sublists) iterate as ArrayList does, against the
-sublist's own size, so after a change through the sublist or its list `hasNext()` may be true and
-`next()` throws ConcurrentModificationException; other AbstractList sublists (LinkedList, Vector)
-answer `hasNext()` by `nextIndex() < size` and fail with NoSuchElementException at their end.
-Pinned by: FailFast ("exhausted …", "sublist iterators"), Iterators.
+Sublists of an ArrayList, and their own sublists at any depth, compare with the ArrayList itself:
+they take its count when made, and any call on one after the ArrayList changed elsewhere (`size()`
+and `isEmpty()` included) throws ConcurrentModificationException. Their iterators run against the
+sublist's own size, so after a change `hasNext()` may be true and `next()` throws
+ConcurrentModificationException. Such a window reads and writes the ArrayList's storage at its
+offset itself, so `get`, `set` and its iterators work on a window made from a stale window as long as
+the ArrayList has not changed since it was made; `add`, `remove` and `addAll` go through the parent,
+which checks for itself. Its iterator's `forEachRemaining` reads the storage as it was when the call
+began and stops early only for a change made through the window; a change made to the ArrayList
+directly lets it visit the rest, then throws ConcurrentModificationException.
+Sublists of other AbstractLists (LinkedList, Vector) compare with their direct parent, whose own
+check reaches further up only when it is called; `subList()` on a stale one asks its `size()` first
+and so throws ConcurrentModificationException before any range check. Their iterators answer `hasNext()` by `nextIndex() < size` and fail with
+NoSuchElementException at their end.
+`forEachRemaining` at the end of the walk: ArrayList and Vector return quietly even after a change;
+LinkedList checks and throws ConcurrentModificationException. After a completed `forEachRemaining`,
+`set` and `remove` act on the last element visited, except in an ArrayList sublist, whose
+`remove()` then throws ConcurrentModificationException while `set` writes the list element just past
+the sublist. LinkedList's list iterator checks for a change before it checks for a missing `next()`
+in `remove()`, and the other way round in `set()`. Pinned by: FailFast ("exhausted …", "sublist
+iterators", "stale nested sublists", "forEachRemaining", "LinkedList iterator checks",
+"ArrayList window after a direct change"), Iterators.
 
 **F3.** How far a call gets when its action changes the collection, then throws
 `ConcurrentModificationException`: ArrayList and Vector `forEach`, `replaceAll`, `removeIf` and
@@ -402,7 +446,9 @@ a copy with the same runtime type as the backing array. Pinned by: ArraysUtil, L
 
 **X4.** `Collections.checkedMap(...).merge(k, v, f)` does not type-check `k` or `v` when `k` is
 absent: they are stored unchecked. When `k` is present, `f`'s result is checked. `computeIfAbsent`,
-`compute` and `putIfAbsent` check what they store. Pinned by: CheckedViews ("merge …").
+`compute` and `putIfAbsent` check what they store. Its `entrySet().add(x)` casts `x` to `Map.Entry`
+(`ClassCastException` for a non-entry) and then refuses with `UnsupportedOperationException`, as does
+`entrySet().addAll`. Pinned by: CheckedViews ("merge …", "entrySet add").
 
 **X5.** `toString` prints `(this Collection)` or `(this Map)` for an element, key or value that is
 the very object being printed; any other path back (a view, a wrapper, another collection) recurses
@@ -416,6 +462,17 @@ that contains itself, except Hashtable (T4) and IdentityHashMap (identity hashes
 `emptyMap().replaceAll(null)` throws `NullPointerException`). `singletonList(x).sort(c)` does
 nothing. Pinned by: MapDefaults ("singletonMap …", "emptyMap …"), CollectionsUtil ("singletonList
 sort").
+
+**X7.** `Collections.emptyIterator()`, `emptyListIterator()` and `emptyEnumeration()` are three
+distinct objects: an Iterator only, a ListIterator, and an Enumeration only. `emptyList().iterator()`
+and `emptySet().iterator()` are Iterators only, `emptyList().listIterator()` a ListIterator. An
+empty Hashtable's view iterators are Iterators only, and its `keys()` and `elements()` Enumerations
+only. `iterator()` is a ListIterator for LinkedList and for every sublist, and a plain Iterator for
+ArrayList, Vector, Stack, `Arrays.asList`, `nCopies`, `singletonList`, AbstractList's default and the
+unmodifiable and checked wrappers; the synchronized wrappers hand out the wrapped list's own. A checked
+collection's iterator steps through `next()` in `forEachRemaining` instead of forwarding it. A range
+of `nCopies` is again an `nCopies` list. Pinned by: CollectionsUtil ("empty iterator kinds", "list
+iterator kinds", "checked iterator forEachRemaining").
 
 ## 11. Exception types and messages
 
@@ -444,7 +501,7 @@ The common misuse cases throw these; "–" is a null message. Pinned by the test
 
 ## 12. Not observable: the implementation may choose
 
-ArrayList capacity and LinkedHashMap/LinkedHashSet table sizes; the maximum table and array sizes;
+LinkedHashMap/LinkedHashSet table sizes; the maximum table and array sizes;
 the primitive sort algorithms (only the sorted result shows); the merge sort's temporary storage and
 run-stack size; IdentityHashMap's order (IdentityMaps sorts its output); the seed of `new Random()`
 and the hidden Random of `Collections.shuffle(l)`; and identity hash codes themselves (only H6's
@@ -454,6 +511,12 @@ Observable but left free: which `compareTo` calls a HashMap makes to find an exi
 tree bin. The oracle's lookups call it on keys of the bin (a key that logs its calls sees them),
 and so do its compute-family insertions before they insert; this specification pins only the
 calls of H6 to H8 insertion, and LazyVM finds keys by hash and `equals` alone.
+
+Also left free: what a HashMap compute-family call (`computeIfAbsent`, `computeIfPresent`, `compute`,
+`merge`) stores, and what the map then holds, when its function changes the map structurally (for
+example clears it or adds keys). The oracle can bring back entries that were removed, or store a key
+that its lookups then miss; LazyVM keeps the map consistent (every key a walk shows is found), and
+which entries it then holds is its own.
 
 ## 13. API to provide
 

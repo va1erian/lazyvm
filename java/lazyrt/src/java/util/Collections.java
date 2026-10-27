@@ -345,13 +345,13 @@ public class Collections {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> Iterator<T> emptyIterator() { return (Iterator<T>) FixedCollections.NO_ELEMENTS; }
+    public static <T> Iterator<T> emptyIterator() { return (Iterator<T>) FixedCollections.NO_ITERATOR; }
 
     @SuppressWarnings("unchecked")
-    public static <T> ListIterator<T> emptyListIterator() { return (ListIterator<T>) FixedCollections.NO_ELEMENTS; }
+    public static <T> ListIterator<T> emptyListIterator() { return (ListIterator<T>) FixedCollections.NO_LIST_ITERATOR; }
 
     @SuppressWarnings("unchecked")
-    public static <T> Enumeration<T> emptyEnumeration() { return (Enumeration<T>) FixedCollections.NO_ELEMENTS; }
+    public static <T> Enumeration<T> emptyEnumeration() { return (Enumeration<T>) FixedCollections.NO_ENUMERATION; }
     public static <T> Set<T> singleton(T o) { return new FixedCollections.One<T>(o); }
     public static <T> List<T> singletonList(T o) { return new FixedCollections.OneList<T>(o); }
 

@@ -58,7 +58,15 @@ final class Checked {
         public boolean containsAll(Collection<?> coll) { return c.containsAll(coll); }
         public boolean removeAll(Collection<?> coll) { return c.removeAll(coll); }
         public boolean retainAll(Collection<?> coll) { return c.retainAll(coll); }
-        public Iterator<E> iterator() { return c.iterator(); }
+        // Spec 10.X7: a plain iterator that steps through next(), so forEachRemaining is not forwarded.
+        public Iterator<E> iterator() {
+            Iterator<E> it = c.iterator();
+            return new Iterator<E>() {
+                public boolean hasNext() { return it.hasNext(); }
+                public E next() { return it.next(); }
+                public void remove() { it.remove(); }
+            };
+        }
         public boolean add(E e) { return c.add(check(e)); }
         public boolean addAll(Collection<? extends E> coll) { return c.addAll(checkAll(coll)); }
         public void forEach(Consumer<? super E> action) { c.forEach(action); }
@@ -297,6 +305,10 @@ final class Checked {
         public boolean contains(Object o) { return s.contains(o); }
         public boolean remove(Object o) { return s.remove(o); }
         public void clear() { s.clear(); }
+
+        // Spec 10.X4: the element is cast to Map.Entry before add refuses it; addAll always refuses.
+        public boolean add(Map.Entry<K, V> e) { throw Unmodifiable.refused(); }
+        public boolean addAll(Collection<? extends Map.Entry<K, V>> c) { throw Unmodifiable.refused(); }
 
         public Iterator<Map.Entry<K, V>> iterator() {
             Iterator<Map.Entry<K, V>> it = s.iterator();

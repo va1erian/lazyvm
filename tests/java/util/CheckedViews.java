@@ -64,6 +64,11 @@ public class CheckedViews {
         t("merge of a present key checks the result", () -> { Map c = Collections.checkedMap(new LinkedHashMap<String, Integer>(), String.class, Integer.class); c.put("x", 1); return c.merge("x", 2, (p, q) -> "str"); });
         t("computeIfAbsent checks", () -> { Map c = Collections.checkedMap(new HashMap<String, Integer>(), String.class, Integer.class); return c.computeIfAbsent("x", k -> "s"); });
         t("compute on absent checks", () -> { Map c = Collections.checkedMap(new HashMap<String, Integer>(), String.class, Integer.class); return c.compute("x", (k, w) -> "s"); });
+        t("entrySet add", () -> { Map c = Collections.checkedMap(new HashMap<String, Integer>(), String.class, Integer.class); String a, b, d;
+            try { c.entrySet().add("x"); a = "added"; } catch (RuntimeException e) { a = e.getClass().getSimpleName(); }
+            try { c.entrySet().add(new AbstractMap.SimpleEntry<>("k", 1)); b = "added"; } catch (RuntimeException e) { b = e.getClass().getSimpleName(); }
+            try { c.entrySet().addAll(Collections.emptyList()); d = "added"; } catch (RuntimeException e) { d = e.getClass().getSimpleName(); }
+            return a + " " + b + " " + d; });
         System.out.println("done");
     }
 }

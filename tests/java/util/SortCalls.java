@@ -119,6 +119,17 @@ public class SortCalls {
         log.setLength(0); calls = 0;
         Arrays.sort(a);
         System.out.println("final merging of " + late.length + " runs: " + result(a, a.length));
+        // final merging where the two candidate runs are equally long
+        int[] tie = {83, 32, 770, 1000, 1000, 200, 33, 200, 500, 459, 33, 1000, 1000, 500, 500, 200, 200, 64, 845, 64,
+            1000, 100, 288, 33, 33, 32, 100, 33, 200, 126};
+        List<Integer> tv = new ArrayList<>();
+        for (int len : tie) for (int j = 0; j < len; j++) tv.add(j);
+        int[] tr2 = new int[tv.size()];
+        for (int i = 0; i < tr2.length; i++) tr2[i] = tv.get(i);
+        a = elems(tr2);
+        log.setLength(0); calls = 0;
+        Arrays.sort(a);
+        System.out.println("final merging with a tie: " + result(a, a.length));
         System.out.println("done");
     }
 }

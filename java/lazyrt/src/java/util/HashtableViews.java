@@ -101,6 +101,9 @@ final class HashtableViews {
         private final Hashtable<K, V> t;
 
         Entries(Hashtable<K, V> t) { this.t = t; }
+
+        // Spec 2.T5: the element is cast to Map.Entry before add refuses it.
+        public boolean add(Map.Entry<K, V> e) { return super.add(e); }
         public Iterator<Map.Entry<K, V>> iterator() { return t.iterator(e -> e); }
         public int size() { return t.size(); }
 

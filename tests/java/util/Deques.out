@@ -84,4 +84,6 @@ lifo queue: [3, 2, 1] 3 2 2
 equals: false true false
 slots (size at which addFirst disturbs an iterator): (0)8 (1)8 (7)8 (8)16 (9)16 (15)16 (16)32 (17)32 (100)128 coll1=8 coll7=8 coll8=16 coll16=32 default 8/16 grown-then-drained 64
 remove at the middle (tie): CME [a, b, d]
+iterator remove after a change: none=ok[2, 3, 4, 5, 6] pollFirst=CME[2, 3, 4, 5, 6] pollLast=ok[2, 3, 4, 5] remove 3=CME[1, 2, 4, 5, 6] remove 1=CME[2, 3, 4, 5, 6] clear and refill=ok[20, 30, 40, 50, 60]
+descending next after pollLast:  ConcurrentModificationException 4 3 2 1  NoSuchElementException | then forEachRemaining CME, then 4321
 done

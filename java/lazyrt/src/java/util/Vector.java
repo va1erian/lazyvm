@@ -141,20 +141,21 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
         elementData[index] = obj;
     }
 
+    // Spec 9.F1: Vector's index removals and insertions count as a change even when the index is bad.
     public synchronized void removeElementAt(int index) {
+        modCount++;
         checkLegacy(index);
         if (index < 0) {
             throw new ArrayIndexOutOfBoundsException(index);
         }
-        modCount++;
         removeSlots(index, index + 1);
     }
 
     public synchronized void insertElementAt(E obj, int index) {
+        modCount++;
         if (index > elementCount) {
             throw new ArrayIndexOutOfBoundsException(index + " > " + elementCount);
         }
-        modCount++;
         ensureRoom(elementCount + 1);
         System.arraycopy(elementData, index, elementData, index + 1, elementCount - index);
         elementData[index] = obj;
@@ -220,9 +221,9 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
     public void add(int index, E element) { insertElementAt(element, index); }
 
     public synchronized E remove(int index) {
+        modCount++;
         checkListIndex(index);
         E old = at(index);
-        modCount++;
         removeSlots(index, index + 1);
         return old;
     }
@@ -309,4 +310,6 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
         }
         modCount++;
     }
+
+    int remainingStyle() { return 1; }
 }
