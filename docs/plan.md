@@ -283,7 +283,7 @@ Goal: the everyday `java.util` and `java.io` surface from
       `ReferenceQueue`, behaviour specified in `design/collections.md` like
       the other maps ([`design/weakhashmap.md`](design/weakhashmap.md)).
       Check: `tests/java/util/WeakMaps`, `WeakMapOrder`, `WeakMapViews` (both).
-- [ ] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
+- [x] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
       Javadoc except `%t` dates, which come with S11), `Double.toString`
       (the shortest form its Javadoc asks for, D9), `Integer.parseInt` and friends,
       `StringJoiner`, `String.split` (literal patterns exist since S5-01;
@@ -300,9 +300,10 @@ Goal: the everyday `java.util` and `java.io` surface from
       State (branch `s5-util`): `Optional*`, `Objects`, `Random` R3, `Base64`, `UUID`,
       `BitSet`, `StringTokenizer` and `InputMismatchException` are built; Utilities,
       Base64s, Base64Streams, Uuids, BitSets, Tokenizers and RandomSeq pass on both
-      (`StrictMath` stays on `libm`, decisions.md D13). `Scanner` waits for S5-03 regex / S5-05;
+      (`StrictMath` stays on `libm`, decisions.md D13). `Scanner` waits for S5-05;
       `Properties` waits for S5-05 (and `java.util.Date` for its `store` line); UtilBuffers,
-      `Base64`'s `ByteBuffer` overloads and `BitSet.valueOf` of buffers wait for S5-06.
+      `Base64`'s `ByteBuffer` overloads and `BitSet.valueOf` of buffers wait for S5-06. Until
+      then their tests sit in [`tests/pending`](../tests/pending/README.md).
 - [ ] S5-05 `java.io`: byte and char streams, `Buffered*`, `InputStreamReader`
       and `OutputStreamWriter` over the charsets, `File`, `FileInputStream`,
       `FileOutputStream`, `RandomAccessFile`, `Data*Stream`, `PrintWriter`,
@@ -326,6 +327,16 @@ Goal: the everyday `java.util` and `java.io` surface from
       pressure), `ReferenceQueue`, and finalization not supported (documented:
       `finalize` is never called).
       Check: `tests/java/lang/WeakRefs`.
+
+- [ ] S5-09 `java.util.regex` engine: an explicit backtrack stack (no recursion per
+      iteration, so a non-flat loop runs as deep as the heap allows instead of
+      about 500 to 2000 iterations), and the loop memo extended across lookarounds
+      and possessive repeats (so `(?:a|a*)*b(?=c)` stops being exponential).
+      Behaviour stays as pinned by the `Regex*` goldens; see "Known gaps" in
+      `docs/regex.md` for the measured limits.
+      Check: the `Regex*` goldens unchanged, plus `tests/java/util/RegexDepth`
+      (100000 iterations of `(?:(a)b)*`, `(a)\1*`, `(?:(?=a)a)*`) and a timed
+      `RegexMemo` row for `(?:a|a*)*b(?=c)` on 30 `a`.
 
 Gate: `tests/java/s5/WordCount` (reads a 5 MB file, counts with `HashMap`,
 prints the top 20 with `printf`) matches the oracle on both platforms.

@@ -1,0 +1,45 @@
+(\d)+ x200000 -> true
+([a-z])* x200000 -> true
+(.)* x200000 -> true
+(a|b)* x400 -> true
+(?:ab)*+ x100000 -> true
+(?>a|b)* x100000 -> true
+a* x100000 -> true
+(\w+\s?)* x800 -> true
+(?:ab|c)* x800 -> true
+(ab|c)* x800 -> true
+(?:a|b)*?c x0 -> false
+(?:ab+;?)* x800 -> true
+(?:(a)b)* x500 -> true
+\R+ x20000 -> true
+\R+ x20000 -> true
+(?:\R\d)* x5000 -> true
+(?:x+x+)+y x22 false
+(?:x+x+)+y x26 false
+(.*?,){11}P x20 false
+(a+)+b x26 false
+(a|aa)+$ x26 false
+(a*)*b x26 false
+(?:a|ab)+c x13 false
+(?:(a)(a)?)+b x30 false
+true
+false true true
+false 1 false
+1 1
+true true
+2000 102000 15000
+0 2000 24000 16000
+true 2 3999 4000
+true [cd] 3000 3002
+true c 2099
+true false false true false
+true true true true
+true true
+nesting 10 true true true true true
+nesting 300 true true true true true
+true 200 a a 0
+repeated resets over a String 300 fast
+nesting 20000 ( Stack overflow during pattern compilation, index inside, full message
+nesting 20000 (?= Stack overflow during pattern compilation, index inside, full message
+nesting 20000 (?<= Stack overflow during pattern compilation, index inside, full message
+done
