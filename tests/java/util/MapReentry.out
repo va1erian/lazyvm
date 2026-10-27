@@ -1,0 +1,30 @@
+HashMap computeIfAbsent removes another key: 71 -> {1=10, 3=30, 4=40, 7=71} size 4 consistent
+HashMap computeIfAbsent clears: 71 -> {7=71} size 1 consistent
+HashMap computeIfAbsent puts another key: 71 -> {1=10, 2=20, 3=30, 4=40, 7=71, 8=80} size 6 consistent
+HashMap computeIfPresent removes the key: 31 -> {1=10, 2=20, 4=40} size 3 consistent
+HashMap computeIfPresent removes and puts back the key: 31 -> {1=10, 2=20, 3=32, 4=40} size 4 consistent
+HashMap computeIfPresent clears: 31 -> {} size 0 consistent
+HashMap compute removes the key: 33 -> {1=10, 2=20, 4=40} size 3 consistent
+HashMap compute clears, returns null: null -> {} size 0 consistent
+HashMap merge removes the key: 25 -> {1=10, 3=30, 4=40} size 3 consistent
+HashMap merge clears: 25 -> {} size 0 consistent
+LinkedHashMap computeIfAbsent removes another key: 71 -> {1=10, 3=30, 4=40, 7=71} size 4 consistent
+LinkedHashMap computeIfAbsent clears: 71 -> {7=71} size 1 consistent
+LinkedHashMap computeIfAbsent puts another key: 71 -> {1=10, 2=20, 3=30, 4=40, 8=80, 7=71} size 6 consistent
+LinkedHashMap computeIfPresent removes the key: 31 -> {1=10, 2=20, 4=40} size 3 consistent
+LinkedHashMap computeIfPresent removes and puts back the key: 31 -> {1=10, 2=20, 4=40, 3=32} size 4 consistent
+LinkedHashMap computeIfPresent clears: 31 -> {} size 0 consistent
+LinkedHashMap compute removes the key: 33 -> {1=10, 2=20, 4=40} size 3 consistent
+LinkedHashMap compute clears, returns null: null -> {} size 0 consistent
+LinkedHashMap merge removes the key: 25 -> {1=10, 3=30, 4=40} size 3 consistent
+LinkedHashMap merge clears: 25 -> {} size 0 consistent
+Hashtable computeIfAbsent removes another key: 71 -> {7=71, 4=40, 3=30, 1=10} size 4 consistent
+Hashtable computeIfAbsent clears: 71 -> {7=71} size 1 consistent
+Hashtable computeIfAbsent puts another key: 71 -> {8=80, 7=71, 4=40, 3=30, 2=20, 1=10} size 6 consistent
+Hashtable computeIfPresent removes the key: 31 -> {4=40, 2=20, 1=10} size 3 consistent
+Hashtable computeIfPresent removes and puts back the key: 31 -> {4=40, 3=32, 2=20, 1=10} size 4 consistent
+Hashtable computeIfPresent clears: 31 -> {} size 0 consistent
+Hashtable compute removes the key: 33 -> {4=40, 2=20, 1=10} size 3 consistent
+Hashtable merge removes the key: 25 -> {4=40, 3=30, 1=10} size 3 consistent
+Hashtable merge clears: 25 -> {} size 0 consistent
+done

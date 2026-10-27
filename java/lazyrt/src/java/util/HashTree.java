@@ -18,26 +18,104 @@ final class HashTree {
     }
 
     // Spec 1.H6: tree order of key k (mixed hash h) against node p; negative means k goes left.
-    @SuppressWarnings({"unchecked", "rawtypes"})
     static int order(int h, Object k, HashMap.Cell<?, ?> p) {
         if (h != p.hash) {
             return h < p.hash ? -1 : 1;
         }
-        Object pk = p.key;
+        int r = compared(k, p.key);
+        return r != 0 ? r : tieBreak(k, p.key);
+    }
+
+    /** Spec 1.H6 step 2: k.compareTo(pk) for two keys of one qualifying class, else 0. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static int compared(Object k, Object pk) {
+        if (k != null && pk != null && k.getClass() == pk.getClass() && qualifies(k.getClass())) {
+            return ((Comparable) k).compareTo(pk);
+        }
+        return 0;
+    }
+
+    /** Spec 1.H6 steps 3 and 4: class names, then identity hashes. */
+    private static int tieBreak(Object k, Object pk) {
         if (k != null && pk != null) {
-            Class<?> c = k.getClass();
-            if (c == pk.getClass() && qualifies(c)) {
-                int r = ((Comparable) k).compareTo(pk);
-                if (r != 0) {
-                    return r;
-                }
-            }
-            int r = c.getName().compareTo(pk.getClass().getName());
+            int r = k.getClass().getName().compareTo(pk.getClass().getName());
             if (r != 0) {
                 return r;
             }
         }
         return System.identityHashCode(k) <= System.identityHashCode(pk) ? -1 : 1;
+    }
+
+    /**
+     * Spec 1.H6, section 12: the entry for key k in the tree under p. It goes down by mixed hash and,
+     * for two keys of one qualifying class, by compareTo; where neither decides (equal hashes and
+     * no usable or a zero compareTo), it searches the right side and then goes on to the left.
+     * Keys of one qualifying class are so found in logarithmic time, which tree bins are for.
+     */
+    static <K, V> HashMap.Cell<K, V> lookup(HashMap.Cell<K, V> p, int h, Object k) {
+        while (p != null) {
+            if (h != p.hash) {
+                p = child(p, h < p.hash);
+                continue;
+            }
+            if (Objects.equals(k, p.key)) {
+                return p;
+            }
+            int r = compared(k, p.key);
+            if (r != 0) {
+                p = child(p, r < 0);
+                continue;
+            }
+            HashMap.Cell<K, V> q = lookup(child(p, false), h, k);
+            if (q != null) {
+                return q;
+            }
+            p = child(p, true);
+        }
+        return null;
+    }
+
+    /**
+     * Spec 1.H8: put-style insertion of k into tree bin i in a single descent, the one that places
+     * a new key (so it makes H6's compareTo calls and no more): returns the entry already holding k,
+     * or null once a new entry for k and v hangs where the descent ended.
+     */
+    static <K, V> HashMap.Cell<K, V> putIn(HashMap<K, V> owner, HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots,
+            int i, int h, K k, V v) {
+        HashMap.Cell<K, V> p = roots[i];
+        boolean searched = false;
+        while (true) {
+            int r;
+            if (h != p.hash) {
+                r = h < p.hash ? -1 : 1;
+            } else if (Objects.equals(k, p.key)) {
+                return p;
+            } else if ((r = compared(k, p.key)) == 0) {
+                if (!searched) {
+                    searched = true;
+                    HashMap.Cell<K, V> q = lookup(child(p, true), h, k);
+                    q = q != null ? q : lookup(child(p, false), h, k);
+                    if (q != null) {
+                        return q;
+                    }
+                }
+                r = tieBreak(k, p.key);
+            }
+            HashMap.Cell<K, V> next = child(p, r < 0);
+            if (next == null) {
+                HashMap.Cell<K, V> n = owner.makeCell(h, k, v);
+                owner.modCount++;
+                RedBlack.attach(p, n, r < 0);
+                hangAfter(table, roots, i, p, n);
+                return null;
+            }
+            p = next;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <K, V> HashMap.Cell<K, V> child(HashMap.Cell<K, V> p, boolean left) {
+        return (HashMap.Cell<K, V>) (left ? p.left : p.right);
     }
 
     // Spec 1.H6: String, or a class that itself declares Comparable<itself>.
@@ -101,11 +179,15 @@ final class HashTree {
 
     // Spec 1.H8: a new key goes into the tree and, in the sequence, right after its parent.
     static <K, V> void insert(HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots, int i, HashMap.Cell<K, V> n) {
-        HashMap.Cell<K, V> root = roots[i];
-        HashMap.Cell<K, V> p = attach(root, n);
+        hangAfter(table, roots, i, attach(roots[i], n), n);
+    }
+
+    /** Spec 1.H8: n, just attached under p, follows p in the sequence; the tree is then rebalanced. */
+    private static <K, V> void hangAfter(HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots, int i, HashMap.Cell<K, V> p,
+            HashMap.Cell<K, V> n) {
         n.next = p.next;
         p.next = n;
-        root = (HashMap.Cell<K, V>) RedBlack.fixInsert(root, n);
+        HashMap.Cell<K, V> root = (HashMap.Cell<K, V>) RedBlack.fixInsert(roots[i], n);
         roots[i] = root;
         rootFirst(table, i, root);
     }
@@ -130,6 +212,29 @@ final class HashTree {
             roots[i] = null;
         } else if (mapStyle) {
             rootFirst(table, i, root);
+        }
+    }
+
+    /**
+     * Spec 1.H2, H5, H12: moves each bin of the old table into the new one, emptying the old bin as
+     * it goes (so a walk over the old table ends early, spec 9.F3).
+     */
+    static <K, V> void spread(HashMap<K, V> owner, HashMap.Cell<K, V>[] old, HashMap.Cell<K, V>[] oldRoots,
+            HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots) {
+        int oldN = old == null ? 0 : old.length;
+        for (int j = 0; j < oldN; j++) {
+            HashMap.Cell<K, V> bin = old[j];
+            if (bin == null) {
+                continue;
+            }
+            old[j] = null;
+            if (oldRoots != null && oldRoots[j] != null) {
+                divide(owner, bin, oldRoots[j], j, oldN, table, roots);
+            } else {
+                HashMap.Cell<K, V>[] two = halves(bin, oldN);
+                table[j] = two[0];
+                table[j + oldN] = two[1];
+            }
         }
     }
 

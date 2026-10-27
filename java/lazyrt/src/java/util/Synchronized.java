@@ -142,9 +142,37 @@ final class Synchronized {
         public V remove(Object key) { synchronized (mutex) { return m.remove(key); } }
         public void putAll(Map<? extends K, ? extends V> map) { synchronized (mutex) { m.putAll(map); } }
         public void clear() { synchronized (mutex) { m.clear(); } }
-        public Set<K> keySet() { synchronized (mutex) { return new SSet<K>(m.keySet(), mutex); } }
-        public Set<Map.Entry<K, V>> entrySet() { synchronized (mutex) { return new SSet<Map.Entry<K, V>>(m.entrySet(), mutex); } }
-        public Collection<V> values() { synchronized (mutex) { return new SColl<V>(m.values(), mutex); } }
+        // Spec 10.X8: each view is made once (a navigable map's keySet is the exception).
+        private transient Set<K> keys;
+        private transient Set<Map.Entry<K, V>> pairs;
+        private transient Collection<V> vals;
+
+        public Set<K> keySet() {
+            synchronized (mutex) {
+                if (keys == null) {
+                    keys = new SSet<K>(m.keySet(), mutex);
+                }
+                return keys;
+            }
+        }
+
+        public Set<Map.Entry<K, V>> entrySet() {
+            synchronized (mutex) {
+                if (pairs == null) {
+                    pairs = new SSet<Map.Entry<K, V>>(m.entrySet(), mutex);
+                }
+                return pairs;
+            }
+        }
+
+        public Collection<V> values() {
+            synchronized (mutex) {
+                if (vals == null) {
+                    vals = new SColl<V>(m.values(), mutex);
+                }
+                return vals;
+            }
+        }
         public boolean equals(Object o) { if (this == o) { return true; } synchronized (mutex) { return m.equals(o); } }
         public int hashCode() { synchronized (mutex) { return m.hashCode(); } }
         public String toString() { synchronized (mutex) { return m.toString(); } }
@@ -188,6 +216,9 @@ final class Synchronized {
             super(m, mutex);
             nm = m;
         }
+
+        // Spec 10.X8: a navigable map's keySet is a new navigableKeySet() each time.
+        public Set<K> keySet() { return navigableKeySet(); }
 
         public Map.Entry<K, V> lowerEntry(K key) { synchronized (mutex) { return nm.lowerEntry(key); } }
         public K lowerKey(K key) { synchronized (mutex) { return nm.lowerKey(key); } }

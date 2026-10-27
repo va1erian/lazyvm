@@ -28,6 +28,52 @@ public class ArrayListSubclass {
         String quiet() { on = false; try { return super.toString(); } finally { on = true; } }
     }
 
+    /** Logs the overridable methods that ArrayList's and Vector's own bulk methods might call. */
+    interface Wide { }
+
+    static final class WideList<E> extends ArrayList<E> implements Wide {
+        WideList(Collection<E> c) { super(c); }
+        public int indexOf(Object o) { log.append("indexOf "); return super.indexOf(o); }
+        public boolean contains(Object o) { log.append("contains "); return super.contains(o); }
+        public boolean removeIf(java.util.function.Predicate<? super E> p) { log.append("removeIf "); return super.removeIf(p); }
+        public boolean addAll(int i, Collection<? extends E> c) { log.append("addAll@ "); return super.addAll(i, c); }
+        public ListIterator<E> listIterator(int i) { log.append("listIterator(i) "); return super.listIterator(i); }
+        public ListIterator<E> listIterator() { log.append("listIterator() "); return super.listIterator(); }
+        public Iterator<E> iterator() { log.append("iterator "); return super.iterator(); }
+        public E remove(int i) { log.append("remove@ "); return super.remove(i); }
+        public int size() { log.append("size "); return super.size(); }
+        public E get(int i) { log.append("get "); return super.get(i); }
+    }
+
+    static final class WideVector<E> extends Vector<E> implements Wide {
+        WideVector(Collection<E> c) { super(c); }
+        public int indexOf(Object o) { log.append("indexOf "); return super.indexOf(o); }
+        public boolean contains(Object o) { log.append("contains "); return super.contains(o); }
+        public boolean removeIf(java.util.function.Predicate<? super E> p) { log.append("removeIf "); return super.removeIf(p); }
+        public boolean addAll(int i, Collection<? extends E> c) { log.append("addAll@ "); return super.addAll(i, c); }
+        public ListIterator<E> listIterator(int i) { log.append("listIterator(i) "); return super.listIterator(i); }
+        public ListIterator<E> listIterator() { log.append("listIterator() "); return super.listIterator(); }
+        public Iterator<E> iterator() { log.append("iterator "); return super.iterator(); }
+        public E remove(int i) { log.append("remove@ "); return super.remove(i); }
+        public int size() { log.append("size "); return super.size(); }
+        public E get(int i) { log.append("get "); return super.get(i); }
+    }
+
+    /** contains answers from `in` and throws on call number k. */
+    static Collection<Object> failingOn(int k, Set<Object> in) {
+        return new AbstractCollection<Object>() {
+            int n;
+            public boolean contains(Object o) {
+                if (++n == k) {
+                    throw new IllegalStateException("call " + k);
+                }
+                return in.contains(o);
+            }
+            public Iterator<Object> iterator() { return in.iterator(); }
+            public int size() { return in.size(); }
+        };
+    }
+
     public static void main(String[] args) {
         Logged<Integer> l = new Logged<>(Arrays.asList(3, 1, 2));
         t("for-each", () -> { int s = 0; for (Integer x : l) s += x; return s; });
@@ -50,6 +96,28 @@ public class ArrayListSubclass {
         t("copy and clone", () -> new ArrayList<>(l).size() + " " + ((Logged<?>) l.clone()).quiet());
         t("iterator remove", () -> { Iterator<Integer> it = l.iterator(); it.next(); it.remove(); return l.quiet(); });
         t("listIterator add and set", () -> { ListIterator<Integer> it = l.listIterator(); it.add(7); it.next(); it.set(8); return l.quiet(); });
+        for (int v = 0; v < 2; v++) {
+            String n = v == 0 ? "ArrayList" : "Vector";
+            List<Integer> five = Arrays.asList(3, 1, 4, 1, 5);
+            java.util.function.Supplier<List<Integer>> make = v == 0 ? () -> new WideList<>(five) : () -> new WideVector<>(five);
+            t(n + " remove(Object)", () -> make.get().remove((Object) 4));
+            t(n + " addAll", () -> make.get().addAll(Arrays.asList(7, 8)));
+            t(n + " removeAll", () -> { List<Integer> w = make.get(); log.setLength(0); return w.removeAll(Arrays.asList(1)); });
+            t(n + " retainAll", () -> { List<Integer> w = make.get(); log.setLength(0); return w.retainAll(Arrays.asList(1, 5)); });
+            t(n + " equals", () -> { List<Integer> w = make.get(); log.setLength(0); return w.equals(Arrays.asList(3, 1, 4, 1, 5)); });
+            t(n + " listIterator()", () -> { List<Integer> w = make.get(); log.setLength(0); return w.listIterator().nextIndex(); });
+            StringBuilder sb = new StringBuilder();
+            for (int k = 1; k <= 6; k++) {
+                for (int mode = 0; mode < 2; mode++) {
+                    List<Integer> b = v == 0 ? new ArrayList<>(Arrays.asList(1, 2, 3, 4, 5, 6, 7)) : new Vector<>(Arrays.asList(1, 2, 3, 4, 5, 6, 7));
+                    Collection<Object> c = failingOn(k, new HashSet<>(Arrays.asList(1, 3, 5, 7)));
+                    String r;
+                    try { r = String.valueOf(mode == 0 ? b.removeAll(c) : b.retainAll(c)); } catch (IllegalStateException e) { r = e.getMessage(); }
+                    sb.append(mode == 0 ? " removeAll " : " retainAll ").append(r).append(' ').append(b);
+                }
+            }
+            System.out.println(n + " bulk removal whose contains fails:" + sb);
+        }
         System.out.println("done");
     }
 }

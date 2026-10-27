@@ -99,6 +99,18 @@ public class ReentrantWalks {
         d.clear();
         d.addLast(24);
         System.out.println("clear of an empty deque: remove " + tr(() -> { it.remove(); return "ok"; }) + " " + d);
+        // A window of a LinkedList tracks its iterator's place itself (spec 8.C1).
+        List<Integer> base = new LinkedList<>(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7));
+        ListIterator<Integer> wl = base.subList(1, 7).subList(1, 5).listIterator();
+        StringBuilder steps = new StringBuilder();
+        steps.append(wl.next()).append(' ').append(wl.next()).append(" remove after next: ");
+        wl.remove();
+        steps.append(wl.nextIndex()).append('/').append(wl.previousIndex()).append(' ').append(wl.next()).append(" previous ").append(wl.previous());
+        wl.remove();
+        steps.append(" remove after previous: ").append(wl.nextIndex()).append(' ').append(wl.hasPrevious()).append(' ').append(wl.next());
+        wl.add(9);
+        steps.append(" add: ").append(wl.nextIndex()).append(' ').append(wl.hasNext()).append(' ').append(tr(wl::next)).append(' ').append(tr(wl::next));
+        System.out.println("window of a window iterator: " + steps + " => " + base);
         System.out.println("done");
     }
 }

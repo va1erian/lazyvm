@@ -20,6 +20,15 @@ public class EntryEquality {
         public String toString() { return n; }
     }
 
+    /** Equal by name, but each logs its own tag, so the log shows whose equals ran. */
+    static final class T {
+        final String n, tag;
+        T(String n, String tag) { this.n = n; this.tag = tag; }
+        public boolean equals(Object o) { log.append(tag).append(".eq(").append(o).append(") "); return o instanceof T && ((T) o).n.equals(n); }
+        public int hashCode() { return n.hashCode(); }
+        public String toString() { return tag; }
+    }
+
     static void t(String label, Supplier<Object> s) {
         log.setLength(0);
         String r;
@@ -81,6 +90,44 @@ public class EntryEquality {
             return (s.keySet().getClass() == one) + " " + (s.values().getClass() == one) + " " + (s.entrySet().getClass() == one) + " "
                 + (s.keySet() == s.keySet()) + " " + (s.values() == s.values()) + " " + (s.entrySet() == s.entrySet()) + " " + s.values().hashCode();
         });
+        Hashtable<W, W> keyed = new Hashtable<>();
+        keyed.put(k, v);
+        t("Hashtable get by an equal key", () -> keyed.get(k2));
+        t("Hashtable containsKey by an equal key", () -> keyed.containsKey(k2));
+        t("Hashtable put by an equal key", () -> keyed.put(k2, v));
+        t("Hashtable putIfAbsent, replace, merge, compute by an equal key", () -> keyed.putIfAbsent(k2, v) + " " + keyed.replace(k2, v) + " "
+            + keyed.merge(k2, v, (a, b) -> a) + " " + keyed.compute(k2, (a, b) -> b) + " " + keyed.computeIfPresent(k2, (a, b) -> b));
+        t("Hashtable remove by an equal key", () -> keyed.remove(k2) + " " + keyed.put(k, v));
+        t("Hashtable keySet remove by an equal key", () -> keyed.keySet().remove(k2) + " " + keyed.put(k, v));
+        t("HashMap equals a Hashtable", () -> new HashMap<>(keyed).equals(keyed));
+        for (int i = 0; i < 2; i++) {
+            Map<W, W> h = i == 0 ? new HashMap<>() : new LinkedHashMap<>();
+            h.put(k, v);
+            t(h.getClass().getSimpleName() + " replace(k, old, new) by copies", () -> h.replace(k2, v2, v));
+        }
+        TreeMap<W, W> tn = new TreeMap<>();
+        tn.put(k, v);
+        tn.put(new W("m"), new W("w"));
+        t("TreeMap entrySet contains, null value", () -> tn.entrySet().contains(new AbstractMap.SimpleEntry<W, W>(k2, null)));
+        t("TreeMap entrySet remove, a copy", () -> tn.entrySet().remove(new AbstractMap.SimpleEntry<>(k2, v2)) + " " + tn.put(k, v));
+        t("TreeMap subMap entrySet contains, a copy", () -> tn.subMap(k, true, new W("z"), true).entrySet().contains(new AbstractMap.SimpleEntry<>(k2, v2)));
+        t("TreeMap descendingMap entrySet remove, a copy", () -> tn.descendingMap().entrySet().remove(new AbstractMap.SimpleEntry<>(k2, v2)) + " " + tn.size());
+        IdentityHashMap<W, W> two = new IdentityHashMap<>();
+        two.put(k, v);
+        two.put(bad, v);
+        HashMap<W, W> one = new HashMap<>();
+        one.put(k, v);
+        t("IdentityHashMap of two equals a HashMap of one", () -> two.equals(one) + " " + one.equals(two));
+        T stored = new T("k", "storedKey"), probe = new T("k", "probeKey"), sv = new T("v", "storedValue"), pv = new T("v", "probeValue");
+        Hashtable<T, T> tagged = new Hashtable<>();
+        tagged.put(stored, sv);
+        t("Hashtable get, whose equals", () -> tagged.get(probe));
+        t("Hashtable remove(k, v), whose equals", () -> tagged.remove(probe, pv) + " " + tagged.put(stored, sv));
+        HashMap<T, T> taggedHash = new HashMap<>();
+        taggedHash.put(stored, sv);
+        t("HashMap get, whose equals", () -> taggedHash.get(probe));
+        t("HashMap replace(k, old, new), whose equals", () -> taggedHash.replace(probe, pv, sv));
+        t("HashMap remove(k, v), whose equals", () -> taggedHash.remove(probe, pv));
         System.out.println("done");
     }
 }

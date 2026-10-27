@@ -1,0 +1,19 @@
+HashMap computeIfAbsent puts the key: 71 -> size 6 walked 6 consistent get 71 80
+HashMap compute puts the key: 71 -> size 6 walked 6 consistent get 71 80
+HashMap computeIfAbsent puts many keys: 71 -> size 46 walked 46 consistent get 71 80
+HashMap computeIfPresent puts many keys: 81 -> size 45 walked 45 consistent get null 81
+HashMap merge clears and puts the key: 81 -> size 1 walked 1 consistent get null 82
+HashMap compute clears, returns null: null -> size 0 walked 0 consistent get null null
+LinkedHashMap computeIfAbsent puts the key: 71 -> size 6 walked 6 consistent get 71 80
+LinkedHashMap compute puts the key: 71 -> size 6 walked 6 consistent get 71 80
+LinkedHashMap computeIfAbsent puts many keys: 71 -> size 46 walked 46 consistent get 71 80
+LinkedHashMap computeIfPresent puts many keys: 81 -> size 45 walked 45 consistent get null 81
+LinkedHashMap merge clears and puts the key: 81 -> size 1 walked 1 consistent get null 82
+LinkedHashMap compute clears, returns null: null -> size 0 walked 0 consistent get null null
+Hashtable computeIfAbsent puts the key: 71 -> size 6 walked 6 consistent get 71 80
+Hashtable compute puts the key: 71 -> size 6 walked 6 consistent get 71 80
+Hashtable computeIfAbsent puts many keys: 71 -> size 46 walked 46 consistent get 71 80
+Hashtable computeIfPresent puts many keys: 81 -> size 45 walked 45 consistent get null 81
+Hashtable merge clears and puts the key: 81 -> size 1 walked 1 consistent get null 82
+Hashtable compute clears, returns null: null -> size 0 walked 0 consistent get null null
+done

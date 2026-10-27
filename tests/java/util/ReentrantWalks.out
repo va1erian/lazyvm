@@ -37,4 +37,5 @@ checked wrapper over LinkedList, removal at the last element: listIterator Concu
 window walk over shrunk storage: ConcurrentModificationException saw []
 deque remove after the walked slot left: after 1 next ok[2] after 2 next ok[1] after 3 next ConcurrentModificationException[1, 2]
 clear of an empty deque: remove ConcurrentModificationException [24]
+window of a window iterator: 2 3 remove after next: 1/0 4 previous 4 remove after previous: 1 true 5 add: 3 false NoSuchElementException NoSuchElementException => [0, 1, 2, 5, 9, 6, 7]
 done

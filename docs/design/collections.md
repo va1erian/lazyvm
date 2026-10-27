@@ -343,10 +343,17 @@ ArrayList itself, by contrast, works on its storage and its size field: on a sub
 `get`, `size`, `isEmpty` or `set`, its iterators, `forEachRemaining`, `forEach`, `toString`,
 `hashCode`, `equals`, `indexOf`, `contains`, `toArray`, `subList` (and the window's `get`), `sort`,
 `clone` and the copy constructor call none of them, and `set(i, e)` and `remove(i)` do not call
-`get`. The calls that do reach a subclass are those the iterators make to change the list
+`get`. Nor do `remove(Object)`, `addAll(c)`, `removeAll`, `retainAll` and `listIterator()` call any
+overridable method (`indexOf`, `addAll(i, c)`, `removeIf`, `listIterator(i)`). The calls that do
+reach a subclass are `contains`'s call of `indexOf`, those the iterators make to change the list
 (`remove(i)`, `set(i, e)`, `add(i, e)`) and those of the Collections algorithms as C2 lists them
 (`reverse`: `size`, then `get` and two `set`s per swap; `binarySearch`: `size`, then `get`).
-Pinned by: ArrayListSubclass.
+ArrayList's `removeAll` and `retainAll` ask `c.contains` about each element in order and then close
+the gaps: if `contains` throws, the elements it already judged to leave have left and the rest
+stay. Vector differs: its iterators also read the storage and the count, but `remove(Object)` asks
+its own `indexOf(Object)`, and `removeAll`/`retainAll` walk `iterator()` and remove each leaving
+element through it (one `remove(i)` each), so a failing `contains` likewise leaves the earlier
+removals done. Pinned by: ArrayListSubclass.
 
 **C2.** The calls each algorithm makes on a list `l` of size `n` (indexed form unless noted; "RA"
 means `l instanceof RandomAccess`). Pinned by: CollectionsCallLog, CollectionsCalls.
@@ -379,10 +386,16 @@ found. Per map type:
 - TreeMap entries: key and value are compared with the stored object's `equals` alone, without a
   shortcut for the entry itself, so such an entry is not even equal to itself. `values().remove(o)`
   asks each stored value's `equals(o)`, where other maps' value views ask `o.equals(stored)`.
-- Hashtable: `contains`, `containsValue` and `values().contains` ask the stored value's
-  `equals(probe)`; `entrySet().contains` and `remove` compare the given entry once with each entry
-  of its key's chain (the stored key's and value's `equals`), without a separate key lookup.
-- IdentityHashMap `equals(m)` for a map that is not an IdentityHashMap compares sizes, then looks up
+  `entrySet().contains` and `remove`, on the map and on its range and descending views, find the
+  key, then ask the stored value's `equals` about the given value, even when that is null.
+- HashMap `replace(k, old, new)`: identity first, then the stored value's `equals(old)`.
+- Hashtable: key lookups (`get`, `containsKey`, `put`, `remove`, `putIfAbsent`, `replace`, the
+  compute family, `merge`, `keySet().remove`, and so a HashMap's `equals` of a Hashtable) ask the
+  stored key's `equals(probe)`. `contains`, `containsValue` and `values().contains` ask the stored
+  value's `equals(probe)`; `entrySet().contains` and `remove` compare the given entry once with each
+  entry of its key's chain (the stored key's and value's `equals`), without a separate key lookup.
+- IdentityHashMap `equals(m)` for a map that is not an IdentityHashMap compares sizes (so a map of
+  two keys never equals a map of one), then looks up
   each of `m`'s entries here by identity, calling no `equals`.
 
 Pinned by: CollectionsCallLog ("receiver …"), Lists ("HashMap values compared by identity first"),
@@ -481,7 +494,9 @@ a copy with the same runtime type as the backing array. Pinned by: ArraysUtil, L
 absent: they are stored unchecked. When `k` is present, `f`'s result is checked. `computeIfAbsent`,
 `compute` and `putIfAbsent` check what they store. Its `entrySet().add(x)` casts `x` to `Map.Entry`
 (`ClassCastException` for a non-entry) and then refuses with `UnsupportedOperationException`, as does
-`entrySet().addAll`. Pinned by: CheckedViews ("merge …", "entrySet add").
+`entrySet().addAll`. Its `putAll` checks every entry first, then puts them one at a time, so a
+HashMap underneath is not sized for the batch as its own `putAll` would be (H4). Pinned by:
+CheckedViews ("merge …", "entrySet add"), WrapperViews ("putAll into an empty HashMap …").
 
 **X5.** `toString` prints `(this Collection)` or `(this Map)` for an element, key or value that is
 the very object being printed; any other path back (a view, a wrapper, another collection) recurses
@@ -510,6 +525,19 @@ and `emptyList().listIterator()` is `emptyListIterator()`. All three views of `e
 `emptySet()` itself; `singletonMap`'s three views are one-element sets (`values()` included), each
 made once. Pinned by: CollectionsUtil ("empty iterator kinds", "list
 iterator kinds", "checked iterator forEachRemaining").
+
+**X8.** The wrapper maps make their views once: the `keySet`, `values` and `entrySet` of
+`unmodifiableMap`, `unmodifiableSortedMap`, `unmodifiableNavigableMap`, `synchronizedMap` and
+`synchronizedSortedMap`, and the `values` and `entrySet` of `synchronizedNavigableMap`; a checked
+map hands on its map's `keySet` and `values` and makes its `entrySet` once. The synchronized and
+checked navigable maps return a new `navigableKeySet()` for each `keySet()`, and every navigable
+wrapper a new `navigableKeySet`, `descendingKeySet` and `descendingMap` each time.
+`emptySortedMap()` and `emptyNavigableMap()` are one shared map, whose `navigableKeySet` too is made
+once, and `emptySortedSet()` and `emptyNavigableSet()` one shared set. `singletonMap(k, v).replaceAll`
+throws `UnsupportedOperationException` without calling the function (or checking it for null). A
+checked map's `entrySet().remove` of something that is not an entry (null included) returns false;
+of an entry it hands the call on. The unmodifiable entry set's `forEach` hands the walk on to the
+map's own, so it ends as that map's does (spec 9.F3). Pinned by: WrapperViews.
 
 ## 11. Exception types and messages
 
@@ -545,15 +573,21 @@ and the hidden Random of `Collections.shuffle(l)`; and identity hash codes thems
 use of them is fixed).
 
 Observable but left free: which `compareTo` calls a HashMap makes to find an existing key in a
-tree bin. The oracle's lookups call it on keys of the bin (a key that logs its calls sees them),
-and so do its compute-family insertions before they insert; this specification pins only the
-calls of H6 to H8 insertion, and LazyVM finds keys by hash and `equals` alone.
+tree bin. This specification pins only the calls of H6 to H8 insertion: a `put`-style insertion
+finds the key and the place for a new one in a single descent, so it makes exactly those calls. A
+lookup goes down the tree by mixed hash and, for two keys of one qualifying class, by `compareTo`;
+where neither decides it searches both sides. So for keys of one qualifying class even a bin
+holding every key costs logarithmic time per lookup, which is what tree bins are for (spec 1.H7).
+Pinned by: HashTreeLookups, HashTreeRules ("compareTo calls").
 
-Also left free: what a HashMap compute-family call (`computeIfAbsent`, `computeIfPresent`, `compute`,
-`merge`) stores, and what the map then holds, when its function changes the map structurally (for
-example clears it or adds keys). The oracle can bring back entries that were removed, or store a key
-that its lookups then miss; LazyVM keeps the map consistent (every key a walk shows is found), and
-which entries it then holds is its own.
+What a compute-family call (`computeIfAbsent`, `computeIfPresent`, `compute`, `merge`) of a HashMap,
+LinkedHashMap or Hashtable stores when its function changes the map structurally. LazyVM's rule:
+the key is looked up again after the function returns. If the call started from an entry that has
+since left the map, the function's result is dropped (what the function itself put stays). If the
+key had no entry, the result goes to an entry the function added for it, or else a new one. The map
+always stays consistent. This matches the oracle wherever the oracle's own map stays consistent
+(pinned by MapReentry). In other cases the oracle keeps a key twice, loses one, or ends with a
+wrong size; LazyVM's outcome there is pinned by lazy.util.ReentrantCompute.
 
 Re-entrant changes. Fail-fast checking is best effort (the Javadoc says so). When a callback (an
 action, a comparator, a function) changes the very collection being walked, LazyVM matches the
@@ -562,7 +596,12 @@ and a test pins it. Beyond that, the exact point at which such a walk notices th
 whether one more element is visited or the exception comes one call later, is left free, on three
 conditions: the change never yields wrong data (a wrong element removed or returned, an element
 lost or seen twice beyond what the walk's description allows), never a crash or a hang, and never
-leaves the collection in a broken state without a ConcurrentModificationException.
+leaves the collection in a broken state without a ConcurrentModificationException. Two known
+cases: when an iterator's own removals inside its `forEachRemaining` leave it past the end, the
+oracle's `previous()` can return a cleared slot or an element outside a sublist where LazyVM throws
+NoSuchElementException; and when a `removeAll` or `retainAll` argument changes an ArrayList from
+`contains`, the oracle may fail with ArrayIndexOutOfBoundsException and a scrambled list where
+LazyVM throws ConcurrentModificationException and removes nothing.
 
 ## 13. API to provide
 

@@ -166,11 +166,32 @@ final class Unmodifiable {
         public boolean equals(Object o) { return o == this || m.equals(o); }
         public int hashCode() { return m.hashCode(); }
         public String toString() { return m.toString(); }
-        public Set<K> keySet() { return new USet<K>(m.keySet()); }
-        public Collection<V> values() { return new Coll<V>(m.values()); }
+        // Spec 10.X8: each view is made once.
+        private transient Set<K> keys;
+        private transient Collection<V> vals;
+        private transient Set<Map.Entry<K, V>> pairs;
+
+        public Set<K> keySet() {
+            if (keys == null) {
+                keys = new USet<K>(m.keySet());
+            }
+            return keys;
+        }
+
+        public Collection<V> values() {
+            if (vals == null) {
+                vals = new Coll<V>(m.values());
+            }
+            return vals;
+        }
 
         @SuppressWarnings({"unchecked", "rawtypes"})
-        public Set<Map.Entry<K, V>> entrySet() { return new UEntrySet<K, V>((Set) m.entrySet()); }
+        public Set<Map.Entry<K, V>> entrySet() {
+            if (pairs == null) {
+                pairs = new UEntrySet<K, V>((Set) m.entrySet());
+            }
+            return pairs;
+        }
 
         @SuppressWarnings("unchecked")
         public V getOrDefault(Object k, V defaultValue) { return ((Map<K, V>) m).getOrDefault(k, defaultValue); }
@@ -206,6 +227,22 @@ final class Unmodifiable {
         public K firstKey() { return sm.firstKey(); }
         public K lastKey() { return sm.lastKey(); }
     }
+
+    /** Spec 10.X8: the one empty navigable map, whose navigableKeySet is made once too. */
+    @SuppressWarnings("rawtypes")
+    static final NavigableMap EMPTY_NAVIGABLE_MAP = new UNavigableMap<Object, Object>(new TreeMap<Object, Object>()) {
+        private transient NavigableSet<Object> navKeys;
+
+        public NavigableSet<Object> navigableKeySet() {
+            if (navKeys == null) {
+                navKeys = super.navigableKeySet();
+            }
+            return navKeys;
+        }
+    };
+
+    @SuppressWarnings("rawtypes")
+    static final NavigableSet EMPTY_NAVIGABLE_SET = new UNavigableSet<Object>(new TreeSet<Object>());
 
     static class UNavigableMap<K, V> extends USortedMap<K, V> implements NavigableMap<K, V> {
         private final NavigableMap<K, V> nm;
@@ -273,11 +310,11 @@ final class Unmodifiable {
             };
         }
 
+        // Spec 9.F3: handed on to the map's own forEach, each entry made read-only.
+        @SuppressWarnings("unchecked")
         public void forEach(Consumer<? super Map.Entry<K, V>> action) {
             Objects.requireNonNull(action);
-            for (Map.Entry<K, V> e : this) {
-                action.accept(e);
-            }
+            ((Set<Map.Entry<K, V>>) c).forEach(e -> action.accept(new UEntry<K, V>(e)));
         }
 
         @SuppressWarnings("unchecked")

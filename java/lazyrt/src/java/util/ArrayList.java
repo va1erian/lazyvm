@@ -89,12 +89,8 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
     E cursorGet(int i) { return at(i); }
     int cursorLimit() { return size; }
 
-    Object[] walkStorage(int i) {
-        if (i >= items.length) {
-            throw new ConcurrentModificationException();
-        }
-        return items;
-    }
+    // The walk stays below the size taken when it began, which never exceeds the storage's length.
+    Object[] walkStorage(int i) { return items; }
 
     public E set(int index, E element) {
         E old = at(index);
@@ -130,7 +126,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
     }
 
     public boolean remove(Object o) {
-        int i = indexOf(o);
+        int i = Support.indexOf(items, 0, size, o);
         if (i < 0) {
             return false;
         }
@@ -145,10 +141,11 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
         size = 0;
     }
 
-    public boolean addAll(Collection<? extends E> c) { return addAll(size, c); }
+    public boolean addAll(Collection<? extends E> c) { return insertAll(size, c); }
+    public boolean addAll(int index, Collection<? extends E> c) { return insertAll(index, c); }
 
     // Spec 9.F1: adding an empty collection still counts as a change.
-    public boolean addAll(int index, Collection<? extends E> c) {
+    private boolean insertAll(int index, Collection<? extends E> c) {
         Support.checkPosition(index, size);
         Object[] more = c.toArray();
         modCount++;
@@ -171,14 +168,51 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
         size = newSize;
     }
 
-    public boolean removeAll(Collection<?> c) {
+    public boolean removeAll(Collection<?> c) { return sift(c, false); }
+    public boolean retainAll(Collection<?> c) { return sift(c, true); }
+
+    /**
+     * Spec 9.F1, 8.C1: asks c about each element in order, then closes the gaps. If c throws, the
+     * elements it already judged still leave and the rest stay; if c changed this list, nothing
+     * leaves and ConcurrentModificationException reports it (spec 12).
+     */
+    private boolean sift(Collection<?> c, boolean keepContained) {
         Objects.requireNonNull(c);
-        return removeIf(e -> c.contains(e));
+        int expected = modCount;
+        boolean[] leaves = new boolean[size];
+        int judged = 0;
+        boolean removed = false;
+        try {
+            for (; judged < leaves.length; judged++) {
+                boolean in = c.contains(items[judged]);
+                if (modCount != expected) {
+                    throw new ConcurrentModificationException();
+                }
+                leaves[judged] = in != keepContained;
+            }
+        } finally {
+            if (modCount == expected) {
+                removed = closeGaps(leaves, judged);
+            }
+        }
+        return removed;
     }
 
-    public boolean retainAll(Collection<?> c) {
-        Objects.requireNonNull(c);
-        return removeIf(e -> !c.contains(e));
+    /** Drops each of the first `judged` elements marked in `leaves`, keeping order. */
+    private boolean closeGaps(boolean[] leaves, int judged) {
+        int w = 0;
+        for (int r = 0; r < size; r++) {
+            if (r >= judged || !leaves[r]) {
+                items[w++] = items[r];
+            }
+        }
+        if (w == size) {
+            return false;
+        }
+        Arrays.fill(items, w, size, null);
+        size = w;
+        modCount++;
+        return true;
     }
 
     @SuppressWarnings("unchecked")
@@ -213,14 +247,8 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
         modCount++;
     }
 
-    // Spec 11: a bad start names only the index; the size is read from the field (spec 8.C1).
-    public ListIterator<E> listIterator(int index) {
-        if (index < 0 || index > size) {
-            throw new IndexOutOfBoundsException("Index: " + index);
-        }
-        return cursorAt(index);
-    }
-    public ListIterator<E> listIterator() { return listIterator(0); }
+    public ListIterator<E> listIterator(int index) { return indexOnlyListIterator(index, size); }
+    public ListIterator<E> listIterator() { return cursorAt(0); }
     public Iterator<E> iterator() { return super.iterator(); }
     public List<E> subList(int fromIndex, int toIndex) {
         Support.checkSubList(fromIndex, toIndex, size);

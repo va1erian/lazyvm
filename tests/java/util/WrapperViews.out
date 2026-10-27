@@ -1,0 +1,18 @@
+unmodifiableMap: keySet= values= entrySet=
+unmodifiableSortedMap: keySet= values= entrySet=
+unmodifiableNavigableMap: keySet= values= entrySet= navigableKeySetx descendingKeySetx descendingMapx
+synchronizedMap: keySet= values= entrySet=
+synchronizedSortedMap: keySet= values= entrySet=
+synchronizedNavigableMap: keySetx values= entrySet= navigableKeySetx descendingKeySetx descendingMapx
+checkedMap: keySet= values= entrySet=
+checkedSortedMap: keySet= values= entrySet=
+checkedNavigableMap: keySetx values= entrySet= navigableKeySetx descendingKeySetx descendingMapx
+emptyNavigableMap: keySet= values= entrySet= navigableKeySet= descendingKeySetx descendingMapx
+singletonMap: keySet= values= entrySet=
+unmodifiable singletonMap: keySet= values= entrySet=
+empty sorted and navigable constants: true true true true
+singletonMap replaceAll: UnsupportedOperationException calls [] null function UnsupportedOperationException
+checked entrySet remove: of 3 false, of null false, of an entry UnsupportedOperationException
+wrapper view forEach while the map shrinks: unmodifiable keys ConcurrentModificationException [0,1,2,3,4,] unmodifiable values ConcurrentModificationException [0,1,2,3,4,] unmodifiable entries ConcurrentModificationException [0=0,1=1,2=2,3=3,4=4,] synchronized keys ConcurrentModificationException [0,1,2,3,4,] synchronized values ConcurrentModificationException [0,1,2,3,4,] synchronized entries ConcurrentModificationException [0=0,1=1,2=2,3=3,4=4,] checked keys ConcurrentModificationException [0,1,2,3,4,] checked values ConcurrentModificationException [0,1,2,3,4,] checked entries ConcurrentModificationException [0=0,]
+putAll into an empty HashMap through a wrapper, then merge: checked {1015=3, 1016=1, 1019=2} synchronized {1016=1, 1015=3, 1019=2} the map's own putAll {1016=1, 1015=3, 1019=2}
+done

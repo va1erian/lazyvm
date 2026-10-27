@@ -337,12 +337,12 @@ public class Collections {
     @SuppressWarnings("unchecked")
     public static final <K, V> Map<K, V> emptyMap() { return (Map<K, V>) EMPTY_MAP; }
     public static <E> SortedSet<E> emptySortedSet() { return emptyNavigableSet(); }
-    public static <E> NavigableSet<E> emptyNavigableSet() { return unmodifiableNavigableSet(new TreeSet<E>()); }
+    @SuppressWarnings("unchecked")
+    public static <E> NavigableSet<E> emptyNavigableSet() { return (NavigableSet<E>) Unmodifiable.EMPTY_NAVIGABLE_SET; }
     public static final <K, V> SortedMap<K, V> emptySortedMap() { return emptyNavigableMap(); }
 
-    public static final <K, V> NavigableMap<K, V> emptyNavigableMap() {
-        return unmodifiableNavigableMap(new TreeMap<K, V>());
-    }
+    @SuppressWarnings("unchecked")
+    public static final <K, V> NavigableMap<K, V> emptyNavigableMap() { return (NavigableMap<K, V>) Unmodifiable.EMPTY_NAVIGABLE_MAP; }
 
     @SuppressWarnings("unchecked")
     public static <T> Iterator<T> emptyIterator() { return (Iterator<T>) FixedCollections.NO_ITERATOR; }

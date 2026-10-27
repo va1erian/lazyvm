@@ -87,7 +87,8 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     private Link<K, V> find(Object key) {
         int h = key.hashCode();
         for (Link<K, V> e = table[bucket(h)]; e != null; e = e.next) {
-            if (e.hash == h && key.equals(e.key)) {
+            // Spec 8.C3: the stored key's equals is asked.
+            if (e.hash == h && e.key.equals(key)) {
                 return e;
             }
         }
@@ -397,11 +398,9 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         if (e != null) {
             return e.value;
         }
+        int seen = modCount;
         V v = mappingFunction.apply(key);
-        if (v != null) {
-            insertNew(key, v);
-        }
-        return v;
+        return v == null ? null : finish(seen, e, key, v);
     }
 
     public synchronized V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
@@ -410,16 +409,27 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         if (e == null) {
             return null;
         }
-        return settle(e, remappingFunction.apply(key, e.value));
+        int seen = modCount;
+        return finish(seen, e, key, remappingFunction.apply(key, e.value));
     }
 
     public synchronized V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         Objects.requireNonNull(remappingFunction);
         Link<K, V> e = find(key);
-        if (e != null) {
-            return settle(e, remappingFunction.apply(key, e.value));
+        int seen = modCount;
+        return finish(seen, e, key, remappingFunction.apply(key, e == null ? null : e.value));
+    }
+
+    // Section 12: records v for key after a remapping, as HashMap.finish does: v is dropped when
+    // the entry e it started from has left the table, and goes to an entry the function added.
+    private V finish(int seen, Link<K, V> e, K key, V v) {
+        Link<K, V> at = modCount == seen ? e : find(key);
+        if (e != null && at != e) {
+            return v;
         }
-        V v = remappingFunction.apply(key, null);
+        if (at != null) {
+            return settle(at, v);
+        }
         if (v != null) {
             insertNew(key, v);
         }
@@ -430,7 +440,8 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         Objects.requireNonNull(remappingFunction);
         Link<K, V> e = find(key);
         if (e != null) {
-            return settle(e, remappingFunction.apply(e.value, value));
+            int seen = modCount;
+            return finish(seen, e, key, remappingFunction.apply(e.value, value));
         }
         if (value != null) {
             insertNew(key, value);

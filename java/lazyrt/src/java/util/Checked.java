@@ -222,7 +222,15 @@ final class Checked {
         public String toString() { return m.toString(); }
         public V getOrDefault(Object k, V dflt) { return m.getOrDefault(k, dflt); }
         public void forEach(BiConsumer<? super K, ? super V> action) { m.forEach(action); }
-        public Set<Map.Entry<K, V>> entrySet() { return new CEntrySet<K, V>(m.entrySet(), valueClass); }
+        // Spec 10.X8: the entry set is made once.
+        private transient Set<Map.Entry<K, V>> pairs;
+
+        public Set<Map.Entry<K, V>> entrySet() {
+            if (pairs == null) {
+                pairs = new CEntrySet<K, V>(m.entrySet(), valueClass);
+            }
+            return pairs;
+        }
         public V put(K key, V value) { check(key, value); return m.put(key, value); }
         public V putIfAbsent(K key, V value) { check(key, value); return m.putIfAbsent(key, value); }
         public boolean remove(Object key, Object value) { return m.remove(key, value); }
@@ -234,7 +242,11 @@ final class Checked {
             for (Map.Entry<? extends K, ? extends V> e : t.entrySet()) {
                 copy.put(e.getKey(), checked(e.getKey(), e.getValue()));
             }
-            m.putAll(copy);
+            // Spec 10.X4: everything is checked first, then put one at a time (so a HashMap is not
+            // sized for the whole batch, as its own putAll would be, spec 1.H4).
+            for (Map.Entry<K, V> e : copy.entrySet()) {
+                m.put(e.getKey(), e.getValue());
+            }
         }
 
         public void replaceAll(BiFunction<? super K, ? super V, ? extends V> f) {
@@ -305,7 +317,8 @@ final class Checked {
 
         public int size() { return s.size(); }
         public boolean contains(Object o) { return s.contains(o); }
-        public boolean remove(Object o) { return s.remove(o); }
+        // Spec 10.X4: something that is not an entry is not in the set.
+        public boolean remove(Object o) { return o instanceof Map.Entry && s.remove(o); }
         public void clear() { s.clear(); }
 
         // Spec 10.X4: the element is cast to Map.Entry before add refuses it; addAll always refuses.
@@ -346,6 +359,9 @@ final class Checked {
             super(m, keyClass, valueClass);
             nm = m;
         }
+
+        // Spec 10.X8: a navigable map's keySet is a new navigableKeySet() each time.
+        public Set<K> keySet() { return navigableKeySet(); }
 
         public Map.Entry<K, V> lowerEntry(K key) { return entry(nm.lowerEntry(key), valueClass); }
         public K lowerKey(K key) { return nm.lowerKey(key); }

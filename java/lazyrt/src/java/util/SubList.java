@@ -141,31 +141,45 @@ class SubList<E> extends AbstractList<E> {
             return cursorAt(index);
         }
         ListIterator<E> it = backing.listIterator(start + index);
+        // The position is tracked here, as a list iterator's moves define it, rather than asked of
+        // the parent's iterator each time: windows of windows then cost one step per level.
         return new ListIterator<E>() {
-            public boolean hasNext() { return nextIndex() < size; }
+            private int pos = index;
+            private boolean forward;
+
+            public boolean hasNext() { return pos < size; }
 
             public E next() {
                 if (!hasNext()) {
                     throw new NoSuchElementException();
                 }
-                return it.next();
+                E e = it.next();
+                pos++;
+                forward = true;
+                return e;
             }
 
-            public boolean hasPrevious() { return previousIndex() >= 0; }
+            public boolean hasPrevious() { return pos > 0; }
 
             public E previous() {
                 if (!hasPrevious()) {
                     throw new NoSuchElementException();
                 }
-                return it.previous();
+                E e = it.previous();
+                pos--;
+                forward = false;
+                return e;
             }
 
-            public int nextIndex() { return it.nextIndex() - start; }
-            public int previousIndex() { return it.previousIndex() - start; }
+            public int nextIndex() { return pos; }
+            public int previousIndex() { return pos - 1; }
 
             public void remove() {
                 it.remove();
                 resync(-1);
+                if (forward) {
+                    pos--;
+                }
             }
 
             public void set(E e) { it.set(e); }
@@ -173,6 +187,7 @@ class SubList<E> extends AbstractList<E> {
             public void add(E e) {
                 it.add(e);
                 resync(1);
+                pos++;
             }
         };
     }

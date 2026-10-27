@@ -89,9 +89,12 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
     /** The index iterator, started at an index the caller checked. */
     final ListIterator<E> cursorAt(int index) { return new Cursor(index); }
 
-    /** For ArrayList and Vector, whose bad iterator start names only the index (spec 11). */
-    final ListIterator<E> indexOnlyListIterator(int index) {
-        if (index < 0 || index > size()) {
+    /**
+     * For ArrayList and Vector, whose bad iterator start names only the index (spec 11); they pass
+     * their size field, so no overriding size() is called (spec 8.C1).
+     */
+    final ListIterator<E> indexOnlyListIterator(int index, int size) {
+        if (index < 0 || index > size) {
             throw new IndexOutOfBoundsException("Index: " + index);
         }
         return new Cursor(index);

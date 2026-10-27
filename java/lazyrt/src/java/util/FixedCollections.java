@@ -149,6 +149,9 @@ final class FixedCollections {
             this.value = value;
         }
 
+        // Spec 10.X6: refused without calling the function.
+        public void replaceAll(BiFunction<? super K, ? super V, ? extends V> f) { throw Unmodifiable.refused(); }
+
         public int size() { return 1; }
         public boolean containsKey(Object k) { return Support.eq(k, key); }
         public boolean containsValue(Object v) { return Support.eq(v, value); }

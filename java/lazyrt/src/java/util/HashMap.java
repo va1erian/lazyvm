@@ -115,8 +115,12 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return findIn(h & (table.length - 1), h, key);
     }
 
-    // Spec 8.C3: the probe key's equals is called, after a cheap identity test.
+    // Spec 8.C3: the probe key's equals is called, after a cheap identity test; a tree bin is
+    // searched down its tree (spec 1.H6).
     private Cell<K, V> findIn(int i, int h, Object key) {
+        if (isTree(i)) {
+            return HashTree.lookup(roots[i], h, key);
+        }
         for (Cell<K, V> e = table[i]; e != null; e = e.next) {
             if (e.hash == h && Objects.equals(key, e.key)) {
                 return e;
@@ -133,7 +137,9 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
             widen();
         }
         int h = mixHash(key);
-        Cell<K, V> e = findIn(h & (table.length - 1), h, key);
+        int i = h & (table.length - 1);
+        boolean tree = isTree(i);
+        Cell<K, V> e = tree ? HashTree.putIn(this, table, roots, i, h, key, value) : findIn(i, h, key);
         if (e != null) {
             V old = e.value;
             if (!onlyIfAbsent || old == null) {
@@ -142,7 +148,9 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
             used(e);
             return old;
         }
-        addNode(h, key, value, false);
+        if (!tree) {
+            addNode(h, key, value, false);
+        }
         if (++size > threshold) {
             widen();
         }
@@ -247,20 +255,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         table = newTable(n);
         Cell<K, V>[] oldRoots = roots;
         roots = oldRoots == null ? null : newTable(n);
-        for (int j = 0; j < oldN; j++) {
-            if (old[j] == null) {
-                continue;
-            }
-            Cell<K, V> bin = old[j];
-            old[j] = null;
-            if (oldRoots != null && oldRoots[j] != null) {
-                HashTree.divide(this, bin, oldRoots[j], j, oldN, table, roots);
-            } else {
-                Cell<K, V>[] halves = HashTree.halves(bin, oldN);
-                table[j] = halves[0];
-                table[j + oldN] = halves[1];
-            }
-        }
+        HashTree.spread(this, old, oldRoots, table, roots);
     }
 
     @SuppressWarnings("unchecked")
@@ -371,7 +366,8 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
     public boolean replace(K key, V oldValue, V newValue) {
         Cell<K, V> e = find(key);
-        if (e == null || !Objects.equals(oldValue, e.value)) {
+        // Spec 8.C3: identity first, then the stored value's equals.
+        if (e == null || !Objects.equals(e.value, oldValue)) {
             return false;
         }
         e.value = newValue;
@@ -398,17 +394,9 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
             used(e);
             return e.value;
         }
+        int seen = modCount;
         V v = mappingFunction.apply(key);
-        if (v == null) {
-            return null;
-        }
-        if (e != null) {
-            e.value = v;
-            used(e);
-        } else {
-            addFront(mixHash(key), key, v);
-        }
-        return v;
+        return v == null ? null : finish(seen, e, key, v);
     }
 
     public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
@@ -417,22 +405,16 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         if (e == null || e.value == null) {
             return null;
         }
-        V v = remappingFunction.apply(key, e.value);
-        settle(e, v);
-        return v;
+        int seen = modCount;
+        return finish(seen, e, key, remappingFunction.apply(key, e.value));
     }
 
     public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         Objects.requireNonNull(remappingFunction);
         growBeforeCompute();
         Cell<K, V> e = find(key);
-        V v = remappingFunction.apply(key, e == null ? null : e.value);
-        if (e != null) {
-            settle(e, v);
-        } else if (v != null) {
-            addFront(mixHash(key), key, v);
-        }
-        return v;
+        int seen = modCount;
+        return finish(seen, e, key, remappingFunction.apply(key, e == null ? null : e.value));
     }
 
     public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
@@ -444,8 +426,25 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
             addFront(mixHash(key), key, value);
             return value;
         }
-        V v = e.value == null ? value : remappingFunction.apply(e.value, value);
-        settle(e, v);
+        int seen = modCount;
+        return finish(seen, e, key, e.value == null ? value : remappingFunction.apply(e.value, value));
+    }
+
+    /**
+     * Section 12: records v for key at the end of a remapping, e being key's entry beforehand. If
+     * the function changed the map structurally (the count is no longer `seen`), key is looked up
+     * again: v is dropped when e has left the map, and goes to an entry the function added.
+     */
+    private V finish(int seen, Cell<K, V> e, K key, V v) {
+        Cell<K, V> at = modCount == seen ? e : find(key);
+        if (e != null && at != e) {
+            return v;
+        }
+        if (at != null) {
+            settle(at, v);
+        } else if (v != null) {
+            addFront(mixHash(key), key, v);
+        }
         return v;
     }
 

@@ -171,7 +171,8 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
     // Spec 9.F1: removing counts as a change even when nothing is found.
     public synchronized boolean removeElement(Object obj) {
         modCount++;
-        int i = indexOf(obj, 0);
+        // Spec 8.C1: Vector asks its own (overridable) indexOf here.
+        int i = indexOf(obj);
         if (i < 0) {
             return false;
         }
@@ -230,20 +231,15 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
 
     public void clear() { removeAllElements(); }
     public synchronized boolean containsAll(Collection<?> c) { return super.containsAll(c); }
-    public synchronized boolean addAll(Collection<? extends E> c) { return addAll(elementCount, c); }
+    public synchronized boolean addAll(Collection<? extends E> c) { return insertAll(elementCount, c); }
+    public synchronized boolean addAll(int index, Collection<? extends E> c) { return insertAll(index, c); }
 
-    public synchronized boolean removeAll(Collection<?> c) {
-        Objects.requireNonNull(c);
-        return removeIf(e -> c.contains(e));
-    }
-
-    public synchronized boolean retainAll(Collection<?> c) {
-        Objects.requireNonNull(c);
-        return removeIf(e -> !c.contains(e));
-    }
+    // Spec 8.C1: Vector removes through its iterator, one remove(i) per element that leaves.
+    public synchronized boolean removeAll(Collection<?> c) { return super.removeAll(c); }
+    public synchronized boolean retainAll(Collection<?> c) { return super.retainAll(c); }
 
     // Spec 9.F1: adding an empty collection still counts as a change.
-    public synchronized boolean addAll(int index, Collection<? extends E> c) {
+    private boolean insertAll(int index, Collection<? extends E> c) {
         modCount++;
         if (index < 0 || index > elementCount) {
             throw new ArrayIndexOutOfBoundsException(index);
@@ -273,8 +269,8 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
         elementCount = newCount;
     }
 
-    public synchronized ListIterator<E> listIterator(int index) { return indexOnlyListIterator(index); }
-    public synchronized ListIterator<E> listIterator() { return indexOnlyListIterator(0); }
+    public synchronized ListIterator<E> listIterator(int index) { return indexOnlyListIterator(index, elementCount); }
+    public synchronized ListIterator<E> listIterator() { return indexOnlyListIterator(0, elementCount); }
     public synchronized Iterator<E> iterator() { return super.iterator(); }
 
     @SuppressWarnings("unchecked")
@@ -313,11 +309,15 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
 
     int remainingStyle() { return 1; }
 
-    // Spec 9.F2: forEachRemaining reads the storage as it was when the walk began.
-    Object[] walkStorage(int i) {
-        if (i >= elementData.length) {
-            throw new ConcurrentModificationException();
-        }
-        return elementData;
+    // Spec 9.F2: forEachRemaining reads the storage as it was when the walk began; the walk stays
+    // below the count taken then, which never exceeds the storage's length.
+    Object[] walkStorage(int i) { return elementData; }
+
+    // Spec 8.C1: the iterators read the storage and the count, not an overriding get or size.
+    E cursorGet(int i) {
+        checkListIndex(i);
+        return at(i);
     }
+
+    int cursorLimit() { return elementCount; }
 }

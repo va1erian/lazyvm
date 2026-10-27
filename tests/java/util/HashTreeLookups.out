@@ -1,0 +1,3 @@
+6000 colliding Comparable keys: found 6000, size after removing half 3000, lookups right true, equals calls under 600000: true
+400 colliding keys that are not Comparable: found 400 of 400, missing key null
+done

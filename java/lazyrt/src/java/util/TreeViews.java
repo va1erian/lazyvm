@@ -99,7 +99,8 @@ final class TreeViews {
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
             MapNode<K, V> n = find.apply(e.getKey());
-            return n != null && Support.eq(e.getValue(), n.value) ? n : null;
+            // Spec 8.C3: the stored value's equals is asked, even about a null.
+            return n != null && (n.value == null ? e.getValue() == null : n.value.equals(e.getValue())) ? n : null;
         }
 
         public boolean contains(Object o) { return match(o) != null; }
