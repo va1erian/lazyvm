@@ -118,6 +118,36 @@ public class WriterBlocks {
         ps.close();
         inner.fail();
         System.out.println("closed outer, inner error: " + ps.checkError());
+
+        String[][] splits = {{"\ud83d", "\ude00"}, {"\ud83d", "x"}, {"a\ud83d", ""}};
+        for (String[] sp : splits) {
+            o = new Log(0);
+            ps = new PrintStream(o);
+            ps.print(sp[0]);
+            ps.flush();
+            ps.print(sp[1]);
+            ps.close();
+            System.out.println("split print: " + o.log);
+        }
+        o = new Log(0);
+        ps = new PrintStream(o);
+        ps.print('\ud83d');
+        ps.print('\ude00');
+        ps.print('!');
+        System.out.println("split chars: " + o.log);
+
+        o = new Log(0);
+        ps = new PrintStream(o);
+        Exception bad = new Exception("cause") {
+            public String toString() {
+                throw new IllegalStateException("no toString");
+            }
+        };
+        try {
+            new RuntimeException("outer", bad).printStackTrace(ps);
+        } catch (IllegalStateException e) {
+            System.out.println("trace before the failure reached the stream: " + (o.log.length() > 0));
+        }
     }
 
     static class Quiet extends PrintStream {

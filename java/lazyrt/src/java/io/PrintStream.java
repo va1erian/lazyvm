@@ -9,6 +9,8 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     private boolean trouble;
     /** After close, writes only record trouble, as observed on the oracle. */
     private boolean closed;
+    /** A high surrogate printed last, held for its low half (observed on the oracle). */
+    private char held;
 
     public PrintStream(OutputStream out) {
         this(out, false);
@@ -50,6 +52,10 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         }
         closed = true;
         try {
+            if (held != 0) {
+                held = 0;
+                out.write('?');
+            }
             out.close();
         } catch (IOException e) {
             trouble = true;
@@ -117,11 +123,22 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
 
     /** Encodes `s` once and writes it with a single call to the underlying stream. */
     private void writeText(String s, boolean newline) {
-        if (newline) {
-            s = s + System.lineSeparator();
-        }
         if (refused()) {
             return;
+        }
+        if (held != 0) {
+            s = held + s;
+            held = 0;
+        }
+        if (!newline && !s.isEmpty() && Character.isHighSurrogate(s.charAt(s.length() - 1))) {
+            held = s.charAt(s.length() - 1);
+            s = s.substring(0, s.length() - 1);
+            if (s.isEmpty()) {
+                return;
+            }
+        }
+        if (newline) {
+            s = s + System.lineSeparator();
         }
         byte[] bytes = s.getBytes();
         try {

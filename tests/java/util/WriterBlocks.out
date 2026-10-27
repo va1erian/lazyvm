@@ -38,3 +38,8 @@ clean after close: false
 closed outer, print: true
 closed outer, flush: true
 closed outer, inner error: false
+split print: F w4:😀 C 
+split print: F w2:?x C 
+split print: w1:a F w1:? C 
+split chars: w4:😀 w1:! 
+trace before the failure reached the stream: true

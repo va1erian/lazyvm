@@ -150,49 +150,27 @@ public class Throwable implements Serializable {
         printStackTrace(System.err);
     }
 
-    /** One println per line, so an autoflush stream flushes each line. */
+    /**
+     * Prints line by line as the trace is walked, so an autoflush stream
+     * flushes each line and a failing toString leaves the earlier lines out.
+     */
     public void printStackTrace(PrintStream s) {
-        String[] lines = traceLines();
         synchronized (s) {
-            for (String line : lines) {
-                s.println(line);
-            }
+            printTrace(new Sink(s, null), NO_TRACE, "", "", new Seen());
         }
     }
 
     public void printStackTrace(PrintWriter s) {
-        String[] lines = traceLines();
         synchronized (s) {
-            for (String line : lines) {
-                s.println(line);
-            }
+            printTrace(new Sink(null, s), NO_TRACE, "", "", new Seen());
         }
-    }
-
-    /** The whole trace, with its causes and suppressed exceptions, one line per frame. */
-    private String[] traceLines() {
-        StringBuilder sb = new StringBuilder();
-        printTrace(sb, NO_TRACE, "", "", new Seen());
-        String text = sb.toString();
-        String nl = System.lineSeparator();
-        int count = 0;
-        for (int i = text.indexOf(nl); i >= 0; i = text.indexOf(nl, i + nl.length())) {
-            count++;
-        }
-        String[] lines = new String[count];
-        for (int k = 0, i = 0; k < count; k++) {
-            int j = text.indexOf(nl, i);
-            lines[k] = text.substring(i, j);
-            i = j + nl.length();
-        }
-        return lines;
     }
 
     /** Prints this throwable, eliding the frames it shares with the enclosing trace. */
-    private void printTrace(StringBuilder s, StackTraceElement[] enclosing, String caption,
+    private void printTrace(Sink s, StackTraceElement[] enclosing, String caption,
             String prefix, Seen seen) {
         if (seen.contains(this)) {
-            line(s, prefix + caption + "[CIRCULAR REFERENCE: " + this + "]");
+            s.line(prefix + caption + "[CIRCULAR REFERENCE: " + this + "]");
             return;
         }
         seen.add(this);
@@ -204,12 +182,12 @@ public class Throwable implements Serializable {
             n--;
         }
         int common = trace.length - 1 - m;
-        line(s, prefix + caption + this);
+        s.line(prefix + caption + this);
         for (int i = 0; i <= m; i++) {
-            line(s, prefix + "\tat " + trace[i]);
+            s.line(prefix + "\tat " + trace[i]);
         }
         if (common != 0) {
-            line(s, prefix + "\t... " + common + " more");
+            s.line(prefix + "\t... " + common + " more");
         }
         Throwable[] sup = getSuppressed();
         for (int i = 0; i < sup.length; i++) {
@@ -221,8 +199,23 @@ public class Throwable implements Serializable {
         }
     }
 
-    private static void line(StringBuilder sb, String text) {
-        sb.append(text).append(System.lineSeparator());
+    /** Where a trace goes: println on a PrintStream or a PrintWriter. */
+    private static final class Sink {
+        private final PrintStream stream;
+        private final PrintWriter writer;
+
+        Sink(PrintStream stream, PrintWriter writer) {
+            this.stream = stream;
+            this.writer = writer;
+        }
+
+        void line(String text) {
+            if (stream != null) {
+                stream.println(text);
+            } else {
+                writer.println(text);
+            }
+        }
     }
 
     /** Identity set of the throwables already printed. */
