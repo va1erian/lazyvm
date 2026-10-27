@@ -46,6 +46,7 @@ available 1234 read A available 1234 read0 0 markSupported false skip 2 then D
 read bounds IndexOutOfBoundsException: null
 read null NPE
 zero-length reads: QQ== fresh 0 got 1 zero -1 end zero -1 bad bounds -1 null -1 QUI= fresh 0 got 2 zero -1 end zero -1 bad bounds -1 null -1 QUJD fresh 0 got 3 zero 0 end zero -1 bad bounds -1 null -1 QUJDRA fresh 0 got 3 zero 0 +68 end zero -1 bad bounds -1 null -1  fresh 0 got -1 zero -1 end zero -1 bad bounds -1 null -1
+after error: QUJD==== got 3 next  error zero 0 bad bounds  bad bounds IOOBE QUJDR got 3 next  error zero -1 bad bounds -1 QUJD=x got 3 next  error zero 0 bad bounds  bad bounds IOOBE
 close closes underlying true
 read after close: Stream is closed
 read(b) after close: Stream is closed

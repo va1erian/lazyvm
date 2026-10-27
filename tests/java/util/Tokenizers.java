@@ -19,6 +19,39 @@ public class Tokenizers {
         return b.toString();
     }
 
+    static void padTo(StringBuilder b, int n, char c) {
+        while (b.length() < n) b.append(c);
+    }
+
+    /**
+     * About 1100 chars with a token across 256, a surrogate pair across 512 and 1024, and a
+     * delimiter run across 768, so scans cross any 256-char boundary in every state.
+     */
+    static String longText() {
+        StringBuilder b = new StringBuilder();
+        padTo(b, 254, 'a');
+        b.append(" bcd");                    // token at 255-257
+        padTo(b, 300, ' ');
+        padTo(b, 511, 'e');
+        b.append("😀f, ,");        // pair at 511-512
+        while (b.length() < 760) b.append(b.length() % 7 == 0 ? ',' : 'i');
+        padTo(b, 772, ' ');                  // delimiter run at 760-771
+        b.append("😀，jk");
+        padTo(b, 1023, 'l');
+        b.append("😀 m，n");    // pair at 1023-1024
+        return b.toString();
+    }
+
+    /** The count first, then each token as its length and its first and last char. */
+    static String brief(StringTokenizer t) {
+        StringBuilder b = new StringBuilder(t.countTokens() + ":");
+        while (t.hasMoreTokens()) {
+            String s = t.nextToken();
+            b.append(' ').append(s.length()).append(show(s.substring(0, 1))).append(show(s.substring(s.length() - 1)));
+        }
+        return b.toString();
+    }
+
     interface Op { Object run() throws Exception; }
 
     static String ex(Op r) {
@@ -101,6 +134,21 @@ public class Tokenizers {
             + " | " + f2.nextToken() + " " + ex(f2::nextToken) + " then " + ex(() -> f2.nextToken("x"))
             + " | hasMore " + f3.hasMoreTokens() + " then " + ex(() -> f3.nextToken("x"))
             + " | count " + f4.countTokens() + " then " + ex(() -> f4.nextToken("x")));
+        // T2-T4, T7 on a long text: each tokenizer counts to the end first and then reads from the
+        // start, with tokens, pairs and delimiter runs across 256-char boundaries (longText).
+        String longText = longText();
+        System.out.println("long tokens " + brief(new StringTokenizer(longText)));
+        System.out.println("long returned " + brief(new StringTokenizer(longText, " ,", true)));
+        System.out.println("long fullwidth " + brief(new StringTokenizer(longText, " ，")));
+        System.out.println("long pair delim " + brief(new StringTokenizer(longText, " ,😀", true)));
+        StringTokenizer mixed = new StringTokenizer(longText, " ,");
+        StringBuilder steps = new StringBuilder();
+        for (int i = 0; mixed.hasMoreTokens(); i++) {
+            steps.append(mixed.nextToken().length());
+            if (i % 3 == 0) steps.append('/').append(mixed.countTokens());
+            steps.append(' ');
+        }
+        System.out.println("long interleaved " + steps.toString().trim());
         // T6: null arguments.
         System.out.println("null string " + ex(() -> new StringTokenizer(null)) + " | " + ex(() -> new StringTokenizer(null, ",")) + " | " + ex(() -> new StringTokenizer(null, ",", true)));
         System.out.println("null delims " + ex(() -> new StringTokenizer("a b", null) != null) + " | " + ex(() -> new StringTokenizer("a b", null).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("a b", null).nextToken()) + " | " + ex(() -> new StringTokenizer("a b", null).countTokens()) + " | " + ex(() -> new StringTokenizer("", null).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("", null).countTokens()) + " | " + ex(() -> new StringTokenizer("", null, true).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("a b").nextToken(null)) + " | " + ex(() -> { StringTokenizer z = new StringTokenizer("a b"); try { z.nextToken(null); } catch (NullPointerException e) { } return z.nextToken(); }));

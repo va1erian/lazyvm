@@ -12,6 +12,8 @@ public class StringTokenizer implements Enumeration<Object> {
     private int[] delimiterPoints;
     /** The largest delimiter, so most text chars are rejected with one comparison. */
     private int maxDelimiter;
+    /** Whether the scans may compare chars rather than code points (setDelimiters). */
+    private boolean charDelimiters;
     private int position;
     /**
      * A copy of text chars windowStart..windowEnd - 1, made only as the scans reach them. Indexing
@@ -34,12 +36,21 @@ public class StringTokenizer implements Enumeration<Object> {
     /** T1: space, tab, newline, carriage return and form feed only. */
     public StringTokenizer(String str) { this(str, " \t\n\r\f", false); }
 
+    /**
+     * Also decides charDelimiters: T7 compares code points, but when no delimiter is a surrogate
+     * or a supplementary code point, no surrogate char in the text (paired or lone) can equal one,
+     * so reading a pair as two chars gives the same tokens and the scans may compare chars.
+     */
     private void setDelimiters(String delim) {
         delimiterPoints = delim == null ? null : codePoints(delim);
         maxDelimiter = -1;
+        charDelimiters = true;
         if (delimiterPoints != null) {
             for (int d : delimiterPoints) {
                 maxDelimiter = Math.max(maxDelimiter, d);
+                if (d > Character.MAX_VALUE || d >= Character.MIN_SURROGATE && d <= Character.MAX_SURROGATE) {
+                    charDelimiters = false;
+                }
             }
         }
     }
@@ -61,13 +72,6 @@ public class StringTokenizer implements Enumeration<Object> {
         return delimiterPoints;
     }
 
-    /**
-     * Whether the scans may compare single chars. T7 compares code points, but when every
-     * delimiter is below the surrogate range, no surrogate in the text, paired or lone, can be or
-     * contain a delimiter, so a pair read as two chars gives the same tokens.
-     */
-    private boolean byChars() { return maxDelimiter < Character.MIN_SURROGATE; }
-
     private static boolean contains(int[] points, int codePoint) {
         for (int d : points) {
             if (d == codePoint) {
@@ -87,78 +91,59 @@ public class StringTokenizer implements Enumeration<Object> {
         str.getChars(windowStart, windowEnd, window, 0);
     }
 
+    /**
+     * From pos, the end of the run of delimiters (when `delimiters`) or of non-delimiters. T7
+     * compares code points; charDelimiters says the chars alone decide (see setDelimiters).
+     */
+    private int run(int pos, boolean delimiters) {
+        int[] d = points();
+        int max = maxDelimiter;
+        if (!charDelimiters) {
+            while (pos < length) {
+                int cp = str.codePointAt(pos);
+                if ((cp <= max && contains(d, cp)) != delimiters) {
+                    break;
+                }
+                pos += Character.charCount(cp);
+            }
+            return pos;
+        }
+        if (pos < length && (pos < windowStart || pos >= windowEnd)) {
+            fill(pos);
+        }
+        char[] w = window;
+        int ws = windowStart;
+        int we = windowEnd;
+        while (pos < length) {
+            if (pos == we) {
+                fill(pos);
+                ws = windowStart;
+                we = windowEnd;
+            }
+            int c = w[pos - ws];
+            if ((c <= max && contains(d, c)) != delimiters) {
+                break;
+            }
+            pos++;
+        }
+        return pos;
+    }
+
     /** T2: past the delimiters before a token, unless they are tokens themselves. */
     private int skipDelimiters(int pos) {
         if (returnDelims || pos >= length) {
             return pos; // T6: countTokens on an empty string needs no delimiters
         }
-        int[] d = points();
-        int max = maxDelimiter;
-        if (byChars()) {
-            if (pos < windowStart || pos >= windowEnd) {
-                fill(pos);
-            }
-            char[] w = window;
-            int ws = windowStart;
-            int we = windowEnd;
-            while (pos < length) {
-                if (pos == we) {
-                    fill(pos);
-                    ws = windowStart;
-                    we = windowEnd;
-                }
-                int c = w[pos - ws];
-                if (c > max || !contains(d, c)) {
-                    break;
-                }
-                pos++;
-            }
-            return pos;
-        }
-        while (pos < length) {
-            int cp = str.codePointAt(pos);
-            if (cp > max || !contains(d, cp)) {
-                break;
-            }
-            pos += Character.charCount(cp);
-        }
-        return pos;
+        return run(pos, true);
     }
 
     /** T2: the end of the token at pos: a run of text, or one returned delimiter. */
     private int scanToken(int pos) {
-        int[] d = points();
-        int max = maxDelimiter;
-        int start = pos;
-        if (byChars()) {
-            if (pos < windowStart || pos >= windowEnd) {
-                fill(pos);
-            }
-            char[] w = window;
-            int ws = windowStart;
-            int we = windowEnd;
-            while (pos < length) {
-                if (pos == we) {
-                    fill(pos);
-                    ws = windowStart;
-                    we = windowEnd;
-                }
-                int c = w[pos - ws];
-                if (c <= max && contains(d, c)) {
-                    return returnDelims && pos == start ? pos + 1 : pos;
-                }
-                pos++;
-            }
-            return pos;
+        int end = run(pos, false);
+        if (end == pos && returnDelims) {
+            return pos + Character.charCount(str.codePointAt(pos)); // T7: a pair is one token
         }
-        while (pos < length) {
-            int cp = str.codePointAt(pos);
-            if (cp <= max && contains(d, cp)) {
-                return returnDelims && pos == start ? pos + Character.charCount(cp) : pos;
-            }
-            pos += Character.charCount(cp);
-        }
-        return pos;
+        return end;
     }
 
     public boolean hasMoreTokens() {

@@ -285,6 +285,25 @@ public class Base64Streams {
             }
         }
         System.out.println(zero);
+        // B19: an error does not finish the stream, so later empty or out-of-bounds reads are not -1.
+        StringBuilder after = new StringBuilder("after error:");
+        for (String s : new String[] {"QUJD====", "QUJDR", "QUJD=x"}) {
+            InputStream z = Base64.getDecoder().wrap(new Under(s, false));
+            byte[] zb = new byte[4];
+            after.append(' ').append(s).append(" got ").append(z.read(zb, 1, 3));
+            try {
+                after.append(" next ").append(z.read(zb, 0, 3));
+            } catch (IOException e) {
+                after.append(" error");
+            }
+            after.append(" zero ").append(z.read(zb, 0, 0));
+            try {
+                after.append(" bad bounds ").append(z.read(zb, 5, 1));
+            } catch (IndexOutOfBoundsException e) {
+                after.append(" bad bounds IOOBE");
+            }
+        }
+        System.out.println(after);
         in.close();
         System.out.println("close closes underlying " + u.closed);
         try { in.read(); } catch (IOException e) { System.out.println("read after close: " + e.getMessage()); }

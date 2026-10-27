@@ -153,11 +153,14 @@ is false and `skip` reads and drops bytes. Bad bounds on `read(b, off, len)` thr
 ended (padding read, or the end of `in` seen) and every decoded byte has been returned. From then
 on `read(b, off, len)` returns -1 whatever its arguments, `len` 0, bad bounds and a `null` array
 included. So for `QQ==`, `read()` gives 65 and then `read(b, 0, 0)` gives -1, while for `QUJD` after
-`read(b, 0, 3)` (the end of `in` not yet seen) it gives 0. (Corrected after review; the first
+`read(b, 0, 3)` (the end of `in` not yet seen) it gives 0. A B18 error finishes the stream only when
+it comes from the end of `in` (the dangling byte); after an ending-sequence or illegal-character
+error, `read(b, 0, 0)` still gives 0 and bad bounds still throw (`QUJD====`: 3 bytes, the error,
+then 0). (Corrected after review; the first
 version said 0 always.) `close()` closes `in`; after it, `read()`, `read(b, off, len)` and
 `available()` throw `IOException: Stream is closed`, finished or not, and a second `close()` does
 nothing. Pinned by: Base64Streams ("available", "read bounds", "read null", "zero-length reads",
-"close closes underlying", "read after close", "read(b) after close", "available after close",
+"after error", "close closes underlying", "read after close", "read(b) after close", "available after close",
 "close twice").
 
 ## 4. Base64 with java.nio buffers (waits for S5-06)

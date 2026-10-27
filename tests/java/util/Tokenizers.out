@@ -9,6 +9,11 @@ count 3 a 2 true 2
 count returned 5 2 1
 enumeration true ab false java.util.NoSuchElementException: null java.util.NoSuchElementException: null java.util.NoSuchElementException: null
 failed next moves java.util.NoSuchElementException: null then java.util.NoSuchElementException: null | a java.util.NoSuchElementException: null then java.util.NoSuchElementException: null | hasMore false then ,, | count 0 then ,,
+long tokens 6: 254aa 3bd 215e, 244,i 253<d83d><de00> 3mn
+long returned 135: 254aa 1   3bd 1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   214ef 1,, 1   1,, 1ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 3ii 1   1   1   1   1   1   1   1   1   1   1   1   253<d83d><de00> 1   3mn
+long fullwidth 8: 254aa 3bd 215e, 244,i 2<d83d><de00> 250j<de00> 1mm 1nn
+long pair delim 139: 254aa 1   3bd 1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   211ee 2<d83d><de00> 1ff 1,, 1   1,, 1ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 3ii 1   1   1   1   1   1   1   1   1   1   1   1   2<d83d><de00> 249<ff0c>l 2<d83d><de00> 1   3mn
+long interleaved 254/40 3 214 1/37 6 6 6/34 6 6 6/31 6 6 6/28 6 6 6/25 6 6 6/22 6 6 6/19 6 6 6/16 6 6 6/13 6 6 6/10 6 6 6/7 6 6 6/4 6 3 253/1 3
 null string java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null
 null delims true | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | 0 | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null
 pair 2:[a][b<d83d>c<de00>d] 3:[a][<d83d><de00>][b<d83d>c<de00>d]

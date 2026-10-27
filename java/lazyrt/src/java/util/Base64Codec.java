@@ -9,12 +9,13 @@ final class Base64Codec {
     private Base64Codec() {
     }
 
-    private static final byte[] BASIC = alphabet('+', '/');
-    private static final byte[] URL = alphabet('-', '_');
+    private static final byte[] BASIC = buildAlphabet('+', '/');
+    private static final byte[] URL = buildAlphabet('-', '_');
     private static final int[] BASIC_VALUES = values(BASIC);
     private static final int[] URL_VALUES = values(URL);
 
-    private static byte[] alphabet(char c62, char c63) {
+    /** RFC 4648 table 1, or table 2, from the two characters that differ. */
+    private static byte[] buildAlphabet(char c62, char c63) {
         byte[] a = new byte[64];
         for (int i = 0; i < 26; i++) {
             a[i] = (byte) ('A' + i);

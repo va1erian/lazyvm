@@ -103,6 +103,8 @@ final class Base64In extends InputStream {
         while (p < 4) {
             int c = src.read();
             if (c < 0) {
+                // B19: the end of `in` finishes the stream even when it leaves a dangling byte;
+                // the '=' and illegal-byte errors below do not.
                 ended = true;
                 if (p == 1) {
                     throw new IOException("Base64 stream has one un-decoded dangling byte.");
@@ -115,10 +117,10 @@ final class Base64In extends InputStream {
                 bits = bits << 6 | v;
                 p++;
             } else if (c == '=') {
-                ended = true;
                 if (p < 2 || p == 2 && src.read() != '=') {
                     throw new IOException("Illegal base64 ending sequence:" + (18 - 6 * p));
                 }
+                ended = true;
                 unitBits = bits << (6 * (4 - p));
                 return p - 1;
             } else if (!mime) {
