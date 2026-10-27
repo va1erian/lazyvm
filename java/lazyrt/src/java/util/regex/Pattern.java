@@ -35,6 +35,8 @@ public final class Pattern implements java.io.Serializable {
     transient int minLength;
     /** The pattern starts with ^ or \A, so a search only needs to try where it starts. */
     transient boolean anchoredStart;
+    /** See PatternReader.supplementary. */
+    transient boolean supplementary;
     private transient String[] groupNames;
 
     private Pattern(String p, int f) {
@@ -58,7 +60,9 @@ public final class Pattern implements java.io.Serializable {
         groupNames = parser.groupNames;
         minLength = tree.min();
         anchoredStart = parser.anchoredStart;
+        supplementary = parser.supplementary;
         root = tree.link(new Node.Accept());
+        LoopMemo.prepare(root);
     }
 
     public static Pattern compile(String regex) {

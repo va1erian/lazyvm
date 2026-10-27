@@ -82,4 +82,11 @@ a(?i:b)c in 'aBc aBC': [0,3)
 (?:(a)?+b)*c|x in 'abab':
 (a)*+b|x in 'aax': [2,3) 'a'@1
 (?:a)(?>(b))c|b in 'abd abc': [1,2) 'b'@1 [4,7) 'b'@5
+(ab|c)*c in 'abc': [0,3) 'ab'@0
+(ab|c)*c in 'abcc': [0,4) 'c'@2
+(?:(a)|b)*c in 'abbc': [0,4) 'a'@0
+(a|b)*?b in 'aab': [0,3) 'a'@1
+(?:(a)+b)* in 'aab': [0,3) 'a'@1 [3,3) null@-1
+(?:(a)+?b)*c in 'aabc': [0,4) 'a'@1
+(?:(a|ab)+c)* in 'abcac': [0,5) 'a'@3 [5,5) null@-1
 done

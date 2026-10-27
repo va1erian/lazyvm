@@ -22,6 +22,18 @@ final class Category {
         if (name.equals("LC")) {
             return bit(Lu) | bit(Ll) | bit(Lt);
         }
+        if (name.equals("LD")) {
+            return mask("L") | bit(Nd);
+        }
+        if (name.equals("all")) {
+            return -1;
+        }
+        if (name.equals("C")) {
+            // Observed on the oracle: C is the four "other" categories that have members
+            // (Cc, Cf, Co, Cs) and leaves out unassigned code points (Cn). Pinned by
+            // RegexNames (\p{C} against \p{Cn}); mutation: let C include Cn.
+            return mask("Cc") | mask("Cf") | mask("Co") | mask("Cs");
+        }
         if (name.length() == 1) {
             int mask = 0;
             for (int t = 0; t < NAMES.length; t++) {

@@ -76,6 +76,11 @@ public class RegexQuantifiers {
         all("()*x", "x");
         all("(){0}x", "x");
         all("(\\n*?){2}a", "\naa");
+        // the same when the body is not flat, so the loop is the recursive one
+        all("(?:(?=a)\\n*?){2}a", "aa");
+        all("(?:(?!x)(\\n*?)){3}a", "\naa");
+        all("((?!x)(\\n*?)){2}a", "a\n\na");
+        all("(?:(?=\\n|a)\\n*?){3}a", "\n\n\naa");
         all("(?:(?<!(a))|.*+){2}", "xa");
         all("(a){0}b", "ab");
         all("(a){0,0}b", "ab");

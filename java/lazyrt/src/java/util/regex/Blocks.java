@@ -10,7 +10,8 @@ final class Blocks {
     }
 
     static CharClass block(String name) {
-        return find(UnicodeData.BLOCKS, name);
+        CharClass cc = find(UnicodeData.BLOCKS, name);
+        return cc == null ? null : cc.markCategoryOrBlock();
     }
 
     static CharClass script(String name) {

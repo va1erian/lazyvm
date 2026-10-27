@@ -15,12 +15,25 @@ class PatternReader {
     final int len;
     int cursor;
     int flags;
+    /**
+     * Observed on the oracle: a pattern whose text holds a supplementary character, or that
+     * negates a category or block (\P{Lu}, \P{InGreek}, \P{all} excepted), makes a failed
+     * search attempt at a high surrogate skip the low half of its pair (Matcher.search). It
+     * changes nothing for an explicit start inside a pair. Pinned by RegexSurrogates, blessed
+     * in RegexSurrogates.out; mutation: ignore this flag in Matcher.search.
+     */
+    boolean supplementary;
 
     PatternReader(String pattern, int flags) {
         this.original = pattern;
         this.src = (flags & Pattern.LITERAL) != 0 ? pattern : removeQuotes(pattern);
         this.len = src.length();
         this.flags = flags;
+        for (int i = 0; i + 1 < pattern.length(); i++) {
+            if (Character.isSurrogatePair(pattern.charAt(i), pattern.charAt(i + 1))) {
+                supplementary = true;
+            }
+        }
     }
 
     final PatternSyntaxException error(String desc) {
@@ -261,6 +274,9 @@ class PatternReader {
         CharClass cc = Props.resolve(name, has(Pattern.UNICODE_CHARACTER_CLASS), failure);
         if (cc == null) {
             throw error(failure[0]);
+        }
+        if (negate && cc.categoryOrBlock) {
+            supplementary = true;
         }
         return negate ? cc.not() : cc;
     }

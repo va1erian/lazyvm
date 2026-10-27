@@ -37,7 +37,28 @@ class ClassReader extends PatternReader {
             cursor++;
             negating = true;
         }
+        CharClass result = body(negating, true);
+        return result == null ? CharClass.range(1, 0) : CharClass.cached(result);
+    }
+
+    /**
+     * The items of a class, folded left to right. `bracketed` is false for the tail of an &&
+     * side, which ends before the ']' instead of consuming it.
+     *
+     * <p>Observed on the oracle (RegexClassAlgebra, mutation-checked there): && intersects what
+     * was gathered so far with the right side; when the right side is empty it intersects with
+     * the last item written before it, not with the empty set, so [a\d&&] is just [\d]. A run
+     * of plain characters counts as one item, however it is interrupted: [a[bc]b&&] is [ab],
+     * and [^a&&] is empty because that item is the un-negated a. Each plain character is
+     * combined as that whole run (`stale` marks when that differs from combining it alone), so
+     * [a[b]&&&] is [a-b&] and [^aa[^b]b] excludes a again.
+     */
+    private CharClass body(boolean negating, boolean bracketed) {
         Acc acc = new Acc();
+        Acc singles = new Acc();
+        CharClass last = null;
+        boolean lastIsSingle = false;
+        boolean stale = false;
         boolean first = true;
         while (true) {
             skipComments();
@@ -45,35 +66,47 @@ class ClassReader extends PatternReader {
                 throw errorAt("Unclosed character class", len - 1);
             }
             int c = src.charAt(cursor);
-            if (c == ']' && !first) {
-                cursor++;
+            if (c == ']' && !(first && bracketed)) {
+                if (bracketed) {
+                    cursor++;
+                }
                 break;
             }
             first = false;
             if (c == '[') {
                 cursor++;
-                acc.add(Acc.UNION, parseClass());
+                last = parseClass();
+                lastIsSingle = false;
+                stale |= negating;
+                acc.add(Acc.UNION, last);
             } else if (c == '&' && cursor + 1 < len && src.charAt(cursor + 1) == '&') {
                 cursor += 2;
-                CharClass rhs = parseRightSide();
+                CharClass rhs = rightSide();
                 if (rhs == null && acc.isEmpty()) {
                     throw error("Bad class syntax");
                 }
-                if (rhs != null) {
-                    acc.add(Acc.INTERSECT, rhs);
+                if (rhs == null && lastIsSingle) {
+                    rhs = singles.build();
                 }
-                negating = false;
+                acc.add(acc.isEmpty() ? Acc.UNION : Acc.INTERSECT, rhs != null ? rhs : last);
+                last = rhs != null ? rhs : last;
+                lastIsSingle = false;
+                stale = true;
             } else {
-                CharClass item = item();
-                if (negating) {
-                    acc.add(Acc.INTERSECT, item.not());
-                } else {
-                    acc.add(Acc.UNION, item);
+                last = item();
+                lastIsSingle = singleItem;
+                CharClass added = last;
+                if (lastIsSingle) {
+                    singles.add(Acc.UNION, last);
+                    if (stale) {
+                        added = singles.build();
+                        stale = false;
+                    }
                 }
+                acc.add(negating ? Acc.INTERSECT : Acc.UNION, negating ? added.not() : added);
             }
         }
-        CharClass result = acc.build();
-        return result == null ? CharClass.range(1, 0) : CharClass.cached(result);
+        return acc.build();
     }
 
     /**
@@ -119,9 +152,14 @@ class ClassReader extends PatternReader {
         }
     }
 
-    /** The items after &&, up to the next '&' or the closing bracket; null when there are none. */
-    private CharClass parseRightSide() {
-        Acc rhs = new Acc();
+    /**
+     * The side of an && up to the next '&' or the closing bracket; null when it is empty.
+     * Observed on the oracle: nested classes are unioned, but a plain item (or range) starts
+     * a fresh class that runs to the end of the side and replaces whatever came before, so
+     * [a-z&&[b]c] is [c].
+     */
+    private CharClass rightSide() {
+        CharClass side = null;
         while (true) {
             skipComments();
             if (atEnd()) {
@@ -129,16 +167,15 @@ class ClassReader extends PatternReader {
             }
             int c = src.charAt(cursor);
             if (c == ']' || c == '&') {
-                return rhs.build();
+                return side;
             }
-            CharClass item;
             if (c == '[') {
                 cursor++;
-                item = parseClass();
+                CharClass nested = parseClass();
+                side = side == null ? nested : CharClass.or(side, nested);
             } else {
-                item = item();
+                side = CharClass.cached(body(false, false));
             }
-            rhs.add(Acc.UNION, item);
         }
     }
 
@@ -150,8 +187,16 @@ class ClassReader extends PatternReader {
         return c;
     }
 
+    /**
+     * True when the last item() call returned a plain character below U+0100, the only ones that
+     * join a "run of plain characters" (see body); a range, a class or a character from U+0100 up
+     * is an item of its own.
+     */
+    private boolean singleItem;
+
     /** One char, one range, or one predefined class. */
     private CharClass item() {
+        singleItem = false;
         int c = readCodePoint();
         if (c == '\\') {
             int e = read();
@@ -176,6 +221,7 @@ class ClassReader extends PatternReader {
                 return range(c, rangeEnd());
             }
         }
+        singleItem = c < 256;
         return single(c);
     }
 
@@ -191,6 +237,7 @@ class ClassReader extends PatternReader {
     }
 
     private int rangeEnd() {
+        skipComments();
         int c = readCodePoint();
         if (c != '\\') {
             return c;

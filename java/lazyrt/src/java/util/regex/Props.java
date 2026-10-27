@@ -25,7 +25,10 @@ final class Props {
                 result = binary(rest);
             }
             if (result == null) {
-                result = posix(rest, unicodeClasses);
+                result = javaClass(rest);
+            }
+            if (result == null) {
+                result = isPosix(rest);
             }
             if (result == null) {
                 result = Blocks.script(rest);
@@ -64,7 +67,11 @@ final class Props {
 
     private static CharClass category(String name) {
         int mask = Category.mask(name);
-        return mask == 0 ? null : CharClass.categories(mask);
+        if (mask == 0) {
+            return null;
+        }
+        CharClass cc = CharClass.categories(mask);
+        return mask == -1 ? cc : cc.markCategoryOrBlock();
     }
 
     private static CharClass binary(String name) {
@@ -98,6 +105,8 @@ final class Props {
             kind = CharClass.U_NONCHAR;
         } else if (n.equals("ASSIGNED")) {
             kind = CharClass.U_ASSIGNED;
+        } else if (n.equals("WORD")) {
+            kind = CharClass.U_WORD;
         } else {
             return null;
         }
@@ -146,6 +155,18 @@ final class Props {
             return null;
         }
         return CharClass.of(kind);
+    }
+
+    /**
+     * The POSIX names spelled with an Is prefix. Observed on the oracle: they
+     * ignore UNICODE_CHARACTER_CLASS; Alnum, Graph, Print and Blank are the
+     * Unicode sets and every other name stays ASCII. Pinned by RegexNames,
+     * blessed in RegexNames.out; killed by routing these through posix(name, flag).
+     */
+    private static CharClass isPosix(String name) {
+        boolean wide = name.equals("Alnum") || name.equals("Graph") || name.equals("Print")
+            || name.equals("Blank");
+        return posix(name, wide);
     }
 
     /** The POSIX classes: ASCII only, or Unicode-aware under UNICODE_CHARACTER_CLASS. */

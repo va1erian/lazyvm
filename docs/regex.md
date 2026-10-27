@@ -17,6 +17,7 @@ exist (S11).
 | `Node`, `Atoms`, `Anchor`, `GroupNodes`, `Repeat`, `FlatLoop` | the node tree the parser builds and `link` wires into a chain |
 | `CharClass`, `Props`, `Category`, `Blocks`, `UnicodeData` | sets of code points and the `\p{..}` names |
 | `LookbehindReach` | how far back a lookbehind may look, and which bodies compile |
+| `LoopMemo` | the failed loop states a long search remembers, and which loops may |
 | `Replacement` | `$n`, `${name}` and `\` expansion for `appendReplacement` |
 
 A match is a walk down `next` pointers: a node consumes input and calls
@@ -43,8 +44,32 @@ and lookaround groups, back references (`\n`, `\k<name>`), inline flags
 Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
 
 - A leading `^` in a class negates only the items written directly in it
-  (`[^a-c&&b-d]` is "not a-c, and b-d"); an empty side of `&&` is ignored
-  (`RegexClasses`).
+  (`[^a-c&&b-d]` is "not a-c, and b-d", `[^a[b]]` is "not a, or b").
+- `&&` intersects everything gathered so far with its right side
+  (`RegexClassAlgebra`, which also runs every class of up to four items from a
+  small alphabet). Nested classes on the right are unioned, but a plain item or
+  range there starts a fresh class that runs to the end of the side and
+  replaces them: `[a-z&&[b]c]` is `[c]`, `[a-z&&c[b]]` is `[bc]`. An empty
+  right side intersects with the last item written before it, where a run of
+  plain characters below U+0100 counts as one item however it is interrupted:
+  `[ab&&]` is `[ab]`, `[a[b]&&]` is `[b]`, `[a[bc]b&&]` is `[ab]`, and
+  `[^a&&]` is empty (the item is the un-negated `a`). Negation carries on after
+  `&&`: `[^a&&[b]&c]` is `[b]`. The same run explains `[a[b]&&&]` being
+  `[ab&]` and `[^aa[^b]b]` excluding `a` again.
+- Under `COMMENTS`, white space and `#` comments are skipped on both sides of
+  the `-` of a class range: `[a- b]` is `a-b`, `[\r- ]` runs on to `]` and is
+  unclosed (`RegexFlags`).
+- A pattern with a supplementary character written in its text, or with a
+  negated category or block (`\P{Lu}`, `\P{InGreek}`; not `\P{all}`, scripts,
+  binary properties or `[^\p{Lu}]`), skips the low half of a pair after a
+  failed search attempt at the high half. An explicit start inside the pair
+  (`find(1)`, a region) is not skipped. A literal `\uDC00` or `[\uDC00]` does
+  match the low half of a pair, in both engines (`RegexSurrogates`).
+- `\p{IsAlnum}`, `IsGraph`, `IsPrint`, `IsBlank` and `IsDigit` are the Unicode
+  sets and the other `Is` + POSIX names (`IsLower`, `IsAlpha`, ...) stay ASCII,
+  whatever `UNICODE_CHARACTER_CLASS` says; `\p{C}` leaves out unassigned code
+  points; `LD`, `all` and `IsWord` exist; `Is` + `java*` names work
+  (`RegexNames`).
 - `{` where an atom is expected starts a repeat of nothing, so `{1}` compiles
   (`RegexErrors`).
 - `\R` is atomic for CRLF (`RegexClasses`).
@@ -65,10 +90,9 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
 - Only `^` or `\A` written directly at the start of a pattern lets a failed
   search skip the other positions; inside any group it does not (`RegexRegions`).
 
-Oracle oddities not copied: `(?<=\x{1F600})A` failing on a text of the emoji
-followed by `A`, and a lone `\uDE00` never matching inside a pair. Here a
-lookbehind over a supplementary character and a literal half of a pair behave
-as code point semantics suggest.
+Oracle oddity not copied: `(?<=\x{1F600})A` failing on a text of the emoji
+followed by `A`. Here a lookbehind over a supplementary character behaves as
+code point semantics suggest.
 
 ## Lookbehind reach
 
@@ -79,14 +103,15 @@ bodies with the oracle's verdicts and match counts).
 
 | Rule | Examples |
 |---|---|
-| a char counts 1, a class repeated n times n, an unbounded repeat 2147483647; counts add up in plain int arithmetic | `a+b` ok |
+| a char counts 1, a class repeated n times n, an unbounded repeat 2147483647; counts add up in plain int arithmetic, so a sum can wrap | `a+b` ok |
 | `*`, `+`, `{n}`, `{n,m}`, `{n,}` are rejected when their count overflows the total so far | `a+b+`, `ab*`, `_a+` rejected; `a*a`, `a+aa`, `_*a` ok |
 | a plain or lazy `?` never is | `a+_?` ok, `a+_{0,1}` rejected |
-| an alternation contributes its longest branch, counted from -1 | `a+b\|c+d` ok, never matches |
+| an alternation contributes its longest branch, counted from -1 | `a+b\|c+d` ok, never matches; `a*_?\|c*_?` ok, finds nothing |
 | after an alternation, and after a group repeated by plain or lazy `?`, the total starts again from zero, up to the end of the enclosing branch or repeated group | `(?:a\|b)a+`, `(?:ab)?a+` ok; `(?:ab)?+a+`, `ab?a+` rejected |
-| a repeat of a group is rejected when the group has alternatives or a variable part | `(?:a\|b)+`, `(?:a\|b){2}`, `(?:a?b)+` rejected; `(?:a\|b)?`, `(?>a\|b)+` ok |
+| a repeat of a group is rejected when the group has alternatives or a variable part; a lookaround in the group takes no width and is not a variable part | `(?:a\|b)+`, `(?:a\|b){2}`, `(?:a?b)+` rejected; `(?:a\|b)?`, `(?>a\|b)+`, `(?:(?=b)b){2}` ok |
+| a group of n chars repeated without an upper bound reaches n * 2147483647 in int arithmetic: an odd n gives a positive reach (accepted), an even n a negative one (rejected) | `(?:abc)+`, `(?:abcde)+` ok; `(?:ab)+`, `(?:abcd)+`, `(?:ab){2,}` rejected |
 | a back reference is rejected | `(a)\1` |
-| the matcher looks back from the shortest body to the reach, in int arithmetic | a reach that wrapped to a small negative number finds nothing: `(?<!_*\p{InBasicLatin}.+)` is true everywhere |
+| the matcher looks back from the shortest body to the reach, in int arithmetic | a reach that wrapped to a small negative number finds nothing: `(?<!_*\p{InBasicLatin}.+)` is true everywhere, `(?<=_*\p{InBasicLatin}.+)` never |
 
 Known differences: a possessive `?+` over a group with an unbounded body, and a
 few deeper nestings of these rules, can differ from the oracle.
@@ -116,6 +141,18 @@ hex escape so it cannot extend an earlier escape).
   `*`/`+` loop over a group with a variable body) and then reports `hitEnd` and
   `requireEnd` differently after a failed `find()`.
 - Back references do not set `hitEnd` in `matches()` the way the oracle does.
+- The shortest match that bounds a failed search counts nothing for a repeat of
+  alternatives or of a variable body (`\b(?:B|C)+z` on `""` reports
+  `requireEnd` on the oracle), and nothing after the first such repeat in the
+  same sequence (`RegexEnds`). Other shapes of the oracle's bound can still
+  differ after a failed `find()`.
+- A capturing group repeated by a greedy `+`, `*` or `{n,m}` inside an outer
+  loop (`(?:(a)+b)*`) keeps, on the oracle, the capture of an earlier outer
+  iteration in some cases: `(?:(a)+b)*` on `aabab` reports group 1 at index 1
+  there and 3 here, and `(?:(a)*b)*` on `abab` reports 0 there and 2 here.
+  One iteration, lazy and possessive repeats, and alternations of groups agree.
+- A nested loop of nested loops such as `((a+)+)+b` stays exponential in its
+  inner loop (see Cost and limits).
 
 ## Cost and limits
 
@@ -126,9 +163,9 @@ iterations) overflows, and so does a loop that recurses:
 - Loops over one character class (`.*`, `\w+`, `[^,]*?`), and the same inside
   one capturing group (`(\d)+`, `(a|b)*`; alternatives of single chars become one
   class), run in a counting loop with no stack per iteration.
-- Loops over a *flat* body (literals, classes, repeats of a class, zero-width
-  anchors, alternatives of such sequences, optionally in one capturing group:
-  `(\w+\s?)*`, `(?:ab|c)*`, `(?:ab)*+`) run in `FlatLoop`, which keeps the
+- Loops over a *flat* body (literals, classes, repeats of a class, `\R`,
+  zero-width anchors, alternatives of such sequences, optionally in one
+  capturing group: `(\w+\s?)*`, `(?:ab|c)*`, `(?:ab)*+`, `\R+`) run in `FlatLoop`, which keeps the
   backtracking state in an int array: no stack, about 40 bytes per iteration.
 - Any other loop (a body with a nested group, lookaround or back reference, e.g.
   `(?:(a)b)*`) recurses, about four frames per iteration: roughly 1000 iterations.
@@ -137,6 +174,13 @@ iterations) overflows, and so does a loop that recurses:
   classes recurse, about 4000 levels.
 - A class or alternation of ten thousand single characters is one sorted range
   table; ranges are merged, so lookups are a binary search.
-- Backtracking is exponential on patterns such as `(a+)+b` against `aaaa..c`,
-  and on `(a|aa)+$`. Possessive quantifiers and atomic groups avoid it; nothing
-  is memoized. The oracle shows the same blow-up.
+- Backtracking is exponential on patterns such as `(a+)+b` against `aaaa..c`.
+  Possessive quantifiers and atomic groups avoid it, and so does `LoopMemo`:
+  once a search has taken 20000 loop steps it remembers, per loop, the
+  (iteration count, position) states that failed and does not enter them again.
+  It applies to loops that sit inside no other loop and no lookaround, in
+  patterns without back references (the class comment says why those are safe).
+  Nested loops such as `((a+)+)+b` stay exponential in their inner loop.
+  `(?:x+x+)+y` on 22 `x` takes 0.2 s and `(.*?,){11}P` on `1,` twenty times
+  0.3 s here (45 s before); `(?:\w+\s?)*$` on 2000 words and a `!` finishes in
+  0.5 s here, where the oracle throws `StackOverflowError`.

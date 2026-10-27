@@ -49,6 +49,10 @@ final class GroupNodes {
             return body.min();
         }
 
+        boolean blocksMin() {
+            return body.blocksMin();
+        }
+
         int max() {
             return body.max();
         }
@@ -91,6 +95,10 @@ final class GroupNodes {
             this.positive = positive;
             this.minLen = body.min();
             this.maxLen = maxLen;
+        }
+
+        Node body() {
+            return body;
         }
 
         Node link(Node after) {
@@ -170,6 +178,10 @@ final class GroupNodes {
 
         int min() {
             return body.min();
+        }
+
+        boolean blocksMin() {
+            return body.blocksMin();
         }
 
         int max() {

@@ -124,6 +124,15 @@ public class RegexGroups {
         all("(?:(a)?+b)*c|x", "abab");
         all("(a)*+b|x", "aax");
         all("(?:a)(?>(b))c|b", "abd abc");
+        // a group set by an iteration that is later given up is restored (a loop over a flat body)
+        all("(ab|c)*c", "abc");
+        all("(ab|c)*c", "abcc");
+        all("(?:(a)|b)*c", "abbc");
+        all("(a|b)*?b", "aab");
+        // a group repeated inside a loop that is not flat keeps the last iteration of the inner repeat
+        all("(?:(a)+b)*", "aab");
+        all("(?:(a)+?b)*c", "aabc");
+        all("(?:(a|ab)+c)*", "abcac");
         System.out.println("done");
     }
 }

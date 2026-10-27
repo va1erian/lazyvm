@@ -38,6 +38,8 @@ public final class Matcher implements MatchResult {
     int stopPos;
     /** Where the most recent repeat iteration ended in the current attempt, or -1. */
     int iterationEnd = -1;
+    /** Failed loop states of the current search (see LoopMemo). */
+    final LoopMemo memo = new LoopMemo();
     int behindTarget;
 
     Matcher(Pattern parent, CharSequence text) {
@@ -221,6 +223,7 @@ public final class Matcher implements MatchResult {
         hi = regionEnd;
         oldLast = oldLast < 0 ? from : oldLast;
         iterationEnd = -1;
+        memo.reset(regionStart, regionEnd, parentPattern.loopCount);
         clearGroups();
     }
 
@@ -236,9 +239,13 @@ public final class Matcher implements MatchResult {
             return false;
         }
         int guard = hi - parentPattern.minLength;
+        boolean skipsPairs = parentPattern.supplementary;
         for (int s = from; s <= guard; s++) {
             if (parentPattern.root.match(this, s)) {
                 return succeed(s);
+            }
+            if (skipsPairs && s + 1 < hi && Character.isSurrogatePair(text.charAt(s), text.charAt(s + 1))) {
+                s++;
             }
         }
         hitEnd = true;

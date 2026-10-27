@@ -20,7 +20,8 @@ package java.util.regex;
  * same branch or repeated group, however many groups close in between.
  * <li>A repeat of a group is rejected when the group has alternatives or any
  * variable part, even with a small count: (?:a|b){2} and (?:a|b)+ fail but
- * (?:a|b)? and (?>a|b)+ are accepted.
+ * (?:a|b)? and (?>a|b)+ are accepted. A lookaround inside the group counts as
+ * fixed and zero wide.
  * <li>A back reference is rejected.
  * <li>The matcher looks back from the shortest possible body to the reach, in
  * int arithmetic. A reach that wrapped to a small negative number therefore finds
@@ -97,7 +98,7 @@ final class LookbehindReach {
 
     private void loop(Repeat.Loop loop) {
         LookbehindReach inner = new LookbehindReach(loop.body());
-        if (loop.question && loop.possessive && fixedShape(loop.body())) {
+        if (loop.question && loop.possessive && fixedShape(loop.body(), true)) {
             sum += inner.max;
         } else if (loop.question && loop.possessive) {
             repeat(inner.max, inner.valid, 1);
@@ -107,7 +108,7 @@ final class LookbehindReach {
             if (loop.inGroup) {
                 restart();
             }
-        } else if (loop.grouped && !fixedShape(loop.body())) {
+        } else if (loop.grouped && !fixedShape(loop.body(), true)) {
             ok = false;
         } else {
             repeat(inner.max, inner.valid, loop.maxCount());
@@ -133,27 +134,37 @@ final class LookbehindReach {
         }
     }
 
-    /** True when a group body has no alternatives, lookarounds, back references or variable repeats. */
-    private static boolean fixedShape(Node n) {
-        if (n instanceof Node.Alt || n instanceof GroupNodes.Look || n instanceof Atoms.BackRef) {
+    /**
+     * True when a group body has no alternatives or variable repeats, and, for a lookbehind, no
+     * back references; otherwise (the shortest-match rule in Repeat) back references are fixed
+     * and an atomic group hides what it holds.
+     * Observed on the oracle: a lookaround inside the group takes no width and does not make it
+     * variable, so (?<=(?:(?=b)b){2})c is accepted. Pinned by RegexLookbehind, blessed in
+     * RegexLookbehind.out; mutation: count a lookaround as variable again.
+     */
+    static boolean fixedShape(Node n, boolean forLookbehind) {
+        if (n instanceof Node.Alt) {
             return false;
+        }
+        if (n instanceof Atoms.BackRef) {
+            return !forLookbehind;
         }
         if (n instanceof Atoms.One) {
             return !((Atoms.One) n).fromAlternation;
         }
         if (n instanceof Node.Seq) {
             for (Node item : ((Node.Seq) n).items) {
-                if (!fixedShape(item)) {
+                if (!fixedShape(item, forLookbehind)) {
                     return false;
                 }
             }
             return true;
         }
         if (n instanceof GroupNodes.Group) {
-            return fixedShape(((GroupNodes.Group) n).body());
+            return fixedShape(((GroupNodes.Group) n).body(), forLookbehind);
         }
         if (n instanceof GroupNodes.Atomic) {
-            return fixedShape(((GroupNodes.Atomic) n).body());
+            return !forLookbehind || fixedShape(((GroupNodes.Atomic) n).body(), true);
         }
         if (n instanceof Repeat.CharRepeat) {
             Repeat.CharRepeat r = (Repeat.CharRepeat) n;
@@ -161,7 +172,7 @@ final class LookbehindReach {
         }
         if (n instanceof Repeat.Loop) {
             Repeat.Loop l = (Repeat.Loop) n;
-            return l.minCount() == l.maxCount() && fixedShape(l.body());
+            return l.minCount() == l.maxCount() && fixedShape(l.body(), forLookbehind);
         }
         return true;
     }

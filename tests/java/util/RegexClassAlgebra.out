@@ -1,0 +1,83 @@
+== an empty right side keeps the last item, and a run of plain characters is one item
+[a&&] -> {a}
+[ab&&] -> {ab}
+[a-c&&] -> {abc}
+[a[b]&&] -> {b}
+[ab-d&&] -> {bcd}
+[a-ca&&] -> {a}
+[a\d&&] -> {1}
+[a[bc]b&&] -> {ab}
+[a[^b]b&&] -> {ab}
+[b[^b]&&] -> {acdx&1-^éÿĀ}
+[ab-db&&] -> {ab}
+[abc&&] -> {abc}
+[a&a&&] -> {a&}
+== negated, the same
+[^a&&] -> {}
+[^ab&&] -> {}
+[^\d&&] -> {}
+[^a[b]&&] -> {b}
+[^a[^b]&&] -> {acdx&1-^éÿĀ}
+[^a-c&&] -> {}
+[^aa-c&&] -> {}
+[^a[a&&b]&&] -> {}
+== a right side starting with a plain item replaces the nested classes before it
+[a-z&&[b]c] -> {c}
+[a-z&&[^b]x] -> {x}
+[a-z&&c[b]] -> {bc}
+[a-z&&[b][c]] -> {bc}
+[a-z&&[b]cd] -> {cd}
+[a-d&&[bc]a-c] -> {abc}
+[a-d&&[b]&&c] -> {}
+[a-d&&bc&&cd] -> {c}
+== &, && and & again
+[^a&&&b] -> {}
+[^a&&b&c] -> {bc&}
+[a&&&b] -> {ab&}
+[a&&[b]&] -> {a&}
+[c&&[b]&] -> {c&}
+[[b]&&[^b]&] -> {&}
+[a[b]&&&] -> {ab&}
+[ab&&&] -> {ab&}
+[a&&&&] -> {a}
+[a&&&] -> {a&}
+== negation after &&
+[^a&&[bc]&d] -> {bc}
+[^a&&[bc]&&d] -> {}
+[^ab&&[bcd]&c] -> {d}
+[^a&&[b]&c] -> {b}
+[^a&&[b]&&c&&d] -> {}
+[^a[b]&c] -> {bdx1-^éÿĀ}
+[^a[b]&&[c]&a] -> {c}
+== negation applies to each item written directly, not to nested classes
+[^a[b]] -> {bcdx&1-^éÿĀ}
+[^a[b]c] -> {bdx&1-^éÿĀ}
+[^ab[b]a] -> {cdx&1-^éÿĀ}
+[^aa[^b]b] -> {cdx&1-^éÿĀ}
+[^a-c&&b-d] -> {d}
+[^ab[bc]c] -> {dx&1-^éÿĀ}
+[^a[b][c]] -> {bcdx&1-^éÿĀ}
+== only characters below U+0100 join that run; a later one from U+0100 up is an item of its own
+[aĀ&&] -> {Ā}
+[Āa&&] -> {a}
+[aÿ&&] -> {aÿ}
+[ÿa&&] -> {aÿ}
+[éĀ&&] -> {Ā}
+[aé&&] -> {aé}
+[^bĀ[b]Ā] -> {abcdx&1-^éÿ}
+[^bÿ[b]ÿ] -> {acdx&1-^éĀ}
+[^bĀ[b]c] -> {adx&1-^éÿ}
+[^ĀĀ[^b]b] -> {acdx&1-^éÿĀ}
+== errors
+[&&] -> {error Bad class syntax @2}
+[&&a] -> {a}
+[a&& -> {error Unclosed character class @3}
+[a&&[ -> {error Unclosed character class @4}
+[] -> {error Unclosed character class @1}
+[a- -> {error Illegal character range @3}
+[b-a] -> {error Illegal character range @3}
+[a&&b-a] -> {error Illegal character range @6}
+== every class of up to four items
+4680 classes, 4468 not empty, hash -1953682963419814192
+4680 negated classes, 3876 not empty, hash 3430581304036737
+done

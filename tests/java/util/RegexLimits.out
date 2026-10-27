@@ -11,6 +11,19 @@ a* x100000 -> true
 (?:a|b)*?c x0 -> false
 (?:ab+;?)* x800 -> true
 (?:(a)b)* x500 -> true
+\R+ x20000 -> true
+\R+ x20000 -> true
+(?:\R\d)* x5000 -> true
+(?:x+x+)+y x22 false
+(?:x+x+)+y x26 false
+(.*?,){11}P x20 false
+(a+)+b x26 false
+(a|aa)+$ x26 false
+(a*)*b x26 false
+(?:a|ab)+c x13 false
+(?:(a)(a)?)+b x30 false
+(?:(?=a)a(a)?)+b x30 false
+true
 true 2 3999 4000
 true [cd] 3000 3002
 true c 2999

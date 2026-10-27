@@ -84,6 +84,22 @@ a f=47(47) A : [0,1) matches=true
 ( ? i)a f=4(6) ab : [0,1) matches=false
 (?i: a) f=4(4) ab : [0,1) matches=false
 ( ?:a)b f=0(0) ab : matches=false
+[a- b] f=4(4) abc \n- : [0,1) [1,2) matches=false
+[a - b] f=4(4) abc \n- : [0,1) [1,2) matches=false
+[a -b] f=4(4) abc \n- : [0,1) [1,2) matches=false
+[a-\n b] f=4(4) abc \n- : [0,1) [1,2) matches=false
+[a-#c\nb] f=4(4) abc \n- : [0,1) [1,2) matches=false
+[\r- ] f=4 : Unclosed character class @5
+[a- ] f=4 : Illegal character range @4
+[ a-b] f=4(4) abc \n- : [0,1) [1,2) matches=false
+[a-b ]c f=4(4) abc \n- : [1,3) matches=false
+[a-b#x\n] f=4(4) abc \n- : [0,1) [1,2) matches=false
+[a - ] f=4 : Illegal character range @5
+[^a- b] f=4(4) abc \n- : [2,3) [3,4) [4,5) [5,6) matches=false
+[a-\n b] f=4 : Illegal character range @4
+[a #\n- b] f=4(4) abc \n- : [0,1) [1,2) matches=false
+[a-b- c] f=4(4) abc \n- : [0,1) [1,2) [2,3) [5,6) matches=false
+[a- b] f=0 : Illegal character range @3
 \b in _\u0301: default 0 1 / 2; unicode 0 2 / 1
 \b in a\u0301: default 0 2 / 1; unicode 0 2 / 1
 \b in 1\u0301: default 0 2 / 1; unicode 0 2 / 1

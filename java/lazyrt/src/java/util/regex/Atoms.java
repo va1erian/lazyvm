@@ -140,16 +140,21 @@ final class Atoms {
     /** \R: CRLF as one unit (and then only as one unit), or any single line terminator. */
     static final class LineBreak extends Node {
         boolean match(Matcher m, int i) {
+            int w = widthAt(m, i);
+            return w > 0 && next.match(m, i + w);
+        }
+
+        /** The length of the line break at i, or 0 when there is none. */
+        static int widthAt(Matcher m, int i) {
             if (i >= m.hi) {
                 m.hitEnd = true;
-                return false;
+                return 0;
             }
             char c = m.text.charAt(i);
             if (c == '\r') {
-                boolean crlf = i + 1 < m.hi && m.text.charAt(i + 1) == '\n';
-                return next.match(m, crlf ? i + 2 : i + 1);
+                return i + 1 < m.hi && m.text.charAt(i + 1) == '\n' ? 2 : 1;
             }
-            return CharClass.isVerticalSpace(c) && next.match(m, i + 1);
+            return CharClass.isVerticalSpace(c) ? 1 : 0;
         }
 
         int min() {

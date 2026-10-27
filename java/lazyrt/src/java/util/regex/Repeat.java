@@ -196,7 +196,15 @@ final class Repeat {
         }
 
         int min() {
-            return mul(1, minCount);
+            // Observed on the oracle: a repeat of an alternation counts nothing towards the
+            // shortest match, which decides where a failed search stops and so its hitEnd and
+            // requireEnd ((?:B|C)+z on "" reports requireEnd). Pinned by RegexEnds, blessed in
+            // RegexEnds.out; mutation: count minCount again.
+            return blocksMin() ? 0 : mul(1, minCount);
+        }
+
+        boolean blocksMin() {
+            return fromAlternation && mode != POSSESSIVE && !question;
         }
 
         int max() {
@@ -227,6 +235,15 @@ final class Repeat {
         private Tail tail;
         private FlatLoop flat;
 
+        /** Lets this loop remember failed states (see LoopMemo). */
+        void memoize(boolean on) {
+            if (flat != null) {
+                flat.memoizable = on;
+            } else {
+                tail.memoizable = on;
+            }
+        }
+
         Loop(Node body, int minCount, int maxCount, boolean lazy, int id, boolean grouped, boolean question,
              boolean possessive, boolean inGroup) {
             this.inGroup = inGroup;
@@ -254,7 +271,7 @@ final class Repeat {
 
         Node link(Node after) {
             this.next = after;
-            this.flat = FlatLoop.of(body, minCount, maxCount, lazy);
+            this.flat = FlatLoop.of(body, minCount, maxCount, lazy, id);
             if (flat != null) {
                 flat.next = after;
                 return this;
@@ -282,7 +299,13 @@ final class Repeat {
         }
 
         int min() {
-            return mul(body.min(), minCount);
+            // Observed on the oracle: as for CharRepeat, a repeat of a body with alternatives or
+            // a variable part counts nothing; a possessive repeat and an atomic body count fully.
+            return blocksMin() ? 0 : mul(body.min(), minCount);
+        }
+
+        boolean blocksMin() {
+            return !question && !possessive && !LookbehindReach.fixedShape(body, false);
         }
 
         int max() {
@@ -301,9 +324,12 @@ final class Repeat {
         private final int minCount;
         private final int maxCount;
         private final boolean lazy;
+        private final int slots;
+        boolean memoizable;
         Node head;
 
         Tail(int id, int minCount, int maxCount, boolean lazy) {
+            this.slots = LoopMemo.slots(minCount, maxCount);
             this.id = id;
             this.minCount = minCount;
             this.maxCount = maxCount;
@@ -320,6 +346,11 @@ final class Repeat {
             if (c > 0) {
                 m.iterationEnd = i;
             }
+            boolean memo = memoizable && m.memo.busy();
+            int slot = c < slots ? c : slots - 1;
+            if (memo && m.memo.failed(id, slot, i)) {
+                return false;
+            }
             boolean required = c < minCount;
             if (lazy && !required && next.match(m, i)) {
                 return true;
@@ -334,7 +365,13 @@ final class Repeat {
                 m.loopCount[id] = c;
                 m.loopStart[id] = savedStart;
             }
-            return !required && !lazy && next.match(m, i);
+            if (!required && !lazy && next.match(m, i)) {
+                return true;
+            }
+            if (memo) {
+                m.memo.fail(id, slot, slots, i);
+            }
+            return false;
         }
     }
 

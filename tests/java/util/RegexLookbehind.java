@@ -9,7 +9,7 @@ import java.util.regex.PatternSyntaxException;
  * (docs/regex.md, "Lookbehind reach"), including bodies it accepts although they are unbounded.
  */
 public class RegexLookbehind {
-    private static final String[] TEXTS = {"aaaaaaab_a", "a_aab_aaa_b_a", "xaaabbbaabbb_ab", " KΑabc Β_ def"};
+    private static final String[] TEXTS = {"aaaaaaab_a", "a_aab_aaa_b_a", "xaaabbbaabbb_ab", " KΑabc Β_ def", "bbcxbcc_x"};
 
     static int count(String re, String text) {
         Matcher m = Pattern.compile(re).matcher(text);
@@ -43,8 +43,13 @@ public class RegexLookbehind {
         String[] groupLoops = {"(?:a|b)+", "(?:a|b)*", "(?:a|b){2}", "(?:a|b){0,3}", "(a|bc){2}", "(?: |x){2,}", "(?:ab)+", "(?:ab)*", "(?:ab)*a", "(?:a|bc)+", "(?:a?b)+", "(?:a{2})+", "(?:a+)+", "(?:a+_?)+", "(?:a)+_"};
         String[] restarts = {"(?:a|b)a+", "(?:a|bc)a+", "(?:ab|cd)a+", "(a|b)a+", "(?:a|b)a+b", "(?:a|b)_?a+", "x(?:a|b)a+", "a(?:a|b)?a+", "(?:ab)?a+", "(?:ab)??a+", "(?:ab)?+a+", "(?:ab)?a+b+", "(?:ab)?_a+", "_(?:ab)?a+",
             "(?:ab)?(?:cd)?a+", "(?:ab)?(?:cd)a+", "(?:(?:ab)?a)a+", "(?:a(?:ab)?)a+", "(?:a(?:ab)?)_a+", "(?:ab)?(?:a|b)a+", "(?:ab)?a+(?:ab)?a+", "(a)?a+", "(?:a)?a+", "a?a+", "(?>ab)?a+", "ab?a+", "(?:ab)?+_", ".+(?:ab)?+a{2}"};
-        String[][] groups = {bounded, unbounded, afterUnbounded, rejected, groupLoops, restarts};
-        String[] names = {"bounded", "unbounded", "after an unbounded repeat", "rejected", "loops over groups", "restart after an alternation or optional group"};
+        String[] wraps = {"(?:ab)+", "(?:abc)+", "(?:abcd)+", "(?:abcde)+", "(?:abc)*", "(?:ab)*", "(?:abc){2,}", "(?:abc){3,}", "(?:ab){2,}", "(?:a){2,}", "(?:aa)+", "(?:aaa)+", "(?:\\w\\w)+", "(?:\\w\\w\\w)+"};
+        String[] looks = {"(?:(?=b)b){2}", "(b(?=c)){1,2}", "(?:a(?!b)){2}", "(?:(?<=a)a)+", "(?:(?=b)b)+", "(?:b(?=c)|c)+", "(?:(?=b)bb)*", "(?:(?=b)b)?"};
+        String[] alternations = {"a*_?|c*_?", "a+_?|c+_?", "a*|c*", "a+|c+", "b*_?|c", "a*_?|c*_?|_", "_?a*|c", "(?:a*_?|c*_?)", "a*_?|c*_?x"};
+        String[][] groups = {bounded, unbounded, afterUnbounded, rejected, groupLoops, restarts, wraps, looks, alternations};
+        String[] names = {"bounded", "unbounded", "after an unbounded repeat", "rejected", "loops over groups", "restart after an alternation or optional group",
+            "group repeats: an odd body length wraps to a positive reach, an even one to a negative reach", "a lookaround inside a repeated group has no width",
+            "an alternation counts its longest branch from -1"};
         for (int g = 0; g < groups.length; g++) {
             System.out.println("== " + names[g]);
             for (String b : groups[g]) {

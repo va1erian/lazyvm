@@ -27,6 +27,14 @@ abstract class Node {
         return 0;
     }
 
+    /**
+     * True when this subtree is a repeat the oracle gives no length (see Repeat), which also
+     * stops it counting the nodes after it in the same sequence towards the shortest match.
+     */
+    boolean blocksMin() {
+        return false;
+    }
+
     /** Most chars this subtree can consume, or UNBOUNDED. */
     int max() {
         return 0;
@@ -107,8 +115,20 @@ abstract class Node {
             int n = 0;
             for (Node item : items) {
                 n = add(n, item.min());
+                if (item.blocksMin()) {
+                    break;
+                }
             }
             return n;
+        }
+
+        boolean blocksMin() {
+            for (Node item : items) {
+                if (item.blocksMin()) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         int max() {

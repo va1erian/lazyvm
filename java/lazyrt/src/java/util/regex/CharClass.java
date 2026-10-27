@@ -2,7 +2,15 @@ package java.util.regex;
 
 /** A set of code points, tested one at a time. Instances are immutable. */
 abstract class CharClass {
+    /** Set on classes that came from a general category or block name (see supplementary). */
+    boolean categoryOrBlock;
+
     abstract boolean test(int cp);
+
+    CharClass markCategoryOrBlock() {
+        categoryOrBlock = true;
+        return this;
+    }
 
     CharClass not() {
         return new Not(this);
@@ -430,7 +438,7 @@ abstract class CharClass {
     }
 
     private static boolean isHexDigit(int cp) {
-        return (cp >= '0' && cp <= '9') || (cp >= 'a' && cp <= 'f') || (cp >= 'A' && cp <= 'F')
-            || (cp >= 0xFF10 && cp <= 0xFF19) || (cp >= 0xFF21 && cp <= 0xFF26) || (cp >= 0xFF41 && cp <= 0xFF46);
+        return Character.isDigit(cp) || (cp >= 'a' && cp <= 'f') || (cp >= 'A' && cp <= 'F')
+            || (cp >= 0xFF21 && cp <= 0xFF26) || (cp >= 0xFF41 && cp <= 0xFF46);
     }
 }

@@ -25,8 +25,14 @@ final class FlatLoop extends Node {
     private final boolean lazy;
     private final int width;
     private final int frameSize;
+    private final int id;
+    private final int slots;
+    /** Set by LoopMemo.prepare: this loop may remember the states that failed. */
+    boolean memoizable;
 
-    private FlatLoop(Node[][] branches, int group, int minCount, int maxCount, boolean lazy) {
+    private FlatLoop(Node[][] branches, int group, int minCount, int maxCount, boolean lazy, int id) {
+        this.id = id;
+        this.slots = LoopMemo.slots(minCount, maxCount);
         this.branches = branches;
         this.group = group;
         this.minCount = minCount;
@@ -41,7 +47,7 @@ final class FlatLoop extends Node {
     }
 
     /** The flat form of a loop over `body`, or null when the body is not flat. */
-    static FlatLoop of(Node body, int minCount, int maxCount, boolean lazy) {
+    static FlatLoop of(Node body, int minCount, int maxCount, boolean lazy, int id) {
         int group = -1;
         Node inner = body;
         if (body instanceof GroupNodes.Group) {
@@ -56,7 +62,7 @@ final class FlatLoop extends Node {
                 return null;
             }
         }
-        return new FlatLoop(branches, group, minCount, maxCount, lazy);
+        return new FlatLoop(branches, group, minCount, maxCount, lazy, id);
     }
 
     private static Node[] items(Node n) {
@@ -79,7 +85,8 @@ final class FlatLoop extends Node {
         if (n instanceof Repeat.CharRepeat) {
             return ((Repeat.CharRepeat) n).group < 0;
         }
-        return n instanceof Atoms.One || n instanceof Atoms.Str || n instanceof Anchor;
+        return n instanceof Atoms.One || n instanceof Atoms.Str || n instanceof Anchor
+            || n instanceof Atoms.LineBreak;
     }
 
     /**
@@ -105,6 +112,13 @@ final class FlatLoop extends Node {
                 case ENTER:
                     if (c > 0 && i == st[f + LAST]) {
                         st[f + PHASE] = EXIT_ONLY;
+                        break;
+                    }
+                    if (memoizable && m.memo.busy() && m.memo.failed(id, c < slots ? c : slots - 1, i)) {
+                        f = drop(m, st, f);
+                        if (f < 0) {
+                            return false;
+                        }
                         break;
                     }
                     st[f + PHASE] = ITERATE;
@@ -141,6 +155,9 @@ final class FlatLoop extends Node {
                 case LEAVE:
                     if (!required && !lazy && next.match(m, i)) {
                         return true;
+                    }
+                    if (memoizable) {
+                        m.memo.fail(id, c < slots ? c : slots - 1, slots, i);
                     }
                     f = drop(m, st, f);
                     if (f < 0) {
@@ -226,6 +243,10 @@ final class FlatLoop extends Node {
         }
         if (item instanceof Atoms.One) {
             int w = Repeat.widthAt(m, ((Atoms.One) item).cc, p);
+            return w == 0 ? -1 : p + w;
+        }
+        if (item instanceof Atoms.LineBreak) {
+            int w = Atoms.LineBreak.widthAt(m, p);
             return w == 0 ? -1 : p + w;
         }
         if (item instanceof Atoms.Str) {

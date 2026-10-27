@@ -123,6 +123,12 @@ public class RegexFlags {
             find(re, Pattern.COMMENTS, "ab");
         }
         find("( ?:a)b", 0, "ab");
+        // Under COMMENTS, white space and comments are skipped on either side of the '-' of a range.
+        for (String re : new String[] {"[a- b]", "[a - b]", "[a -b]", "[a-\n b]", "[a-#c\nb]", "[\\r- ]", "[a- ]", "[ a-b]", "[a-b ]c",
+            "[a-b#x\n]", "[a - ]", "[^a- b]", "[a-\\n b]", "[a #\n- b]", "[a-b- c]"}) {
+            find(re, Pattern.COMMENTS, "abc \n-");
+        }
+        find("[a- b]", 0, "abc \n-");
         wordBoundaries();
         System.out.println("done");
     }

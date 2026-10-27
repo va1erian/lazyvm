@@ -45,6 +45,18 @@ public class RegexLimits {
         loop("(?:a|b)*?c", "a", 0);
         loop("(?:ab+;?)*", "abb", 800);
         loop("(?:(a)b)*", "ab", 500);
+        loop("\\R+", "\n", 20000);
+        loop("\\R+", "\r\n", 20000);
+        loop("(?:\\R\\d)*", "\n1", 5000);
+        // A search that would retry the same failing states exponentially is cut short by LoopMemo.
+        for (String[] c : new String[][] {{"(?:x+x+)+y", "x", "22"}, {"(?:x+x+)+y", "x", "26"}, {"(.*?,){11}P", "1,", "20"},
+            {"(a+)+b", "a", "26"}, {"(a|aa)+$", "a", "26"}, {"(a*)*b", "a", "26"}, {"(?:a|ab)+c", "ab", "13"},
+            {"(?:(a)(a)?)+b", "a", "30"}, {"(?:(?=a)a(a)?)+b", "a", "30"}}) {
+            System.out.println(c[0] + " x" + c[2] + " " + find(c[0], rep(c[1], Integer.parseInt(c[2])) + "!"));
+        }
+        // A loop inside another loop does not remember failures: whether it can finish depends on the outer count.
+        String block = rep("a", 300) + "d";
+        System.out.println(find("(?:(?:(?!x)a)+){2}c", rep(block, 3) + rep("a", 300) + "c"));
         Matcher m = Pattern.compile("(\\d)+").matcher(rep("12", 2000));
         System.out.println(m.matches() + " " + m.group(1) + " " + m.start(1) + " " + m.end(1));
         m = Pattern.compile("(\\w+\\s?)*").matcher(rep("ab ", 1000) + "cd");
