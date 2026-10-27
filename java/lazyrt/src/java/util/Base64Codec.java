@@ -1,6 +1,10 @@
 package java.util;
 
-/** The alphabets and the array coders shared by Base64's encoders, decoders and streams. */
+/**
+ * The alphabets and the coding loops shared by Base64's encoders, decoders and streams. The loops
+ * keep everything they need in locals and handle whole units inline, because an interpreter pays
+ * for every field read and call per byte.
+ */
 final class Base64Codec {
     private Base64Codec() {
     }
@@ -33,10 +37,8 @@ final class Base64Codec {
         return v;
     }
 
-    /** The 6-bit value of an alphabet byte, or -1 for any other byte ('=' included). */
-    static int value(byte b, boolean url) { return (url ? URL_VALUES : BASIC_VALUES)[b & 0xff]; }
-
-    static byte letter(int sixBits, boolean url) { return (url ? URL : BASIC)[sixBits & 63]; }
+    /** Byte (0-255) to its 6-bit value; -1 for every byte outside the alphabet, '=' included. */
+    static int[] table(boolean url) { return url ? URL_VALUES : BASIC_VALUES; }
 
     /** A computed array size, or the error Java gives for arrays it cannot make. */
     static int toInt(long size) {
@@ -46,72 +48,101 @@ final class Base64Codec {
         return (int) size;
     }
 
-    /** Writes encoded characters into an array, breaking lines as B3 and B14 describe. */
-    static final class Sink {
-        private final Base64.Encoder encoder;
-        private final byte[] dst;
-        private int length;
-        private int column;
-
-        Sink(Base64.Encoder encoder, byte[] dst, int column) {
-            this.encoder = encoder;
-            this.dst = dst;
-            this.column = column;
-        }
-
-        int length() { return length; }
-
-        /** Characters on the current line, carried from one stream group to the next. */
-        int column() { return column; }
-
-        /** One group of `count` (1 to 3) bytes: 4 characters, or fewer when unpadded (B1, B2). */
-        void group(byte a, byte b, byte c, int count) {
-            int bits = (a & 0xff) << 16 | (b & 0xff) << 8 | (c & 0xff);
-            boolean url = encoder.url();
-            for (int k = 0; k <= count; k++) {
-                put(letter(bits >> (18 - 6 * k), url));
-            }
-            if (encoder.pad()) {
-                for (int k = count; k < 3; k++) {
-                    put((byte) '=');
+    /**
+     * Encodes `groups` whole 3-byte groups of src from sp into dst at dp and returns the new dp.
+     * column[0] carries the characters on the current line between calls: a separator goes in only
+     * when a new line gets its first character (B3, B14), and since line lengths are multiples of 4
+     * that moment always falls between two groups.
+     */
+    static int encodeGroups(byte[] src, int sp, int groups, byte[] dst, int dp, Base64.Encoder e,
+                            int[] column) {
+        byte[] alpha = e.url() ? URL : BASIC;
+        byte[] sep = e.separator();
+        int line = e.lineLength();
+        int col = column[0];
+        for (int end = sp + 3 * groups; sp < end; sp += 3) {
+            if (sep != null && col == line) {
+                for (byte s : sep) {
+                    dst[dp++] = s;
                 }
+                col = 0;
             }
+            int bits = (src[sp] & 0xff) << 16 | (src[sp + 1] & 0xff) << 8 | (src[sp + 2] & 0xff);
+            dst[dp] = alpha[bits >>> 18];
+            dst[dp + 1] = alpha[(bits >>> 12) & 63];
+            dst[dp + 2] = alpha[(bits >>> 6) & 63];
+            dst[dp + 3] = alpha[bits & 63];
+            dp += 4;
+            col += 4;
         }
+        column[0] = col;
+        return dp;
+    }
 
-        /** B3, B14: a separator only when a new line gets its first character. */
-        private void put(byte ch) {
-            byte[] sep = encoder.separator();
-            if (sep != null && column == encoder.lineLength()) {
-                System.arraycopy(sep, 0, dst, length, sep.length);
-                length += sep.length;
-                column = 0;
+    /** The last 1 or 2 bytes: count + 1 characters, then '=' padding unless withoutPadding (B1, B2). */
+    static int encodeTail(byte[] src, int sp, int count, byte[] dst, int dp, Base64.Encoder e, int[] column) {
+        byte[] alpha = e.url() ? URL : BASIC;
+        byte[] sep = e.separator();
+        if (sep != null && column[0] == e.lineLength()) {
+            for (byte s : sep) {
+                dst[dp++] = s;
             }
-            dst[length++] = ch;
-            column++;
+            column[0] = 0;
         }
+        int bits = (src[sp] & 0xff) << 16 | (count > 1 ? (src[sp + 1] & 0xff) << 8 : 0);
+        dst[dp++] = alpha[bits >>> 18];
+        dst[dp++] = alpha[(bits >>> 12) & 63];
+        if (count > 1) {
+            dst[dp++] = alpha[(bits >>> 6) & 63];
+        }
+        if (e.pad()) {
+            for (int k = count; k < 3; k++) {
+                dst[dp++] = '=';
+            }
+        }
+        column[0] += 4;
+        return dp;
     }
 
     /** B8-B12 on arrays: decodes src into dst and returns the number of bytes written. */
     static int decode(byte[] src, byte[] dst, boolean url, boolean mime) {
+        int[] t = table(url);
+        int n = src.length;
         int bits = 0;
         int p = 0;
         int d = 0;
         int i = 0;
-        int n = src.length;
         while (i < n) {
-            byte b = src[i];
-            if (b == '=') {
-                d = padded(src, i, p, bits, dst, d);
-                return afterPadding(src, i + (p == 2 ? 2 : 1), mime, d);
+            if (p == 0 && i + 4 <= n) {
+                // A whole unit of alphabet bytes, the usual case, in one step.
+                int v0 = t[src[i] & 0xff];
+                int v1 = t[src[i + 1] & 0xff];
+                int v2 = t[src[i + 2] & 0xff];
+                int v3 = t[src[i + 3] & 0xff];
+                if ((v0 | v1 | v2 | v3) >= 0) {
+                    int u = v0 << 18 | v1 << 12 | v2 << 6 | v3;
+                    dst[d] = (byte) (u >> 16);
+                    dst[d + 1] = (byte) (u >> 8);
+                    dst[d + 2] = (byte) u;
+                    d += 3;
+                    i += 4;
+                    continue;
+                }
             }
-            int v = value(b, url);
-            i++;
+            byte b = src[i];
+            int v = t[b & 0xff];
             if (v < 0) {
+                if (b == '=') {
+                    d = padded(src, i, p, bits, dst, d);
+                    return afterPadding(src, i + (p == 2 ? 2 : 1), mime, d);
+                }
                 if (!mime) {
                     throw new IllegalArgumentException("Illegal base64 character " + Integer.toString(b, 16));
                 }
+                i++; // B8: MIME skips it
                 continue;
             }
+            i++;
             bits = bits << 6 | v;
             if (++p == 4) {
                 d = unit(bits, 3, dst, d);
@@ -136,13 +167,17 @@ final class Base64Codec {
         return unit(bits << (6 * (4 - p)), p - 1, dst, d);
     }
 
-    /** B11: what may follow the padding, from index i. */
+    /**
+     * B11: what may follow the padding, from index i. The basic and URL decoders refuse any byte;
+     * MIME skips everything but an alphabet byte, and reports that byte's index plus one.
+     */
     private static int afterPadding(byte[] src, int i, boolean mime, int d) {
+        int[] t = BASIC_VALUES;
         for (int j = i; j < src.length; j++) {
             if (!mime) {
                 throw new IllegalArgumentException("Input byte array has incorrect ending byte at " + j);
             }
-            if (value(src[j], false) >= 0) {
+            if (t[src[j] & 0xff] >= 0) {
                 throw new IllegalArgumentException("Input byte array has incorrect ending byte at " + (j + 1));
             }
         }

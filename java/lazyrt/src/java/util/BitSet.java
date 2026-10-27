@@ -160,7 +160,7 @@ public class BitSet implements Cloneable, java.io.Serializable {
         return r;
     }
 
-    /** BS7, BS8. */
+    /** BS7, BS8: the search methods check their index first, then scan whole words. */
     public int nextSetBit(int fromIndex) {
         if (fromIndex < 0) {
             throw new IndexOutOfBoundsException("fromIndex < 0: " + fromIndex);
@@ -191,7 +191,7 @@ public class BitSet implements Cloneable, java.io.Serializable {
         }
     }
 
-    /** BS3. */
+    /** BS3: from the highest non-zero word, so the array's spare words never count. */
     public int length() {
         int n = inUse();
         return n == 0 ? 0 : 64 * n - Long.numberOfLeadingZeros(words[n - 1]);
@@ -284,19 +284,25 @@ public class BitSet implements Cloneable, java.io.Serializable {
         return true;
     }
 
-    /** BS4: a sized set keeps its words; any other keeps only the words in use. */
+    /**
+     * BS4: a sized set keeps its words. Any other set is first trimmed to its words in use, the
+     * receiver included (BS2's one shrinking operation), so later growth starts from that size.
+     */
     @Override
     public Object clone() {
+        if (!sized) {
+            words = Arrays.copyOf(words, inUse());
+        }
         try {
             BitSet copy = (BitSet) super.clone();
-            copy.words = Arrays.copyOf(words, sized ? words.length : inUse());
+            copy.words = words.clone();
             return copy;
         } catch (CloneNotSupportedException e) {
             throw new InternalError(e);
         }
     }
 
-    /** BS5. */
+    /** BS5: set bits in increasing order, walked with nextSetBit. */
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("{");

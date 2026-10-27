@@ -15,6 +15,8 @@ equals: true false false false true false false false false
 equals int: true false true false false true
 equals double: true false false true
 equals calls: true 1
+equals same value: true true 0
+equals empty: false 1 false 1
 of null: java.lang.NullPointerException
 ifPresent null: ok java.lang.NullPointerException
 filter null: java.lang.NullPointerException java.lang.NullPointerException

@@ -99,6 +99,12 @@ public class BitSets {
             + t(() -> { BitSet b = BitSet.valueOf(new long[] {0, 0, 5}); b.clear(130); b.clear(128); return b.clone(); })
             + " | get result " + t(() -> of(1, 300).get(250, 260).clone()) + " | get result trimmed "
             + t(() -> { BitSet b = of(1, 300).get(0, 301); b.clear(299); return b.clone(); }));
+        // BS2/BS4: cloning a set that is not sized trims the receiver too, and growth restarts from there.
+        System.out.println("clone trims receiver " + t(() -> { BitSet b = of(5, 100000); b.clear(100000); b.clone(); return b; })
+            + " | then set 70 " + t(() -> { BitSet b = of(5, 100000); b.clear(100000); b.clone(); b.set(70); return b; })
+            + " | empty " + t(() -> { BitSet b = of(200); b.clear(200); b.clone(); b.set(1); return b; })
+            + " | sized kept " + t(() -> { BitSet b = new BitSet(1000); b.set(3); b.clone(); return b; })
+            + " | sized grown " + t(() -> { BitSet b = new BitSet(100); b.set(500); b.clear(500); b.clone(); return b; }));
         // BS5: toString, valueOf and the arrays, which drop trailing zero words and bytes.
         System.out.println("toString " + new BitSet() + " " + of(0) + " " + of(1, 3, 64, 1000) + " " + of(Integer.MAX_VALUE >> 10));
         System.out.println("valueOf long " + s(BitSet.valueOf(new long[] {1, 0, 0})) + " | " + s(BitSet.valueOf(new long[] {0, 0, 5}))

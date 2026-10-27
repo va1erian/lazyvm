@@ -129,8 +129,12 @@ Pinned by: Base64Streams ("bounds").
 returns. It decodes as B8 (MIME skips non-alphabet bytes) but stops for good at the first padding:
 after a unit ending in `=` (p = 3) or `==` (p = 2) it reports end of stream and never reads the rest,
 whatever follows (`QUI=x` gives `AB`, `QUJDRA==QQ==` gives `ABCD`). Without padding, the end of `in`
-ends the data. After the end, `read` keeps returning -1.
-Pinned by: Base64Streams ("dec stream", "eof", "fuzz dec stream").
+ends the data. After the end, `read` keeps returning -1. The stream reads `in` only through
+`in.read()`, one byte at a time, and only as far as the units the call needs: asking for 1 byte reads
+one whole unit (4 alphabet bytes, and any skipped bytes before them) and keeps the 2 extra decoded
+bytes for the next call, so after any call `in` has been read exactly to the end of a unit, or to the
+padding, never beyond. (Added after review; the oracle does the same.)
+Pinned by: Base64Streams ("dec stream", "eof", "fuzz dec stream", "dec source reads").
 
 **B18.** Decoding stream errors are `IOException`s:
 - a byte that is neither an alphabet byte nor `=`, for the basic and URL decoders:
@@ -216,9 +220,12 @@ to `max(2 * k, w + 1)` words and the set stops being sized. Operations that can 
 `flip(from, to)` (they need the word of bit `to - 1`), and `or(s)` and `xor(s)`, which need as many
 words as `s` has *in use* (words up to its highest set bit), not `s.size()`. Nothing else grows the
 array: `clear` in all forms, `set(i, false)`, ranges set to false, empty ranges, `get`, `and`,
-`andNot`. Nothing shrinks it, `clear()` included; only `clone()` returns a smaller copy (BS4).
+`andNot`. Only `clone()` shrinks it: cloning a set that is not sized (BS4) first trims the
+receiver's own array to its words in use (0 words when empty), so its `size()` drops and later growth
+starts from the trimmed size; a sized set keeps its array. Nothing else shrinks it, `clear()`
+included. (Corrected after review: the first version said `clone()` left the receiver alone.)
 Pinned by: BitSets ("growth default", "growth 64", "growth 0", "no growth", "flip grows",
-"range grows", "set false grows?", "or", "clear()", "fuzz sum").
+"range grows", "set false grows?", "or", "clear()", "clone trims receiver", "fuzz sum").
 
 **BS3.** `length()` is the highest set bit + 1 (0 when empty); `cardinality()` counts set bits;
 `isEmpty()` ignores the size. Pinned by: BitSets (every `len`/`card` field, "intersects").

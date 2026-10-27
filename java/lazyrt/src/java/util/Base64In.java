@@ -6,29 +6,32 @@ import java.io.InputStream;
 /** The stream Base64.Decoder.wrap returns (docs/design/util-data.md B17-B19). */
 final class Base64In extends InputStream {
     private final InputStream in;
-    private final boolean url;
+    private final int[] table;
     private final boolean mime;
-    /** Decoded bytes not yet returned: a unit can give more than the caller asked for. */
+    /** Decoded bytes of the last unit that the caller had no room for yet. */
     private final byte[] pending = new byte[3];
     private int pendingStart;
     private int pendingEnd;
+    /** The bytes of the last unit nextUnit() decoded, high byte first. */
+    private int unitBits;
     private boolean ended;
     private boolean closed;
+    /** Reused by read(), which would otherwise allocate per byte. */
+    private final byte[] one = new byte[1];
 
     Base64In(InputStream in, boolean url, boolean mime) {
         this.in = in;
-        this.url = url;
+        this.table = Base64Codec.table(url);
         this.mime = mime;
     }
 
     @Override
     public int read() throws IOException {
-        byte[] one = new byte[1];
         int n = read(one, 0, 1);
         return n < 0 ? -1 : one[0] & 0xff;
     }
 
-    /** B17: fills the request unless the data ends first. */
+    /** B17: fills the request unless the data ends first; whole units go straight to b. */
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
         checkOpen();
@@ -38,17 +41,28 @@ final class Base64In extends InputStream {
         if (len == 0) {
             return 0;
         }
-        int done = 0;
-        while (done < len) {
-            if (pendingStart == pendingEnd && (ended || !nextUnit())) {
-                break;
-            }
-            b[off + done++] = pending[pendingStart++];
+        int end = off + len;
+        int d = off;
+        while (d < end && pendingStart < pendingEnd) {
+            b[d++] = pending[pendingStart++];
         }
-        return done == 0 ? -1 : done;
+        while (d < end && !ended) {
+            int k = nextUnit();
+            int bits = unitBits;
+            if (end - d >= k) {
+                d = Base64Codec.unit(bits, k, b, d);
+            } else {
+                pendingStart = 0;
+                pendingEnd = Base64Codec.unit(bits, k, pending, 0);
+                while (d < end) {
+                    b[d++] = pending[pendingStart++];
+                }
+            }
+        }
+        return d == off ? -1 : d - off;
     }
 
-    /** B19. */
+    /** B19: the source's own count, as the rule states; decoded bytes held in pending are not added. */
     @Override
     public int available() throws IOException {
         checkOpen();
@@ -69,42 +83,42 @@ final class Base64In extends InputStream {
         }
     }
 
-    /** Reads one unit into `pending`; false at the end of the data (B17, B18). */
-    private boolean nextUnit() throws IOException {
+    /**
+     * Reads one unit from `in` and returns how many bytes it gives (0 at the end of the data),
+     * leaving them in unitBits. B17: `in` is read one byte at a time and never past the unit, so
+     * after padding nothing more of it is consumed. B18: the errors.
+     */
+    private int nextUnit() throws IOException {
+        InputStream src = in;
+        int[] t = table;
         int bits = 0;
         int p = 0;
         while (p < 4) {
-            int c = in.read();
+            int c = src.read();
             if (c < 0) {
                 ended = true;
                 if (p == 1) {
                     throw new IOException("Base64 stream has one un-decoded dangling byte.");
                 }
-                return p > 0 && fill(bits << (6 * (4 - p)), p - 1);
+                unitBits = bits << (6 * (4 - p));
+                return p == 0 ? 0 : p - 1;
             }
-            if (c == '=') {
+            int v = t[c & 0xff];
+            if (v >= 0) {
+                bits = bits << 6 | v;
+                p++;
+            } else if (c == '=') {
                 ended = true;
-                if (p < 2 || p == 2 && in.read() != '=') {
+                if (p < 2 || p == 2 && src.read() != '=') {
                     throw new IOException("Illegal base64 ending sequence:" + (18 - 6 * p));
                 }
-                return fill(bits << (6 * (4 - p)), p - 1);
-            }
-            int v = Base64Codec.value((byte) c, url);
-            if (v < 0) {
-                if (mime) {
-                    continue;
-                }
+                unitBits = bits << (6 * (4 - p));
+                return p - 1;
+            } else if (!mime) {
                 throw new IOException("Illegal base64 character -1");
             }
-            bits = bits << 6 | v;
-            p++;
         }
-        return fill(bits, 3);
-    }
-
-    private boolean fill(int bits, int count) {
-        pendingStart = 0;
-        pendingEnd = Base64Codec.unit(bits, count, pending, 0);
-        return true;
+        unitBits = bits;
+        return 3;
     }
 }

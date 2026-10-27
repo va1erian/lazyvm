@@ -369,7 +369,10 @@ returned").
 
 **T5.** `hasMoreElements`/`nextElement` are `hasMoreTokens`/`nextToken`. Past the end,
 `nextToken()`, `nextToken(delim)` and `nextElement()` throw `NoSuchElementException` with no
-message. Pinned by: Tokenizers ("enumeration").
+message. Such a failing call has still moved past the delimiters it skipped, so with `,,` and
+delimiter `,` a failed `nextToken()` leaves nothing for a later `nextToken("x")`, which fails too;
+`hasMoreTokens()` and `countTokens()` never move, so after them `nextToken("x")` returns `,,`.
+(Added after review.) Pinned by: Tokenizers ("enumeration", "failed next moves").
 
 **T6.** A null string throws `NullPointerException` in the constructor. Null delimiters are
 accepted by the constructor; then `hasMoreTokens`, `nextToken` and `countTokens` throw

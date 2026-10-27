@@ -51,11 +51,14 @@ So `OptionalInt.of(0)` and `OptionalInt.empty()` share hash 0. Pinned by: Utilit
 int", "hash long", "hash double", "fuzz").
 
 **O4.** `equals(o)` is true only when `o` is of the same one of the four classes and both are empty,
-or both are present with equal values. `Optional` asks the value's `equals` once. `OptionalInt` and
+or both are present with equal values. `Optional` treats the same value object (or itself) as equal
+without a call, and otherwise, when its own value is present, asks that value's `equals` once with
+the other value, which is `null` when the other `Optional` is empty; an empty receiver calls nothing. `OptionalInt` and
 `OptionalLong` compare with `==`. `OptionalDouble` compares as `Double.compare(a, b) == 0`: any NaN
 equals any NaN, and `0.0` differs from `-0.0`. A present value never equals an empty one even when
 the value is 0, an `Optional` never equals its bare value, and the classes never equal each other.
-Pinned by: Utilities ("equals", "equals int", "equals double", "equals calls", "fuzz").
+Pinned by: Utilities ("equals", "equals int", "equals double", "equals calls", "equals same value",
+"equals empty", "fuzz").
 
 **O5.** Null arguments throw `NullPointerException` with no message, as follows. `Optional.of(null)`
 always. `filter`, `map` and `flatMap` with a null argument always, present or empty, before

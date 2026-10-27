@@ -8,6 +8,7 @@ switch back x|:y| z|false
 count 3 a 2 true 2
 count returned 5 2 1
 enumeration true ab false java.util.NoSuchElementException: null java.util.NoSuchElementException: null java.util.NoSuchElementException: null
+failed next moves java.util.NoSuchElementException: null then java.util.NoSuchElementException: null | a java.util.NoSuchElementException: null then java.util.NoSuchElementException: null | hasMore false then ,, | count 0 then ,,
 null string java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null
 null delims true | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | 0 | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null
 pair 2:[a][b<d83d>c<de00>d] 3:[a][<d83d><de00>][b<d83d>c<de00>d]

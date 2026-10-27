@@ -47,6 +47,8 @@ public class Base64Streams {
         int pos;
         final boolean trickle;
         boolean closed;
+        int singles;
+        int bulks;
 
         Under(String s, boolean trickle) {
             data = latin1(s);
@@ -54,10 +56,12 @@ public class Base64Streams {
         }
 
         public int read() {
+            singles++;
             return pos < data.length ? data[pos++] & 0xff : -1;
         }
 
         public int read(byte[] b, int off, int len) {
+            bulks++;
             if (len == 0) return 0;
             if (pos >= data.length) return -1;
             int n = trickle ? 1 : Math.min(len, data.length - pos);
@@ -220,6 +224,20 @@ public class Base64Streams {
             line.append(" trickle=").append(drain(Base64.getMimeDecoder().wrap(new Under(s, true)), 64));
             System.out.println(line);
         }
+        // B17: the source is read with read(), one byte at a time, and only as far as the units a
+        // call needs: never past the padding, never ahead of the request.
+        StringBuilder reads = new StringBuilder("dec source reads:");
+        for (String s : new String[] {"QQ==QUJD", "QUJDREVGR0hJ", "QUI=QUJD"}) {
+            for (int want : new int[] {1, 3, 6, 64}) {
+                Under src = new Under(s, false);
+                int got = Base64.getDecoder().wrap(src).read(new byte[64], 0, want);
+                reads.append(' ').append(s).append('/').append(want).append(" got ").append(got).append(" pos ")
+                    .append(src.pos).append(" singles ").append(src.singles).append(" bulks ").append(src.bulks);
+            }
+        }
+        Under ms = new Under("QUJD\r\nREVG\r\nR0hJ", false);
+        int mg = Base64.getMimeDecoder().wrap(ms).read(new byte[64], 0, 3);
+        System.out.println(reads.append(" mime/3 got ").append(mg).append(" pos ").append(ms.pos));
         // B19: available() is the wrapped stream's; reads after close fail.
         Under u = new Under("QUJDREVG", false);
         InputStream in = Base64.getDecoder().wrap(u);

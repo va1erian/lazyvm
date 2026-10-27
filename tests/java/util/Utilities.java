@@ -103,6 +103,14 @@ public class Utilities {
         calls = 0;
         boolean eq = Optional.of(new K(3)).equals(Optional.of(new K(3)));
         p("equals calls", eq + " " + calls);
+        // O4: the same value object in both is equal without a call, as is the receiver itself.
+        calls = 0;
+        K same = new K(3);
+        Optional<K> os = Optional.of(same);
+        p("equals same value", os.equals(Optional.of(same)) + " " + os.equals(os) + " " + calls);
+        // O4: a present value is asked about an empty one (with null); an empty receiver asks nothing.
+        calls = 0;
+        p("equals empty", os.equals(Optional.empty()) + " " + calls + " " + Optional.empty().equals(os) + " " + calls);
     }
 
     static void nullChecks() {

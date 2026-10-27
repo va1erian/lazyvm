@@ -92,6 +92,15 @@ public class Tokenizers {
         // T5: the Enumeration methods, and running out.
         t = new StringTokenizer("ab");
         System.out.println("enumeration " + t.hasMoreElements() + " " + t.nextElement() + " " + t.hasMoreElements() + " " + ex(t::nextElement) + " " + ex(t::nextToken) + " " + ex(() -> new StringTokenizer("").nextToken(",")));
+        // T5: a nextToken that finds nothing has moved past the delimiters; hasMoreTokens and countTokens do not move.
+        StringTokenizer f1 = new StringTokenizer(",,", ",");
+        StringTokenizer f2 = new StringTokenizer(",a,,", ",");
+        StringTokenizer f3 = new StringTokenizer(",,", ",");
+        StringTokenizer f4 = new StringTokenizer(",,", ",");
+        System.out.println("failed next moves " + ex(f1::nextToken) + " then " + ex(() -> f1.nextToken("x"))
+            + " | " + f2.nextToken() + " " + ex(f2::nextToken) + " then " + ex(() -> f2.nextToken("x"))
+            + " | hasMore " + f3.hasMoreTokens() + " then " + ex(() -> f3.nextToken("x"))
+            + " | count " + f4.countTokens() + " then " + ex(() -> f4.nextToken("x")));
         // T6: null arguments.
         System.out.println("null string " + ex(() -> new StringTokenizer(null)) + " | " + ex(() -> new StringTokenizer(null, ",")) + " | " + ex(() -> new StringTokenizer(null, ",", true)));
         System.out.println("null delims " + ex(() -> new StringTokenizer("a b", null) != null) + " | " + ex(() -> new StringTokenizer("a b", null).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("a b", null).nextToken()) + " | " + ex(() -> new StringTokenizer("a b", null).countTokens()) + " | " + ex(() -> new StringTokenizer("", null).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("", null).countTokens()) + " | " + ex(() -> new StringTokenizer("", null, true).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("a b").nextToken(null)) + " | " + ex(() -> { StringTokenizer z = new StringTokenizer("a b"); try { z.nextToken(null); } catch (NullPointerException e) { } return z.nextToken(); }));

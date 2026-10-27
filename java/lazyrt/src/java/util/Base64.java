@@ -29,7 +29,7 @@ public class Base64 {
      */
     public static Encoder getMimeEncoder(int lineLength, byte[] lineSeparator) {
         for (byte b : lineSeparator) {
-            if (b == '=' || Base64Codec.value(b, false) >= 0) {
+            if (b == '=' || Base64Codec.table(false)[b & 0xff] >= 0) {
                 throw new IllegalArgumentException(
                     "Illegal base64 line separator character 0x" + Integer.toString(b & 0xff, 16));
             }
@@ -58,7 +58,7 @@ public class Base64 {
             this.pad = pad;
         }
 
-        /** B1. */
+        /** B1: the array is sized exactly first (B6 needs the same length), then filled. */
         public byte[] encode(byte[] src) {
             byte[] dst = new byte[Base64Codec.toInt(encodedLength(src.length))];
             encodeTo(src, dst);
@@ -82,10 +82,10 @@ public class Base64 {
             return new String(chars);
         }
 
-        /** B2. */
+        /** B2: everything but the padding is kept, the B14a stream prefix included. */
         public Encoder withoutPadding() { return new Encoder(url, separator, lineLength, streamPrefix, false); }
 
-        /** B14-B16. */
+        /** B14-B16: the stream checks its target eagerly, as the other entry points do (B7). */
         public OutputStream wrap(OutputStream os) {
             Objects.requireNonNull(os);
             return new Base64Out(os, this);
@@ -101,16 +101,11 @@ public class Base64 {
         }
 
         private int encodeTo(byte[] src, byte[] dst) {
-            Base64Codec.Sink sink = new Base64Codec.Sink(this, dst, 0);
-            int i = 0;
-            for (; i + 3 <= src.length; i += 3) {
-                sink.group(src[i], src[i + 1], src[i + 2], 3);
-            }
-            int left = src.length - i;
-            if (left > 0) {
-                sink.group(src[i], left > 1 ? src[i + 1] : 0, (byte) 0, left);
-            }
-            return sink.length();
+            int[] column = {0};
+            int groups = src.length / 3;
+            int d = Base64Codec.encodeGroups(src, 0, groups, dst, 0, this, column);
+            int left = src.length - 3 * groups;
+            return left == 0 ? d : Base64Codec.encodeTail(src, 3 * groups, left, dst, d, this, column);
         }
 
         boolean url() { return url; }
@@ -155,7 +150,7 @@ public class Base64 {
             return Base64Codec.decode(src, dst, url, mime);
         }
 
-        /** B17-B19. */
+        /** B17-B19: the stream checks its source eagerly, as the other entry points do (B7). */
         public InputStream wrap(InputStream is) {
             Objects.requireNonNull(is);
             return new Base64In(is, url, mime);
@@ -165,9 +160,10 @@ public class Base64 {
         private int expectedLength(byte[] src) {
             int n = src.length;
             if (mime) {
+                int[] t = Base64Codec.table(false);
                 int c = 0;
                 for (int i = 0; i < n && src[i] != '='; i++) {
-                    if (Base64Codec.value(src[i], false) >= 0) {
+                    if (t[src[i] & 0xff] >= 0) {
                         c++;
                     }
                 }

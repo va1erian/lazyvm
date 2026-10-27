@@ -22,7 +22,7 @@ public final class OptionalDouble {
     /** O1: a fresh object per call. */
     public static OptionalDouble of(double value) { return new OptionalDouble(true, value); }
 
-    /** O6. */
+    /** O6: asking an empty object for its value is an error with a fixed message. */
     public double getAsDouble() {
         if (!present) {
             throw new NoSuchElementException("No value present");
@@ -51,7 +51,7 @@ public final class OptionalDouble {
         return value;
     }
 
-    /** O4. */
+    /** O4: only the same class, both empty or both present; Double.compare semantics: NaN equals NaN, 0.0 differs from -0.0. */
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -68,7 +68,7 @@ public final class OptionalDouble {
     @Override
     public int hashCode() { return present ? Double.hashCode(value) : 0; }
 
-    /** O2. */
+    /** O2: the value as its wrapper's toString prints it, or the class name and .empty. */
     @Override
     public String toString() { return present ? "OptionalDouble[" + value + "]" : "OptionalDouble.empty"; }
 }

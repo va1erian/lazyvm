@@ -50,7 +50,7 @@ public final class UUID implements java.io.Serializable, Comparable<UUID> {
 
     public long getMostSignificantBits() { return mostSigBits; }
 
-    /** U4. */
+    /** U4: the version nibble, read with a signed shift as the oracle does. */
     public int version() { return (int) ((mostSigBits >> 12) & 0xf); }
 
     /** U4: 0, 2, 6 or 7 from the top one to three bits of the low word. */
@@ -62,7 +62,7 @@ public final class UUID implements java.io.Serializable, Comparable<UUID> {
         return top3 < 6 ? 2 : top3;
     }
 
-    /** U5. */
+    /** U5: time fields are only meaningful for version 1, whatever the variant. */
     public long timestamp() {
         requireTimeBased();
         return (mostSigBits & 0xfffL) << 48 | ((mostSigBits >>> 16) & 0xffffL) << 32 | mostSigBits >>> 32;
@@ -84,30 +84,26 @@ public final class UUID implements java.io.Serializable, Comparable<UUID> {
         }
     }
 
-    /** U1. */
+    /** U1: the 8-4-4-4-12 form, each field zero padded in lower case. */
     @Override
     public String toString() {
         return hex(mostSigBits >>> 32, 8) + "-" + hex(mostSigBits >>> 16, 4) + "-" + hex(mostSigBits, 4) + "-"
             + hex(leastSigBits >>> 48, 4) + "-" + hex(leastSigBits, 12);
     }
 
-    /** The low `digits` hex digits of v, zero padded. */
+    /** The low `digits` (at most 15) hex digits of v, lower case and zero padded (U1). */
     private static String hex(long v, int digits) {
-        char[] c = new char[digits];
-        for (int i = digits - 1; i >= 0; i--, v >>>= 4) {
-            c[i] = Character.forDigit((int) (v & 0xf), 16);
-        }
-        return new String(c);
+        return FormatHex.pad(Long.toHexString(v & ((1L << (4 * digits)) - 1)), digits);
     }
 
-    /** U1. */
+    /** U1: both words folded together, so equal UUIDs hash alike. */
     @Override
     public int hashCode() {
         long x = mostSigBits ^ leastSigBits;
         return (int) (x >>> 32) ^ (int) x;
     }
 
-    /** U6. */
+    /** U6: equal only to a UUID with the same two words. */
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof UUID)) {

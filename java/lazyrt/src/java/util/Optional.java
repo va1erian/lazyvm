@@ -22,7 +22,7 @@ public final class Optional<T> {
 
     public static <T> Optional<T> ofNullable(T value) { return value == null ? empty() : of(value); }
 
-    /** O6. */
+    /** O6: asking an empty Optional for its value is an error with a fixed message. */
     public T get() {
         if (value == null) {
             throw new NoSuchElementException("No value present");
@@ -69,20 +69,20 @@ public final class Optional<T> {
         return value;
     }
 
-    /** O4: only another Optional, compared through the value's equals. */
+    /**
+     * O4: only another Optional. The same value object needs no call; otherwise a present value is
+     * asked once, with the other's value even when that is null (the oracle does the same).
+     */
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
         if (!(obj instanceof Optional)) {
             return false;
         }
         Object other = ((Optional<?>) obj).value;
-        return value == null ? other == null : other != null && value.equals(other);
+        return value == other || value != null && value.equals(other);
     }
 
-    /** O3. */
+    /** O3: the value's own hash, and 0 when empty, so it agrees with equals. */
     @Override
     public int hashCode() { return value == null ? 0 : value.hashCode(); }
 
