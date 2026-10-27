@@ -1,0 +1,102 @@
+%,e => java.util.FormatFlagsConversionMismatchException: Conversion = e, Flags = ,
+%,E => java.util.FormatFlagsConversionMismatchException: Conversion = e, Flags = ,
+%,a => java.util.FormatFlagsConversionMismatchException: Conversion = a, Flags = ,
+%,(a => java.util.FormatFlagsConversionMismatchException: Conversion = a, Flags = (
+%(a => java.util.FormatFlagsConversionMismatchException: Conversion = a, Flags = (
+%+s => java.util.FormatFlagsConversionMismatchException: Conversion = s, Flags = +
+% s => java.util.FormatFlagsConversionMismatchException: Conversion = s, Flags =  
+%0s => java.util.FormatFlagsConversionMismatchException: Conversion = s, Flags = 0
+%,s => java.util.FormatFlagsConversionMismatchException: Conversion = s, Flags = ,
+%(s => java.util.FormatFlagsConversionMismatchException: Conversion = s, Flags = (
+%+b => java.util.FormatFlagsConversionMismatchException: Conversion = b, Flags = +
+%0c => java.util.FormatFlagsConversionMismatchException: Conversion = c, Flags = 0
+%+c => java.util.FormatFlagsConversionMismatchException: Conversion = c, Flags = +
+%(h => java.util.FormatFlagsConversionMismatchException: Conversion = h, Flags = (
+%#s => java.util.FormatFlagsConversionMismatchException: Conversion = s, Flags = #
+%#S => java.util.FormatFlagsConversionMismatchException: Conversion = s, Flags = #
+%#s => java.util.MissingFormatArgumentException: Format specifier '%#s'
+%+x => java.util.FormatFlagsConversionMismatchException: Conversion = x, Flags = +
+% x => java.util.FormatFlagsConversionMismatchException: Conversion = x, Flags =  
+%,x => java.util.FormatFlagsConversionMismatchException: Conversion = x, Flags = ,
+%(x => java.util.FormatFlagsConversionMismatchException: Conversion = x, Flags = (
+%+(x => java.util.FormatFlagsConversionMismatchException: Conversion = x, Flags = (
+%+o => java.util.FormatFlagsConversionMismatchException: Conversion = o, Flags = +
+%,o => java.util.FormatFlagsConversionMismatchException: Conversion = o, Flags = ,
+%(X => java.util.FormatFlagsConversionMismatchException: Conversion = x, Flags = (
+%x => java.util.IllegalFormatConversionException: x != java.lang.Double
+%d => java.util.IllegalFormatConversionException: d != java.lang.String
+%d => java.util.IllegalFormatConversionException: d != java.lang.Double
+%d => java.util.IllegalFormatConversionException: d != java.lang.Float
+%d => java.util.IllegalFormatConversionException: d != java.lang.Character
+%d => java.util.IllegalFormatConversionException: d != java.lang.Boolean
+%o => java.util.IllegalFormatConversionException: o != java.lang.String
+%X => java.util.IllegalFormatConversionException: x != java.lang.Double
+%c => java.util.IllegalFormatConversionException: c != java.lang.Double
+%c => java.util.IllegalFormatConversionException: c != java.lang.String
+%c => java.util.IllegalFormatConversionException: c != java.lang.Long
+%c => java.util.IllegalFormatConversionException: c != java.lang.Boolean
+%c => java.util.IllegalFormatCodePointException: Code point = 0xffffffff
+%c => java.util.IllegalFormatCodePointException: Code point = 0x110000
+%c => java.util.IllegalFormatCodePointException: Code point = 0x7fffffff
+%c => java.util.IllegalFormatCodePointException: Code point = 0xffffffff
+%c => java.util.IllegalFormatCodePointException: Code point = 0xfffffffe
+%C => java.util.IllegalFormatCodePointException: Code point = 0xffffffff
+%e => java.util.IllegalFormatConversionException: e != java.lang.Integer
+%f => java.util.IllegalFormatConversionException: f != java.lang.Long
+%g => java.util.IllegalFormatConversionException: g != java.lang.Character
+%G => java.util.IllegalFormatConversionException: g != java.lang.String
+%a => java.util.IllegalFormatConversionException: a != java.lang.Integer
+%A => java.util.IllegalFormatConversionException: a != java.lang.Boolean
+%E => java.util.IllegalFormatConversionException: e != java.lang.Byte
+%f => java.util.IllegalFormatConversionException: f != java.lang.String
+%d => java.util.MissingFormatArgumentException: Format specifier '%d'
+%s %s => java.util.MissingFormatArgumentException: Format specifier '%s'
+%2$s => java.util.MissingFormatArgumentException: Format specifier '%2$s'
+%3$s %1$s => java.util.MissingFormatArgumentException: Format specifier '%3$s'
+%<s => java.util.MissingFormatArgumentException: Format specifier '%<s'
+%s %<s %<s %s => java.util.MissingFormatArgumentException: Format specifier '%s'
+%-5s| => java.util.MissingFormatArgumentException: Format specifier '%-5s'
+%-5$s => java.util.UnknownFormatConversionException: Conversion = '-'
+%2147483648$s => java.util.MissingFormatArgumentException: Format specifier '%s'
+%99999999999d => [1]
+%.99999999999d => [1]
+%d %.2d => java.util.IllegalFormatPrecisionException: 2
+%d %y => java.util.UnknownFormatConversionException: Conversion = 'y'
+%d %d %y => java.util.UnknownFormatConversionException: Conversion = 'y'
+%y %-d => java.util.UnknownFormatConversionException: Conversion = 'y'
+%-d %y => java.util.MissingFormatWidthException: %-d
+%d %s => java.util.IllegalFormatConversionException: d != java.lang.String
+%tY => java.util.MissingFormatArgumentException: Format specifier '%tY'
+%1$tY => java.util.MissingFormatArgumentException: Format specifier '%1$tY'
+java.util.IllegalFormatConversionException: d != java.lang.String after pre:x2ysz
+java.util.UnknownFormatConversionException: Conversion = 'y' after pre:x2ysz
+java.util.DuplicateFormatFlagsException: Flags = '-' / true
+java.util.FormatFlagsConversionMismatchException: Conversion = d, Flags = # / true
+java.util.IllegalFormatCodePointException: Code point = 0x41 / true
+java.util.IllegalFormatCodePointException: Code point = 0xfffffffb / true
+java.util.IllegalFormatConversionException: d != java.lang.String / true
+java.util.IllegalFormatFlagsException: Flags = '+ ' / true
+java.util.IllegalFormatPrecisionException: -4 / true
+java.util.IllegalFormatWidthException: -4 / true
+java.util.MissingFormatArgumentException: Format specifier '%5d' / true
+java.util.MissingFormatWidthException: %-d / true
+java.util.UnknownFormatConversionException: Conversion = 'q' / true
+java.util.UnknownFormatFlagsException: Flags = zz / true
+-
+#d
+65
+d class java.lang.String
++ 
+7
+8
+%5d
+%-d
+q
+zz
+true
+null
+npe1
+npe2
+npe3
+npe4
+done

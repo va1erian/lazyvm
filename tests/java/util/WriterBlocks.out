@@ -1,0 +1,47 @@
+8188+1: w8190 F 
+8189+1: w8191 F 
+8190+1: w8192 F 
+8191+1: w8191 w2:é F 
+16381+1: w8192 w8191 F 
+16382+1: w8192 w8192 F 
+8188+1: w8191 F 
+8189+1: w8192 F 
+8190+1: w8190 w3:€ F 
+8191+1: w8191 w3:€ F 
+16381+1: w8192 w8192 F 
+16382+1: w8192 w8190 w3:€ F 
+8188+2: w8192 F 
+8189+2: w8189 w4:😀 F 
+8190+2: w8190 w4:😀 F 
+8191+2: w8191 w4:😀 F 
+16381+2: w8192 w8189 w4:😀 F 
+16382+2: w8192 w8190 w4:😀 F 
+8188+2: w8191 F 
+8189+2: w8192 F 
+8190+2: w8192 w1:x F 
+8191+2: w8191 w3:éx F 
+16381+2: w8192 w8192 F 
+16382+2: w8192 w8192 w1:x F 
+8188+1: w8189 F 
+8189+1: w8190 F 
+8190+1: w8191 F 
+8191+1: w8192 F 
+16381+1: w8192 w8190 F 
+16382+1: w8192 w8191 F 
+X3 w3:def C | true
+X3 | true
+w1:x C | true
+flush after close: true
+PrintWriter over failing PrintStream: true
+PrintStream over failing PrintStream: true
+clean after close: false
+closed outer, print: true
+closed outer, flush: true
+closed outer, inner error: false
+split print: F w4:😀 C 
+split print: F w2:?x C 
+split print: w1:a F w1:? C 
+split chars: w4:😀 w1:! 
+trace before the failure reached the stream: true
+held surrogate fails on close: w1:a X1 C | true
+overrides seen: lnO pS lnO pS lnS pS 

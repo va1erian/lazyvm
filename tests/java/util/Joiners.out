@@ -1,0 +1,24 @@
+delimiter: NPE The delimiter must not be null
+prefix: NPE The prefix must not be null
+suffix: NPE The suffix must not be null
+empty: NPE The empty value must not be null
+merge: NPE null
+empty plain [] 0
+abc [a, b, c] 7
+empty braces [{}] 2
+empty value [EMPTY] 5
+one [{a}] 3
+null and empty [{a, null, }] 11
+still full [{a, null, }] 11
+one empty element [[]] 2
+merge into empty [<a, null, >] 11
+merge into full [<a, null, -z-a, null, >] 23
+merge empty joiner [<a, null, -z-a, null, >] 23
+merge self [<a, null, -z-a, null, -a, null, -z-a, null, >] 45
+merge into bare [] 0
+merge different delimiters [/x;y] 4
+char sequences [<sb|sf|s!!] 10
+true
+no delimiter [01234] 5
+a-b-c
+done

@@ -185,7 +185,11 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
   follow their Javadoc ("as many, but only as many, more digits as are
   needed to uniquely distinguish"). Java 8 sometimes prints an extra digit
   (`1.23456792E8` for `123456789f`), a bug fixed in JDK 19, and LazyVM does
-  not copy it. A test whose output depends on this declares `// ORACLE: modern`
+  not copy it. The same digits drive string conversion and `Formatter`'s
+  `%e`, `%f` and `%g` (whose Javadoc defines them through `Double.toString`),
+  so those differ from Java 8 for the same values: `%f` of
+  `2.82879384806159E17` is `282879384806159000.000000`, not Java 8's
+  `282879384806159008.000000`. A test whose output depends on this declares `// ORACLE: modern`
   and is blessed on JDK 19 or newer (`LAZYVM_ORACLE_JAVA_MODERN`, else `java`
   on `PATH`).
 - `lazy.*` tests have hand-written `.out` files and run on LazyVM only.

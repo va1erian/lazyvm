@@ -1,6 +1,7 @@
 package java.lang;
 
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
 
 public class Throwable implements Serializable {
@@ -149,17 +150,27 @@ public class Throwable implements Serializable {
         printStackTrace(System.err);
     }
 
+    /**
+     * Prints line by line as the trace is walked, so an autoflush stream
+     * flushes each line and a failing toString leaves the earlier lines out.
+     */
     public void printStackTrace(PrintStream s) {
         synchronized (s) {
-            printTrace(s, NO_TRACE, "", "", new Seen());
+            printTrace(new Sink(s, null), NO_TRACE, "", "", new Seen());
+        }
+    }
+
+    public void printStackTrace(PrintWriter s) {
+        synchronized (s) {
+            printTrace(new Sink(null, s), NO_TRACE, "", "", new Seen());
         }
     }
 
     /** Prints this throwable, eliding the frames it shares with the enclosing trace. */
-    private void printTrace(PrintStream s, StackTraceElement[] enclosing, String caption,
+    private void printTrace(Sink s, StackTraceElement[] enclosing, String caption,
             String prefix, Seen seen) {
         if (seen.contains(this)) {
-            s.println(prefix + caption + "[CIRCULAR REFERENCE: " + this + "]");
+            s.line(prefix + caption + "[CIRCULAR REFERENCE: " + this + "]");
             return;
         }
         seen.add(this);
@@ -171,12 +182,13 @@ public class Throwable implements Serializable {
             n--;
         }
         int common = trace.length - 1 - m;
-        s.println(prefix + caption + this);
+        // Observed on the oracle: the first line is the throwable itself.
+        s.line(prefix.isEmpty() && caption.isEmpty() ? this : prefix + caption + this);
         for (int i = 0; i <= m; i++) {
-            s.println(prefix + "\tat " + trace[i]);
+            s.line(prefix + "\tat " + trace[i]);
         }
         if (common != 0) {
-            s.println(prefix + "\t... " + common + " more");
+            s.line(prefix + "\t... " + common + " more");
         }
         Throwable[] sup = getSuppressed();
         for (int i = 0; i < sup.length; i++) {
@@ -185,6 +197,25 @@ public class Throwable implements Serializable {
         Throwable c = getCause();
         if (c != null) {
             c.printTrace(s, trace, "Caused by: ", prefix, seen);
+        }
+    }
+
+    /** Where a trace goes: println(Object) on a PrintStream or a PrintWriter, as observed. */
+    private static final class Sink {
+        private final PrintStream stream;
+        private final PrintWriter writer;
+
+        Sink(PrintStream stream, PrintWriter writer) {
+            this.stream = stream;
+            this.writer = writer;
+        }
+
+        void line(Object text) {
+            if (stream != null) {
+                stream.println(text);
+            } else {
+                writer.println(text);
+            }
         }
     }
 
