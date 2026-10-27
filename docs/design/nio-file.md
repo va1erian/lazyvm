@@ -57,11 +57,14 @@ exists as a directory under the parent's name as written (after the one-dot trim
 filename, directory name, or volume label syntax is incorrect"`: `f2:x`, `f2::$DATA`, `d2::$INDEX_ALLOCATION\in`,
 `C:\a:b`, `d2.\a:b`), while below a missing directory, a file, or a parent named with trailing spaces it stays
 (`nope\a:b`, `f2\a:b`, `d2 \a:b` → `d2\a:b`, `d2. \in:x`). On Unix the existing part is resolved as written, so
-`/t/link/../x` is the `x` beside the link's target, and a dangling link is followed to its target, the file the path
-opens or would create. `Path.toRealPath` opens the path with every name's trailing dots and spaces ignored (`d2..\in`
-resolves) and reports one it cannot resolve with this trimming but no "Bad pathname" (`nope..\x` stays); NUL in an
-existing directory of a drive is its own real path, while on a share or past MAX_PATH a DOS device name is a missing
-file (`NoSuchFileException`; the OS refuses it). [CanonWin; NioEdges: toRealPath of a missing path]
+`/t/link/../x` is the `x` beside the link's target, and a dangling link is followed to its target; a `..` after a
+missing name is applied by name (`/t/nope/../top` → `/t/top`, though the path does not open). A `\\.\` path keeps its
+prefix (`\\.\C:\d\NUL` names a file NUL, `C:\d\NUL` the device). `Path.toRealPath` opens the path with every name's
+trailing dots and spaces ignored (`d2..\in` resolves) and reports one it cannot resolve with this trimming but no
+"Bad pathname" (`nope..\x` stays). NUL in an existing directory of a drive is its own real path in a path of at most
+247 units; in a longer one, or on a share, a DOS device name (CON, PRN, AUX, NUL, COM1-9, LPT1-9, CONIN$, CONOUT$,
+any extension) is an ordinary name: a real file of that name (made through `\\?\`) is its real path, else
+`NoSuchFileException`. [CanonWin; NioEdges: toRealPath of a missing path]
 
 **U1.** `java.net.URI` (the part file names need; S7-02 adds the rest) parses left to right, so the leftmost bad
 component is reported: scheme (`"Expected scheme name"` for a leading `:`, `"Illegal character in scheme name"`),
@@ -182,11 +185,11 @@ Where LazyVM knowingly differs from the oracle; the reviewer's probes show each 
 - Canonical forms: a `<` or `>` in a name is not matched as a wildcard (the oracle's `C:\<` can come back as a real
   directory), and some names of dots that the oracle refuses with `"Invalid argument"` are `"Bad pathname"`. A mapped
   network drive resolves to its share (`Z:\x` → `\\server\share\x`; the oracle keeps the drive) and a `:` below its
-  root follows PW2's rule (the oracle keeps the name); `\\.\C:\x` is `C:\x` (the oracle keeps the prefix);
-  `toRealPath` of `NUL.` is the NUL path (the oracle: `"The parameter is incorrect."`).
+  root follows PW2's rule (the oracle keeps the name); `toRealPath` of `NUL.` is the NUL path (the oracle: `"The
+  parameter is incorrect."`).
 - `URI.toASCIIString` of a lone surrogate escapes it as `%3F`; the oracle throws `NullPointerException`.
-- Canonical forms not matched (the third and fourth reviews' fuzz): a `\\.\` or `\\?\` prefix is dropped (the oracle
-  keeps `\\.\` and refuses `\\?\` with `"Invalid argument"`); some names of dots or spaces that the oracle refuses
+- Canonical forms not matched (the third and fourth reviews' fuzz): a `\\?\` prefix is dropped (the oracle refuses
+  it with `"Invalid argument"`); some names of dots or spaces that the oracle refuses
   with `"Invalid argument"` are `"Bad pathname"` or kept; a non-last `NUL ` keeps its space; a `nul:` below a
   file or under a name with trailing dots is kept (the oracle: the syntax error); and `toRealPath` of a missing
   `NUL` is `NoSuchFileException` where the oracle sometimes reports `"\\.\NUL: The parameter is incorrect."`.

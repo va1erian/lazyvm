@@ -111,6 +111,46 @@ public class CanonWin {
         check("setLastModifiedTime(1601)", Files.getLastModifiedTime(f2).toMillis(), "1234567890000");
     }
 
+    static String pad(int n) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; i++) sb.append('a');
+        return sb.toString();
+    }
+
+    /** NUL near the path length limit, and real directories named NUL (made through \\?\). */
+    static void deviceNames(File root) throws IOException {
+        check("canonical nope|NUL|", canonical(base + "\\nope\\NUL\\"), "||.|NUL");
+        for (int len = 246; len <= 249 && base.length() + 6 < len; len++) {
+            String dir = base + "\\" + pad(len - base.length() - 5);
+            new File(dir).mkdir();
+            // Observed: up to 247 units NUL in an existing directory is the device, then a name.
+            check("real NUL at " + len, real(Paths.get(dir, "NUL")), len < 248 ? u(dir) + "|NUL" : "NoSuchFileException " + u(dir) + "|NUL");
+            check("real nope|NUL at " + len, real(Paths.get(dir, "nope", "NUL")), "NoSuchFileException " + u(dir) + "|nope|NUL");
+            new File(dir).delete();
+        }
+        String d2 = base + "\\d2";
+        String verbatim = "\\\\?\\" + d2 + "\\NUL";
+        check("make d2|NUL", new File(verbatim).mkdir(), "true");
+        check("canonical \\\\.\\ d2|NUL", canonical("\\\\.\\" + d2 + "\\NUL"), "||.|" + u(d2) + "|NUL");
+        String share = "\\\\localhost\\C$" + d2.substring(2);
+        if (new File("\\\\localhost\\C$").exists()) {
+            check("unc real of a real NUL", real(Paths.get(share, "NUL")), u(share) + "|NUL");
+        }
+        check("remove d2|NUL", new File(verbatim).delete(), "true");
+        StringBuilder lb = new StringBuilder(base);
+        for (int i = 0; i < 6; i++) lb.append("\\long_name_component_of_forty_characters").append(i);
+        String deep = lb.toString();
+        new File(deep).mkdirs();
+        check("make long|NUL", new File("\\\\?\\" + deep + "\\NUL").mkdir(), "true");
+        check("real of a long real NUL", real(Paths.get(deep, "NUL")), u(deep) + "|NUL");
+        check("real of a long real NUL|.", real(Paths.get(deep, "NUL", ".")), u(deep) + "|NUL");
+        check("real of a long missing NUL", real(Paths.get(deep, "nope", "NUL")), "NoSuchFileException " + u(deep) + "|nope|NUL");
+        new File("\\\\?\\" + deep + "\\NUL").delete();
+        for (File f = new File(deep); !f.equals(root); f = f.getParentFile()) {
+            f.delete();
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         if (File.separatorChar == '\\') {
             File root = Files.createTempDirectory("lazycanon").toFile().getCanonicalFile();
@@ -138,7 +178,10 @@ public class CanonWin {
                 check("unc d2|NUL", canonical(share + "\\d2\\NUL"), u(share) + "|d2|NUL");
                 check("unc real d2|NUL", real(Paths.get(share, "d2", "NUL")), "NoSuchFileException " + u(share) + "|d2|NUL");
                 check("unc real CON", real(Paths.get(share, "CON")), "NoSuchFileException " + u(share) + "|CON");
+                check("unc real COM1", real(Paths.get(share, "COM1")), "NoSuchFileException " + u(share) + "|COM1");
+                check("unc real CON.txt", real(Paths.get(share, "CON.txt")), "NoSuchFileException " + u(share) + "|CON.txt");
             }
+            deviceNames(root);
             files(root);
             new File(d2, "in").delete();
             d2.delete();

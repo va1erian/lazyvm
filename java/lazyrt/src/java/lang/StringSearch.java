@@ -83,7 +83,7 @@ final class StringSearch {
 
     /** The code point `ch` as a char (or a high/low pair) for searching; null if invalid. */
     private static char[] unit(int ch) {
-        if (ch < Character.MIN_SUPPLEMENTARY_CODE_POINT) {
+        if (ch >= 0 && ch < Character.MIN_SUPPLEMENTARY_CODE_POINT) {
             return new char[] {(char) ch};
         }
         if (!Character.isValidCodePoint(ch)) {
@@ -206,13 +206,27 @@ final class StringSearch {
             }
             return sb.append(replacement).toString();
         }
+        // Observed: a match that starts or ends between the chars of a surrogate pair does not
+        // count (an empty target still goes between every two chars, as above).
         int from = 0;
-        int at;
-        while ((at = s.indexOf(target, from)) >= 0) {
+        int at = s.indexOf(target);
+        while (at >= 0) {
+            int end = at + target.length();
+            if (splitsPair(s, at) || splitsPair(s, end)) {
+                at = s.indexOf(target, at + 1);
+                continue;
+            }
             sb.append(s, from, at).append(replacement);
-            from = at + target.length();
+            from = end;
+            at = s.indexOf(target, end);
         }
         return sb.append(s, from, s.length()).toString();
+    }
+
+    /** Whether index `i` of `s` falls between a high and a low surrogate. */
+    private static boolean splitsPair(String s, int i) {
+        return i > 0 && i < s.length() && Character.isHighSurrogate(s.charAt(i - 1))
+                && Character.isLowSurrogate(s.charAt(i));
     }
 
     /** The chars of code points codePoints[offset, offset + count). */

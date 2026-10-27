@@ -357,7 +357,7 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public boolean setWritable(boolean writable, boolean ownerOnly) {
-        return FileSystem.setAccess(path, 2, writable, ownerOnly);
+        return access(2, writable, ownerOnly);
     }
 
     public boolean setWritable(boolean writable) {
@@ -365,7 +365,12 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public boolean setReadable(boolean readable, boolean ownerOnly) {
-        return FileSystem.setAccess(path, 4, readable, ownerOnly);
+        return access(4, readable, ownerOnly);
+    }
+
+    // A path holding a NUL char names no file, so no access can change (observed: false).
+    private boolean access(int bits, boolean enable, boolean ownerOnly) {
+        return !invalid(path) && FileSystem.setAccess(path, bits, enable, ownerOnly);
     }
 
     public boolean setReadable(boolean readable) {
@@ -373,7 +378,7 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public boolean setExecutable(boolean executable, boolean ownerOnly) {
-        return FileSystem.setAccess(path, 1, executable, ownerOnly);
+        return access(1, executable, ownerOnly);
     }
 
     public boolean setExecutable(boolean executable) {

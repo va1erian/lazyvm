@@ -245,8 +245,9 @@ impl Vm {
     /// plus elements), stopping at the first zero count, which allocates
     /// nothing below it. Observed: the counts are checked left to right, a
     /// negative one (allocated or not) first, then a level that is allocated
-    /// and past the VM limit, before any lack of room (`new int[M][-1]` is the
-    /// limit, `new int[0][-1]` and `new int[-1][M]` negative).
+    /// and past the VM limit (`new int[M][-1]` is the limit, `new int[0][-1]`
+    /// and `new int[-1][M]` negative). Room is judged only after: when an
+    /// earlier level does not fit, the oracle's heap may say OutOfMemory first.
     fn multi_array_bytes(&self, class: ClassId, counts: &[i32]) -> VmResult<usize> {
         let mut bytes = 0usize;
         let mut arrays = 1usize;

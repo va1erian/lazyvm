@@ -130,6 +130,8 @@ public class IoEdges {
         File nul = new File(root, "x\u0000y");
         t("NUL char canonical", () -> nul.getCanonicalPath());
         t("NUL char createNewFile", () -> nul.createNewFile());
+        t("NUL char temp file", () -> { try { return File.createTempFile("abc\u0000", null, root).getName(); } catch (IOException e) { return e.getMessage().replace("\u0000", "<NUL>"); } });
+        t("NUL char setters", () -> nul.setReadable(true) + " " + nul.setExecutable(true) + " " + nul.setWritable(true));
         t("NUL char stream", () -> new FileInputStream(nul));
         File lone = new File(root, "nope\ud800");
         t("lone surrogate in a message", () -> { try { new FileInputStream(lone).close(); return "opened"; } catch (FileNotFoundException e) { return e.getMessage().startsWith(lone.getPath() + " ("); } });

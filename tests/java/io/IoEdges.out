@@ -26,6 +26,8 @@ file setLastModified: true 1234567890000
 toURI of the empty path ends with /: true
 NUL char canonical: !java.io.IOException: Invalid file path
 NUL char createNewFile: !java.io.IOException: Invalid file path
+NUL char temp file: Unable to create temporary file, <T>/abc<NUL>N.tmp
+NUL char setters: false false false
 NUL char stream: !java.io.FileNotFoundException: Invalid file path
 lone surrogate in a message: true
 NUL char queries: false 0 false null

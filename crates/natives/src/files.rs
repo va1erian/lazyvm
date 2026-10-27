@@ -183,13 +183,13 @@ fn register_paths(vm: &mut Vm) {
         FS,
         "realPath",
         "(Ljava/lang/String;)Ljava/lang/String;",
-        crate::canonical::real_path,
+        crate::real_path::real_path,
     );
     vm.register_native(
         FS,
         "lexical",
         "(Ljava/lang/String;)Ljava/lang/String;",
-        crate::canonical::lexical,
+        crate::real_path::lexical,
     );
 }
 

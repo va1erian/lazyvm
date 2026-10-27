@@ -19,6 +19,7 @@ mod lang_string_case;
 mod lang_system;
 mod lang_throwable;
 mod math;
+mod real_path;
 mod reflect;
 mod reflect_access;
 mod unicode;

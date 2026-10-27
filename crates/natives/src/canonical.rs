@@ -1,6 +1,6 @@
-//! Canonical and real paths: `lazy.internal.FileSystem.canonicalize`
-//! (`File.getCanonicalPath`), `realPath` and `lexical` (`Path.toRealPath`),
-//! as docs/design/files.md and nio-file.md PW2 describe them.
+//! Canonical paths: `lazy.internal.FileSystem.canonicalize`
+//! (`File.getCanonicalPath`), as docs/design/files.md and nio-file.md PW2
+//! describe them, and the path helpers `real_path` shares.
 //!
 //! Paths are worked on as Java's UTF-16 units. The part of the path that
 //! exists is resolved by the OS (links, on-disk case) and the rest is
@@ -9,26 +9,26 @@
 //! observed rules below. On Unix the OS resolves the existing part as
 //! written, so a `..` after a link leaves the link's target, a dangling link
 //! is followed to the target it names, and only the missing rest is resolved
-//! by name, so the canonical path names the file the path opens (files.md
-//! lists the exception: a current directory whose name is not UTF-8).
+//! by name: a path the OS resolves gets the form of the file it reaches, while
+//! a `..` after a missing name is applied by name (files.md).
 
 use std::path::MAIN_SEPARATOR;
 
-use platform::files;
 use vm::{Value, Vm, VmError, VmResult};
 
 use crate::{arg, ret_ref};
 
-const SEP: u16 = MAIN_SEPARATOR as u16;
-const WINDOWS: bool = cfg!(windows);
-const DOT: u16 = b'.' as u16;
-const SPACE: u16 = b' ' as u16;
-const COLON: u16 = b':' as u16;
-/// Win32's path limit; longer paths are opened in their verbatim form.
-const MAX_PATH: usize = 260;
+pub(crate) const SEP: u16 = MAIN_SEPARATOR as u16;
+pub(crate) const WINDOWS: bool = cfg!(windows);
+pub(crate) const DOT: u16 = b'.' as u16;
+pub(crate) const SPACE: u16 = b' ' as u16;
+pub(crate) const COLON: u16 = b':' as u16;
+/// Observed: a NUL in an existing directory of a drive is the device in a
+/// path of at most 247 units; from 248 on it is an ordinary name.
+pub(crate) const DEVICE_PATH_LIMIT: usize = 248;
 const SYNTAX: &str = "The filename, directory name, or volume label syntax is incorrect";
 
-fn path_units(vm: &Vm, args: &[Value]) -> VmResult<Vec<u16>> {
+pub(crate) fn path_units(vm: &Vm, args: &[Value]) -> VmResult<Vec<u16>> {
     let r = arg(args, 0)?.reference()?.ok_or_else(VmError::npe)?;
     vm.string_utf16(r)
 }
@@ -47,139 +47,20 @@ pub(crate) fn canonicalize(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value
     }
 }
 
-/// `realPath(String)`: the OS's real path of an existing file. A missing
-/// one is a bare `NoSuchFileException`; another failure an `IOException`
-/// with the OS's reason as a FileSystemException shows it.
-pub(crate) fn real_path(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let path = path_units(vm, args)?;
-    let root = root_length(&path);
-    let opened = if WINDOWS {
-        let (names, trailing) = opened_names(&path, root);
-        let parent = &names[..names.len().saturating_sub(1)];
-        let short = path.len() < MAX_PATH;
-        if !unc(&path)
-            && short
-            && names.last().is_some_and(|n| is_device(n))
-            && is_dir(&join(&path[..root], parent))
-        {
-            // Observed: NUL in an existing directory of a drive is its own
-            // real path; on a share, or past MAX_PATH, it is an ordinary name.
-            return ret_ref(Some(vm.new_string_utf16(&joined(
-                &path[..root],
-                &names,
-                trailing,
-            ))?));
-        }
-        joined(&path[..root], &names, trailing)
-    } else {
-        path
-    };
-    match std::fs::canonicalize(vm::wtf::from_units(&opened)) {
-        Ok(real) => {
-            let real = without_verbatim(vm::wtf::to_units(real.as_os_str()));
-            ret_ref(Some(vm.new_string_utf16(&real)?))
-        }
-        Err(e) if (missing(&e) || refused_device(&e, &opened)) && !below_file(&opened) => {
-            Err(VmError::bare("java/nio/file/NoSuchFileException"))
-        }
-        Err(e) if missing(&e) => {
-            // Observed on Windows: below a file it is the OS's "directory name is invalid".
-            const ERROR_DIRECTORY: i32 = 267;
-            let e = std::io::Error::from_raw_os_error(ERROR_DIRECTORY);
-            Err(VmError::exception(
-                "java/io/IOException",
-                files::os_text(&e, false),
-            ))
-        }
-        Err(e) => Err(VmError::exception(
-            "java/io/IOException",
-            files::os_text(&e, false),
-        )),
+/// Removes a name's trailing dots and spaces, as Windows reads a last name.
+pub(crate) fn trim_dots_spaces(name: &mut Vec<u16>) {
+    while matches!(name.last(), Some(&DOT | &SPACE)) {
+        name.pop();
     }
 }
 
-/// Whether the longest existing part of a missing path is a file (Windows).
-fn below_file(path: &[u16]) -> bool {
-    let root = root_length(path);
-    let (names, _) = resolved_names(path, root);
-    let k = existing(&path[..root], &names);
-    WINDOWS && k > 0 && !is_dir(&join(&path[..root], &names[..k]))
-}
-
-/// Observed: a share refuses a DOS device name anywhere in a path as access
-/// denied, and a path past MAX_PATH as an invalid parameter; Java 8 reports
-/// both as a missing file.
-fn refused_device(e: &std::io::Error, path: &[u16]) -> bool {
-    const ERROR_ACCESS_DENIED: i32 = 5;
-    const ERROR_INVALID_PARAMETER: i32 = 87;
-    let refusal = if unc(path) {
-        ERROR_ACCESS_DENIED
-    } else if path.len() >= MAX_PATH {
-        ERROR_INVALID_PARAMETER
-    } else {
-        return false;
-    };
-    WINDOWS && e.raw_os_error() == Some(refusal) && path.split(|&c| c == SEP).any(dos_device)
-}
-
-/// CON, PRN, AUX, NUL, COM1-9, LPT1-9, CONIN$, CONOUT$, before any
-/// extension or trailing spaces, in any case.
-fn dos_device(name: &[u16]) -> bool {
-    let stem = String::from_utf16_lossy(name).to_ascii_uppercase();
-    let stem = stem.split('.').next().unwrap_or("").trim_end();
-    let numbered = |p: &str| {
-        stem.len() == 4
-            && stem.starts_with(p)
-            && stem.as_bytes()[3].is_ascii_digit()
-            && &stem[3..] != "0"
-    };
-    matches!(stem, "CON" | "PRN" | "AUX" | "NUL" | "CONIN$" | "CONOUT$")
-        || numbered("COM")
-        || numbered("LPT")
-}
-
-/// Whether a path is on a share (`\\host\share\`) rather than a drive.
-fn unc(path: &[u16]) -> bool {
-    path.starts_with(&[SEP, SEP])
-}
-
-/// Whether the OS says the file is not there. On Windows only "file" and
-/// "path not found" are: an unreachable share keeps its own reason.
-fn missing(e: &std::io::Error) -> bool {
-    if WINDOWS {
-        matches!(e.raw_os_error(), Some(2 | 3))
-    } else {
-        e.kind() == std::io::ErrorKind::NotFound
-    }
-}
-
-/// Observed: Windows opens a path whose names end in dots or spaces as if
-/// they did not (`d2..\in` is `d2\in`), except names of only dots and spaces.
-fn opened_names(path: &[u16], root: usize) -> (Vec<Vec<u16>>, bool) {
-    let (mut names, trailing) = resolved_names(path, root);
-    for n in names.iter_mut().filter(|n| !dots_and_spaces(n)) {
-        while matches!(n.last(), Some(&DOT | &SPACE)) {
-            n.pop();
-        }
-    }
-    (names, trailing)
-}
-
-fn dots_and_spaces(name: &[u16]) -> bool {
+pub(crate) fn dots_and_spaces(name: &[u16]) -> bool {
     name.iter().all(|&c| c == DOT || c == SPACE)
 }
 
-/// `lexical(String)`: an absolute path as `toRealPath` reports a file it
-/// cannot resolve: `.` and `..` applied by name, on Windows the names
-/// trimmed as for a canonical form (but a name ending in two dots kept).
-pub(crate) fn lexical(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let path = path_units(vm, args)?;
-    let root = root_length(&path);
-    let out = match names(&path, root, false) {
-        Ok((names, trailing)) => joined(&path[..root], &names, trailing),
-        Err(_) => path,
-    };
-    ret_ref(Some(vm.new_string_utf16(&out)?))
+/// Whether a path is on a share (`\\host\share\`) rather than a drive.
+pub(crate) fn unc(path: &[u16]) -> bool {
+    path.starts_with(&[SEP, SEP])
 }
 
 /// The names after `root`, `.` and `..` applied, and whether a separator
@@ -187,7 +68,11 @@ pub(crate) fn lexical(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
 /// final dot, and one ending in two dots is "Bad pathname" when `strict`;
 /// the last name loses its trailing dots and spaces, and goes if nothing is
 /// left, the separator staying.
-fn names(path: &[u16], root: usize, strict: bool) -> Result<(Vec<Vec<u16>>, bool), &'static str> {
+pub(crate) fn names(
+    path: &[u16],
+    root: usize,
+    strict: bool,
+) -> Result<(Vec<Vec<u16>>, bool), &'static str> {
     let (mut names, mut trailing) = resolved_names(path, root);
     if !WINDOWS {
         return Ok((names, trailing));
@@ -203,9 +88,7 @@ fn names(path: &[u16], root: usize, strict: bool) -> Result<(Vec<Vec<u16>>, bool
         }
     }
     if let Some(n) = names.last_mut() {
-        while matches!(n.last(), Some(&DOT | &SPACE)) {
-            n.pop();
-        }
+        trim_dots_spaces(n);
         if n.is_empty() {
             names.pop();
             trailing = true;
@@ -217,7 +100,7 @@ fn names(path: &[u16], root: usize, strict: bool) -> Result<(Vec<Vec<u16>>, bool
 /// The names after `root` with `.` and `..` applied by name, and whether a
 /// separator ends the path: the one place either is resolved by name (Unix
 /// resolves only the missing rest, after the OS's real base).
-fn resolved_names(path: &[u16], root: usize) -> (Vec<Vec<u16>>, bool) {
+pub(crate) fn resolved_names(path: &[u16], root: usize) -> (Vec<Vec<u16>>, bool) {
     let mut names: Vec<Vec<u16>> = Vec::new();
     for n in path[root..].split(|&c| c == SEP).filter(|n| !n.is_empty()) {
         match n {
@@ -241,9 +124,7 @@ fn windows_canonical(path: &[u16]) -> Result<Vec<u16>, &'static str> {
         .split(|&c| c == SEP)
         .rfind(|n| !n.is_empty());
     if let Some(mut device) = written.map(<[u16]>::to_vec).filter(|_| !unc(path)) {
-        while matches!(device.last(), Some(&DOT | &SPACE)) {
-            device.pop();
-        }
+        trim_dots_spaces(&mut device);
         if is_device(&device) {
             let mut out = units(r"\\.\");
             out.extend_from_slice(&device[..3]);
@@ -269,7 +150,14 @@ fn windows_canonical(path: &[u16]) -> Result<Vec<u16>, &'static str> {
     {
         return Err(SYNTAX);
     }
-    Ok(resolved(root, &names, k, trailing))
+    let out = resolved(root, &names, k, trailing);
+    // Observed: a `\\.\` path keeps the prefix, which reaches the file by name
+    // (`\\.\C:\d\NUL` is a file NUL, `C:\d\NUL` the device).
+    let dotted = units(r"\\.\");
+    if path.starts_with(&dotted) && !unc(&out) {
+        return Ok([dotted, out].concat());
+    }
+    Ok(out)
 }
 
 fn unix_canonical(path: &[u16]) -> Vec<u16> {
@@ -342,7 +230,7 @@ fn os_real(base: Vec<u16>) -> Vec<u16> {
 /// How many leading names exist. The whole path is tried first (the usual
 /// case); else, since a missing directory has no existing descendants, a
 /// binary search keeps a deep missing path to a few lookups.
-fn existing(root: &[u16], names: &[Vec<u16>]) -> usize {
+pub(crate) fn existing(root: &[u16], names: &[Vec<u16>]) -> usize {
     if exists(&join(root, names)) {
         return names.len();
     }
@@ -358,7 +246,7 @@ fn existing(root: &[u16], names: &[Vec<u16>]) -> usize {
     lo
 }
 
-fn joined(root: &[u16], names: &[Vec<u16>], trailing: bool) -> Vec<u16> {
+pub(crate) fn joined(root: &[u16], names: &[Vec<u16>], trailing: bool) -> Vec<u16> {
     let mut out = join(root, names);
     if trailing && out.last() != Some(&SEP) {
         out.push(SEP);
@@ -367,11 +255,11 @@ fn joined(root: &[u16], names: &[Vec<u16>], trailing: bool) -> Vec<u16> {
 }
 
 /// `C:\`, `\\host\share\` (Windows) or `/`: the part `..` cannot leave.
-fn root_length(path: &[u16]) -> usize {
+pub(crate) fn root_length(path: &[u16]) -> usize {
     if !WINDOWS {
         return usize::from(path.first() == Some(&SEP));
     }
-    if path.starts_with(&[SEP, SEP]) {
+    if unc(path) {
         // Past the separator after the share, or the whole path.
         let mut seps = 0;
         for (i, &c) in path.iter().enumerate().skip(2) {
@@ -389,7 +277,7 @@ fn root_length(path: &[u16]) -> usize {
 
 /// Observed on Windows 11: of the DOS device names only NUL (any case, a
 /// ':' after it too) still names its device inside a directory.
-fn is_device(name: &[u16]) -> bool {
+pub(crate) fn is_device(name: &[u16]) -> bool {
     let nul = |n: &[u16]| String::from_utf16_lossy(n).eq_ignore_ascii_case("NUL");
     nul(name) || (name.len() == 4 && name[3] == COLON && nul(&name[..3]))
 }
@@ -398,11 +286,11 @@ fn exists(units: &[u16]) -> bool {
     std::path::Path::new(&vm::wtf::from_units(units)).exists()
 }
 
-fn is_dir(units: &[u16]) -> bool {
+pub(crate) fn is_dir(units: &[u16]) -> bool {
     std::path::Path::new(&vm::wtf::from_units(units)).is_dir()
 }
 
-fn join(root: &[u16], names: &[Vec<u16>]) -> Vec<u16> {
+pub(crate) fn join(root: &[u16], names: &[Vec<u16>]) -> Vec<u16> {
     let mut out = root.to_vec();
     for n in names {
         if out.last().is_some_and(|&c| c != SEP) {
@@ -414,7 +302,7 @@ fn join(root: &[u16], names: &[Vec<u16>]) -> Vec<u16> {
 }
 
 /// Windows' canonical form has a `\\?\` prefix Java does not show, `\\?\UNC\` for a share.
-fn without_verbatim(mut text: Vec<u16>) -> Vec<u16> {
+pub(crate) fn without_verbatim(mut text: Vec<u16>) -> Vec<u16> {
     if text.starts_with(&units(r"\\?\UNC\")) {
         text.splice(..8, units(r"\\"));
     } else if text.starts_with(&units(r"\\?\")) {
@@ -423,7 +311,7 @@ fn without_verbatim(mut text: Vec<u16>) -> Vec<u16> {
     text
 }
 
-fn units(s: &str) -> Vec<u16> {
+pub(crate) fn units(s: &str) -> Vec<u16> {
     s.encode_utf16().collect()
 }
 

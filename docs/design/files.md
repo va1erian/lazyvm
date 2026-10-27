@@ -6,8 +6,9 @@ the strings Java code built (relative paths resolve against the process's
 current directory, which is `user.dir`), converted exactly (`vm::wtf`): on
 Windows the UTF-16 units as they are, lone surrogates included; on Unix
 their generalized UTF-8, so a lone surrogate is its own three-byte form.
-Every Java string maps to one OS name and back, so distinct strings never
-name the same file. Names the OS gives back (listings, canonical forms)
+Every Java string maps to one OS name and back, so distinct strings are
+distinct names (on Windows the file system may still read two names as one
+file: case, trailing dots and spaces). Names the OS gives back (listings, canonical forms)
 convert the other way, and on Unix that is lossy for bytes that are not of
 that form: each byte that starts no valid form reads as U+FFFD (a surrogate
 pair spelled as two three-byte forms, CESU-8, too), so such names can read
@@ -93,9 +94,11 @@ Paths (no handle):
   as the OS does, and names are trimmed and checked by nio-file.md PW2; on Unix the
   OS resolves the existing part as written (a `..` after a link leaves the
   link's target), a dangling link is followed to the target it names, and
-  only the missing rest is resolved by name, so the result names the file
-  the path opens or would create. Exception: a relative path under a
-  current directory whose name is not UTF-8 (`user.dir` reads it lossily).
+  only the missing rest is resolved by name. So a path the OS resolves has
+  the canonical form of the file it reaches, but a `..` after a missing name
+  is applied by name: `/t/nope/../top` is `/t/top`, though opening the path
+  fails. A relative path under a current directory whose name is not UTF-8
+  resolves against the lossy `user.dir`.
 - A path holding a NUL char names no file: `getCanonicalPath` and
   `createNewFile` → `IOException("Invalid file path")`, the file streams →
   `FileNotFoundException("Invalid file path")`, `createTempFile` →

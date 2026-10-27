@@ -84,6 +84,13 @@ public class ErrorsMisc {
         cut.delete(2, 8);
         System.out.println("search past length: " + grown.indexOf("NEEDLE") + " " + grown.lastIndexOf("NEEDLE", 9) + " "
                 + cut.indexOf("N", 1) + " " + cut.lastIndexOf("E") + " " + grown.indexOf("b") + " " + cut.lastIndexOf("", 9));
+        t("multi 0,1,-1", new Case(){public void run() throws Throwable { Object o = new int[0][1][-1]; }});
+        System.out.println("empty needle before 0: " + "abc".lastIndexOf("", -5) + " " + new StringBuilder("abc").lastIndexOf("", -5));
+        System.out.println("negative chars: " + "a￿b".indexOf(-1) + " " + "a￿b".lastIndexOf(-1) + " " + "a￿b".indexOf(-65537));
+        String pair = "x😀y";
+        System.out.println("replace inside a pair: " + pair.replace("\ude00", "R").length() + " " + pair.replace("\ud83d", "R").length()
+                + " " + "😀\u0000aa".replace("\ude00\u0000", "R").length() + " " + "\ud83d😀".replace("\ud83d", "R").length()
+                + " " + "😀\ude00".replace("\ude00", "R").length());
         PrintStream ps = new PrintStream(new OutputStream() {
             public void write(int b) throws IOException { throw new IOException("bad"); }
         });
