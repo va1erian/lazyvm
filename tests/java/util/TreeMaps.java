@@ -81,6 +81,10 @@ public class TreeMaps {
         t("empty views", () -> { TreeMap<Integer, String> o = new TreeMap<>(); return o + " " + o.keySet() + o.values() + o.entrySet() + o.descendingMap() + o.headMap(1) + o.isEmpty(); });
         t("hashCode/equals", () -> tm(1, 2).equals(new HashMap<Integer, String>(tm(1, 2))) + " " + tm(1, 2).hashCode() + " " + tm(1, 2).keySet().hashCode());
         t("many", () -> { TreeMap<Integer, Integer> o = new TreeMap<>(); for (int i = 0; i < 2000; i++) o.put((i * 7919) % 2003, i); for (int i = 0; i < 2000; i += 3) o.remove((i * 7919) % 2003); long s = 0; for (int k : o.keySet()) s = s * 31 + k; return o.size() + " " + o.firstKey() + " " + o.lastKey() + " " + s; });
+        t("clear views", () -> { TreeMap<Integer, String> o = tm(5, 13, 20); o.headMap(14, false).clear(); TreeMap<Integer, String> p = tm(1, 2); p.descendingMap().clear(); TreeSet<Integer> s = new TreeSet<>(Arrays.asList(1, 2, 3, 4)); s.headSet(3).clear(); s.descendingSet().tailSet(4, false).clear(); return o + " " + p + " " + s; });
+        t("views kept", () -> { TreeMap<Integer, String> o = tm(1, 2, 3); NavigableMap<Integer, String> tail = o.tailMap(2, true); TreeSet<Integer> s = new TreeSet<>(o.keySet());
+            return (o.descendingMap() == o.descendingMap()) + " " + (o.descendingKeySet() == o.descendingKeySet()) + " " + (o.entrySet() == o.entrySet()) + " " + (tail.descendingMap() == tail.descendingMap())
+                + " " + (tail.navigableKeySet() == tail.keySet()) + " " + (tail.entrySet() == tail.entrySet()) + " " + (tail.descendingMap().descendingMap() == tail) + " " + (s.descendingSet() == s.descendingSet()) + " " + (o.navigableKeySet().descendingSet() == o.navigableKeySet().descendingSet()); });
         System.out.println("done");
     }
 }

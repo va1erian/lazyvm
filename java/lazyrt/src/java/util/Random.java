@@ -2,9 +2,9 @@ package java.util;
 
 /** The 48-bit linear congruential generator the Javadoc specifies, constants included. */
 public class Random implements java.io.Serializable {
-    private static final long MULTIPLIER = 0x5DEECE66DL;
-    private static final long ADDEND = 0xBL;
-    private static final long MASK = (1L << 48) - 1;
+    private static final long TIMES = 0x5DEECE66DL;
+    private static final long PLUS = 0xBL;
+    private static final long LOW_48_BITS = (1L << 48) - 1;
 
     /** Distinguishes Random() instances made within one nanoTime tick. Spec 12: not observable. */
     private static long instances;
@@ -18,7 +18,7 @@ public class Random implements java.io.Serializable {
     // Spec 10.X1: a subclass sees exactly one setSeed call; Random itself sets the seed directly.
     public Random(long seed) {
         if (getClass() == Random.class) {
-            this.seed = scramble(seed);
+            this.seed = firstSeed(seed);
         } else {
             setSeed(seed);
         }
@@ -26,18 +26,18 @@ public class Random implements java.io.Serializable {
 
     private static synchronized long freshSeed() {
         instances++;
-        return System.nanoTime() ^ (instances * MULTIPLIER);
+        return System.nanoTime() ^ (instances * TIMES);
     }
 
-    private static long scramble(long seed) { return (seed ^ MULTIPLIER) & MASK; }
+    private static long firstSeed(long seed) { return (seed ^ TIMES) & LOW_48_BITS; }
 
     public synchronized void setSeed(long seed) {
-        this.seed = scramble(seed);
+        this.seed = firstSeed(seed);
         haveNextNextGaussian = false;
     }
 
     protected synchronized int next(int bits) {
-        seed = (seed * MULTIPLIER + ADDEND) & MASK;
+        seed = (seed * TIMES + PLUS) & LOW_48_BITS;
         return (int) (seed >>> (48 - bits));
     }
 

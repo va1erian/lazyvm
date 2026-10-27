@@ -179,4 +179,10 @@ receiver HashSet.contains: o1.eq(e1)
 receiver List.equals: a1.eq(b1) a2.eq(b3)
 receiver Arrays.binarySearch: e1.cmp(k2) e2.cmp(k2)
 receiver TreeMap first put: f1.cmp(f1)
+disjoint empty list, list 0 plain -> true:  []
+disjoint empty list, list 0 fast -> true:  []
+disjoint list, empty list 2 plain -> true:  [0, 1]
+disjoint list, empty list 2 fast -> true:  [0, 1]
+disjoint empty set, list 2 plain -> true: T g0 g1 [0, 1]
+disjoint empty set, list 2 fast -> true: T g0 g1 [0, 1]
 done

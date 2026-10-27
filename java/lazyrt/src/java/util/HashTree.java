@@ -19,7 +19,7 @@ final class HashTree {
 
     // Spec 1.H6: tree order of key k (mixed hash h) against node p; negative means k goes left.
     @SuppressWarnings({"unchecked", "rawtypes"})
-    static int order(int h, Object k, HashMap.Node<?, ?> p) {
+    static int order(int h, Object k, HashMap.Cell<?, ?> p) {
         if (h != p.hash) {
             return h < p.hash ? -1 : 1;
         }
@@ -64,30 +64,30 @@ final class HashTree {
     }
 
     /** Spec 1.H7: makes bin i a tree by inserting its sequence in order; the root goes first. */
-    static <K, V> void treeify(HashMap.Node<K, V>[] table, HashMap.Node<K, V>[] roots, int i) {
-        HashMap.Node<K, V> root = null;
-        for (HashMap.Node<K, V> n = table[i]; n != null; n = n.next) {
+    static <K, V> void growTree(HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots, int i) {
+        HashMap.Cell<K, V> root = null;
+        for (HashMap.Cell<K, V> n = table[i]; n != null; n = n.next) {
             n.unlinkTree();
             root = root == null ? blackRoot(n) : plant(root, n);
         }
         roots[i] = root;
-        toFront(table, i, root);
+        rootFirst(table, i, root);
     }
 
-    private static <K, V> HashMap.Node<K, V> blackRoot(HashMap.Node<K, V> n) {
+    private static <K, V> HashMap.Cell<K, V> blackRoot(HashMap.Cell<K, V> n) {
         n.red = false;
         return n;
     }
 
     /** Attaches n where tree order leads, rebalances, and returns the new root. */
-    private static <K, V> HashMap.Node<K, V> plant(HashMap.Node<K, V> root, HashMap.Node<K, V> n) {
+    private static <K, V> HashMap.Cell<K, V> plant(HashMap.Cell<K, V> root, HashMap.Cell<K, V> n) {
         attach(root, n);
-        return (HashMap.Node<K, V>) RedBlack.fixInsert(root, n);
+        return (HashMap.Cell<K, V>) RedBlack.fixInsert(root, n);
     }
 
     /** Hangs n at the end of its tree-order path (one comparison per node passed) and returns its parent. */
-    private static <K, V> HashMap.Node<K, V> attach(HashMap.Node<K, V> root, HashMap.Node<K, V> n) {
-        HashMap.Node<K, V> p = root;
+    private static <K, V> HashMap.Cell<K, V> attach(HashMap.Cell<K, V> root, HashMap.Cell<K, V> n) {
+        HashMap.Cell<K, V> p = root;
         while (true) {
             boolean left = order(n.hash, n.key, p) < 0;
             MapNode<K, V> next = left ? p.left : p.right;
@@ -95,43 +95,41 @@ final class HashTree {
                 RedBlack.attach(p, n, left);
                 return p;
             }
-            p = (HashMap.Node<K, V>) next;
+            p = (HashMap.Cell<K, V>) next;
         }
     }
 
     // Spec 1.H8: a new key goes into the tree and, in the sequence, right after its parent.
-    static <K, V> void insert(HashMap.Node<K, V>[] table, HashMap.Node<K, V>[] roots, int i, HashMap.Node<K, V> n) {
-        HashMap.Node<K, V> root = roots[i];
-        HashMap.Node<K, V> p = attach(root, n);
+    static <K, V> void insert(HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots, int i, HashMap.Cell<K, V> n) {
+        HashMap.Cell<K, V> root = roots[i];
+        HashMap.Cell<K, V> p = attach(root, n);
         n.next = p.next;
         p.next = n;
-        root = (HashMap.Node<K, V>) RedBlack.fixInsert(root, n);
+        root = (HashMap.Cell<K, V>) RedBlack.fixInsert(root, n);
         roots[i] = root;
-        toFront(table, i, root);
+        rootFirst(table, i, root);
     }
 
     /**
      * Spec 1.H9 (map-style) and H10 (iterator-style): n leaves the sequence; a map-style removal
      * from a tree that is too thin reverts the bin to a list, otherwise n leaves the tree.
      */
-    static <K, V> void remove(HashMap.Node<K, V>[] table, HashMap.Node<K, V>[] roots, int i,
-            HashMap.Node<K, V> n, boolean mapStyle) {
+    static <K, V> void remove(HashMap<K, V> owner, HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots, int i,
+            HashMap.Cell<K, V> n, boolean mapStyle) {
         unlinkFromSequence(table, i, n);
-        HashMap.Node<K, V> root = roots[i];
+        HashMap.Cell<K, V> root = roots[i];
         if (mapStyle && (root.left == null || root.right == null || root.left.left == null)) {
             roots[i] = null;
-            for (HashMap.Node<K, V> e = table[i]; e != null; e = e.next) {
-                e.unlinkTree();
-            }
+            renew(owner, table, i);
             n.unlinkTree();
             return;
         }
-        root = (HashMap.Node<K, V>) RedBlack.remove(root, n);
+        root = (HashMap.Cell<K, V>) RedBlack.remove(root, n);
         roots[i] = root;
         if (table[i] == null) {
             roots[i] = null;
         } else if (mapStyle) {
-            toFront(table, i, root);
+            rootFirst(table, i, root);
         }
     }
 
@@ -139,21 +137,21 @@ final class HashTree {
      * Spec 1.H12: the tree bin j of the old table splits by bit oldN; a small half becomes a list,
      * a large half a new tree, and a bin that stays whole keeps its tree and sequence.
      */
-    static <K, V> void split(HashMap.Node<K, V> bin, HashMap.Node<K, V> root, int j, int oldN,
-            HashMap.Node<K, V>[] table, HashMap.Node<K, V>[] roots) {
-        HashMap.Node<K, V>[] halves = splitSequence(bin, oldN);
+    static <K, V> void divide(HashMap<K, V> owner, HashMap.Cell<K, V> bin, HashMap.Cell<K, V> root, int j, int oldN,
+            HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots) {
+        HashMap.Cell<K, V>[] halves = halves(bin, oldN);
         int loCount = count(halves[0]);
         int hiCount = count(halves[1]);
-        place(halves[0], loCount, hiCount, root, j, table, roots);
-        place(halves[1], hiCount, loCount, root, j + oldN, table, roots);
+        place(owner, halves[0], loCount, hiCount, root, j, table, roots);
+        place(owner, halves[1], hiCount, loCount, root, j + oldN, table, roots);
     }
 
     // Spec 1.H5: on growth a bin's entries keep their order, split by bit `bit` of the hash.
-    static <K, V> HashMap.Node<K, V>[] splitSequence(HashMap.Node<K, V> head, int bit) {
-        HashMap.Node<K, V>[] heads = HashMap.newTable(2);
-        HashMap.Node<K, V>[] tails = HashMap.newTable(2);
-        for (HashMap.Node<K, V> e = head; e != null;) {
-            HashMap.Node<K, V> next = e.next;
+    static <K, V> HashMap.Cell<K, V>[] halves(HashMap.Cell<K, V> head, int bit) {
+        HashMap.Cell<K, V>[] heads = HashMap.newTable(2);
+        HashMap.Cell<K, V>[] tails = HashMap.newTable(2);
+        for (HashMap.Cell<K, V> e = head; e != null;) {
+            HashMap.Cell<K, V> next = e.next;
             int half = (e.hash & bit) == 0 ? 0 : 1;
             e.next = null;
             if (tails[half] == null) {
@@ -167,24 +165,40 @@ final class HashTree {
         return heads;
     }
 
-    private static <K, V> void place(HashMap.Node<K, V> head, int count, int otherCount, HashMap.Node<K, V> root,
-            int i, HashMap.Node<K, V>[] table, HashMap.Node<K, V>[] roots) {
+    private static <K, V> void place(HashMap<K, V> owner, HashMap.Cell<K, V> head, int count, int otherCount,
+            HashMap.Cell<K, V> root, int i, HashMap.Cell<K, V>[] table, HashMap.Cell<K, V>[] roots) {
         if (head == null) {
             return;
         }
         table[i] = head;
         if (count <= LIST_AT_SPLIT) {
-            for (HashMap.Node<K, V> e = head; e != null; e = e.next) {
-                e.unlinkTree();
-            }
+            renew(owner, table, i);
         } else if (otherCount == 0) {
             roots[i] = root;
         } else {
-            treeify(table, roots, i);
+            growTree(table, roots, i);
         }
     }
 
-    private static int count(HashMap.Node<?, ?> head) {
+    /**
+     * Spec 1.H15: when bin i turns from a list into a tree or back, its entries are replaced by new
+     * ones in the same order; the old ones keep their links, so a walk standing on one goes on
+     * along the bin as it was, and an entry held from before no longer writes through.
+     */
+    static <K, V> void renew(HashMap<K, V> owner, HashMap.Cell<K, V>[] t, int i) {
+        HashMap.Cell<K, V> last = null;
+        for (HashMap.Cell<K, V> e = t[i]; e != null; e = e.next) {
+            HashMap.Cell<K, V> c = owner.replica(e);
+            if (last == null) {
+                t[i] = c;
+            } else {
+                last.next = c;
+            }
+            last = c;
+        }
+    }
+
+    private static int count(HashMap.Cell<?, ?> head) {
         int n = 0;
         for (; head != null; head = head.next) {
             n++;
@@ -193,7 +207,7 @@ final class HashTree {
     }
 
     /** Moves `root` to the front of bin i's sequence. */
-    static <K, V> void toFront(HashMap.Node<K, V>[] table, int i, HashMap.Node<K, V> root) {
+    static <K, V> void rootFirst(HashMap.Cell<K, V>[] table, int i, HashMap.Cell<K, V> root) {
         if (table[i] != root) {
             unlinkFromSequence(table, i, root);
             root.next = table[i];
@@ -201,11 +215,11 @@ final class HashTree {
         }
     }
 
-    static <K, V> void unlinkFromSequence(HashMap.Node<K, V>[] table, int i, HashMap.Node<K, V> n) {
+    static <K, V> void unlinkFromSequence(HashMap.Cell<K, V>[] table, int i, HashMap.Cell<K, V> n) {
         if (table[i] == n) {
             table[i] = n.next;
         } else {
-            HashMap.Node<K, V> p = table[i];
+            HashMap.Cell<K, V> p = table[i];
             while (p.next != n) {
                 p = p.next;
             }

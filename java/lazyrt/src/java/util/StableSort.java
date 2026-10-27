@@ -10,17 +10,17 @@ final class StableSort<T> {
     // Spec 7.S1: a merge first gallops after this many consecutive takes from one side.
     private static final int GALLOP_START = 7;
 
-    private final T[] a;
-    private final Comparator<? super T> c;
-    private T[] tmp;
+    private final T[] items;
+    private final Comparator<? super T> order;
+    private T[] spare;
     private int gallopAt = GALLOP_START;
-    private int[] runBase = new int[8];
-    private int[] runLen = new int[8];
+    private int[] starts = new int[8];
+    private int[] lengths = new int[8];
     private int runs;
 
-    private StableSort(T[] a, Comparator<? super T> c) {
-        this.a = a;
-        this.c = c;
+    private StableSort(T[] items, Comparator<? super T> order) {
+        this.items = items;
+        this.order = order;
     }
 
     /** Sorts a[lo, hi) by c, or by natural order when c is null. */
@@ -36,11 +36,11 @@ final class StableSort<T> {
             s.insert(lo, hi, lo + s.run(lo, hi));
             return;
         }
-        int minRun = minRun(n);
+        int least = shortestRun(n);
         while (n > 0) {
             int len = s.run(lo, hi);
-            if (len < minRun) {
-                int forced = Math.min(n, minRun);
+            if (len < least) {
+                int forced = Math.min(n, least);
                 s.insert(lo, lo + forced, lo + len);
                 len = forced;
             }
@@ -53,7 +53,7 @@ final class StableSort<T> {
     }
 
     // Spec 7.S1: the minimum run length for n >= 32.
-    private static int minRun(int n) {
+    private static int shortestRun(int n) {
         int r = 0;
         while (n >= SMALL) {
             r |= n & 1;
@@ -68,13 +68,13 @@ final class StableSort<T> {
         if (i == hi) {
             return 1;
         }
-        if (c.compare(a[i++], a[lo]) < 0) {
-            while (i < hi && c.compare(a[i], a[i - 1]) < 0) {
+        if (order.compare(items[i++], items[lo]) < 0) {
+            while (i < hi && order.compare(items[i], items[i - 1]) < 0) {
                 i++;
             }
             reverse(lo, i);
         } else {
-            while (i < hi && c.compare(a[i], a[i - 1]) >= 0) {
+            while (i < hi && order.compare(items[i], items[i - 1]) >= 0) {
                 i++;
             }
         }
@@ -83,47 +83,47 @@ final class StableSort<T> {
 
     private void reverse(int lo, int hi) {
         for (hi--; lo < hi; lo++, hi--) {
-            T t = a[lo];
-            a[lo] = a[hi];
-            a[hi] = t;
+            T t = items[lo];
+            items[lo] = items[hi];
+            items[hi] = t;
         }
     }
 
-    /** Binary insertion of a[sorted, hi) into the sorted prefix a[lo, sorted). */
+    /** Binary insertion of items[sorted, hi) into the sorted prefix items[lo, sorted). */
     private void insert(int lo, int hi, int sorted) {
         for (int i = sorted; i < hi; i++) {
-            T pivot = a[i];
+            T pivot = items[i];
             int left = lo;
             int right = i;
             while (left < right) {
                 int mid = (left + right) >>> 1;
-                if (c.compare(pivot, a[mid]) < 0) {
+                if (order.compare(pivot, items[mid]) < 0) {
                     right = mid;
                 } else {
                     left = mid + 1;
                 }
             }
-            System.arraycopy(a, left, a, left + 1, i - left);
-            a[left] = pivot;
+            System.arraycopy(items, left, items, left + 1, i - left);
+            items[left] = pivot;
         }
     }
 
     private void push(int base, int len) {
-        if (runs == runBase.length) {
-            runBase = Arrays.copyOf(runBase, runs * 2);
-            runLen = Arrays.copyOf(runLen, runs * 2);
+        if (runs == starts.length) {
+            starts = Arrays.copyOf(starts, runs * 2);
+            lengths = Arrays.copyOf(lengths, runs * 2);
         }
-        runBase[runs] = base;
-        runLen[runs++] = len;
+        starts[runs] = base;
+        lengths[runs++] = len;
     }
 
     // Spec 7.S1, collapse: only the three newest runs are looked at.
     private void collapse() {
         while (runs > 1) {
             int j = runs - 2;
-            if (j >= 1 && runLen[j - 1] <= runLen[j] + runLen[j + 1]) {
-                merge(runLen[j - 1] < runLen[j + 1] ? j - 1 : j);
-            } else if (runLen[j] <= runLen[j + 1]) {
+            if (j >= 1 && lengths[j - 1] <= lengths[j] + lengths[j + 1]) {
+                merge(lengths[j - 1] < lengths[j + 1] ? j - 1 : j);
+            } else if (lengths[j] <= lengths[j + 1]) {
                 merge(j);
             } else {
                 return;
@@ -134,29 +134,29 @@ final class StableSort<T> {
     private void finish() {
         while (runs > 1) {
             int j = runs - 2;
-            merge(j >= 1 && runLen[j - 1] < runLen[j + 1] ? j - 1 : j);
+            merge(j >= 1 && lengths[j - 1] < lengths[j + 1] ? j - 1 : j);
         }
     }
 
     /** Merges stacked runs i and i + 1 into one. */
     private void merge(int i) {
-        int base1 = runBase[i];
-        int len1 = runLen[i];
-        int base2 = runBase[i + 1];
-        int len2 = runLen[i + 1];
-        runLen[i] = len1 + len2;
+        int base1 = starts[i];
+        int len1 = lengths[i];
+        int base2 = starts[i + 1];
+        int len2 = lengths[i + 1];
+        lengths[i] = len1 + len2;
         if (i == runs - 3) {
-            runBase[i + 1] = runBase[i + 2];
-            runLen[i + 1] = runLen[i + 2];
+            starts[i + 1] = starts[i + 2];
+            lengths[i + 1] = lengths[i + 2];
         }
         runs--;
-        int skip = gallop(a[base2], a, base1, len1, 0, false);
+        int skip = gallop(items[base2], items, base1, len1, 0, false);
         base1 += skip;
         len1 -= skip;
         if (len1 == 0) {
             return;
         }
-        len2 = gallop(a[base1 + len1 - 1], a, base2, len2, len2 - 1, true);
+        len2 = gallop(items[base1 + len1 - 1], items, base2, len2, len2 - 1, true);
         if (len2 == 0) {
             return;
         }
@@ -213,19 +213,19 @@ final class StableSort<T> {
     }
 
     private boolean after(T key, T e, boolean strict) {
-        int r = c.compare(key, e);
+        int r = order.compare(key, e);
         return strict ? r > 0 : r >= 0;
     }
 
-    boolean less(T x, T y) { return c.compare(x, y) < 0; }
-    T[] array() { return a; }
+    boolean less(T x, T y) { return order.compare(x, y) < 0; }
+    T[] array() { return items; }
 
     @SuppressWarnings("unchecked")
     T[] scratch(int n) {
-        if (tmp == null || tmp.length < n) {
-            tmp = (T[]) new Object[n];
+        if (spare == null || spare.length < n) {
+            spare = (T[]) new Object[n];
         }
-        return tmp;
+        return spare;
     }
 
     int gallopAt() { return gallopAt; }

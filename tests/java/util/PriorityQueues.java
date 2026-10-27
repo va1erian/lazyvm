@@ -98,6 +98,9 @@ public class PriorityQueues {
             return log + "=> " + p + " " + q2 + " " + r;
         });
         t("large", () -> { PriorityQueue<Integer> p = new PriorityQueue<>(); for (int i = 0; i < 1000; i++) p.add((i * 7919) % 1009); long s = 0; int prev = -1; boolean ok = true; while (!p.isEmpty()) { int v = p.poll(); ok &= v >= prev; prev = v; s += v; } return s + " " + ok; });
+        t("comparator adding to its own queue", () -> { List<PriorityQueue<Integer>> box = new ArrayList<>(); int[] n = {0};
+            PriorityQueue<Integer> p = new PriorityQueue<>((x, y) -> { if (n[0]++ < 3) box.get(0).add(n[0] + 100); return Integer.compare(x, y); });
+            box.add(p); p.add(1); p.add(2); p.add(3); return p + " " + n[0]; });
         System.out.println("done");
     }
 }

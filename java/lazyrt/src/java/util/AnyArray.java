@@ -135,7 +135,8 @@ final class AnyArray {
         return true;
     }
 
-    private static boolean deepElementSame(Object x, Object y) {
+    /** Arrays.deepEquals for one pair of elements, and Objects.deepEquals. */
+    static boolean deepElementSame(Object x, Object y) {
         if (x == y) {
             return true;
         }

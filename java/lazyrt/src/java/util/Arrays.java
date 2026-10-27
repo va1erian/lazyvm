@@ -18,7 +18,7 @@ public class Arrays {
     }
 
     // Spec 11: the range messages of sort, fill, binarySearch and parallelPrefix.
-    static void rangeCheck(int length, int from, int to) {
+    static void checkSpan(int length, int from, int to) {
         if (from > to) {
             throw new IllegalArgumentException("fromIndex(" + from + ") > toIndex(" + to + ")");
         }
@@ -40,20 +40,20 @@ public class Arrays {
     public static void sort(float[] a) { KeySort.sort(a, 0, a.length); }
     public static void sort(double[] a) { KeySort.sort(a, 0, a.length); }
 
-    public static void sort(int[] a, int from, int to) { rangeCheck(a.length, from, to); KeySort.sort(a, from, to); }
-    public static void sort(long[] a, int from, int to) { rangeCheck(a.length, from, to); KeySort.heapSort(a, from, to); }
-    public static void sort(short[] a, int from, int to) { rangeCheck(a.length, from, to); KeySort.sort(a, from, to); }
-    public static void sort(char[] a, int from, int to) { rangeCheck(a.length, from, to); KeySort.sort(a, from, to); }
-    public static void sort(byte[] a, int from, int to) { rangeCheck(a.length, from, to); KeySort.sort(a, from, to); }
-    public static void sort(float[] a, int from, int to) { rangeCheck(a.length, from, to); KeySort.sort(a, from, to); }
-    public static void sort(double[] a, int from, int to) { rangeCheck(a.length, from, to); KeySort.sort(a, from, to); }
+    public static void sort(int[] a, int from, int to) { checkSpan(a.length, from, to); KeySort.sort(a, from, to); }
+    public static void sort(long[] a, int from, int to) { checkSpan(a.length, from, to); KeySort.heapSort(a, from, to); }
+    public static void sort(short[] a, int from, int to) { checkSpan(a.length, from, to); KeySort.sort(a, from, to); }
+    public static void sort(char[] a, int from, int to) { checkSpan(a.length, from, to); KeySort.sort(a, from, to); }
+    public static void sort(byte[] a, int from, int to) { checkSpan(a.length, from, to); KeySort.sort(a, from, to); }
+    public static void sort(float[] a, int from, int to) { checkSpan(a.length, from, to); KeySort.sort(a, from, to); }
+    public static void sort(double[] a, int from, int to) { checkSpan(a.length, from, to); KeySort.sort(a, from, to); }
 
     public static void sort(Object[] a) {
         StableSort.sort(a, 0, a.length, null);
     }
 
     public static void sort(Object[] a, int fromIndex, int toIndex) {
-        rangeCheck(a.length, fromIndex, toIndex);
+        checkSpan(a.length, fromIndex, toIndex);
         StableSort.sort(a, fromIndex, toIndex, null);
     }
 
@@ -62,7 +62,7 @@ public class Arrays {
     }
 
     public static <T> void sort(T[] a, int fromIndex, int toIndex, Comparator<? super T> c) {
-        rangeCheck(a.length, fromIndex, toIndex);
+        checkSpan(a.length, fromIndex, toIndex);
         StableSort.sort(a, fromIndex, toIndex, c);
     }
 
@@ -114,37 +114,37 @@ public class Arrays {
     }
 
     public static int binarySearch(long[] a, int from, int to, long key) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         return KeySort.search(from, to, i -> a[i], key);
     }
 
     public static int binarySearch(int[] a, int from, int to, int key) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         return KeySort.search(from, to, i -> a[i], key);
     }
 
     public static int binarySearch(short[] a, int from, int to, short key) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         return KeySort.search(from, to, i -> a[i], key);
     }
 
     public static int binarySearch(char[] a, int from, int to, char key) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         return KeySort.search(from, to, i -> a[i], key);
     }
 
     public static int binarySearch(byte[] a, int from, int to, byte key) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         return KeySort.search(from, to, i -> a[i], key);
     }
 
     public static int binarySearch(double[] a, int from, int to, double key) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         return KeySort.search(from, to, i -> KeySort.key(a[i]), KeySort.key(key));
     }
 
     public static int binarySearch(float[] a, int from, int to, float key) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         return KeySort.search(from, to, i -> KeySort.key(a[i]), KeySort.key(key));
     }
 
@@ -153,7 +153,7 @@ public class Arrays {
     }
 
     public static int binarySearch(Object[] a, int fromIndex, int toIndex, Object key) {
-        rangeCheck(a.length, fromIndex, toIndex);
+        checkSpan(a.length, fromIndex, toIndex);
         return search(a, fromIndex, toIndex, key, null);
     }
 
@@ -162,7 +162,7 @@ public class Arrays {
     }
 
     public static <T> int binarySearch(T[] a, int fromIndex, int toIndex, T key, Comparator<? super T> c) {
-        rangeCheck(a.length, fromIndex, toIndex);
+        checkSpan(a.length, fromIndex, toIndex);
         return search(a, fromIndex, toIndex, key, c);
     }
 
@@ -248,63 +248,63 @@ public class Arrays {
     public static void fill(Object[] a, Object val) { fill(a, 0, a.length, val); }
 
     public static void fill(long[] a, int from, int to, long val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
     }
 
     public static void fill(int[] a, int from, int to, int val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
     }
 
     public static void fill(short[] a, int from, int to, short val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
     }
 
     public static void fill(char[] a, int from, int to, char val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
     }
 
     public static void fill(byte[] a, int from, int to, byte val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
     }
 
     public static void fill(boolean[] a, int from, int to, boolean val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
     }
 
     public static void fill(double[] a, int from, int to, double val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
     }
 
     public static void fill(float[] a, int from, int to, float val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
     }
 
     public static void fill(Object[] a, int from, int to, Object val) {
-        rangeCheck(a.length, from, to);
+        checkSpan(a.length, from, to);
         for (int i = from; i < to; i++) {
             a[i] = val;
         }
@@ -399,7 +399,7 @@ public class Arrays {
 
     public static <T> void parallelPrefix(T[] array, int fromIndex, int toIndex, BinaryOperator<T> op) {
         Objects.requireNonNull(op);
-        rangeCheck(array.length, fromIndex, toIndex);
+        checkSpan(array.length, fromIndex, toIndex);
         for (int i = fromIndex + 1; i < toIndex; i++) {
             array[i] = op.apply(array[i - 1], array[i]);
         }
@@ -407,7 +407,7 @@ public class Arrays {
 
     public static void parallelPrefix(long[] array, int fromIndex, int toIndex, LongBinaryOperator op) {
         Objects.requireNonNull(op);
-        rangeCheck(array.length, fromIndex, toIndex);
+        checkSpan(array.length, fromIndex, toIndex);
         for (int i = fromIndex + 1; i < toIndex; i++) {
             array[i] = op.applyAsLong(array[i - 1], array[i]);
         }
@@ -415,7 +415,7 @@ public class Arrays {
 
     public static void parallelPrefix(double[] array, int fromIndex, int toIndex, DoubleBinaryOperator op) {
         Objects.requireNonNull(op);
-        rangeCheck(array.length, fromIndex, toIndex);
+        checkSpan(array.length, fromIndex, toIndex);
         for (int i = fromIndex + 1; i < toIndex; i++) {
             array[i] = op.applyAsDouble(array[i - 1], array[i]);
         }
@@ -423,7 +423,7 @@ public class Arrays {
 
     public static void parallelPrefix(int[] array, int fromIndex, int toIndex, IntBinaryOperator op) {
         Objects.requireNonNull(op);
-        rangeCheck(array.length, fromIndex, toIndex);
+        checkSpan(array.length, fromIndex, toIndex);
         for (int i = fromIndex + 1; i < toIndex; i++) {
             array[i] = op.applyAsInt(array[i - 1], array[i]);
         }

@@ -84,17 +84,17 @@ final class KeySort {
     static void heapSort(long[] k, int from, int to) {
         int n = to - from;
         for (int i = n / 2 - 1; i >= 0; i--) {
-            siftDown(k, from, i, n);
+            sinkKey(k, from, i, n);
         }
         for (int end = n - 1; end > 0; end--) {
             long top = k[from];
             k[from] = k[from + end];
             k[from + end] = top;
-            siftDown(k, from, 0, end);
+            sinkKey(k, from, 0, end);
         }
     }
 
-    private static void siftDown(long[] k, int base, int i, int n) {
+    private static void sinkKey(long[] k, int base, int i, int n) {
         long v = k[base + i];
         while (2 * i + 1 < n) {
             int child = 2 * i + 1;

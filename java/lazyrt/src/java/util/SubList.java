@@ -2,37 +2,43 @@ package java.util;
 
 /** The view returned by AbstractList.subList: a window of the parent, offset by `from`. */
 class SubList<E> extends AbstractList<E> {
-    private final AbstractList<E> parent;
-    private final int from;
+    private final AbstractList<E> backing;
+    private final int start;
     private int size;
+    /** Spec 9.F2: a window of an ArrayList (or of such a window) iterates like ArrayList itself. */
+    private final boolean indexed;
 
-    SubList(AbstractList<E> parent, int from, int to) {
-        this.parent = parent;
-        this.from = from;
-        this.size = to - from;
-        this.modCount = parent.modCount;
+    SubList(AbstractList<E> backing, int start, int to) {
+        this.backing = backing;
+        this.start = start;
+        this.size = to - start;
+        this.modCount = backing.modCount;
+        this.indexed = backing instanceof ArrayList || (backing instanceof SubList && ((SubList<E>) backing).indexed);
     }
+
+    int cursorLimit() { return size; }
+    void checkFresh() { checkUnchanged(); }
 
     /** A window of a RandomAccess list is RandomAccess too. */
     private static final class Fast<E> extends SubList<E> implements RandomAccess {
-        Fast(AbstractList<E> parent, int from, int to) { super(parent, from, to); }
+        Fast(AbstractList<E> backing, int start, int to) { super(backing, start, to); }
     }
 
     /** The window [from, to) of `parent`, whose bounds the caller has checked. */
-    static <E> List<E> of(AbstractList<E> parent, int from, int to) {
-        return parent instanceof RandomAccess ? new Fast<E>(parent, from, to) : new SubList<E>(parent, from, to);
+    static <E> List<E> of(AbstractList<E> backing, int start, int to) {
+        return backing instanceof RandomAccess ? new Fast<E>(backing, start, to) : new SubList<E>(backing, start, to);
     }
 
     public E get(int index) {
         Support.checkIndex(index, size);
         checkUnchanged();
-        return parent.get(index + from);
+        return backing.get(index + start);
     }
 
     public E set(int index, E element) {
         Support.checkIndex(index, size);
         checkUnchanged();
-        return parent.set(index + from, element);
+        return backing.set(index + start, element);
     }
 
     public int size() {
@@ -43,21 +49,21 @@ class SubList<E> extends AbstractList<E> {
     public void add(int index, E element) {
         Support.checkPosition(index, size);
         checkUnchanged();
-        parent.add(index + from, element);
+        backing.add(index + start, element);
         resync(1);
     }
 
     public E remove(int index) {
         Support.checkIndex(index, size);
         checkUnchanged();
-        E old = parent.remove(index + from);
+        E old = backing.remove(index + start);
         resync(-1);
         return old;
     }
 
     protected void removeRange(int fromIndex, int toIndex) {
         checkUnchanged();
-        parent.removeRange(fromIndex + from, toIndex + from);
+        backing.removeRange(fromIndex + start, toIndex + start);
         resync(fromIndex - toIndex);
     }
 
@@ -70,18 +76,22 @@ class SubList<E> extends AbstractList<E> {
             return false;
         }
         checkUnchanged();
-        parent.addAll(from + index, c);
+        backing.addAll(start + index, c);
         resync(n);
         return true;
     }
 
     public Iterator<E> iterator() { return listIterator(); }
 
-    // Spec 8.C1: the window's iterators are the parent's listIterator(from + index).
+    // Spec 8.C1: the window's iterators are the backing list's listIterator(start + index); spec 9.F2:
+    // a window of an ArrayList uses the index iterator instead.
     public ListIterator<E> listIterator(int index) {
         checkUnchanged();
         Support.checkPosition(index, size);
-        ListIterator<E> it = parent.listIterator(from + index);
+        if (indexed) {
+            return cursorAt(index);
+        }
+        ListIterator<E> it = backing.listIterator(start + index);
         return new ListIterator<E>() {
             public boolean hasNext() { return nextIndex() < size; }
 
@@ -101,8 +111,8 @@ class SubList<E> extends AbstractList<E> {
                 return it.previous();
             }
 
-            public int nextIndex() { return it.nextIndex() - from; }
-            public int previousIndex() { return it.previousIndex() - from; }
+            public int nextIndex() { return it.nextIndex() - start; }
+            public int previousIndex() { return it.previousIndex() - start; }
 
             public void remove() {
                 it.remove();
@@ -125,12 +135,12 @@ class SubList<E> extends AbstractList<E> {
 
     /** After a change made through the parent: adopt its modCount and the new size. */
     private void resync(int delta) {
-        modCount = parent.modCount;
+        modCount = backing.modCount;
         size += delta;
     }
 
     private void checkUnchanged() {
-        if (parent.modCount != modCount) {
+        if (backing.modCount != modCount) {
             throw new ConcurrentModificationException();
         }
     }

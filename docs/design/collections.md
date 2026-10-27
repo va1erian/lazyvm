@@ -109,6 +109,12 @@ as in H7, if the other half is non-empty; if all entries stay together, the bin 
 (same tree, same sequence, even if the root is not first). Pinned by: HashTreeRules ("split",
 "unsplit"), HashTreeBins ("split").
 
+**H15.** When a bin becomes a tree (H7), or a tree bin becomes a list (H9 shrink, an H12 half of at
+most 6), its entries are replaced by new entry objects in the same order. An entry obtained earlier
+(from iteration) no longer writes through, and a `forEach` standing on one carries on along the bin
+as it was when it changed, so keys then added to the bin go unseen. A split half that becomes a new
+tree keeps its entries. Pinned by: HashTreeRules ("entries replaced").
+
 ### LinkedHashMap
 
 **H13.** In access order, these move an existing entry to the end, and count as a structural change
@@ -185,14 +191,17 @@ additions. Pinned by: Deques ("iterator …" lines).
 `removeLastOccurrence` or an iterator) shifts the `i` elements before it one slot toward the end if
 `i < n - i`, else shifts the elements after it one slot toward the front. Iterator removal adjusts
 the iterator, which then continues correctly. `clear()` empties every slot and moves both ends to
-slot 0. Pinned by: Deques ("remove index …", "clear").
+slot 0. Pinned by: Deques ("remove index …", "remove at the middle (tie)", "clear").
 
 ## 5. PriorityQueue
 
 **P1.** Iteration, `toString` and `toArray` follow a binary heap array: children of `i` at `2i+1`
 and `2i+2`. All comparisons call `compare(x, y)` (or `x.compareTo(y)`) with the arguments in the
-order below. Pinned by: PriorityQueues ("compare calls", "building calls", "add …").
+order below. Pinned by: PriorityQueues ("compare calls", "building calls", "add …", "comparator
+adding to its own queue").
 - `offer(x)`: put `x` at the end; while it has a parent `p` and `compare(x, p) < 0`, move `p` down.
+  The size counts `x` before the first comparison, so a comparator that adds to the queue meets an
+  empty slot (a `null` argument).
 - Moving down from slot `k` with element `x`: while `k` has a child, let `c` be the left child, or
   the right child if it exists and `compare(left, right) > 0`; stop if `compare(x, c) <= 0`, else
   move `c` up and continue at `c`'s slot.
@@ -236,7 +245,14 @@ navigation methods walk the tree as M1 does. A walk over a view first finds its 
 node in range, or the highest when descending, then checks it against the other bound), then its
 fence: the first node past the far bound, found by ceiling (exclusive bound) or higher (inclusive),
 or by floor or lower when descending. `size()` counts by walking and counts again only after the
-map changed. Pinned by: TreeMapCalls ("subMap walk", "descending view").
+map changed. Making a view compares its bounds: the low key with the high one when both exist
+(`fromKey > toKey` if it is greater), else the one bound with itself. A map or view keeps the one
+`descendingMap()`, `navigableKeySet()` (also its `keySet()`) and `entrySet()` it hands out, so
+`descendingKeySet()` twice makes one view and no comparisons the second time; the descending view of
+a descending view is a new view. TreeSet's `descendingSet()` and `headSet(…)`, and the key sets'
+`descendingSet()`, are new each call. Clearing a view removes its entries one by one. Pinned by:
+TreeMapCalls ("subMap walk", "descending view", "view bounds"), TreeMaps ("views kept", "clear
+views").
 
 ## 7. Sorting objects
 
@@ -257,7 +273,7 @@ run), Sorting ("comparison …", "inconsistent comparators", "list.sort violates
   `L[j-1] <= L[j] + L[j+1]`, merge runs `j-1, j` when `L[j-1] < L[j+1]`, else `j, j+1`; else if
   `L[j] <= L[j+1]` merge `j, j+1`; else stop. Repeat. Only these three runs are looked at.
 - Final merging: while two or more runs: `j` second newest; merge `j-1, j` if `j ≥ 1` and
-  `L[j-1] < L[j+1]`, else `j, j+1`.
+  `L[j-1] < L[j+1]`, else `j, j+1`. Pinned by: SortCalls ("final merging of 30 runs").
 - *Find-after(key, run, hint)* is the number of leading run elements `e` with
   `compare(key, e) >= 0`; *find-before* counts those with `compare(key, e) > 0`. Both first test
   `run[hint]`. If the key belongs after it, they probe `hint + 1, hint + 3, hint + 7, …` (offsets
@@ -299,7 +315,8 @@ Pinned by: CollectionsCallLog ("sort"), SortCalls, FailFast.
 step; `hashCode`, `contains`, `toString`, `toArray` use `iterator()`; `indexOf` uses
 `listIterator()`; `lastIndexOf` uses `listIterator(size())` backwards. A sublist's `get(i)` and
 `set(i)` call the parent's with `i + from`; its iterators come from the parent's
-`listIterator(from + i)`. Pinned by: CollectionsCallLog.
+`listIterator(from + i)` (except an ArrayList's, F2). A list iterator whose `add` throws leaves its
+cursor where it was. Pinned by: CollectionsCallLog, FailFast ("failed listIterator add").
 
 **C2.** The calls each algorithm makes on a list `l` of size `n` (indexed form unless noted; "RA"
 means `l instanceof RandomAccess`). Pinned by: CollectionsCallLog, CollectionsCalls.
@@ -317,7 +334,7 @@ means `l instanceof RandomAccess`). Pinned by: CollectionsCallLog, CollectionsCa
 | `indexOfSubList(s, t)` | `s` < 35 elements, or `s` and `t` both RA | for each start from 0: `t.get(i)` then `s.get(start + i)` until a mismatch | `s.listIterator()`; per start: `t.listIterator()`, alternate t next, s next; on a mismatch after `i` matches, s steps back `i` |
 | `lastIndexOfSubList(s, t)` | `s` < 35, or `s` RA (`t` does not matter) | starts from `n - |t|` down | `s.listIterator(n - |t|)`; per start: `t.listIterator()`, alternate t next, s next; on a mismatch after `i` matches and start > 0, s steps back `i + 2` |
 | `min`, `max`, `frequency` | always | `iterator()`; `max`: `next.compareTo(best) > 0` replaces; `min`: `< 0` | |
-| `disjoint(a, b)` | always | iterates `b` and asks `a.contains` if `a` is a Set, or if neither is a Set and `a` is larger; else iterates `a` and asks `b.contains` | |
+| `disjoint(a, b)` | always | when neither is a Set and either is empty: `true`, touching neither; else iterates `b` and asks `a.contains` if `a` is a Set, or if neither is a Set and `a` is larger; else iterates `a` and asks `b.contains` | |
 
 **C3.** Equality tests call `equals` on the argument or target object: `o.equals(e)` for `indexOf`,
 `lastIndexOf`, `contains`, `remove(Object)`, `frequency`, `replaceAll` and hashed lookups;
@@ -347,17 +364,23 @@ Vector, PriorityQueue, HashMap/HashSet/LinkedHashMap, Hashtable and IdentityHash
 TreeSet check the end first; ArrayDeque follows D2. `hasNext()` never throws: ArrayList and Vector
 answer `cursor != size()`, LinkedList `cursor < size()`, PriorityQueue `cursor < size()` or
 displaced elements remain (P2); the hashed and tree maps report whether a next node was found.
-Pinned by: FailFast ("exhausted …"), Iterators.
+Sublists: those of an ArrayList (and their own sublists) iterate as ArrayList does, against the
+sublist's own size, so after a change through the sublist or its list `hasNext()` may be true and
+`next()` throws ConcurrentModificationException; other AbstractList sublists (LinkedList, Vector)
+answer `hasNext()` by `nextIndex() < size` and fail with NoSuchElementException at their end.
+Pinned by: FailFast ("exhausted …", "sublist iterators"), Iterators.
 
 **F3.** How far a call gets when its action changes the collection, then throws
 `ConcurrentModificationException`: ArrayList and Vector `forEach`, `replaceAll`, `removeIf` and
 `Iterator.forEachRemaining` stop right after the action that changed it; `sort` completes, then
-throws. HashMap and LinkedHashMap `forEach` (on the map and on `keySet()`) and `replaceAll` finish
-the whole traversal, seeing entries added to buckets not yet visited (HashMap) or appended
-(LinkedHashMap), then throw. TreeMap, Hashtable and IdentityHashMap check after every action.
+throws. HashMap and LinkedHashMap `forEach` (on the map, `keySet()` and `values()`) and `replaceAll`
+finish the whole traversal, seeing entries added to buckets not yet visited (HashMap) or appended
+(LinkedHashMap), then throw. A HashMap traversal walks the table the call began with: if an action
+makes the table grow, those buckets are emptied as their entries move, so the walk ends with the
+rest of the current entry's chain as it now stands, then throws. TreeMap, Hashtable and IdentityHashMap check after every action.
 Collections that inherit `Iterable.forEach` (LinkedList, ArrayDeque, PriorityQueue, HashSet,
 TreeSet) fail on the next `next()`. EnumMap and EnumSet iterators never throw. Pinned by: FailFast,
-LinkedHashMaps, IdentityMaps ("forEach CME").
+LinkedHashMaps, IdentityMaps ("forEach CME"), FailFast ("… grows the table").
 
 **F4.** EnumMap iterators see the current contents. An EnumSet iterator captures the members of the
 first 64 constants when created and of each later group of 64 when it reaches it; later changes

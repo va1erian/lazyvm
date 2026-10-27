@@ -21,4 +21,7 @@ Hashtable: exhausted iterator after an add: hasNext false, next CME | forEach CM
 IdentityHashMap: exhausted iterator after an add: hasNext false, next CME | forEach CME@1 map.forEach CME@1 map.replaceAll CME@1 | forEachRemaining CME@1
 clear() of an empty collection, then next() of an older iterator: ArrayList=CME LinkedList=CME Vector=CME ArrayDeque=end PriorityQueue=CME HashSet=CME TreeSet=end HashMap=CME LinkedHashMap=CME Hashtable=end IdentityHashMap=CME
 EnumMap never fails: 035 [WAITING, TERMINATED]
+HashMap forEach whose action grows the table: CME@3 [0,33,18,] CME@3 [0,33,18,] CME@3 [0,33,18,] CME@3 [0,11,6,]
+sublist iterators: ArrayList: after sub.remove true/CME, after a parent add false/CME LinkedList: after sub.remove false/end, after a parent add false/end Vector: after sub.remove false/end, after a parent add false/end
+failed listIterator add: UnsupportedOperationException, then nextIndex 1 previousIndex 0
 done

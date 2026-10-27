@@ -108,6 +108,17 @@ public class SortCalls {
         } catch (IllegalArgumentException e) {
             System.out.println("never equal: " + e.getMessage());
         }
+        // natural runs whose final merging must merge the two runs below the top first
+        int[] late = {64, 32, 770, 1000, 1000, 200, 33, 200, 500, 459, 33, 1000, 1000, 500, 500, 200, 200, 64, 845, 64,
+            1000, 100, 288, 33, 33, 32, 100, 33, 200, 126};
+        List<Integer> lv = new ArrayList<>();
+        for (int len : late) for (int j = 0; j < len; j++) lv.add(j);
+        int[] lr = new int[lv.size()];
+        for (int i = 0; i < lr.length; i++) lr[i] = lv.get(i);
+        a = elems(lr);
+        log.setLength(0); calls = 0;
+        Arrays.sort(a);
+        System.out.println("final merging of " + late.length + " runs: " + result(a, a.length));
         System.out.println("done");
     }
 }

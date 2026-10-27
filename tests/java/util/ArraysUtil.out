@@ -34,4 +34,5 @@ true false true 65663 false true false 0 true
 setAll null: !java.lang.NullPointerException
 parallelPrefix bad range: !java.lang.IllegalArgumentException: fromIndex(2) > toIndex(1)
 parallelSetAll: [1, 2, 3, 4]
+Objects.deepEquals true true true true false false
 done

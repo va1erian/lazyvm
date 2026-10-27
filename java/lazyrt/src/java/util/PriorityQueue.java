@@ -6,22 +6,22 @@ package java.util;
  */
 public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serializable {
     // Javadoc: the default initial capacity.
-    private static final int DEFAULT_CAPACITY = 11;
+    private static final int DEFAULT_SLOTS = 11;
 
-    private transient Object[] queue;
+    private transient Object[] heap;
     private int size;
     private final Comparator<? super E> comparator;
     transient int modCount;
 
-    public PriorityQueue() { this(DEFAULT_CAPACITY, null); }
+    public PriorityQueue() { this(DEFAULT_SLOTS, null); }
     public PriorityQueue(int initialCapacity) { this(initialCapacity, null); }
-    public PriorityQueue(Comparator<? super E> comparator) { this(DEFAULT_CAPACITY, comparator); }
+    public PriorityQueue(Comparator<? super E> comparator) { this(DEFAULT_SLOTS, comparator); }
 
     public PriorityQueue(int initialCapacity, Comparator<? super E> comparator) {
         if (initialCapacity < 1) {
             throw new IllegalArgumentException();
         }
-        this.queue = new Object[initialCapacity];
+        this.heap = new Object[initialCapacity];
         this.comparator = comparator;
     }
 
@@ -54,16 +54,16 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
 
     /** Adopts the elements a; spec 5.P3: unordered input is heapified from slot n/2 - 1 down. */
     @SuppressWarnings("unchecked")
-    private void take(Object[] a, boolean heapify) {
+    private void take(Object[] a, boolean makeHeap) {
         a = Support.plainArray(a);
         for (Object o : a) {
             Objects.requireNonNull(o);
         }
-        queue = a.length == 0 ? new Object[1] : a;
+        heap = a.length == 0 ? new Object[1] : a;
         size = a.length;
-        if (heapify) {
+        if (makeHeap) {
             for (int i = (size >>> 1) - 1; i >= 0; i--) {
-                siftDown(i, (E) queue[i]);
+                sink(i, (E) heap[i]);
             }
         }
     }
@@ -74,36 +74,36 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
     }
 
     // Spec 5.P1: a new element climbs while it orders before its parent.
-    private void siftUp(int k, E x) {
+    private void climb(int k, E x) {
         while (k > 0) {
             int parent = (k - 1) >>> 1;
-            Object p = queue[parent];
+            Object p = heap[parent];
             if (compare(x, p) >= 0) {
                 break;
             }
-            queue[k] = p;
+            heap[k] = p;
             k = parent;
         }
-        queue[k] = x;
+        heap[k] = x;
     }
 
     // Spec 5.P1: x sinks below the lesser child (the right one only if the left orders after it).
-    private void siftDown(int k, E x) {
+    private void sink(int k, E x) {
         int half = size >>> 1;
         while (k < half) {
             int child = 2 * k + 1;
-            Object c = queue[child];
+            Object c = heap[child];
             int right = child + 1;
-            if (right < size && compare(c, queue[right]) > 0) {
-                c = queue[child = right];
+            if (right < size && compare(c, heap[right]) > 0) {
+                c = heap[child = right];
             }
             if (compare(x, c) <= 0) {
                 break;
             }
-            queue[k] = c;
+            heap[k] = c;
             k = child;
         }
-        queue[k] = x;
+        heap[k] = x;
     }
 
     public boolean add(E e) { return offer(e); }
@@ -111,40 +111,40 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
     public boolean offer(E e) {
         Objects.requireNonNull(e);
         modCount++;
-        if (size == queue.length) {
-            queue = Arrays.copyOf(queue, size * 2 + 2);
+        if (size == heap.length) {
+            heap = Arrays.copyOf(heap, size * 2 + 2);
         }
-        if (size == 0) {
-            queue[0] = e;
+        int at = size++;
+        if (at == 0) {
+            heap[0] = e;
         } else {
-            siftUp(size, e);
+            climb(at, e);
         }
-        size++;
         return true;
     }
 
     @SuppressWarnings("unchecked")
-    public E peek() { return size == 0 ? null : (E) queue[0]; }
-    private int indexOf(Object o) { return o == null ? -1 : Support.indexOf(queue, 0, size, o); }
+    public E peek() { return size == 0 ? null : (E) heap[0]; }
+    private int indexOf(Object o) { return o == null ? -1 : Support.indexOf(heap, 0, size, o); }
 
     public boolean remove(Object o) {
         int i = indexOf(o);
         if (i < 0) {
             return false;
         }
-        removeAt(i);
+        takeOut(i);
         return true;
     }
 
     public boolean contains(Object o) { return indexOf(o) >= 0; }
-    public Object[] toArray() { return Arrays.copyOf(queue, size); }
-    public <T> T[] toArray(T[] a) { return Support.toArray(queue, size, a); }
+    public Object[] toArray() { return Arrays.copyOf(heap, size); }
+    public <T> T[] toArray(T[] a) { return Support.toArray(heap, size, a); }
     public Iterator<E> iterator() { return new Walk(); }
     public int size() { return size; }
 
     public void clear() {
         modCount++;
-        Arrays.fill(queue, 0, size, null);
+        Arrays.fill(heap, 0, size, null);
         size = 0;
     }
 
@@ -154,11 +154,11 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
             return null;
         }
         modCount++;
-        E top = (E) queue[0];
-        E last = (E) queue[--size];
-        queue[size] = null;
+        E top = (E) heap[0];
+        E last = (E) heap[--size];
+        heap[size] = null;
         if (size != 0) {
-            siftDown(0, last);
+            sink(0, last);
         }
         return top;
     }
@@ -168,18 +168,18 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
      * Returns that element if it climbed above i, else null.
      */
     @SuppressWarnings("unchecked")
-    private E removeAt(int i) {
+    private E takeOut(int i) {
         modCount++;
         int s = --size;
-        E moved = (E) queue[s];
-        queue[s] = null;
+        E moved = (E) heap[s];
+        heap[s] = null;
         if (s == i) {
             return null;
         }
-        siftDown(i, moved);
-        if (queue[i] == moved) {
-            siftUp(i, moved);
-            if (queue[i] != moved) {
+        sink(i, moved);
+        if (heap[i] == moved) {
+            climb(i, moved);
+            if (heap[i] != moved) {
                 return moved;
             }
         }
@@ -193,22 +193,22 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
      * aside and returned once the array is done.
      */
     private final class Walk implements Iterator<E> {
-        private int cursor;
+        private int nextSlot;
         private int last = -1;
         private ArrayDeque<E> displaced;
         private E lastDisplaced;
         private int expected = modCount;
 
-        public boolean hasNext() { return cursor < size || (displaced != null && !displaced.isEmpty()); }
+        public boolean hasNext() { return nextSlot < size || (displaced != null && !displaced.isEmpty()); }
 
         @SuppressWarnings("unchecked")
         public E next() {
             if (expected != modCount) {
                 throw new ConcurrentModificationException();
             }
-            if (cursor < size) {
-                last = cursor++;
-                return (E) queue[last];
+            if (nextSlot < size) {
+                last = nextSlot++;
+                return (E) heap[last];
             }
             if (displaced != null) {
                 last = -1;
@@ -225,10 +225,10 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
                 throw new ConcurrentModificationException();
             }
             if (last != -1) {
-                E moved = removeAt(last);
+                E moved = takeOut(last);
                 last = -1;
                 if (moved == null) {
-                    cursor--;
+                    nextSlot--;
                 } else {
                     if (displaced == null) {
                         displaced = new ArrayDeque<E>();
@@ -236,7 +236,7 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
                     displaced.add(moved);
                 }
             } else if (lastDisplaced != null) {
-                removeSame(lastDisplaced);
+                takeOutSame(lastDisplaced);
                 lastDisplaced = null;
             } else {
                 throw new IllegalStateException();
@@ -246,10 +246,10 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
     }
 
     /** Removes the very object o (not merely an equal one). */
-    private void removeSame(Object o) {
+    private void takeOutSame(Object o) {
         for (int i = 0; i < size; i++) {
-            if (queue[i] == o) {
-                removeAt(i);
+            if (heap[i] == o) {
+                takeOut(i);
                 return;
             }
         }

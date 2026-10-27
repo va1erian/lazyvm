@@ -127,6 +127,9 @@ public class CollectionsCallLog {
         who("List.equals", () -> Arrays.asList(new Q("a", 1), new Q("a", 2)).equals(Arrays.asList(new Q("b", 1), new Q("b", 3))));
         who("Arrays.binarySearch", () -> Arrays.binarySearch(qs(4).toArray(), new Q("k", 2)));
         who("TreeMap first put", () -> new TreeMap<Q, Integer>().put(new Q("f", 1), 1));
+        run("disjoint empty list, list", 0, (l, f) -> Collections.disjoint(l, mk(false, "o", ints(2))));
+        run("disjoint list, empty list", 2, (l, f) -> Collections.disjoint(l, mk(false, "o", ints(0))));
+        run("disjoint empty set, list", 2, (l, f) -> Collections.disjoint(new TreeSet<Integer>(), l));
         System.out.println("done");
     }
 }

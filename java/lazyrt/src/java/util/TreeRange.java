@@ -1,130 +1,125 @@
 package java.util;
 
 /**
- * A live view of the keys of a TreeMap between two optional bounds, in ascending or descending
- * order: subMap, headMap, tailMap and descendingMap. Spec 11 gives the range messages.
+ * A live view of the keys of a TreeMap between two optional ends, in key order or reversed:
+ * subMap, headMap, tailMap and descendingMap (spec 6.M4). Spec 11 gives the range messages.
  */
 final class TreeRange<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, java.io.Serializable {
-    private final TreeMap<K, V> m;
-    private final boolean fromStart;
-    private final K lo;
-    private final boolean loIn;
-    private final boolean toEnd;
-    private final K hi;
-    private final boolean hiIn;
-    private final boolean descending;
+    /** One end of a range: a key, and whether that key itself belongs to the range. */
+    static final class Edge<K> {
+        final K key;
+        final boolean shut;
+
+        Edge(K key, boolean shut) {
+            this.key = key;
+            this.shut = shut;
+        }
+    }
+
+    private final TreeMap<K, V> tree;
+    /** The ends in the map's own order; null where the range is open. */
+    private final Edge<K> low;
+    private final Edge<K> high;
+    private final boolean reversed;
     private transient int count = -1;
     private transient int countedAt;
+    private transient TreeRange<K, V> mirror;
+    private transient Set<Map.Entry<K, V>> entries;
 
-    TreeRange(TreeMap<K, V> m, boolean fromStart, K lo, boolean loIn, boolean toEnd, K hi, boolean hiIn,
-            boolean descending) {
-        if (!fromStart && !toEnd) {
-            if (m.compare(lo, hi) > 0) {
+    TreeRange(TreeMap<K, V> tree, Edge<K> low, Edge<K> high, boolean reversed) {
+        // Spec 6.M4: making a view compares its ends, the low key with the high one, or a lone
+        // end's key with itself, so a key the order cannot compare fails at once.
+        if (low != null || high != null) {
+            K a = (low != null ? low : high).key;
+            K b = (high != null ? high : low).key;
+            if (tree.compare(a, b) > 0) {
                 throw new IllegalArgumentException("fromKey > toKey");
             }
-        } else {
-            if (!fromStart) {
-                m.compare(lo, lo);
-            }
-            if (!toEnd) {
-                m.compare(hi, hi);
-            }
         }
-        this.m = m;
-        this.fromStart = fromStart;
-        this.lo = lo;
-        this.loIn = loIn;
-        this.toEnd = toEnd;
-        this.hi = hi;
-        this.hiIn = hiIn;
-        this.descending = descending;
+        this.tree = tree;
+        this.low = low;
+        this.high = high;
+        this.reversed = reversed;
     }
 
-    // ---- bounds, in the map's own (ascending) order ----
+    // ---- the ends, in the map's own order ----
 
-    private boolean tooLow(Object key) {
-        if (fromStart) {
+    private boolean under(Object key) {
+        if (low == null) {
             return false;
         }
-        int c = m.compare(key, lo);
-        return c < 0 || (c == 0 && !loIn);
+        int c = tree.compare(key, low.key);
+        return c < 0 || (c == 0 && !low.shut);
     }
 
-    private boolean tooHigh(Object key) {
-        if (toEnd) {
+    private boolean over(Object key) {
+        if (high == null) {
             return false;
         }
-        int c = m.compare(key, hi);
-        return c > 0 || (c == 0 && !hiIn);
+        int c = tree.compare(key, high.key);
+        return c > 0 || (c == 0 && !high.shut);
     }
 
-    private boolean inRange(Object key) { return !tooLow(key) && !tooHigh(key); }
+    private boolean holds(Object key) { return !under(key) && !over(key); }
 
-    /** For the bounds of a narrower view: an exclusive bound may sit on this view's own bound. */
-    private boolean admits(Object key, boolean inclusive) {
-        if (inclusive) {
-            return inRange(key);
+    /** For an end of a narrower view: an open end may sit on this view's own end key. */
+    private boolean admits(Object key, boolean shut) {
+        if (shut) {
+            return holds(key);
         }
-        return (fromStart || m.compare(key, lo) >= 0) && (toEnd || m.compare(hi, key) >= 0);
+        return (low == null || tree.compare(key, low.key) >= 0) && (high == null || tree.compare(high.key, key) >= 0);
     }
 
-    private MapNode<K, V> lowest() {
-        MapNode<K, V> e = fromStart ? m.first() : m.near(lo, true, loIn);
-        return e == null || tooHigh(e.key) ? null : e;
+    private MapNode<K, V> bottom() {
+        MapNode<K, V> e = low == null ? tree.first() : tree.near(low.key, true, low.shut);
+        return e == null || over(e.key) ? null : e;
     }
 
-    private MapNode<K, V> highest() {
-        MapNode<K, V> e = toEnd ? m.last() : m.near(hi, false, hiIn);
-        return e == null || tooLow(e.key) ? null : e;
+    private MapNode<K, V> top() {
+        MapNode<K, V> e = high == null ? tree.last() : tree.near(high.key, false, high.shut);
+        return e == null || under(e.key) ? null : e;
     }
 
-    /** The nearest in-range node above or below key, as TreeMap.near. */
+    /** The nearest node of the range above or below key, as TreeMap.near. */
     private MapNode<K, V> near(Object key, boolean above, boolean inclusive) {
-        if (above ? tooLow(key) : tooHigh(key)) {
-            return above ? lowest() : highest();
+        if (above ? under(key) : over(key)) {
+            return above ? bottom() : top();
         }
-        MapNode<K, V> e = m.near(key, above, inclusive);
-        return e == null || (above ? tooHigh(e.key) : tooLow(e.key)) ? null : e;
+        MapNode<K, V> e = tree.near(key, above, inclusive);
+        return e == null || (above ? over(e.key) : under(e.key)) ? null : e;
     }
 
     // ---- the same in this view's order ----
 
-    private MapNode<K, V> firstNode() { return descending ? highest() : lowest(); }
-    private MapNode<K, V> lastNode() { return descending ? lowest() : highest(); }
+    private MapNode<K, V> leading() { return reversed ? top() : bottom(); }
+    private MapNode<K, V> trailing() { return reversed ? bottom() : top(); }
 
     /** ceiling (`up`, inclusive), higher, floor and lower in this view's order. */
-    private MapNode<K, V> step(Object key, boolean up, boolean inclusive) {
-        return near(key, up != descending, inclusive);
-    }
+    private MapNode<K, V> step(Object key, boolean up, boolean inclusive) { return near(key, up != reversed, inclusive); }
 
-    /** A walk from the first node in this view's order to the fence: the first node past the range. */
+    /** Spec 6.M4: a walk finds its first node, then the first node past the far end, where it stops. */
     private Iterator<Map.Entry<K, V>> walk() {
-        MapNode<K, V> start = firstNode();
-        MapNode<K, V> fence;
-        if (descending) {
-            fence = fromStart ? null : m.near(lo, false, !loIn);
-        } else {
-            fence = toEnd ? null : m.near(hi, true, !hiIn);
-        }
-        return new TreeViews.Walk<K, V>(m, start, fence, !descending);
+        MapNode<K, V> start = leading();
+        Edge<K> far = reversed ? low : high;
+        MapNode<K, V> stop = far == null ? null : tree.near(far.key, !reversed, !far.shut);
+        return new TreeViews.Walk<K, V>(tree, start, stop, !reversed);
     }
 
-    /** The node for key if it is in range, else null. */
-    private MapNode<K, V> nodeFor(Object key) { return inRange(key) ? m.getNode(key) : null; }
+    private MapNode<K, V> inside(Object key) { return holds(key) ? tree.locate(key) : null; }
 
-    private TreeRange<K, V> view(boolean fromStart, K lo, boolean loIn, boolean toEnd, K hi, boolean hiIn) {
-        return new TreeRange<K, V>(m, fromStart, lo, loIn, toEnd, hi, hiIn, descending);
+    private TreeRange<K, V> narrowed(Edge<K> newLow, Edge<K> newHigh) {
+        return new TreeRange<K, V>(tree, newLow, newHigh, reversed);
     }
 
     // ---- Map ----
 
-    /** Counts the range, and counts again only after the map changed. */
+    /** Counts the range, and counts again only after the map changed (spec 6.M4). */
     public int size() {
-        if (fromStart && toEnd) {
-            return m.size();
+        if (low == null && high == null) {
+            return tree.size();
         }
-        if (countedAt != m.modCount || count < 0) {
-            countedAt = m.modCount;
+        if (countedAt != tree.modCount || count < 0) {
+            countedAt = tree.modCount;
             count = 0;
             for (Iterator<Map.Entry<K, V>> it = walk(); it.hasNext(); it.next()) {
                 count++;
@@ -133,55 +128,72 @@ final class TreeRange<K, V> extends AbstractMap<K, V> implements NavigableMap<K,
         return count;
     }
 
-    public boolean containsKey(Object key) { return inRange(key) && m.containsKey(key); }
-    public V get(Object key) { return inRange(key) ? m.get(key) : null; }
+    public boolean containsKey(Object key) { return holds(key) && tree.containsKey(key); }
+    public V get(Object key) { return holds(key) ? tree.get(key) : null; }
 
     public V put(K key, V value) {
-        if (!inRange(key)) {
+        if (!holds(key)) {
             throw new IllegalArgumentException("key out of range");
         }
-        return m.put(key, value);
+        return tree.put(key, value);
     }
 
-    public V remove(Object key) { return inRange(key) ? m.remove(key) : null; }
-    public Set<Map.Entry<K, V>> entrySet() { return new TreeViews.Entries<K, V>(this, m, this::walk, this::nodeFor); }
+    public V remove(Object key) { return holds(key) ? tree.remove(key) : null; }
+
+    public Set<Map.Entry<K, V>> entrySet() {
+        if (entries == null) {
+            entries = new TreeViews.Entries<K, V>(this, tree, this::walk, this::inside);
+        }
+        return entries;
+    }
 
     public Comparator<? super K> comparator() {
-        return descending ? Collections.reverseOrder(m.comparator()) : m.comparator();
+        return reversed ? Collections.reverseOrder(tree.comparator()) : tree.comparator();
     }
 
-    public K firstKey() { return TreeMap.keyOrThrow(firstNode()); }
-    public K lastKey() { return TreeMap.keyOrThrow(lastNode()); }
-    public Map.Entry<K, V> firstEntry() { return TreeMap.snapshot(firstNode()); }
-    public Map.Entry<K, V> lastEntry() { return TreeMap.snapshot(lastNode()); }
+    public K firstKey() { return TreeMap.keyOrFail(leading()); }
+    public K lastKey() { return TreeMap.keyOrFail(trailing()); }
+    public Map.Entry<K, V> firstEntry() { return TreeMap.snapshot(leading()); }
+    public Map.Entry<K, V> lastEntry() { return TreeMap.snapshot(trailing()); }
     public Map.Entry<K, V> lowerEntry(K key) { return TreeMap.snapshot(step(key, false, false)); }
-    public K lowerKey(K key) { return TreeMap.keyOrNull(step(key, false, false)); }
+    public K lowerKey(K key) { return TreeMap.keyOf(step(key, false, false)); }
     public Map.Entry<K, V> floorEntry(K key) { return TreeMap.snapshot(step(key, false, true)); }
-    public K floorKey(K key) { return TreeMap.keyOrNull(step(key, false, true)); }
+    public K floorKey(K key) { return TreeMap.keyOf(step(key, false, true)); }
     public Map.Entry<K, V> ceilingEntry(K key) { return TreeMap.snapshot(step(key, true, true)); }
-    public K ceilingKey(K key) { return TreeMap.keyOrNull(step(key, true, true)); }
+    public K ceilingKey(K key) { return TreeMap.keyOf(step(key, true, true)); }
     public Map.Entry<K, V> higherEntry(K key) { return TreeMap.snapshot(step(key, true, false)); }
-    public K higherKey(K key) { return TreeMap.keyOrNull(step(key, true, false)); }
-    public Map.Entry<K, V> pollFirstEntry() { return poll(firstNode()); }
-    public Map.Entry<K, V> pollLastEntry() { return poll(lastNode()); }
+    public K higherKey(K key) { return TreeMap.keyOf(step(key, true, false)); }
+    public Map.Entry<K, V> pollFirstEntry() { return poll(leading()); }
+    public Map.Entry<K, V> pollLastEntry() { return poll(trailing()); }
 
     private Map.Entry<K, V> poll(MapNode<K, V> e) {
         Map.Entry<K, V> out = TreeMap.snapshot(e);
         if (e != null) {
-            m.deleteNode(e);
+            tree.discard(e);
         }
         return out;
     }
 
+    // Spec 6.M4: a view keeps the one reversed view, key set and entry set it hands out.
     public NavigableMap<K, V> descendingMap() {
-        return new TreeRange<K, V>(m, fromStart, lo, loIn, toEnd, hi, hiIn, !descending);
+        if (mirror == null) {
+            mirror = new TreeRange<K, V>(tree, low, high, !reversed);
+        }
+        return mirror;
     }
 
     public Set<K> keySet() { return navigableKeySet(); }
-    public NavigableSet<K> navigableKeySet() { return new TreeViews.Keys<K>(this); }
+
+    public NavigableSet<K> navigableKeySet() {
+        if (keyView == null) {
+            keyView = new TreeViews.Keys<K>(this);
+        }
+        return (NavigableSet<K>) keyView;
+    }
+
     public NavigableSet<K> descendingKeySet() { return descendingMap().navigableKeySet(); }
 
-    // Spec 11: a narrower view's bounds must lie in this one; in a descending view `from` is the high end.
+    // Spec 11: a narrower view's ends must lie in this one; in a reversed view `from` is the high end.
     public NavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive) {
         if (!admits(fromKey, fromInclusive)) {
             throw new IllegalArgumentException("fromKey out of range");
@@ -189,27 +201,25 @@ final class TreeRange<K, V> extends AbstractMap<K, V> implements NavigableMap<K,
         if (!admits(toKey, toInclusive)) {
             throw new IllegalArgumentException("toKey out of range");
         }
-        return descending
-                ? view(false, toKey, toInclusive, false, fromKey, fromInclusive)
-                : view(false, fromKey, fromInclusive, false, toKey, toInclusive);
+        Edge<K> from = new Edge<K>(fromKey, fromInclusive);
+        Edge<K> to = new Edge<K>(toKey, toInclusive);
+        return reversed ? narrowed(to, from) : narrowed(from, to);
     }
 
     public NavigableMap<K, V> headMap(K toKey, boolean inclusive) {
         if (!admits(toKey, inclusive)) {
             throw new IllegalArgumentException("toKey out of range");
         }
-        return descending
-                ? view(false, toKey, inclusive, toEnd, hi, hiIn)
-                : view(fromStart, lo, loIn, false, toKey, inclusive);
+        Edge<K> to = new Edge<K>(toKey, inclusive);
+        return reversed ? narrowed(to, high) : narrowed(low, to);
     }
 
     public NavigableMap<K, V> tailMap(K fromKey, boolean inclusive) {
         if (!admits(fromKey, inclusive)) {
             throw new IllegalArgumentException("fromKey out of range");
         }
-        return descending
-                ? view(fromStart, lo, loIn, false, fromKey, inclusive)
-                : view(false, fromKey, inclusive, toEnd, hi, hiIn);
+        Edge<K> from = new Edge<K>(fromKey, inclusive);
+        return reversed ? narrowed(low, from) : narrowed(from, high);
     }
 
     public SortedMap<K, V> subMap(K fromKey, K toKey) { return subMap(fromKey, true, toKey, false); }

@@ -5,23 +5,23 @@ package java.util;
  * marker so that "absent" and "mapped to null" differ. Spec 9.F4: iterators read the slots live.
  */
 public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements java.io.Serializable, Cloneable {
-    private static final Object NULL_VALUE = new Object();
+    private static final Object HELD_NULL = new Object();
 
-    private final Class<K> keyType;
-    private transient K[] universe;
+    private final Class<K> keyClass;
+    private transient K[] constants;
     private transient Object[] slots;
     private transient int size;
     private transient Set<Map.Entry<K, V>> entryView;
 
-    public EnumMap(Class<K> keyType) {
-        this.keyType = keyType;
-        this.universe = keyType.getEnumConstants();
-        this.slots = new Object[universe.length];
+    public EnumMap(Class<K> keyClass) {
+        this.keyClass = keyClass;
+        this.constants = keyClass.getEnumConstants();
+        this.slots = new Object[constants.length];
     }
 
     public EnumMap(EnumMap<K, ? extends V> m) {
-        this.keyType = m.keyType;
-        this.universe = m.universe;
+        this.keyClass = m.keyClass;
+        this.constants = m.constants;
         this.slots = m.slots.clone();
         this.size = m.size;
     }
@@ -30,8 +30,8 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements 
     public EnumMap(Map<K, ? extends V> m) {
         if (m instanceof EnumMap) {
             EnumMap<K, ? extends V> em = (EnumMap<K, ? extends V>) m;
-            this.keyType = em.keyType;
-            this.universe = em.universe;
+            this.keyClass = em.keyClass;
+            this.constants = em.constants;
             this.slots = em.slots.clone();
             this.size = em.size;
             return;
@@ -39,31 +39,31 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements 
         if (m.isEmpty()) {
             throw new IllegalArgumentException("Specified map is empty");
         }
-        this.keyType = m.keySet().iterator().next().getDeclaringClass();
-        this.universe = keyType.getEnumConstants();
-        this.slots = new Object[universe.length];
+        this.keyClass = m.keySet().iterator().next().getDeclaringClass();
+        this.constants = keyClass.getEnumConstants();
+        this.slots = new Object[constants.length];
         putAll(m);
     }
 
     /** Whether o is a constant of the key enum (a constant with a body is a subclass of it). */
     private boolean isKey(Object o) {
-        return o != null && (o.getClass() == keyType || o.getClass().getSuperclass() == keyType);
+        return o != null && (o.getClass() == keyClass || o.getClass().getSuperclass() == keyClass);
     }
 
     // Spec 11: the wrong enum fails as "class A != class B".
     private void checkKey(K key) {
         Class<?> c = key.getClass();
-        if (c != keyType && c.getSuperclass() != keyType) {
-            throw new ClassCastException(c + " != " + keyType);
+        if (c != keyClass && c.getSuperclass() != keyClass) {
+            throw new ClassCastException(c + " != " + keyClass);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private V unmask(Object slot) { return slot == NULL_VALUE ? null : (V) slot; }
+    private V reveal(Object slot) { return slot == HELD_NULL ? null : (V) slot; }
     public int size() { return size; }
 
     public boolean containsValue(Object value) {
-        Object want = value == null ? NULL_VALUE : value;
+        Object want = value == null ? HELD_NULL : value;
         for (Object slot : slots) {
             if (slot != null && want.equals(slot)) {
                 return true;
@@ -73,44 +73,44 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements 
     }
 
     public boolean containsKey(Object key) { return isKey(key) && slots[((Enum<?>) key).ordinal()] != null; }
-    public V get(Object key) { return isKey(key) ? unmask(slots[((Enum<?>) key).ordinal()]) : null; }
+    public V get(Object key) { return isKey(key) ? reveal(slots[((Enum<?>) key).ordinal()]) : null; }
 
     public V put(K key, V value) {
         checkKey(key);
         int i = key.ordinal();
         Object old = slots[i];
-        slots[i] = value == null ? NULL_VALUE : value;
+        slots[i] = value == null ? HELD_NULL : value;
         if (old == null) {
             size++;
         }
-        return unmask(old);
+        return reveal(old);
     }
 
     public V remove(Object key) {
         if (!isKey(key)) {
             return null;
         }
-        return removeAt(((Enum<?>) key).ordinal());
+        return clearSlot(((Enum<?>) key).ordinal());
     }
 
-    final V removeAt(int i) {
+    final V clearSlot(int i) {
         Object old = slots[i];
         if (old != null) {
             slots[i] = null;
             size--;
         }
-        return unmask(old);
+        return reveal(old);
     }
 
     @SuppressWarnings("unchecked")
     public void putAll(Map<? extends K, ? extends V> m) {
         if (m instanceof EnumMap) {
             EnumMap<?, ?> em = (EnumMap<?, ?>) m;
-            if (em.keyType != keyType) {
+            if (em.keyClass != keyClass) {
                 if (em.isEmpty()) {
                     return;
                 }
-                throw new ClassCastException(em.keyType + " != " + keyType);
+                throw new ClassCastException(em.keyClass + " != " + keyClass);
             }
         }
         super.putAll(m);
@@ -144,7 +144,7 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements 
     public boolean equals(Object o) {
         if (o instanceof EnumMap) {
             EnumMap<?, ?> em = (EnumMap<?, ?>) o;
-            if (em.keyType != keyType) {
+            if (em.keyClass != keyClass) {
                 return size == 0 && em.size == 0;
             }
             return Arrays.equals(slots, em.slots);
@@ -156,7 +156,7 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements 
         int h = 0;
         for (int i = 0; i < slots.length; i++) {
             if (slots[i] != null) {
-                h += universe[i].hashCode() ^ Support.hash(unmask(slots[i]));
+                h += constants[i].hashCode() ^ Support.hash(reveal(slots[i]));
             }
         }
         return h;
@@ -211,7 +211,7 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements 
             }
             last = index++;
             if (!entries) {
-                return (T) universe[last];
+                return (T) constants[last];
             }
             lastSlot = new Slot(last);
             return (T) lastSlot;
@@ -221,7 +221,7 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements 
             if (last < 0) {
                 throw new IllegalStateException();
             }
-            removeAt(last);
+            clearSlot(last);
             last = -1;
             if (lastSlot != null) {
                 lastSlot.index = -1;
@@ -243,13 +243,13 @@ public class EnumMap<K extends Enum<K>, V> extends AbstractMap<K, V> implements 
             return index;
         }
 
-        public K getKey() { return universe[at()]; }
-        public V getValue() { return unmask(slots[at()]); }
+        public K getKey() { return constants[at()]; }
+        public V getValue() { return reveal(slots[at()]); }
 
         public V setValue(V value) {
             int i = at();
-            V old = unmask(slots[i]);
-            slots[i] = value == null ? NULL_VALUE : value;
+            V old = reveal(slots[i]);
+            slots[i] = value == null ? HELD_NULL : value;
             return old;
         }
 

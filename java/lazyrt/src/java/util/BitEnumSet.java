@@ -8,20 +8,20 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
     private long[] words;
     private int size;
 
-    BitEnumSet(Class<E> elementType, Enum<?>[] universe) {
-        super(elementType, universe);
-        words = new long[(universe.length + 63) >>> 6];
+    BitEnumSet(Class<E> enumClass, Enum<?>[] constants) {
+        super(enumClass, constants);
+        words = new long[(constants.length + 63) >>> 6];
     }
 
     private boolean isMember(Object o) {
-        return o != null && (o.getClass() == elementType || o.getClass().getSuperclass() == elementType);
+        return o != null && (o.getClass() == enumClass || o.getClass().getSuperclass() == enumClass);
     }
 
     // Spec 11: the wrong enum fails as "class A != class B".
     private void check(E e) {
         Class<?> c = e.getClass();
-        if (c != elementType && c.getSuperclass() != elementType) {
-            throw new ClassCastException(c + " != " + elementType);
+        if (c != enumClass && c.getSuperclass() != enumClass) {
+            throw new ClassCastException(c + " != " + enumClass);
         }
     }
 
@@ -34,11 +34,11 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
 
     /** Another BitEnumSet of the same enum, or null. */
     private BitEnumSet<?> sameKind(Collection<?> c) {
-        return c instanceof BitEnumSet && ((BitEnumSet<?>) c).elementType == elementType ? (BitEnumSet<?>) c : null;
+        return c instanceof BitEnumSet && ((BitEnumSet<?>) c).enumClass == enumClass ? (BitEnumSet<?>) c : null;
     }
 
     private static boolean otherEnum(Collection<?> c, Class<?> type) {
-        return c instanceof BitEnumSet && ((BitEnumSet<?>) c).elementType != type;
+        return c instanceof BitEnumSet && ((BitEnumSet<?>) c).enumClass != type;
     }
 
     public int size() { return size; }
@@ -80,7 +80,7 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
     }
 
     public boolean containsAll(Collection<?> c) {
-        if (otherEnum(c, elementType)) {
+        if (otherEnum(c, enumClass)) {
             return c.isEmpty();
         }
         BitEnumSet<?> s = sameKind(c);
@@ -96,11 +96,11 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
     }
 
     public boolean addAll(Collection<? extends E> c) {
-        if (otherEnum(c, elementType)) {
+        if (otherEnum(c, enumClass)) {
             if (c.isEmpty()) {
                 return false;
             }
-            throw new ClassCastException(((BitEnumSet<?>) c).elementType + " != " + elementType);
+            throw new ClassCastException(((BitEnumSet<?>) c).enumClass + " != " + enumClass);
         }
         BitEnumSet<?> s = sameKind(c);
         if (s == null) {
@@ -110,7 +110,7 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
     }
 
     public boolean removeAll(Collection<?> c) {
-        if (otherEnum(c, elementType)) {
+        if (otherEnum(c, enumClass)) {
             return false;
         }
         BitEnumSet<?> s = sameKind(c);
@@ -118,7 +118,7 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
     }
 
     public boolean retainAll(Collection<?> c) {
-        if (otherEnum(c, elementType)) {
+        if (otherEnum(c, enumClass)) {
             boolean changed = size != 0;
             clear();
             return changed;
@@ -144,7 +144,7 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
             return super.equals(o);
         }
         BitEnumSet<?> s = (BitEnumSet<?>) o;
-        if (s.elementType != elementType) {
+        if (s.enumClass != enumClass) {
             return size == 0 && s.size == 0;
         }
         return Arrays.equals(words, s.words);
@@ -158,7 +158,7 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
     }
 
     void complement() {
-        for (int i = 0; i < universe.length; i++) {
+        for (int i = 0; i < constants.length; i++) {
             words[i >>> 6] ^= 1L << i;
         }
         recount();
@@ -189,7 +189,7 @@ abstract class BitEnumSet<E extends Enum<E>> extends EnumSet<E> {
                 lastBit = unseen & -unseen;
                 lastWord = word;
                 unseen -= lastBit;
-                return (E) universe[(lastWord << 6) + Long.numberOfTrailingZeros(lastBit)];
+                return (E) constants[(lastWord << 6) + Long.numberOfTrailingZeros(lastBit)];
             }
 
             public void remove() {

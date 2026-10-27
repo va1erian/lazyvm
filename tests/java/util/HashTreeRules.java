@@ -173,6 +173,19 @@ public class HashTreeRules {
         String low = "K3 K0 K1 K2 K4 K5 K6 K7 N100 N101 K50", high = "K3 K0 K1 K2 K4 K5 K6 K7 N100 K50 N101";
         boolean leftWhenLower = System.identityHashCode(n101) <= System.identityHashCode(n100);
         System.out.println("identity order consistent: " + order(tie).equals(leftWhenLower ? low : high));
+        Map<Object, Integer> held = new HashMap<>(64);
+        for (int i = 0; i < 8; i++) held.put(new K(i, 0), i);
+        Map.Entry<Object, Integer> before = held.entrySet().iterator().next();
+        held.put(new K(8, 0), 8);
+        before.setValue(99);
+        Map.Entry<Object, Integer> inTree = held.entrySet().iterator().next();
+        for (int i = 1; i <= 8; i++) held.remove(new K(i, 0));
+        inTree.setValue(77);
+        StringBuilder walked = new StringBuilder();
+        Map<Object, Integer> grows = new HashMap<>(64);
+        for (int i = 0; i < 8; i++) grows.put(new K(i, 0), i);
+        try { grows.forEach((k, v) -> { walked.append(k).append(' '); if (k.equals(new K(2, 0))) { grows.put(new K(20, 0), 0); grows.put(new K(1, 64), 0); } }); } catch (ConcurrentModificationException e) { walked.append("CME"); }
+        System.out.println("entries replaced: held through treeify " + before + " map " + held.get(new K(0, 0)) + "; held through untreeify " + inTree + " map " + held + "; forEach as the bin becomes a tree: " + walked);
         System.out.println("done");
     }
 

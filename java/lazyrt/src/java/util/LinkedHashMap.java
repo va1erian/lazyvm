@@ -8,15 +8,15 @@ import java.util.function.BiFunction;
  * and the views follow the chain, so the table's layout never shows (spec 1.H1).
  */
 public class LinkedHashMap<K, V> extends HashMap<K, V> implements Map<K, V> {
-    static final class Linked<K, V> extends HashMap.Node<K, V> {
-        Linked<K, V> before;
-        Linked<K, V> after;
+    static final class Chained<K, V> extends HashMap.Cell<K, V> {
+        Chained<K, V> older;
+        Chained<K, V> newer;
 
-        Linked(int hash, K key, V value) { super(hash, key, value); }
+        Chained(int hash, K key, V value) { super(hash, key, value); }
     }
 
-    private transient Linked<K, V> head;
-    private transient Linked<K, V> tail;
+    private transient Chained<K, V> oldest;
+    private transient Chained<K, V> newest;
     private final boolean accessOrder;
 
     public LinkedHashMap(int initialCapacity, float loadFactor) { this(initialCapacity, loadFactor, false); }
@@ -25,7 +25,7 @@ public class LinkedHashMap<K, V> extends HashMap<K, V> implements Map<K, V> {
 
     public LinkedHashMap(Map<? extends K, ? extends V> m) {
         accessOrder = false;
-        copyIn(m, false);
+        absorb(m, false);
     }
 
     public LinkedHashMap(int initialCapacity, float loadFactor, boolean accessOrder) {
@@ -33,40 +33,40 @@ public class LinkedHashMap<K, V> extends HashMap<K, V> implements Map<K, V> {
         this.accessOrder = accessOrder;
     }
 
-    Node<K, V> newNode(int hash, K key, V value) {
-        Linked<K, V> n = new Linked<K, V>(hash, key, value);
+    Cell<K, V> makeCell(int hash, K key, V value) {
+        Chained<K, V> n = new Chained<K, V>(hash, key, value);
         append(n);
         return n;
     }
 
-    private void append(Linked<K, V> n) {
-        n.before = tail;
-        n.after = null;
-        if (tail == null) {
-            head = n;
+    private void append(Chained<K, V> n) {
+        n.older = newest;
+        n.newer = null;
+        if (newest == null) {
+            oldest = n;
         } else {
-            tail.after = n;
+            newest.newer = n;
         }
-        tail = n;
+        newest = n;
     }
 
-    private void detach(Linked<K, V> n) {
-        if (n.before == null) {
-            head = n.after;
+    private void detach(Chained<K, V> n) {
+        if (n.older == null) {
+            oldest = n.newer;
         } else {
-            n.before.after = n.after;
+            n.older.newer = n.newer;
         }
-        if (n.after == null) {
-            tail = n.before;
+        if (n.newer == null) {
+            newest = n.older;
         } else {
-            n.after.before = n.before;
+            n.newer.older = n.older;
         }
     }
 
     // Spec 1.H13: in access order a use moves the entry to the end, a change unless already last.
-    void accessed(Node<K, V> e) {
-        if (accessOrder && tail != e) {
-            Linked<K, V> n = (Linked<K, V>) e;
+    void used(Cell<K, V> e) {
+        if (accessOrder && newest != e) {
+            Chained<K, V> n = (Chained<K, V>) e;
             detach(n);
             append(n);
             modCount++;
@@ -74,51 +74,81 @@ public class LinkedHashMap<K, V> extends HashMap<K, V> implements Map<K, V> {
     }
 
     // Spec 1.H14: after each new key, the eldest entry may be evicted.
-    void inserted(boolean evict) {
-        if (evict && head != null && removeEldestEntry(head)) {
-            removeKey(head.key, null, false);
+    void added(boolean evict) {
+        if (evict && oldest != null && removeEldestEntry(oldest)) {
+            removeMapping(oldest.key, null, false);
         }
     }
 
-    void removed(Node<K, V> e) {
-        Linked<K, V> n = (Linked<K, V>) e;
+    void dropped(Cell<K, V> e) {
+        Chained<K, V> n = (Chained<K, V>) e;
         detach(n);
-        n.before = null;
-        n.after = null;
+        n.older = null;
+        n.newer = null;
     }
 
-    Node<K, V> firstNode() { return head; }
-    Node<K, V> nextNode(Node<K, V> e) { return ((Linked<K, V>) e).after; }
+    Cell<K, V> firstNode() { return oldest; }
+    Cell<K, V> nextNode(Cell<K, V> e) { return ((Chained<K, V>) e).newer; }
 
-    void reset() {
-        super.reset();
-        head = null;
-        tail = null;
+    /** Spec 9.F3: walks the chain, seeing entries appended meanwhile, then reports a change. */
+    void traverse(java.util.function.Consumer<Cell<K, V>> visit) {
+        int expected = modCount;
+        for (Cell<K, V> e = oldest; e != null; e = nextNode(e)) {
+            visit.accept(e);
+        }
+        if (modCount != expected) {
+            throw new ConcurrentModificationException();
+        }
+    }
+
+    // Spec 1.H15: the stand-in takes the old entry's place in the chain; the old one keeps its links.
+    Cell<K, V> replica(Cell<K, V> old) {
+        Chained<K, V> o = (Chained<K, V>) old;
+        Chained<K, V> c = new Chained<K, V>(o.hash, o.key, o.value);
+        c.older = o.older;
+        c.newer = o.newer;
+        if (c.older == null) {
+            oldest = c;
+        } else {
+            c.older.newer = c;
+        }
+        if (c.newer == null) {
+            newest = c;
+        } else {
+            c.newer.older = c;
+        }
+        return c;
+    }
+
+    void blank() {
+        super.blank();
+        oldest = null;
+        newest = null;
     }
 
     public void clear() {
         super.clear();
-        head = null;
-        tail = null;
+        oldest = null;
+        newest = null;
     }
 
     public boolean containsValue(Object value) { return super.containsValue(value); }
 
     public V get(Object key) {
-        Node<K, V> e = find(key);
+        Cell<K, V> e = find(key);
         if (e == null) {
             return null;
         }
-        accessed(e);
+        used(e);
         return e.value;
     }
 
     public V getOrDefault(Object key, V defaultValue) {
-        Node<K, V> e = find(key);
+        Cell<K, V> e = find(key);
         if (e == null) {
             return defaultValue;
         }
-        accessed(e);
+        used(e);
         return e.value;
     }
 

@@ -8,27 +8,27 @@ public abstract class EnumSet<E extends Enum<E>> extends AbstractSet<E> implemen
     // Spec 10.X2: the most constants a RegularEnumSet holds.
     private static final int REGULAR_LIMIT = 64;
 
-    final Class<E> elementType;
-    final Enum<?>[] universe;
+    final Class<E> enumClass;
+    final Enum<?>[] constants;
 
-    EnumSet(Class<E> elementType, Enum<?>[] universe) {
-        this.elementType = elementType;
-        this.universe = universe;
+    EnumSet(Class<E> enumClass, Enum<?>[] constants) {
+        this.enumClass = enumClass;
+        this.constants = constants;
     }
 
-    public static <E extends Enum<E>> EnumSet<E> noneOf(Class<E> elementType) {
-        Enum<?>[] universe = elementType.getEnumConstants();
-        if (universe == null) {
-            throw new ClassCastException(elementType + " not an enum");
+    public static <E extends Enum<E>> EnumSet<E> noneOf(Class<E> enumClass) {
+        Enum<?>[] constants = enumClass.getEnumConstants();
+        if (constants == null) {
+            throw new ClassCastException(enumClass + " not an enum");
         }
-        return universe.length <= REGULAR_LIMIT
-                ? new RegularEnumSet<E>(elementType, universe)
-                : new JumboEnumSet<E>(elementType, universe);
+        return constants.length <= REGULAR_LIMIT
+                ? new RegularEnumSet<E>(enumClass, constants)
+                : new JumboEnumSet<E>(enumClass, constants);
     }
 
-    public static <E extends Enum<E>> EnumSet<E> allOf(Class<E> elementType) {
-        EnumSet<E> s = noneOf(elementType);
-        s.addRange(0, s.universe.length);
+    public static <E extends Enum<E>> EnumSet<E> allOf(Class<E> enumClass) {
+        EnumSet<E> s = noneOf(enumClass);
+        s.addRange(0, s.constants.length);
         return s;
     }
 

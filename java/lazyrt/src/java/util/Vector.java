@@ -37,12 +37,12 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
     public synchronized void ensureCapacity(int minCapacity) {
         if (minCapacity > 0) {
             modCount++;
-            grow(minCapacity);
+            ensureRoom(minCapacity);
         }
     }
 
     // Spec 3.V1: grow by the increment, or double, and at least to what is needed.
-    private void grow(int needed) {
+    private void ensureRoom(int needed) {
         int capacity = elementData.length;
         if (needed > capacity) {
             int next = capacity + (capacityIncrement > 0 ? capacityIncrement : capacity);
@@ -54,7 +54,7 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
     public synchronized void setSize(int newSize) {
         modCount++;
         if (newSize > elementCount) {
-            grow(newSize);
+            ensureRoom(newSize);
         } else {
             for (int i = newSize; i < elementCount; i++) {
                 elementData[i] = null;
@@ -76,7 +76,7 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
             public E nextElement() {
                 synchronized (Vector.this) {
                     if (next < elementCount) {
-                        return elementData(next++);
+                        return at(next++);
                     }
                 }
                 throw new NoSuchElementException("Vector Enumeration");
@@ -101,7 +101,7 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
     }
 
     @SuppressWarnings("unchecked")
-    private E elementData(int index) { return (E) elementData[index]; }
+    private E at(int index) { return (E) elementData[index]; }
 
     // Spec 11: the legacy accessors say "i >= n"; a negative index fails in the array access.
     private void checkLegacy(int index) {
@@ -119,21 +119,21 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
 
     public synchronized E elementAt(int index) {
         checkLegacy(index);
-        return elementData(index);
+        return at(index);
     }
 
     public synchronized E firstElement() {
         if (elementCount == 0) {
             throw new NoSuchElementException();
         }
-        return elementData(0);
+        return at(0);
     }
 
     public synchronized E lastElement() {
         if (elementCount == 0) {
             throw new NoSuchElementException();
         }
-        return elementData(elementCount - 1);
+        return at(elementCount - 1);
     }
 
     public synchronized void setElementAt(E obj, int index) {
@@ -155,7 +155,7 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
             throw new ArrayIndexOutOfBoundsException(index + " > " + elementCount);
         }
         modCount++;
-        grow(elementCount + 1);
+        ensureRoom(elementCount + 1);
         System.arraycopy(elementData, index, elementData, index + 1, elementCount - index);
         elementData[index] = obj;
         elementCount++;
@@ -163,7 +163,7 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
 
     public synchronized void addElement(E obj) {
         modCount++;
-        grow(elementCount + 1);
+        ensureRoom(elementCount + 1);
         elementData[elementCount++] = obj;
     }
 
@@ -201,12 +201,12 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
 
     public synchronized E get(int index) {
         checkListIndex(index);
-        return elementData(index);
+        return at(index);
     }
 
     public synchronized E set(int index, E element) {
         checkListIndex(index);
-        E old = elementData(index);
+        E old = at(index);
         elementData[index] = element;
         return old;
     }
@@ -221,7 +221,7 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
 
     public synchronized E remove(int index) {
         checkListIndex(index);
-        E old = elementData(index);
+        E old = at(index);
         modCount++;
         removeSlots(index, index + 1);
         return old;
@@ -248,7 +248,7 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
             throw new ArrayIndexOutOfBoundsException(index);
         }
         Object[] more = c.toArray();
-        grow(elementCount + more.length);
+        ensureRoom(elementCount + more.length);
         System.arraycopy(elementData, index, elementData, index + more.length, elementCount - index);
         System.arraycopy(more, 0, elementData, index, more.length);
         elementCount += more.length;

@@ -178,7 +178,7 @@ final class RedBlack {
         return n;
     }
 
-    static <K, V> MapNode<K, V> successor(MapNode<K, V> n) {
+    static <K, V> MapNode<K, V> following(MapNode<K, V> n) {
         if (n.right != null) {
             return first(n.right);
         }
@@ -190,7 +190,7 @@ final class RedBlack {
         return p;
     }
 
-    static <K, V> MapNode<K, V> predecessor(MapNode<K, V> n) {
+    static <K, V> MapNode<K, V> preceding(MapNode<K, V> n) {
         if (n.left != null) {
             return last(n.left);
         }

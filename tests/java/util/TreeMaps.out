@@ -56,4 +56,6 @@ sub size after change: 3 4 false
 empty views: {} [][][]{}{}true
 hashCode/equals: true 7416 3
 many: 1333 1 2002 -4950893248336494477
+clear views: {20=v20} {} [4]
+views kept: true true true true true true false false false
 done

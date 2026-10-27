@@ -71,6 +71,7 @@ public class ArraysUtil {
         t("setAll null", () -> { Arrays.setAll(new int[1], null); return 0; });
         t("parallelPrefix bad range", () -> { Arrays.parallelPrefix(new int[3], 2, 1, (p, q) -> p); return 0; });
         t("parallelSetAll", () -> { int[] a = new int[4]; Arrays.parallelSetAll(a, k -> k + 1); return Arrays.toString(a); });
+        System.out.println("Objects.deepEquals " + Objects.deepEquals(new int[]{1}, new int[]{1}) + " " + Objects.deepEquals(null, null) + " " + Objects.deepEquals(new Object[]{new int[]{1}}, new Object[]{new int[]{1}}) + " " + Objects.deepEquals("a", "a") + " " + Objects.deepEquals(new int[]{1}, new long[]{1}) + " " + Objects.deepEquals("a", null));
         System.out.println("done");
     }
 }

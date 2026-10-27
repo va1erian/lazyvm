@@ -16,6 +16,10 @@ public class FailFast {
         try { it.next(); return r + "ok"; } catch (ConcurrentModificationException e) { return r + "CME"; } catch (NoSuchElementException e) { return r + "end"; }
     }
 
+    static String after2(Iterator<?> it) {
+        try { it.next(); return "ok"; } catch (ConcurrentModificationException e) { return "CME"; } catch (NoSuchElementException e) { return "end"; }
+    }
+
     static List<Integer> five() { return Arrays.asList(3, 1, 4, 1, 5); }
 
     static List<Integer> list(String kind) {
@@ -163,6 +167,38 @@ public class FailFast {
         StringBuilder seen = new StringBuilder();
         for (St s : em.keySet()) { seen.append(s.ordinal()); em.put(St.TERMINATED, 1); em.remove(St.NEW); }
         System.out.println("EnumMap never fails: " + seen + " " + em.keySet());
+        StringBuilder grown = new StringBuilder("HashMap forEach whose action grows the table:");
+        for (int how = 0; how < 4; how++) {
+            HashMap<Integer, Integer> g = new HashMap<>();
+            for (int i = 0; i < 12; i++) g.put(i * 3, i);
+            calls = 0;
+            StringBuilder visited = new StringBuilder();
+            final int w = how;
+            Consumer<Integer> act = k -> { calls++; visited.append(k).append(','); if (calls == 3) { g.put(1000, 0); g.put(1001, 0); } };
+            String r = count(() -> { if (w == 0) g.forEach((k, v) -> act.accept(k)); else if (w == 1) g.replaceAll((k, v) -> { act.accept(k); return v; }); else if (w == 2) g.keySet().forEach(act); else g.values().forEach(act); });
+            grown.append(' ').append(r).append(" [").append(visited).append(']');
+        }
+        System.out.println(grown);
+        StringBuilder subs = new StringBuilder("sublist iterators:");
+        for (String kind : new String[]{"ArrayList", "LinkedList", "Vector"}) {
+            List<Integer> l = list(kind);
+            List<Integer> s = l.subList(1, 3);
+            Iterator<Integer> it = s.iterator();
+            it.next(); it.next();
+            s.remove(0);
+            String a1 = it.hasNext() + "/" + after2(it);
+            List<Integer> l2 = list(kind);
+            Iterator<Integer> it2 = l2.subList(1, 3).iterator();
+            it2.next(); it2.next();
+            l2.add(9);
+            String a2 = it2.hasNext() + "/" + after2(it2);
+            subs.append(' ').append(kind).append(": after sub.remove ").append(a1).append(", after a parent add ").append(a2);
+        }
+        System.out.println(subs);
+        ListIterator<Integer> failed = Arrays.asList(1, 2, 3).listIterator(1);
+        String added;
+        try { failed.add(9); added = "added"; } catch (UnsupportedOperationException e) { added = "UnsupportedOperationException"; }
+        System.out.println("failed listIterator add: " + added + ", then nextIndex " + failed.nextIndex() + " previousIndex " + failed.previousIndex());
         System.out.println("done");
     }
 }

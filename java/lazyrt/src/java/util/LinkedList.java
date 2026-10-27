@@ -6,15 +6,15 @@ package java.util;
  */
 public class LinkedList<E> extends AbstractSequentialList<E>
         implements List<E>, Deque<E>, Cloneable, java.io.Serializable {
-    private static final class Node<E> {
-        E item;
-        Node<E> prev;
-        Node<E> next;
+    private static final class Link<E> {
+        E element;
+        Link<E> back;
+        Link<E> ahead;
 
-        Node(E item) { this.item = item; }
+        Link(E element) { this.element = element; }
     }
 
-    private transient Node<E> ring = newRing();
+    private transient Link<E> ring = newRing();
     private transient int size;
 
     public LinkedList() {
@@ -22,75 +22,75 @@ public class LinkedList<E> extends AbstractSequentialList<E>
 
     public LinkedList(Collection<? extends E> c) { addAll(c); }
 
-    private static <E> Node<E> newRing() {
-        Node<E> r = new Node<E>(null);
-        r.prev = r;
-        r.next = r;
+    private static <E> Link<E> newRing() {
+        Link<E> r = new Link<E>(null);
+        r.back = r;
+        r.ahead = r;
         return r;
     }
 
     /** Links a new node holding e just before `at`. */
-    private void linkBefore(E e, Node<E> at) {
-        Node<E> n = new Node<E>(e);
-        n.prev = at.prev;
-        n.next = at;
-        at.prev.next = n;
-        at.prev = n;
+    private void insertBefore(E e, Link<E> at) {
+        Link<E> n = new Link<E>(e);
+        n.back = at.back;
+        n.ahead = at;
+        at.back.ahead = n;
+        at.back = n;
         size++;
         modCount++;
     }
 
-    private E unlink(Node<E> n) {
-        n.prev.next = n.next;
-        n.next.prev = n.prev;
+    private E cut(Link<E> n) {
+        n.back.ahead = n.ahead;
+        n.ahead.back = n.back;
         size--;
         modCount++;
-        return n.item;
+        return n.element;
     }
 
     /** The node at an index already checked to be in [0, size), walked from the nearer end. */
-    private Node<E> node(int index) {
-        Node<E> n = ring;
+    private Link<E> seek(int index) {
+        Link<E> n = ring;
         if (index < size / 2) {
             for (int i = -1; i < index; i++) {
-                n = n.next;
+                n = n.ahead;
             }
         } else {
             for (int i = size; i > index; i--) {
-                n = n.prev;
+                n = n.back;
             }
         }
         return n;
     }
 
     /** The node at a position in [0, size]; position size is the sentinel. */
-    private Node<E> nodeAt(int position) { return position == size ? ring : node(position); }
+    private Link<E> seekPosition(int position) { return position == size ? ring : seek(position); }
 
-    private Node<E> first() {
+    private Link<E> first() {
         if (size == 0) {
             throw new NoSuchElementException();
         }
-        return ring.next;
+        return ring.ahead;
     }
 
-    private Node<E> last() {
+    private Link<E> last() {
         if (size == 0) {
             throw new NoSuchElementException();
         }
-        return ring.prev;
+        return ring.back;
     }
 
-    public E getFirst() { return first().item; }
-    public E getLast() { return last().item; }
-    public E removeFirst() { return unlink(first()); }
-    public E removeLast() { return unlink(last()); }
-    public void addFirst(E e) { linkBefore(e, ring.next); }
-    public void addLast(E e) { linkBefore(e, ring); }
+    public E getFirst() { return first().element; }
+    public E getLast() { return last().element; }
+    public E removeFirst() { return cut(first()); }
+    public E removeLast() { return cut(last()); }
+    public void addFirst(E e) { insertBefore(e, ring.ahead); }
+    public void addLast(E e) { insertBefore(e, ring); }
     public boolean contains(Object o) { return indexOf(o) >= 0; }
     public int size() { return size; }
 
     public boolean add(E e) {
-        linkBefore(e, ring);
+        insertBefore(e, ring);
         return true;
     }
 
@@ -103,9 +103,9 @@ public class LinkedList<E> extends AbstractSequentialList<E>
     public boolean addAll(int index, Collection<? extends E> c) {
         Support.checkPosition(index, size);
         Object[] more = c.toArray();
-        Node<E> at = nodeAt(index);
+        Link<E> at = seekPosition(index);
         for (Object e : more) {
-            linkBefore((E) e, at);
+            insertBefore((E) e, at);
         }
         return more.length != 0;
     }
@@ -118,31 +118,31 @@ public class LinkedList<E> extends AbstractSequentialList<E>
 
     public E get(int index) {
         Support.checkIndex(index, size);
-        return node(index).item;
+        return seek(index).element;
     }
 
     public E set(int index, E element) {
         Support.checkIndex(index, size);
-        Node<E> n = node(index);
-        E old = n.item;
-        n.item = element;
+        Link<E> n = seek(index);
+        E old = n.element;
+        n.element = element;
         return old;
     }
 
     public void add(int index, E element) {
         Support.checkPosition(index, size);
-        linkBefore(element, nodeAt(index));
+        insertBefore(element, seekPosition(index));
     }
 
     public E remove(int index) {
         Support.checkIndex(index, size);
-        return unlink(node(index));
+        return cut(seek(index));
     }
 
     public int indexOf(Object o) {
         int i = 0;
-        for (Node<E> n = ring.next; n != ring; n = n.next, i++) {
-            if (Support.eq(o, n.item)) {
+        for (Link<E> n = ring.ahead; n != ring; n = n.ahead, i++) {
+            if (Support.eq(o, n.element)) {
                 return i;
             }
         }
@@ -151,8 +151,8 @@ public class LinkedList<E> extends AbstractSequentialList<E>
 
     public int lastIndexOf(Object o) {
         int i = size - 1;
-        for (Node<E> n = ring.prev; n != ring; n = n.prev, i--) {
-            if (Support.eq(o, n.item)) {
+        for (Link<E> n = ring.back; n != ring; n = n.back, i--) {
+            if (Support.eq(o, n.element)) {
                 return i;
             }
         }
@@ -175,17 +175,17 @@ public class LinkedList<E> extends AbstractSequentialList<E>
         return true;
     }
 
-    public E peekFirst() { return size == 0 ? null : ring.next.item; }
-    public E peekLast() { return size == 0 ? null : ring.prev.item; }
-    public E pollFirst() { return size == 0 ? null : unlink(ring.next); }
-    public E pollLast() { return size == 0 ? null : unlink(ring.prev); }
+    public E peekFirst() { return size == 0 ? null : ring.ahead.element; }
+    public E peekLast() { return size == 0 ? null : ring.back.element; }
+    public E pollFirst() { return size == 0 ? null : cut(ring.ahead); }
+    public E pollLast() { return size == 0 ? null : cut(ring.back); }
     public void push(E e) { addFirst(e); }
     public E pop() { return removeFirst(); }
 
     public boolean removeFirstOccurrence(Object o) {
-        for (Node<E> n = ring.next; n != ring; n = n.next) {
-            if (Support.eq(o, n.item)) {
-                unlink(n);
+        for (Link<E> n = ring.ahead; n != ring; n = n.ahead) {
+            if (Support.eq(o, n.element)) {
+                cut(n);
                 return true;
             }
         }
@@ -193,9 +193,9 @@ public class LinkedList<E> extends AbstractSequentialList<E>
     }
 
     public boolean removeLastOccurrence(Object o) {
-        for (Node<E> n = ring.prev; n != ring; n = n.prev) {
-            if (Support.eq(o, n.item)) {
-                unlink(n);
+        for (Link<E> n = ring.back; n != ring; n = n.back) {
+            if (Support.eq(o, n.element)) {
+                cut(n);
                 return true;
             }
         }
@@ -224,8 +224,8 @@ public class LinkedList<E> extends AbstractSequentialList<E>
             copy.ring = newRing();
             copy.size = 0;
             copy.modCount = 0;
-            for (Node<E> n = ring.next; n != ring; n = n.next) {
-                copy.add(n.item);
+            for (Link<E> n = ring.ahead; n != ring; n = n.ahead) {
+                copy.add(n.element);
             }
             return copy;
         } catch (CloneNotSupportedException e) {
@@ -236,8 +236,8 @@ public class LinkedList<E> extends AbstractSequentialList<E>
     public Object[] toArray() {
         Object[] out = new Object[size];
         int i = 0;
-        for (Node<E> n = ring.next; n != ring; n = n.next) {
-            out[i++] = n.item;
+        for (Link<E> n = ring.ahead; n != ring; n = n.ahead) {
+            out[i++] = n.element;
         }
         return out;
     }
@@ -248,13 +248,13 @@ public class LinkedList<E> extends AbstractSequentialList<E>
      * Spec 9.F2: next() checks for modification before the end; hasNext() is index < size().
      */
     private final class Walker implements ListIterator<E> {
-        private Node<E> next;
-        private Node<E> last;
+        private Link<E> next;
+        private Link<E> last;
         private int index;
         private int expected = modCount;
 
         Walker(int start) {
-            next = nodeAt(start);
+            next = seekPosition(start);
             index = start;
         }
 
@@ -266,9 +266,9 @@ public class LinkedList<E> extends AbstractSequentialList<E>
                 throw new NoSuchElementException();
             }
             last = next;
-            next = next.next;
+            next = next.ahead;
             index++;
-            return last.item;
+            return last.element;
         }
 
         public boolean hasPrevious() { return index > 0; }
@@ -278,10 +278,10 @@ public class LinkedList<E> extends AbstractSequentialList<E>
             if (index <= 0) {
                 throw new NoSuchElementException();
             }
-            next = next.prev;
+            next = next.back;
             last = next;
             index--;
-            return last.item;
+            return last.element;
         }
 
         public int nextIndex() { return index; }
@@ -293,11 +293,11 @@ public class LinkedList<E> extends AbstractSequentialList<E>
             }
             checkUnchanged();
             if (next == last) {
-                next = last.next;
+                next = last.ahead;
             } else {
                 index--;
             }
-            unlink(last);
+            cut(last);
             last = null;
             expected = modCount;
         }
@@ -307,13 +307,13 @@ public class LinkedList<E> extends AbstractSequentialList<E>
                 throw new IllegalStateException();
             }
             checkUnchanged();
-            last.item = e;
+            last.element = e;
         }
 
         public void add(E e) {
             checkUnchanged();
             last = null;
-            linkBefore(e, next);
+            insertBefore(e, next);
             index++;
             expected = modCount;
         }

@@ -49,4 +49,5 @@ removeAll / retainAll: true [1, 6, 2, 8] true [2, 8]
 compare calls: 3?5 8?3 1?5 1?3 9?3 2?8 2?1 7?2 | 3?2 7?2 7?8 | | <2> <3> 9?5 <5> <7> <9> => [2, 5, 7, 9]
 building calls: 1?3 2?6 7?2 1?8 4?1 4?3 1?2 9?1 3?8 9?3 9?4 | 9?9 4?9 7?9 7?4 1?7 1?4 8?7 8?9 2?7 2?4 2?1 6?7 6?2 6?4 3?7 3?2 3?4 | => [1, 3, 2, 4, 8, 7, 6, 9] [1, 3, 2, 4, 8, 7, 6, 9] [1, 2, 3, 4, 6, 7, 8, 9]
 large: 504678 true
+comparator adding to its own queue: !java.lang.NullPointerException
 done

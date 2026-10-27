@@ -13,13 +13,13 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     private static final int DEFAULT_BUCKETS = 11;
     private static final float DEFAULT_LOAD = 0.75f;
 
-    static final class Entry<K, V> implements Map.Entry<K, V> {
+    static final class Link<K, V> implements Map.Entry<K, V> {
         final int hash;
         final K key;
         V value;
-        Entry<K, V> next;
+        Link<K, V> next;
 
-        Entry(int hash, K key, V value, Entry<K, V> next) {
+        Link(int hash, K key, V value, Link<K, V> next) {
             this.hash = hash;
             this.key = key;
             this.value = value;
@@ -34,8 +34,8 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         public String toString() { return key + "=" + value; }
     }
 
-    private transient Entry<K, V>[] table;
-    private transient int count;
+    private transient Link<K, V>[] table;
+    private transient int entries;
     private int threshold;
     private final float loadFactor;
     transient int modCount;
@@ -66,15 +66,15 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
 
     @SuppressWarnings("unchecked")
     private void setTable(int n) {
-        table = (Entry<K, V>[]) new Entry<?, ?>[n];
+        table = (Link<K, V>[]) new Link<?, ?>[n];
         threshold = (int) (n * loadFactor);
     }
 
     private int bucket(int hash) { return (hash & 0x7FFFFFFF) % table.length; }
 
-    private Entry<K, V> find(Object key) {
+    private Link<K, V> find(Object key) {
         int h = key.hashCode();
-        for (Entry<K, V> e = table[bucket(h)]; e != null; e = e.next) {
+        for (Link<K, V> e = table[bucket(h)]; e != null; e = e.next) {
             if (e.hash == h && key.equals(e.key)) {
                 return e;
             }
@@ -83,40 +83,40 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     }
 
     // Spec 2.T2: grow before adding when full, then push the new entry onto its chain.
-    private void addEntry(K key, V value) {
-        if (count >= threshold) {
+    private void insertNew(K key, V value) {
+        if (entries >= threshold) {
             rehash();
         }
         int h = key.hashCode();
         int i = bucket(h);
-        table[i] = new Entry<K, V>(h, key, value, table[i]);
-        count++;
+        table[i] = new Link<K, V>(h, key, value, table[i]);
+        entries++;
         modCount++;
     }
 
-    private void unlink(Entry<K, V> target) {
+    private void unlink(Link<K, V> target) {
         int i = bucket(target.hash);
         if (table[i] == target) {
             table[i] = target.next;
         } else {
-            Entry<K, V> p = table[i];
+            Link<K, V> p = table[i];
             while (p.next != target) {
                 p = p.next;
             }
             p.next = target.next;
         }
-        count--;
+        entries--;
         modCount++;
     }
 
     // Spec 2.T2: 2n + 1 buckets, old buckets taken from n - 1 down, each entry pushed to the front.
     protected void rehash() {
-        Entry<K, V>[] old = table;
+        Link<K, V>[] old = table;
         setTable(old.length * 2 + 1);
         modCount++;
         for (int i = old.length - 1; i >= 0; i--) {
-            for (Entry<K, V> e = old[i]; e != null;) {
-                Entry<K, V> next = e.next;
+            for (Link<K, V> e = old[i]; e != null;) {
+                Link<K, V> next = e.next;
                 int j = bucket(e.hash);
                 e.next = table[j];
                 table[j] = e;
@@ -125,17 +125,17 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         }
     }
 
-    public synchronized int size() { return count; }
-    public synchronized boolean isEmpty() { return count == 0; }
-    public synchronized Enumeration<K> keys() { return count == 0 ? Collections.emptyEnumeration() : walk(e -> e.key, false); }
-    public synchronized Enumeration<V> elements() { return count == 0 ? Collections.emptyEnumeration() : walk(e -> e.value, false); }
+    public synchronized int size() { return entries; }
+    public synchronized boolean isEmpty() { return entries == 0; }
+    public synchronized Enumeration<K> keys() { return entries == 0 ? Collections.emptyEnumeration() : walk(e -> e.key, false); }
+    public synchronized Enumeration<V> elements() { return entries == 0 ? Collections.emptyEnumeration() : walk(e -> e.value, false); }
     public synchronized boolean containsKey(Object key) { return find(key) != null; }
     public boolean containsValue(Object value) { return contains(value); }
 
     public synchronized boolean contains(Object value) {
         Objects.requireNonNull(value);
         for (int i = table.length - 1; i >= 0; i--) {
-            for (Entry<K, V> e = table[i]; e != null; e = e.next) {
+            for (Link<K, V> e = table[i]; e != null; e = e.next) {
                 if (value.equals(e.value)) {
                     return true;
                 }
@@ -145,25 +145,25 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     }
 
     public synchronized V get(Object key) {
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         return e == null ? null : e.value;
     }
 
     public synchronized V put(K key, V value) {
         Objects.requireNonNull(value);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e != null) {
             V old = e.value;
             e.value = value;
             return old;
         }
-        addEntry(key, value);
+        insertNew(key, value);
         return null;
     }
 
     /** Removal by key also clears the entry's value, as an entry held from iteration then shows. */
     public synchronized V remove(Object key) {
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e == null) {
             return null;
         }
@@ -182,7 +182,7 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     public synchronized void clear() {
         Arrays.fill(table, null);
         modCount++;
-        count = 0;
+        entries = 0;
     }
 
     // Spec 2.T3: a clone copies the chains as they are.
@@ -204,8 +204,8 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         }
     }
 
-    private static <K, V> Entry<K, V> copyChain(Entry<K, V> e) {
-        return e == null ? null : new Entry<K, V>(e.hash, e.key, e.value, copyChain(e.next));
+    private static <K, V> Link<K, V> copyChain(Link<K, V> e) {
+        return e == null ? null : new Link<K, V>(e.hash, e.key, e.value, copyChain(e.next));
     }
 
     public synchronized String toString() {
@@ -254,7 +254,7 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
             return false;
         }
         Map<?, ?> m = (Map<?, ?>) o;
-        if (m.size() != count) {
+        if (m.size() != entries) {
             return false;
         }
         try {
@@ -271,14 +271,14 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
 
     // Spec 2.T4: a nested call while this table's hash is being computed counts 0.
     public synchronized int hashCode() {
-        if (count == 0 || hashing) {
+        if (entries == 0 || hashing) {
             return 0;
         }
         hashing = true;
         try {
             int h = 0;
-            for (Entry<K, V> head : table) {
-                for (Entry<K, V> e = head; e != null; e = e.next) {
+            for (Link<K, V> head : table) {
+                for (Link<K, V> e = head; e != null; e = e.next) {
                     h += e.key.hashCode() ^ e.value.hashCode();
                 }
             }
@@ -290,17 +290,17 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
 
     // ---- iteration (spec 2.T1, T3) ----
 
-    private <T> HashtableViews.Walk<K, V, T> walk(Function<Entry<K, V>, T> pick, boolean removable) {
+    private <T> HashtableViews.Walk<K, V, T> walk(Function<Link<K, V>, T> pick, boolean removable) {
         return new HashtableViews.Walk<K, V, T>(this, table, pick, removable);
     }
 
     /** Spec 2.T3: an iterator of a table that is empty now yields nothing, whatever is added later. */
-    <T> Iterator<T> iterator(Function<Entry<K, V>, T> pick) {
-        return count == 0 ? Collections.emptyIterator() : walk(pick, true);
+    <T> Iterator<T> iterator(Function<Link<K, V>, T> pick) {
+        return entries == 0 ? Collections.emptyIterator() : walk(pick, true);
     }
 
-    void removeEntry(Entry<K, V> e) { unlink(e); }
-    Entry<K, V> entryFor(Object key) { return find(key); }
+    void removeEntry(Link<K, V> e) { unlink(e); }
+    Link<K, V> entryFor(Object key) { return find(key); }
 
     // ---- Map defaults: forEach and replaceAll go from bucket 0 up (spec 2.T1) ----
 
@@ -313,8 +313,8 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     public synchronized void forEach(BiConsumer<? super K, ? super V> action) {
         Objects.requireNonNull(action);
         int expected = modCount;
-        for (Entry<K, V> head : table) {
-            for (Entry<K, V> e = head; e != null; e = e.next) {
+        for (Link<K, V> head : table) {
+            for (Link<K, V> e = head; e != null; e = e.next) {
                 action.accept(e.key, e.value);
                 if (modCount != expected) {
                     throw new ConcurrentModificationException();
@@ -326,8 +326,8 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     public synchronized void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
         Objects.requireNonNull(function);
         int expected = modCount;
-        for (Entry<K, V> head : table) {
-            for (Entry<K, V> e = head; e != null; e = e.next) {
+        for (Link<K, V> head : table) {
+            for (Link<K, V> e = head; e != null; e = e.next) {
                 e.value = Objects.requireNonNull(function.apply(e.key, e.value));
                 if (modCount != expected) {
                     throw new ConcurrentModificationException();
@@ -338,17 +338,17 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
 
     public synchronized V putIfAbsent(K key, V value) {
         Objects.requireNonNull(value);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e != null) {
             return e.value;
         }
-        addEntry(key, value);
+        insertNew(key, value);
         return null;
     }
 
     public synchronized boolean remove(Object key, Object value) {
         Objects.requireNonNull(value);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e == null || !e.value.equals(value)) {
             return false;
         }
@@ -360,7 +360,7 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
     public synchronized boolean replace(K key, V oldValue, V newValue) {
         Objects.requireNonNull(oldValue);
         Objects.requireNonNull(newValue);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e == null || !e.value.equals(oldValue)) {
             return false;
         }
@@ -370,7 +370,7 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
 
     public synchronized V replace(K key, V value) {
         Objects.requireNonNull(value);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e == null) {
             return null;
         }
@@ -381,20 +381,20 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
 
     public synchronized V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
         Objects.requireNonNull(mappingFunction);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e != null) {
             return e.value;
         }
         V v = mappingFunction.apply(key);
         if (v != null) {
-            addEntry(key, v);
+            insertNew(key, v);
         }
         return v;
     }
 
     public synchronized V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         Objects.requireNonNull(remappingFunction);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e == null) {
             return null;
         }
@@ -403,31 +403,31 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
 
     public synchronized V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         Objects.requireNonNull(remappingFunction);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e != null) {
             return settle(e, remappingFunction.apply(key, e.value));
         }
         V v = remappingFunction.apply(key, null);
         if (v != null) {
-            addEntry(key, v);
+            insertNew(key, v);
         }
         return v;
     }
 
     public synchronized V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
         Objects.requireNonNull(remappingFunction);
-        Entry<K, V> e = find(key);
+        Link<K, V> e = find(key);
         if (e != null) {
             return settle(e, remappingFunction.apply(e.value, value));
         }
         if (value != null) {
-            addEntry(key, value);
+            insertNew(key, value);
         }
         return value;
     }
 
     /** A remapped value replaces e's; null removes e. */
-    private V settle(Entry<K, V> e, V v) {
+    private V settle(Link<K, V> e, V v) {
         if (v == null) {
             unlink(e);
         } else {

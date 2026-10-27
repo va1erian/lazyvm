@@ -11,12 +11,12 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
     // Javadoc: the default expected maximum size.
     private static final int DEFAULT_EXPECTED = 21;
 
-    static final class Node<K, V> implements Map.Entry<K, V> {
+    static final class Pair<K, V> implements Map.Entry<K, V> {
         final K key;
         V value;
-        Node<K, V> next;
+        Pair<K, V> next;
 
-        Node(K key, V value, Node<K, V> next) {
+        Pair(K key, V value, Pair<K, V> next) {
             this.key = key;
             this.value = value;
             this.next = next;
@@ -37,7 +37,7 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
         }
     }
 
-    private transient Node<K, V>[] table;
+    private transient Pair<K, V>[] table;
     private transient int size;
     transient int modCount;
     private transient Set<Map.Entry<K, V>> entryView;
@@ -48,7 +48,7 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
         if (expectedMaxSize < 0) {
             throw new IllegalArgumentException("expectedMaxSize is negative: " + expectedMaxSize);
         }
-        table = newTable(HashMap.tableSizeFor(Math.max(2 * expectedMaxSize, 2)));
+        table = newTable(HashMap.powerOfTwoAtLeast(Math.max(2 * expectedMaxSize, 2)));
     }
 
     public IdentityHashMap(Map<? extends K, ? extends V> m) {
@@ -57,11 +57,11 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, V> Node<K, V>[] newTable(int n) { return (Node<K, V>[]) new Node<?, ?>[n]; }
-    private int bucket(Object key) { return HashMap.spread(System.identityHashCode(key)) & (table.length - 1); }
+    private static <K, V> Pair<K, V>[] newTable(int n) { return (Pair<K, V>[]) new Pair<?, ?>[n]; }
+    private int bucket(Object key) { return HashMap.mixHash(System.identityHashCode(key)) & (table.length - 1); }
 
-    private Node<K, V> find(Object key) {
-        for (Node<K, V> e = table[bucket(key)]; e != null; e = e.next) {
+    private Pair<K, V> find(Object key) {
+        for (Pair<K, V> e = table[bucket(key)]; e != null; e = e.next) {
             if (e.key == key) {
                 return e;
             }
@@ -70,11 +70,11 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
     }
 
     private void grow() {
-        Node<K, V>[] old = table;
+        Pair<K, V>[] old = table;
         table = newTable(old.length * 2);
-        for (Node<K, V> head : old) {
-            for (Node<K, V> e = head; e != null;) {
-                Node<K, V> next = e.next;
+        for (Pair<K, V> head : old) {
+            for (Pair<K, V> e = head; e != null;) {
+                Pair<K, V> next = e.next;
                 int i = bucket(e.key);
                 e.next = table[i];
                 table[i] = e;
@@ -83,12 +83,12 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
         }
     }
 
-    final void unlink(Node<K, V> target) {
+    final void unlink(Pair<K, V> target) {
         int i = bucket(target.key);
         if (table[i] == target) {
             table[i] = target.next;
         } else {
-            Node<K, V> p = table[i];
+            Pair<K, V> p = table[i];
             while (p.next != target) {
                 p = p.next;
             }
@@ -99,19 +99,19 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
     }
 
     /** Walks every node; spec 9.F2: next() checks for a change before the end. */
-    final <T> Iterator<T> walk(java.util.function.Function<Node<K, V>, T> pick) {
+    final <T> Iterator<T> walk(java.util.function.Function<Pair<K, V>, T> pick) {
         return new Iterator<T>() {
             private int index;
-            private Node<K, V> next = advance(null);
-            private Node<K, V> last;
+            private Pair<K, V> next = advance(null);
+            private Pair<K, V> last;
             private int expected = modCount;
 
-            private Node<K, V> advance(Node<K, V> from) {
+            private Pair<K, V> advance(Pair<K, V> from) {
                 if (from != null && from.next != null) {
                     return from.next;
                 }
                 while (index < table.length) {
-                    Node<K, V> e = table[index++];
+                    Pair<K, V> e = table[index++];
                     if (e != null) {
                         return e;
                     }
@@ -151,15 +151,15 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
     public boolean isEmpty() { return size == 0; }
 
     public V get(Object key) {
-        Node<K, V> e = find(key);
+        Pair<K, V> e = find(key);
         return e == null ? null : e.value;
     }
 
     public boolean containsKey(Object key) { return find(key) != null; }
 
     public boolean containsValue(Object value) {
-        for (Node<K, V> head : table) {
-            for (Node<K, V> e = head; e != null; e = e.next) {
+        for (Pair<K, V> head : table) {
+            for (Pair<K, V> e = head; e != null; e = e.next) {
                 if (e.value == value) {
                     return true;
                 }
@@ -170,12 +170,12 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
 
     /** Whether key maps to the very object value. */
     final boolean hasMapping(Object key, Object value) {
-        Node<K, V> e = find(key);
+        Pair<K, V> e = find(key);
         return e != null && e.value == value;
     }
 
     public V put(K key, V value) {
-        Node<K, V> e = find(key);
+        Pair<K, V> e = find(key);
         if (e != null) {
             return e.setValue(value);
         }
@@ -183,7 +183,7 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
             grow();
         }
         int i = bucket(key);
-        table[i] = new Node<K, V>(key, value, table[i]);
+        table[i] = new Pair<K, V>(key, value, table[i]);
         size++;
         modCount++;
         return null;
@@ -196,7 +196,7 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
     }
 
     public V remove(Object key) {
-        Node<K, V> e = find(key);
+        Pair<K, V> e = find(key);
         if (e == null) {
             return null;
         }
@@ -220,8 +220,8 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
             if (m.size != size) {
                 return false;
             }
-            for (Node<K, V> head : table) {
-                for (Node<K, V> e = head; e != null; e = e.next) {
+            for (Pair<K, V> head : table) {
+                for (Pair<K, V> e = head; e != null; e = e.next) {
                     if (!m.hasMapping(e.key, e.value)) {
                         return false;
                     }
@@ -234,8 +234,8 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
 
     public int hashCode() {
         int h = 0;
-        for (Node<K, V> head : table) {
-            for (Node<K, V> e = head; e != null; e = e.next) {
+        for (Pair<K, V> head : table) {
+            for (Pair<K, V> e = head; e != null; e = e.next) {
                 h += e.hashCode();
             }
         }
@@ -282,8 +282,8 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
     public void forEach(BiConsumer<? super K, ? super V> action) {
         Objects.requireNonNull(action);
         int expected = modCount;
-        for (Node<K, V> head : table) {
-            for (Node<K, V> e = head; e != null; e = e.next) {
+        for (Pair<K, V> head : table) {
+            for (Pair<K, V> e = head; e != null; e = e.next) {
                 action.accept(e.key, e.value);
                 if (modCount != expected) {
                     throw new ConcurrentModificationException();
@@ -295,8 +295,8 @@ public class IdentityHashMap<K, V> extends AbstractMap<K, V> implements Map<K, V
     public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
         Objects.requireNonNull(function);
         int expected = modCount;
-        for (Node<K, V> head : table) {
-            for (Node<K, V> e = head; e != null; e = e.next) {
+        for (Pair<K, V> head : table) {
+            for (Pair<K, V> e = head; e != null; e = e.next) {
                 e.value = function.apply(e.key, e.value);
                 if (modCount != expected) {
                     throw new ConcurrentModificationException();

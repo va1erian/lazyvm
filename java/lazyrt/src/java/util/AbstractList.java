@@ -56,6 +56,16 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
         return new Cursor(index);
     }
 
+    /** The end the index iterator compares with in hasNext(); a window answers without checking. */
+    int cursorLimit() { return size(); }
+
+    /** Fails if this list is a view whose backing list changed; the index iterator checks it. */
+    void checkFresh() {
+    }
+
+    /** The index iterator, started at an index the caller checked. */
+    final ListIterator<E> cursorAt(int index) { return new Cursor(index); }
+
     /** For ArrayList and Vector, whose bad iterator start names only the index (spec 11). */
     final ListIterator<E> indexOnlyListIterator(int index) {
         if (index < 0 || index > size()) {
@@ -113,7 +123,7 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
         int expected = modCount;
 
         Cursor(int start) { next = start; }
-        public boolean hasNext() { return next != size(); }
+        public boolean hasNext() { return next != cursorLimit(); }
 
         public E next() {
             checkUnchanged();
@@ -177,7 +187,8 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
         public void add(E e) {
             checkUnchanged();
             try {
-                AbstractList.this.add(next++, e);
+                AbstractList.this.add(next, e);
+                next++;
             } catch (IndexOutOfBoundsException gone) {
                 throw new ConcurrentModificationException();
             }
@@ -186,6 +197,7 @@ public abstract class AbstractList<E> extends AbstractCollection<E> implements L
         }
 
         final void checkUnchanged() {
+            checkFresh();
             if (modCount != expected) {
                 throw new ConcurrentModificationException();
             }

@@ -15,24 +15,24 @@ final class Checked {
     private Checked() {
     }
 
-    static <E> List<E> list(List<E> list, Class<E> type) {
-        return list instanceof RandomAccess ? new CRandomList<E>(list, type) : new CList<E>(list, type);
+    static <E> List<E> list(List<E> list, Class<E> elementClass) {
+        return list instanceof RandomAccess ? new CRandomList<E>(list, elementClass) : new CList<E>(list, elementClass);
     }
 
     static class CColl<E> implements Collection<E>, java.io.Serializable {
         final Collection<E> c;
-        final Class<E> type;
+        final Class<E> elementClass;
 
-        CColl(Collection<E> c, Class<E> type) {
+        CColl(Collection<E> c, Class<E> elementClass) {
             this.c = Objects.requireNonNull(c, "c");
-            this.type = Objects.requireNonNull(type, "type");
+            this.elementClass = Objects.requireNonNull(elementClass, "type");
         }
 
         @SuppressWarnings("unchecked")
         E check(Object o) {
-            if (o != null && !type.isInstance(o)) {
+            if (o != null && !elementClass.isInstance(o)) {
                 throw new ClassCastException("Attempt to insert " + o.getClass()
-                        + " element into collection with element type " + type);
+                        + " element into collection with element type " + elementClass);
             }
             return (E) o;
         }
@@ -68,8 +68,8 @@ final class Checked {
     static final class CQueue<E> extends CColl<E> implements Queue<E> {
         private final Queue<E> q;
 
-        CQueue(Queue<E> q, Class<E> type) {
-            super(q, type);
+        CQueue(Queue<E> q, Class<E> elementClass) {
+            super(q, elementClass);
             this.q = q;
         }
 
@@ -83,8 +83,8 @@ final class Checked {
     }
 
     static class CSet<E> extends CColl<E> implements Set<E> {
-        CSet(Set<E> s, Class<E> type) {
-            super(s, type);
+        CSet(Set<E> s, Class<E> elementClass) {
+            super(s, elementClass);
         }
 
         public boolean equals(Object o) { return o == this || c.equals(o); }
@@ -94,24 +94,24 @@ final class Checked {
     static class CSortedSet<E> extends CSet<E> implements SortedSet<E> {
         private final SortedSet<E> ss;
 
-        CSortedSet(SortedSet<E> s, Class<E> type) {
-            super(s, type);
+        CSortedSet(SortedSet<E> s, Class<E> elementClass) {
+            super(s, elementClass);
             ss = s;
         }
 
         public Comparator<? super E> comparator() { return ss.comparator(); }
         public E first() { return ss.first(); }
         public E last() { return ss.last(); }
-        public SortedSet<E> subSet(E from, E to) { return new CSortedSet<E>(ss.subSet(from, to), type); }
-        public SortedSet<E> headSet(E to) { return new CSortedSet<E>(ss.headSet(to), type); }
-        public SortedSet<E> tailSet(E from) { return new CSortedSet<E>(ss.tailSet(from), type); }
+        public SortedSet<E> subSet(E from, E to) { return new CSortedSet<E>(ss.subSet(from, to), elementClass); }
+        public SortedSet<E> headSet(E to) { return new CSortedSet<E>(ss.headSet(to), elementClass); }
+        public SortedSet<E> tailSet(E from) { return new CSortedSet<E>(ss.tailSet(from), elementClass); }
     }
 
     static final class CNavigableSet<E> extends CSortedSet<E> implements NavigableSet<E> {
         private final NavigableSet<E> ns;
 
-        CNavigableSet(NavigableSet<E> s, Class<E> type) {
-            super(s, type);
+        CNavigableSet(NavigableSet<E> s, Class<E> elementClass) {
+            super(s, elementClass);
             ns = s;
         }
 
@@ -121,20 +121,20 @@ final class Checked {
         public E higher(E e) { return ns.higher(e); }
         public E pollFirst() { return ns.pollFirst(); }
         public E pollLast() { return ns.pollLast(); }
-        public NavigableSet<E> descendingSet() { return new CNavigableSet<E>(ns.descendingSet(), type); }
+        public NavigableSet<E> descendingSet() { return new CNavigableSet<E>(ns.descendingSet(), elementClass); }
         public Iterator<E> descendingIterator() { return ns.descendingIterator(); }
         public NavigableSet<E> subSet(E from, boolean fromIn, E to, boolean toIn) {
-            return new CNavigableSet<E>(ns.subSet(from, fromIn, to, toIn), type);
+            return new CNavigableSet<E>(ns.subSet(from, fromIn, to, toIn), elementClass);
         }
-        public NavigableSet<E> headSet(E to, boolean in) { return new CNavigableSet<E>(ns.headSet(to, in), type); }
-        public NavigableSet<E> tailSet(E from, boolean in) { return new CNavigableSet<E>(ns.tailSet(from, in), type); }
+        public NavigableSet<E> headSet(E to, boolean in) { return new CNavigableSet<E>(ns.headSet(to, in), elementClass); }
+        public NavigableSet<E> tailSet(E from, boolean in) { return new CNavigableSet<E>(ns.tailSet(from, in), elementClass); }
     }
 
     static class CList<E> extends CColl<E> implements List<E> {
         private final List<E> l;
 
-        CList(List<E> l, Class<E> type) {
-            super(l, type);
+        CList(List<E> l, Class<E> elementClass) {
+            super(l, elementClass);
             this.l = l;
         }
 
@@ -148,7 +148,7 @@ final class Checked {
         public void add(int index, E element) { l.add(index, check(element)); }
         public boolean addAll(int index, Collection<? extends E> c) { return l.addAll(index, checkAll(c)); }
         public ListIterator<E> listIterator() { return listIterator(0); }
-        public List<E> subList(int from, int to) { return list(l.subList(from, to), type); }
+        public List<E> subList(int from, int to) { return list(l.subList(from, to), elementClass); }
         public void replaceAll(UnaryOperator<E> op) { Objects.requireNonNull(op); l.replaceAll(e -> check(op.apply(e))); }
         public void sort(Comparator<? super E> c) { l.sort(c); }
 
@@ -169,28 +169,28 @@ final class Checked {
     }
 
     static final class CRandomList<E> extends CList<E> implements RandomAccess {
-        CRandomList(List<E> l, Class<E> type) {
-            super(l, type);
+        CRandomList(List<E> l, Class<E> elementClass) {
+            super(l, elementClass);
         }
     }
 
     static class CMap<K, V> implements Map<K, V>, java.io.Serializable {
         private final Map<K, V> m;
-        final Class<K> keyType;
-        final Class<V> valueType;
+        final Class<K> keyClass;
+        final Class<V> valueClass;
 
-        CMap(Map<K, V> m, Class<K> keyType, Class<V> valueType) {
+        CMap(Map<K, V> m, Class<K> keyClass, Class<V> valueClass) {
             this.m = Objects.requireNonNull(m);
-            this.keyType = Objects.requireNonNull(keyType);
-            this.valueType = Objects.requireNonNull(valueType);
+            this.keyClass = Objects.requireNonNull(keyClass);
+            this.valueClass = Objects.requireNonNull(valueClass);
         }
 
         void check(Object k, Object v) {
-            if (k != null && !keyType.isInstance(k)) {
+            if (k != null && !keyClass.isInstance(k)) {
                 throw new ClassCastException("Attempt to insert " + k.getClass()
-                        + " key into map with key type " + keyType);
+                        + " key into map with key type " + keyClass);
             }
-            checkValue(valueType, v);
+            checkValue(valueClass, v);
         }
 
         <R extends V> R checked(K k, R v) {
@@ -212,7 +212,7 @@ final class Checked {
         public String toString() { return m.toString(); }
         public V getOrDefault(Object k, V dflt) { return m.getOrDefault(k, dflt); }
         public void forEach(BiConsumer<? super K, ? super V> action) { m.forEach(action); }
-        public Set<Map.Entry<K, V>> entrySet() { return new CEntrySet<K, V>(m.entrySet(), valueType); }
+        public Set<Map.Entry<K, V>> entrySet() { return new CEntrySet<K, V>(m.entrySet(), valueClass); }
         public V put(K key, V value) { check(key, value); return m.put(key, value); }
         public V putIfAbsent(K key, V value) { check(key, value); return m.putIfAbsent(key, value); }
         public boolean remove(Object key, Object value) { return m.remove(key, value); }
@@ -254,30 +254,30 @@ final class Checked {
         }
     }
 
-    static void checkValue(Class<?> valueType, Object v) {
-        if (v != null && !valueType.isInstance(v)) {
+    static void checkValue(Class<?> valueClass, Object v) {
+        if (v != null && !valueClass.isInstance(v)) {
             throw new ClassCastException("Attempt to insert " + v.getClass()
-                    + " value into map with value type " + valueType);
+                    + " value into map with value type " + valueClass);
         }
     }
 
-    static <K, V> Map.Entry<K, V> entry(Map.Entry<K, V> e, Class<V> valueType) {
-        return e == null ? null : new CEntry<K, V>(e, valueType);
+    static <K, V> Map.Entry<K, V> entry(Map.Entry<K, V> e, Class<V> valueClass) {
+        return e == null ? null : new CEntry<K, V>(e, valueClass);
     }
 
     /** An entry whose setValue checks the value type. */
     static final class CEntry<K, V> implements Map.Entry<K, V> {
         private final Map.Entry<K, V> e;
-        private final Class<V> valueType;
+        private final Class<V> valueClass;
 
-        CEntry(Map.Entry<K, V> e, Class<V> valueType) {
+        CEntry(Map.Entry<K, V> e, Class<V> valueClass) {
             this.e = e;
-            this.valueType = valueType;
+            this.valueClass = valueClass;
         }
 
         public K getKey() { return e.getKey(); }
         public V getValue() { return e.getValue(); }
-        public V setValue(V value) { checkValue(valueType, value); return e.setValue(value); }
+        public V setValue(V value) { checkValue(valueClass, value); return e.setValue(value); }
         public int hashCode() { return e.hashCode(); }
         public boolean equals(Object o) { return o == this || AbstractMap.entryEquals(this, o); }
         public String toString() { return e.toString(); }
@@ -286,11 +286,11 @@ final class Checked {
     /** The entry set of a checked map: it hands out checked entries. */
     static final class CEntrySet<K, V> extends AbstractSet<Map.Entry<K, V>> {
         private final Set<Map.Entry<K, V>> s;
-        private final Class<V> valueType;
+        private final Class<V> valueClass;
 
-        CEntrySet(Set<Map.Entry<K, V>> s, Class<V> valueType) {
+        CEntrySet(Set<Map.Entry<K, V>> s, Class<V> valueClass) {
             this.s = s;
-            this.valueType = valueType;
+            this.valueClass = valueClass;
         }
 
         public int size() { return s.size(); }
@@ -302,7 +302,7 @@ final class Checked {
             Iterator<Map.Entry<K, V>> it = s.iterator();
             return new Iterator<Map.Entry<K, V>>() {
                 public boolean hasNext() { return it.hasNext(); }
-                public Map.Entry<K, V> next() { return new CEntry<K, V>(it.next(), valueType); }
+                public Map.Entry<K, V> next() { return new CEntry<K, V>(it.next(), valueClass); }
                 public void remove() { it.remove(); }
             };
         }
@@ -311,46 +311,46 @@ final class Checked {
     static class CSortedMap<K, V> extends CMap<K, V> implements SortedMap<K, V> {
         private final SortedMap<K, V> sm;
 
-        CSortedMap(SortedMap<K, V> m, Class<K> keyType, Class<V> valueType) {
-            super(m, keyType, valueType);
+        CSortedMap(SortedMap<K, V> m, Class<K> keyClass, Class<V> valueClass) {
+            super(m, keyClass, valueClass);
             sm = m;
         }
 
         public Comparator<? super K> comparator() { return sm.comparator(); }
         public K firstKey() { return sm.firstKey(); }
         public K lastKey() { return sm.lastKey(); }
-        public SortedMap<K, V> subMap(K from, K to) { return new CSortedMap<K, V>(sm.subMap(from, to), keyType, valueType); }
-        public SortedMap<K, V> headMap(K to) { return new CSortedMap<K, V>(sm.headMap(to), keyType, valueType); }
-        public SortedMap<K, V> tailMap(K from) { return new CSortedMap<K, V>(sm.tailMap(from), keyType, valueType); }
+        public SortedMap<K, V> subMap(K from, K to) { return new CSortedMap<K, V>(sm.subMap(from, to), keyClass, valueClass); }
+        public SortedMap<K, V> headMap(K to) { return new CSortedMap<K, V>(sm.headMap(to), keyClass, valueClass); }
+        public SortedMap<K, V> tailMap(K from) { return new CSortedMap<K, V>(sm.tailMap(from), keyClass, valueClass); }
     }
 
     static final class CNavigableMap<K, V> extends CSortedMap<K, V> implements NavigableMap<K, V> {
         private final NavigableMap<K, V> nm;
 
-        CNavigableMap(NavigableMap<K, V> m, Class<K> keyType, Class<V> valueType) {
-            super(m, keyType, valueType);
+        CNavigableMap(NavigableMap<K, V> m, Class<K> keyClass, Class<V> valueClass) {
+            super(m, keyClass, valueClass);
             nm = m;
         }
 
-        public Map.Entry<K, V> lowerEntry(K key) { return entry(nm.lowerEntry(key), valueType); }
+        public Map.Entry<K, V> lowerEntry(K key) { return entry(nm.lowerEntry(key), valueClass); }
         public K lowerKey(K key) { return nm.lowerKey(key); }
-        public Map.Entry<K, V> floorEntry(K key) { return entry(nm.floorEntry(key), valueType); }
+        public Map.Entry<K, V> floorEntry(K key) { return entry(nm.floorEntry(key), valueClass); }
         public K floorKey(K key) { return nm.floorKey(key); }
-        public Map.Entry<K, V> ceilingEntry(K key) { return entry(nm.ceilingEntry(key), valueType); }
+        public Map.Entry<K, V> ceilingEntry(K key) { return entry(nm.ceilingEntry(key), valueClass); }
         public K ceilingKey(K key) { return nm.ceilingKey(key); }
-        public Map.Entry<K, V> higherEntry(K key) { return entry(nm.higherEntry(key), valueType); }
+        public Map.Entry<K, V> higherEntry(K key) { return entry(nm.higherEntry(key), valueClass); }
         public K higherKey(K key) { return nm.higherKey(key); }
-        public Map.Entry<K, V> firstEntry() { return entry(nm.firstEntry(), valueType); }
-        public Map.Entry<K, V> lastEntry() { return entry(nm.lastEntry(), valueType); }
-        public Map.Entry<K, V> pollFirstEntry() { return entry(nm.pollFirstEntry(), valueType); }
-        public Map.Entry<K, V> pollLastEntry() { return entry(nm.pollLastEntry(), valueType); }
-        public NavigableMap<K, V> descendingMap() { return new CNavigableMap<K, V>(nm.descendingMap(), keyType, valueType); }
-        public NavigableSet<K> navigableKeySet() { return new CNavigableSet<K>(nm.navigableKeySet(), keyType); }
-        public NavigableSet<K> descendingKeySet() { return new CNavigableSet<K>(nm.descendingKeySet(), keyType); }
+        public Map.Entry<K, V> firstEntry() { return entry(nm.firstEntry(), valueClass); }
+        public Map.Entry<K, V> lastEntry() { return entry(nm.lastEntry(), valueClass); }
+        public Map.Entry<K, V> pollFirstEntry() { return entry(nm.pollFirstEntry(), valueClass); }
+        public Map.Entry<K, V> pollLastEntry() { return entry(nm.pollLastEntry(), valueClass); }
+        public NavigableMap<K, V> descendingMap() { return new CNavigableMap<K, V>(nm.descendingMap(), keyClass, valueClass); }
+        public NavigableSet<K> navigableKeySet() { return new CNavigableSet<K>(nm.navigableKeySet(), keyClass); }
+        public NavigableSet<K> descendingKeySet() { return new CNavigableSet<K>(nm.descendingKeySet(), keyClass); }
         public NavigableMap<K, V> subMap(K from, boolean fromIn, K to, boolean toIn) {
-            return new CNavigableMap<K, V>(nm.subMap(from, fromIn, to, toIn), keyType, valueType);
+            return new CNavigableMap<K, V>(nm.subMap(from, fromIn, to, toIn), keyClass, valueClass);
         }
-        public NavigableMap<K, V> headMap(K to, boolean in) { return new CNavigableMap<K, V>(nm.headMap(to, in), keyType, valueType); }
-        public NavigableMap<K, V> tailMap(K from, boolean in) { return new CNavigableMap<K, V>(nm.tailMap(from, in), keyType, valueType); }
+        public NavigableMap<K, V> headMap(K to, boolean in) { return new CNavigableMap<K, V>(nm.headMap(to, in), keyClass, valueClass); }
+        public NavigableMap<K, V> tailMap(K from, boolean in) { return new CNavigableMap<K, V>(nm.tailMap(from, in), keyClass, valueClass); }
     }
 }

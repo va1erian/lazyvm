@@ -41,7 +41,7 @@ final class TreeViews {
             if (m.modCount != expected) {
                 throw new ConcurrentModificationException();
             }
-            next = ascending ? RedBlack.successor(e) : RedBlack.predecessor(e);
+            next = ascending ? RedBlack.following(e) : RedBlack.preceding(e);
             last = e;
             return e;
         }
@@ -58,7 +58,7 @@ final class TreeViews {
             if (ascending && last.left != null && last.right != null) {
                 next = last;
             }
-            m.deleteNode(last);
+            m.discard(last);
             expected = m.modCount;
             last = null;
         }
@@ -83,7 +83,14 @@ final class TreeViews {
         public Iterator<Map.Entry<K, V>> iterator() { return walk.get(); }
         public int size() { return m.size(); }
         public boolean isEmpty() { return m.isEmpty(); }
-        public void clear() { m.clear(); }
+        // A view clears entry by entry through its walk; only the whole map clears at once.
+        public void clear() {
+            if (m == tree) {
+                tree.clear();
+            } else {
+                super.clear();
+            }
+        }
 
         /** The node matching entry o (key and value), or null. */
         private MapNode<K, V> match(Object o) {
@@ -102,7 +109,7 @@ final class TreeViews {
             if (n == null) {
                 return false;
             }
-            tree.deleteNode(n);
+            tree.discard(n);
             return true;
         }
     }

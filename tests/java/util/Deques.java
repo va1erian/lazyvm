@@ -111,6 +111,7 @@ public class Deques {
         for (int i = 0; i < 40; i++) grown.add(i);
         for (int i = 0; i < 39; i++) grown.poll();
         System.out.println(caps + " default " + slots(new ArrayDeque<>(Collections.singleton(1))) + "/" + slots(addOne(new ArrayDeque<Integer>())) + " grown-then-drained " + slots(grown));
+        t("remove at the middle (tie)", () -> { ArrayDeque<String> d = new ArrayDeque<>(Arrays.asList("a", "b", "c", "d")); Iterator<String> it = d.iterator(); it.next(); d.remove("c"); StringBuilder sb = new StringBuilder(); try { while (it.hasNext()) sb.append(it.next()); } catch (ConcurrentModificationException e) { sb.append("CME"); } return sb + " " + d; });
         System.out.println("done");
     }
 

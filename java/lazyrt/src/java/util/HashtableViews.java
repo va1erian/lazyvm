@@ -14,38 +14,38 @@ final class HashtableViews {
      */
     static final class Walk<K, V, T> implements Enumeration<T>, Iterator<T> {
         private final Hashtable<K, V> owner;
-        private final Hashtable.Entry<K, V>[] table;
+        private final Hashtable.Link<K, V>[] table;
         private final boolean removable;
-        private final Function<Hashtable.Entry<K, V>, T> pick;
-        private int index;
-        private Hashtable.Entry<K, V> entry;
-        private Hashtable.Entry<K, V> last;
+        private final Function<Hashtable.Link<K, V>, T> pick;
+        private int bucketAt;
+        private Hashtable.Link<K, V> pending;
+        private Hashtable.Link<K, V> last;
         private int expected;
 
         /** `removable` for an iterator; an enumeration refuses remove(). */
-        Walk(Hashtable<K, V> owner, Hashtable.Entry<K, V>[] table, Function<Hashtable.Entry<K, V>, T> pick,
+        Walk(Hashtable<K, V> owner, Hashtable.Link<K, V>[] table, Function<Hashtable.Link<K, V>, T> pick,
                 boolean removable) {
             this.owner = owner;
             this.table = table;
             this.pick = pick;
             this.removable = removable;
-            this.index = table.length;
+            this.bucketAt = table.length;
             this.expected = owner.modCount;
         }
 
         public boolean hasMoreElements() {
-            while (entry == null && index > 0) {
-                entry = table[--index];
+            while (pending == null && bucketAt > 0) {
+                pending = table[--bucketAt];
             }
-            return entry != null;
+            return pending != null;
         }
 
         public T nextElement() {
             if (!hasMoreElements()) {
                 throw new NoSuchElementException("Hashtable Enumerator");
             }
-            last = entry;
-            entry = entry.next;
+            last = pending;
+            pending = pending.next;
             return pick.apply(last);
         }
 
@@ -110,7 +110,7 @@ final class HashtableViews {
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
             synchronized (t) {
-                Hashtable.Entry<K, V> found = t.entryFor(e.getKey());
+                Hashtable.Link<K, V> found = t.entryFor(e.getKey());
                 return found != null && found.equals(e);
             }
         }
@@ -121,7 +121,7 @@ final class HashtableViews {
             }
             Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
             synchronized (t) {
-                Hashtable.Entry<K, V> found = t.entryFor(e.getKey());
+                Hashtable.Link<K, V> found = t.entryFor(e.getKey());
                 if (found == null || !found.equals(e)) {
                     return false;
                 }

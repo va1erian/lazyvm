@@ -131,6 +131,14 @@ public class TreeMapCalls {
         NavigableMap<Integer, Integer> desc = sorted(10).descendingMap().headMap(45, true);
         log.setLength(0);
         System.out.println("descending view " + desc + " [" + take() + "]");
+        TreeMap<Integer, Integer> base = sorted(5);
+        NavigableMap<Integer, Integer> tail = base.tailMap(15, true);
+        String made = take();
+        tail.descendingKeySet();
+        String first = take();
+        tail.descendingKeySet();
+        System.out.println("view bounds: tailMap [" + made + "] descendingKeySet [" + first + "] again [" + take() + "] headMap ["
+            + (base.headMap(25, false) != null ? take() : "") + "] subMap of tail [" + (tail.subMap(20, 30) != null ? take() : "") + "]");
         System.out.println("done");
     }
 }

@@ -256,7 +256,11 @@ public class Collections {
     public static boolean disjoint(Collection<?> c1, Collection<?> c2) {
         Collection<?> walk = c1;
         Collection<?> ask = c2;
-        if (c1 instanceof Set || (!(c2 instanceof Set) && c1.size() > c2.size())) {
+        boolean sets = c1 instanceof Set || c2 instanceof Set;
+        if (!sets && (c1.isEmpty() || c2.isEmpty())) {
+            return true;
+        }
+        if (c1 instanceof Set || (!sets && c1.size() > c2.size())) {
             walk = c2;
             ask = c1;
         }

@@ -32,4 +32,5 @@ removal by entrySet.removeAll of 9: K2 K0 K5 K1 K7 K3 K51 K4 K6 K50
 compareTo calls while filling one bin: Direct=47 Second=47 ObjCmp=0 ViaIface=0 Gen=0 Sub=0 Redeclare=0 Raw=0
 equal String hashes: [AaBBAaBB, AaAaBBBB, BBAaAaBB, BBAaBBBB, BBBBAaBB, BBBBBBBB, BBBBBBAa, BBBBAaAa, BBAaBBAa, AaAaAaBB, AaBBBBBB, AaBBBBAa, AaAaBBAa, BBAaAaAa, AaAaAaAa, AaBBAaAa]
 identity order consistent: true
+entries replaced: held through treeify K0=99 map 0; held through untreeify K3=77 map {K0=0}; forEach as the bin becomes a tree: K0 K1 K2 K3 K4 K5 K6 K7 K20 CME
 done
