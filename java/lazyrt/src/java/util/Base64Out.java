@@ -5,17 +5,20 @@ import java.io.OutputStream;
 
 /** The stream Base64.Encoder.wrap returns (docs/design/util-data.md B14-B16). */
 final class Base64Out extends OutputStream {
-    /** Groups encoded per write to the wrapped stream, so long arrays go out in big pieces. */
+    /**
+     * Groups encoded per write to the wrapped stream. The buffer holds characters only:
+     * separators go to the wrapped stream directly, so a long separator costs no buffer.
+     */
     private static final int CHUNK_GROUPS = 1024;
 
     private final OutputStream out;
     private final Base64.Encoder encoder;
+    private final byte[] alpha;
     /** B14: the 1 or 2 bytes of an incomplete group wait here for more data or close(). */
     private final byte[] held = new byte[3];
-    /** Reused output buffer: 4 characters and at most one separator per group. */
-    private final byte[] buffer;
+    private final byte[] buffer = new byte[4 * CHUNK_GROUPS];
     /** The characters on the current output line, carried across writes (B3). */
-    private final int[] column = {0};
+    private int column;
     private int count;
     private boolean started;
     private boolean closed;
@@ -23,8 +26,7 @@ final class Base64Out extends OutputStream {
     Base64Out(OutputStream out, Base64.Encoder encoder) {
         this.out = out;
         this.encoder = encoder;
-        byte[] sep = encoder.separator();
-        this.buffer = new byte[CHUNK_GROUPS * (4 + (sep == null ? 0 : sep.length))];
+        this.alpha = Base64Codec.alphabet(encoder.url());
     }
 
     /** B14: the low 8 bits; a completed group goes out at once. */
@@ -53,13 +55,10 @@ final class Base64Out extends OutputStream {
                 count = 0;
             }
         }
-        for (int groups = len / 3; groups > 0;) {
-            int n = Math.min(groups, CHUNK_GROUPS);
-            emitGroups(b, off, n);
-            off += 3 * n;
-            len -= 3 * n;
-            groups -= n;
-        }
+        int groups = len / 3;
+        emitGroups(b, off, groups);
+        off += 3 * groups;
+        len -= 3 * groups;
         while (len-- > 0) {
             held[count++] = b[off++];
         }
@@ -81,9 +80,8 @@ final class Base64Out extends OutputStream {
         }
         closed = true;
         if (count > 0) {
-            writePrefix();
-            int n = Base64Codec.encodeTail(held, 0, count, buffer, 0, encoder, column);
-            out.write(buffer, 0, n);
+            startGroup();
+            out.write(buffer, 0, Base64Codec.encodeTail(held, 0, count, buffer, 0, alpha, encoder.pad()));
         }
         out.close();
     }
@@ -94,18 +92,31 @@ final class Base64Out extends OutputStream {
         }
     }
 
+    /** Writes `groups` whole groups of src from off, breaking lines and chunking the output. */
     private void emitGroups(byte[] src, int off, int groups) throws IOException {
-        writePrefix();
-        int n = Base64Codec.encodeGroups(src, off, groups, buffer, 0, encoder, column);
-        out.write(buffer, 0, n);
+        while (groups > 0) {
+            startGroup();
+            int run = Math.min(groups, Math.min(CHUNK_GROUPS, Base64Codec.groupsBeforeBreak(encoder, column)));
+            out.write(buffer, 0, Base64Codec.encodeGroups(src, off, run, buffer, 0, alpha));
+            column += 4 * run;
+            off += 3 * run;
+            groups -= run;
+        }
     }
 
-    /** B14a: a line length of 1 to 3 puts the separator before the stream's first character. */
-    private void writePrefix() throws IOException {
+    /**
+     * Before the next character: the B14a prefix on the very first one, and a separator when the
+     * current line is full (B3, B14), so the stream never ends with a separator.
+     */
+    private void startGroup() throws IOException {
         byte[] prefix = encoder.streamPrefix();
         if (!started && prefix != null) {
             out.write(prefix, 0, prefix.length);
         }
         started = true;
+        if (Base64Codec.groupsBeforeBreak(encoder, column) == 0) {
+            out.write(encoder.separator());
+            column = 0;
+        }
     }
 }

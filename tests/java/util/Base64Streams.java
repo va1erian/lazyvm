@@ -182,6 +182,21 @@ public class Base64Streams {
             }
         }
         System.out.println(sb);
+        // B4, B14: a long separator (100,000 bytes) works in arrays and in streams alike.
+        byte[] longSep = new byte[100000];
+        java.util.Arrays.fill(longSep, (byte) '.');
+        longSep[0] = '\n';
+        Base64.Encoder le = Base64.getMimeEncoder(8, longSep);
+        ByteArrayOutputStream lo = new ByteArrayOutputStream();
+        OutputStream lw = le.wrap(lo);
+        lw.write(latin1("abcdefgh"));
+        lw.write('i');
+        lw.write(latin1("jklmnopqrstu"), 0, 12);
+        lw.close();
+        byte[] la = le.encode(latin1("abcdefghijklmnopqrstu"));
+        String ls = text(lo);
+        System.out.println("long sep: stream " + lo.size() + " array " + la.length + " same "
+            + java.util.Arrays.equals(lo.toByteArray(), la) + " starts " + ls.substring(0, 12) + " ends " + ls.substring(ls.length() - 8));
         // B14: close closes the wrapped stream.
         final boolean[] closed = {false};
         OutputStream oc = Base64.getEncoder().wrap(new OutputStream() {
@@ -253,6 +268,23 @@ public class Base64Streams {
         } catch (NullPointerException e) {
             System.out.println("read null NPE");
         }
+        // B19: once finished (data ended, every byte returned), every read is -1, arguments unchecked.
+        StringBuilder zero = new StringBuilder("zero-length reads:");
+        for (String s : new String[] {"QQ==", "QUI=", "QUJD", "QUJDRA", ""}) {
+            InputStream z = Base64.getDecoder().wrap(new Under(s, false));
+            zero.append(' ').append(s).append(" fresh ").append(z.read(new byte[4], 0, 0));
+            int got = z.read(new byte[3], 0, 3 > s.length() ? 1 : 3);
+            zero.append(" got ").append(got).append(" zero ").append(z.read(new byte[4], 0, 0));
+            int r;
+            while ((r = z.read()) >= 0) zero.append(" +").append(r);
+            zero.append(" end zero ").append(z.read(new byte[4], 0, 0)).append(" bad bounds ").append(z.read(new byte[4], 5, 1));
+            try {
+                zero.append(" null ").append(z.read(null, 0, 1));
+            } catch (NullPointerException e) {
+                zero.append(" null NPE");
+            }
+        }
+        System.out.println(zero);
         in.close();
         System.out.println("close closes underlying " + u.closed);
         try { in.read(); } catch (IOException e) { System.out.println("read after close: " + e.getMessage()); }

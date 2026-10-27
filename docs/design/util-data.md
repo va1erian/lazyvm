@@ -146,13 +146,19 @@ Pinned by: Base64Streams ("dec stream", "eof", "fuzz dec stream", "dec source re
 A call that throws returns nothing, so the bytes it decoded before the error are not delivered;
 bytes returned by earlier calls stand. Pinned by: Base64Streams ("dec stream").
 
-**B19.** The decoding stream's `available()` returns `in.available()` while open. `read(b, off, 0)`
-returns 0. `markSupported()` is false and `skip` reads and drops bytes. Bad bounds on
-`read(b, off, len)` throw `IndexOutOfBoundsException` with no message; a `null` array throws
-`NullPointerException`. `close()` closes `in`; after it, `read()`, `read(b, off, len)` and
-`available()` throw `IOException: Stream is closed`, and a second `close()` does nothing.
-Pinned by: Base64Streams ("available", "read bounds", "read null", "close closes underlying",
-"read after close", "read(b) after close", "available after close", "close twice").
+**B19.** The decoding stream's `available()` returns `in.available()` while open. `markSupported()`
+is false and `skip` reads and drops bytes. Bad bounds on `read(b, off, len)` throw
+`IndexOutOfBoundsException` with no message; a `null` array throws `NullPointerException`;
+`read(b, off, 0)` returns 0. All three hold only until the stream has *finished*: the data has
+ended (padding read, or the end of `in` seen) and every decoded byte has been returned. From then
+on `read(b, off, len)` returns -1 whatever its arguments, `len` 0, bad bounds and a `null` array
+included. So for `QQ==`, `read()` gives 65 and then `read(b, 0, 0)` gives -1, while for `QUJD` after
+`read(b, 0, 3)` (the end of `in` not yet seen) it gives 0. (Corrected after review; the first
+version said 0 always.) `close()` closes `in`; after it, `read()`, `read(b, off, len)` and
+`available()` throw `IOException: Stream is closed`, finished or not, and a second `close()` does
+nothing. Pinned by: Base64Streams ("available", "read bounds", "read null", "zero-length reads",
+"close closes underlying", "read after close", "read(b) after close", "available after close",
+"close twice").
 
 ## 4. Base64 with java.nio buffers (waits for S5-06)
 

@@ -31,10 +31,17 @@ final class Base64In extends InputStream {
         return n < 0 ? -1 : one[0] & 0xff;
     }
 
-    /** B17: fills the request unless the data ends first; whole units go straight to b. */
+    /**
+     * B17: fills the request unless the data ends first; whole units go straight to b. B19: once
+     * the data has ended and every decoded byte is out, the answer is -1 before the arguments are
+     * looked at, as the oracle does, so even an empty or out-of-bounds request gets -1.
+     */
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
         checkOpen();
+        if (ended && pendingStart == pendingEnd) {
+            return -1;
+        }
         if (off < 0 || len < 0 || off > b.length - len) {
             throw new IndexOutOfBoundsException();
         }

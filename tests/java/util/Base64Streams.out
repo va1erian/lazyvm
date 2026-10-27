@@ -11,6 +11,7 @@ enc tail 'abcd': [YWJj]->[YWJjZA==] [YWJj]->[YWJjZA] [YWJj]->[YWJjZA==] [YWJj]->
 enc tail 'abcdefghijk': [YWJjZGVmZ2hp]->[YWJjZGVmZ2hpams=] [YWJjZGVmZ2hp]->[YWJjZGVmZ2hpams] [YWJjZGVmZ2hp]->[YWJjZGVmZ2hpams=] [YWJj|ZGVm|Z2hp]->[YWJj|ZGVm|Z2hp|ams=] [YWJjZGVm\r\nZ2hp]->[YWJjZGVm\r\nZ2hpams]
 mime stream: 3 [AAAA] 6 [AAAA|AAAA] 7 [AAAA|AAAA] close [AAAA|AAAA|AQ==]
 mime short lines: -1/0 [] [] -1/1 [AA==] [AA==] -1/4 [AAAAAA] [AAAAAA] 0/0 [] [] 0/1 [AA==] [AA==] 0/4 [AAAAAA] [AAAAAA] 1/0 [] [] 1/1 [|AA==] [AA==] 1/4 [|AAAAAA] [AAAAAA] 3/0 [] [] 3/1 [|AA==] [AA==] 3/4 [|AAAAAA] [AAAAAA] 4/0 [] [] 4/1 [AA==] [AA==] 4/4 [AAAA|AA] [AAAA|AA]
+long sep: stream 300028 array 300028 same true starts YWJjZGVm\n.. ends ....c3R1
 enc close closes underlying true
 fuzz enc stream same 200
 dec stream '': B0=|EOF B1=|EOF B3=|EOF B64=|EOF M64=|EOF U64=|EOF trickle=|EOF
@@ -44,6 +45,7 @@ dec source reads: QQ==QUJD/1 got 1 pos 4 singles 4 bulks 0 QQ==QUJD/3 got 1 pos 
 available 1234 read A available 1234 read0 0 markSupported false skip 2 then D
 read bounds IndexOutOfBoundsException: null
 read null NPE
+zero-length reads: QQ== fresh 0 got 1 zero -1 end zero -1 bad bounds -1 null -1 QUI= fresh 0 got 2 zero -1 end zero -1 bad bounds -1 null -1 QUJD fresh 0 got 3 zero 0 end zero -1 bad bounds -1 null -1 QUJDRA fresh 0 got 3 zero 0 +68 end zero -1 bad bounds -1 null -1  fresh 0 got -1 zero -1 end zero -1 bad bounds -1 null -1
 close closes underlying true
 read after close: Stream is closed
 read(b) after close: Stream is closed

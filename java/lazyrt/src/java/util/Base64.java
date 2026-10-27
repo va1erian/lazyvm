@@ -100,13 +100,7 @@ public class Base64 {
             return chars + (chars - 1) / lineLength * separator.length;
         }
 
-        private int encodeTo(byte[] src, byte[] dst) {
-            int[] column = {0};
-            int groups = src.length / 3;
-            int d = Base64Codec.encodeGroups(src, 0, groups, dst, 0, this, column);
-            int left = src.length - 3 * groups;
-            return left == 0 ? d : Base64Codec.encodeTail(src, 3 * groups, left, dst, d, this, column);
-        }
+        private int encodeTo(byte[] src, byte[] dst) { return Base64Codec.encodeAll(src, dst, this); }
 
         boolean url() { return url; }
         byte[] separator() { return separator; }

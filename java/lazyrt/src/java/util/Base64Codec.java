@@ -48,60 +48,72 @@ final class Base64Codec {
         return (int) size;
     }
 
-    /**
-     * Encodes `groups` whole 3-byte groups of src from sp into dst at dp and returns the new dp.
-     * column[0] carries the characters on the current line between calls: a separator goes in only
-     * when a new line gets its first character (B3, B14), and since line lengths are multiples of 4
-     * that moment always falls between two groups.
-     */
-    static int encodeGroups(byte[] src, int sp, int groups, byte[] dst, int dp, Base64.Encoder e,
-                            int[] column) {
-        byte[] alpha = e.url() ? URL : BASIC;
-        byte[] sep = e.separator();
-        int line = e.lineLength();
-        int col = column[0];
+    static byte[] alphabet(boolean url) { return url ? URL : BASIC; }
+
+    /** Encodes `groups` whole 3-byte groups of src from sp into dst at dp, with no line breaks. */
+    static int encodeGroups(byte[] src, int sp, int groups, byte[] dst, int dp, byte[] alpha) {
         for (int end = sp + 3 * groups; sp < end; sp += 3) {
-            if (sep != null && col == line) {
-                for (byte s : sep) {
-                    dst[dp++] = s;
-                }
-                col = 0;
-            }
             int bits = (src[sp] & 0xff) << 16 | (src[sp + 1] & 0xff) << 8 | (src[sp + 2] & 0xff);
             dst[dp] = alpha[bits >>> 18];
             dst[dp + 1] = alpha[(bits >>> 12) & 63];
             dst[dp + 2] = alpha[(bits >>> 6) & 63];
             dst[dp + 3] = alpha[bits & 63];
             dp += 4;
-            col += 4;
         }
-        column[0] = col;
         return dp;
     }
 
     /** The last 1 or 2 bytes: count + 1 characters, then '=' padding unless withoutPadding (B1, B2). */
-    static int encodeTail(byte[] src, int sp, int count, byte[] dst, int dp, Base64.Encoder e, int[] column) {
-        byte[] alpha = e.url() ? URL : BASIC;
-        byte[] sep = e.separator();
-        if (sep != null && column[0] == e.lineLength()) {
-            for (byte s : sep) {
-                dst[dp++] = s;
-            }
-            column[0] = 0;
-        }
+    static int encodeTail(byte[] src, int sp, int count, byte[] dst, int dp, byte[] alpha, boolean pad) {
         int bits = (src[sp] & 0xff) << 16 | (count > 1 ? (src[sp + 1] & 0xff) << 8 : 0);
         dst[dp++] = alpha[bits >>> 18];
         dst[dp++] = alpha[(bits >>> 12) & 63];
         if (count > 1) {
             dst[dp++] = alpha[(bits >>> 6) & 63];
         }
-        if (e.pad()) {
-            for (int k = count; k < 3; k++) {
-                dst[dp++] = '=';
-            }
+        for (int k = count; pad && k < 3; k++) {
+            dst[dp++] = '=';
         }
-        column[0] += 4;
         return dp;
+    }
+
+    /**
+     * How many groups fit on the current line before a separator is due, given `column` characters
+     * already on it (B3, B14). Line lengths are multiples of 4, so a separator always falls between
+     * two groups, and it is written only when a new line gets its first character: 0 means "write
+     * the separator first". Without lines, every group fits.
+     */
+    static int groupsBeforeBreak(Base64.Encoder e, int column) {
+        return e.separator() == null ? Integer.MAX_VALUE : (e.lineLength() - column) / 4;
+    }
+
+    /** The whole array form of B1-B3: groups, separators where lines end, then the tail. */
+    static int encodeAll(byte[] src, byte[] dst, Base64.Encoder e) {
+        byte[] alpha = alphabet(e.url());
+        byte[] sep = e.separator();
+        int groups = src.length / 3;
+        int sp = 0;
+        int dp = 0;
+        int column = 0;
+        while (true) {
+            int room = groupsBeforeBreak(e, column);
+            boolean more = groups > 0 || src.length > sp;
+            if (room == 0 && more) {
+                System.arraycopy(sep, 0, dst, dp, sep.length);
+                dp += sep.length;
+                column = 0;
+                continue;
+            }
+            if (groups == 0) {
+                break;
+            }
+            int run = Math.min(groups, room);
+            dp = encodeGroups(src, sp, run, dst, dp, alpha);
+            sp += 3 * run;
+            groups -= run;
+            column += 4 * run;
+        }
+        return sp == src.length ? dp : encodeTail(src, sp, src.length - sp, dst, dp, alpha, e.pad());
     }
 
     /** B8-B12 on arrays: decodes src into dst and returns the number of bytes written. */

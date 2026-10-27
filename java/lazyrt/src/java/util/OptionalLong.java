@@ -68,7 +68,7 @@ public final class OptionalLong {
     @Override
     public int hashCode() { return present ? Long.hashCode(value) : 0; }
 
-    /** O2: the value as its wrapper's toString prints it, or the class name and .empty. */
+    /** O2: string concatenation formats the value as the wrapper's toString does, which is the oracle's form. */
     @Override
     public String toString() { return present ? "OptionalLong[" + value + "]" : "OptionalLong.empty"; }
 }
