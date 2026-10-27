@@ -285,25 +285,50 @@ public class Base64Streams {
             }
         }
         System.out.println(zero);
-        // B19: an error does not finish the stream, so later empty or out-of-bounds reads are not -1.
+        // B19: an ending-sequence or illegal-byte error does not finish the stream (empty reads give 0,
+        // bad bounds throw); the dangling byte at the end of the source does (QUJDR: -1).
         StringBuilder after = new StringBuilder("after error:");
-        for (String s : new String[] {"QUJD====", "QUJDR", "QUJD=x"}) {
+        for (String s : new String[] {"QUJD====", "QUJDR", "QUJD=x", "QUJD!QUJD"}) {
             InputStream z = Base64.getDecoder().wrap(new Under(s, false));
             byte[] zb = new byte[4];
-            after.append(' ').append(s).append(" got ").append(z.read(zb, 1, 3));
+            int got = z.read(zb, 1, 3);
+            after.append(' ').append(s).append(" got ").append(got);
             try {
-                after.append(" next ").append(z.read(zb, 0, 3));
+                int next = z.read(zb, 0, 3);
+                after.append(" next ").append(next);
             } catch (IOException e) {
                 after.append(" error");
             }
             after.append(" zero ").append(z.read(zb, 0, 0));
             try {
-                after.append(" bad bounds ").append(z.read(zb, 5, 1));
+                int bad = z.read(zb, 5, 1);
+                after.append(" bad bounds ").append(bad);
             } catch (IndexOutOfBoundsException e) {
                 after.append(" bad bounds IOOBE");
             }
         }
         System.out.println(after);
+        // B18: an error keeps the unit begun before it and drops only the byte that caused it (and
+        // the byte read after a '=' at p = 2); reading on continues from that unit.
+        String[][] cont = {{"b", "QQ=xQUJD"}, {"b", "Q===QUJD"}, {"b", "QQ=x"}, {"b", "QU!DQUJD"}, {"b", "QU!D"},
+            {"b", "QUJ!DQUJD"}, {"u", "QU+DQUJD"}, {"m", "QUJDRA="}, {"m", "QQ=xQUJD"}, {"m", "Q=!=QUJD"}};
+        StringBuilder go = new StringBuilder("read on after error:");
+        for (String[] c : cont) {
+            Base64.Decoder d = c[0].equals("b") ? Base64.getDecoder() : c[0].equals("u") ? Base64.getUrlDecoder() : Base64.getMimeDecoder();
+            InputStream z = d.wrap(new Under(c[1], false));
+            go.append(' ').append(c[0]).append(':').append(c[1]);
+            for (int i = 0; i < 12; i++) {
+                try {
+                    int r = z.read();
+                    go.append(' ').append(r);
+                    if (r < 0) break;
+                } catch (IOException e) {
+                    String m = e.getMessage();
+                    go.append(" [").append(m.startsWith("Illegal base64 ending") ? m.substring(m.indexOf(':')) : m.startsWith("Base64 stream") ? "dangling" : "illegal").append(']');
+                }
+            }
+        }
+        System.out.println(go);
         in.close();
         System.out.println("close closes underlying " + u.closed);
         try { in.read(); } catch (IOException e) { System.out.println("read after close: " + e.getMessage()); }

@@ -149,6 +149,17 @@ public class Tokenizers {
             steps.append(' ');
         }
         System.out.println("long interleaved " + steps.toString().trim());
+        // T3, T7: a switch from plain delimiters to a pair or a lone surrogate after reading has
+        // begun compares code points from then on, past char 256 too.
+        for (String sw : new String[] {"😀", "\ud83d", " 😀"}) {
+            StringTokenizer st = new StringTokenizer(longText, " ,");
+            String first = st.nextToken();
+            StringBuilder b = new StringBuilder(first.length() + " then");
+            String tok = st.nextToken(sw);
+            b.append(' ').append(tok.length()).append(show(tok.substring(0, 1))).append(show(tok.substring(tok.length() - 1)));
+            b.append(" | ").append(brief(st));
+            System.out.println("long switch " + show(sw) + " " + b);
+        }
         // T6: null arguments.
         System.out.println("null string " + ex(() -> new StringTokenizer(null)) + " | " + ex(() -> new StringTokenizer(null, ",")) + " | " + ex(() -> new StringTokenizer(null, ",", true)));
         System.out.println("null delims " + ex(() -> new StringTokenizer("a b", null) != null) + " | " + ex(() -> new StringTokenizer("a b", null).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("a b", null).nextToken()) + " | " + ex(() -> new StringTokenizer("a b", null).countTokens()) + " | " + ex(() -> new StringTokenizer("", null).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("", null).countTokens()) + " | " + ex(() -> new StringTokenizer("", null, true).hasMoreTokens()) + " | " + ex(() -> new StringTokenizer("a b").nextToken(null)) + " | " + ex(() -> { StringTokenizer z = new StringTokenizer("a b"); try { z.nextToken(null); } catch (NullPointerException e) { } return z.nextToken(); }));

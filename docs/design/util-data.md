@@ -143,25 +143,32 @@ Pinned by: Base64Streams ("dec stream", "eof", "fuzz dec stream", "dec source re
   `Illegal base64 ending sequence:` + `(18 - 6 * p)` (no space: `:18`, `:12`, `:6`);
 - end of `in` with p = 1: `Base64 stream has one un-decoded dangling byte.`
 
-A call that throws returns nothing, so the bytes it decoded before the error are not delivered;
-bytes returned by earlier calls stand. Pinned by: Base64Streams ("dec stream").
+A call that throws returns no count, but the whole units it decoded before the error are already
+in the caller's array, and bytes returned by earlier calls stand. The error does not lose the unit
+being built: the byte that caused it is dropped (and, for `=` at p = 2, the byte read after it to
+look for the second `=`), the characters of the unit begun before it are kept, and the next read
+goes on from there. So `QQ=xQUJD`, read with `read()`, gives the `:6` error and then 65, 4, 20, 36
+and the end (`QQ` + `QU`, then `JD`); `QU!DQUJD` gives the illegal-character error and then 65, 64,
+208, 80, 144 (`QU` + `DQ`, then `UJD`); `Q===QUJD` gives `:12` three times, then 65, 5, 9 and the
+dangling-byte error. MIME behaves the same for `=` (it has no illegal bytes). (Corrected after
+review: the first version said the decoded bytes were lost and left reading on unspecified.)
+Pinned by: Base64Streams ("dec stream", "after error", "read on after error").
 
 **B19.** The decoding stream's `available()` returns `in.available()` while open. `markSupported()`
 is false and `skip` reads and drops bytes. Bad bounds on `read(b, off, len)` throw
-`IndexOutOfBoundsException` with no message; a `null` array throws `NullPointerException`;
-`read(b, off, 0)` returns 0. All three hold only until the stream has *finished*: the data has
-ended (padding read, or the end of `in` seen) and every decoded byte has been returned. From then
-on `read(b, off, len)` returns -1 whatever its arguments, `len` 0, bad bounds and a `null` array
-included. So for `QQ==`, `read()` gives 65 and then `read(b, 0, 0)` gives -1, while for `QUJD` after
-`read(b, 0, 3)` (the end of `in` not yet seen) it gives 0. A B18 error finishes the stream only when
-it comes from the end of `in` (the dangling byte); after an ending-sequence or illegal-character
-error, `read(b, 0, 0)` still gives 0 and bad bounds still throw (`QUJD====`: 3 bytes, the error,
-then 0). (Corrected after review; the first
-version said 0 always.) `close()` closes `in`; after it, `read()`, `read(b, off, len)` and
-`available()` throw `IOException: Stream is closed`, finished or not, and a second `close()` does
-nothing. Pinned by: Base64Streams ("available", "read bounds", "read null", "zero-length reads",
-"after error", "close closes underlying", "read after close", "read(b) after close", "available after close",
-"close twice").
+`IndexOutOfBoundsException` with no message; a `null` array throws `NullPointerException`; `read(b,
+off, 0)` returns 0. All three hold only until the stream has *finished*: the data has ended (padding
+read, or the end of `in` seen) and every decoded byte has been returned. From then on `read(b, off,
+len)` returns -1 whatever its arguments, `len` 0, bad bounds and a `null` array included. So for
+`QQ==`, `read()` gives 65 and then `read(b, 0, 0)` gives -1, while for `QUJD` after `read(b, 0, 3)`
+(the end of `in` not yet seen) it gives 0. A B18 error finishes the stream only when it comes from
+the end of `in` (the dangling byte); after an ending-sequence or illegal-character error, `read(b,
+0, 0)` still gives 0 and bad bounds still throw (`QUJD====`: 3 bytes, the error, then 0). (Corrected
+after review; the first version said 0 always.) `close()` closes `in`; after it, `read()`, `read(b,
+off, len)` and `available()` throw `IOException: Stream is closed`, finished or not, and a second
+`close()` does nothing. Pinned by: Base64Streams ("available", "read bounds", "read null",
+"zero-length reads", "after error", "close closes underlying", "read after close", "read(b) after
+close", "available after close", "close twice").
 
 ## 4. Base64 with java.nio buffers (waits for S5-06)
 
@@ -285,8 +292,11 @@ unchanged, and keep only the words in use. Pinned by: UtilBuffers ("valueOf byte
 - The `toString()` of Base64 encoders, decoders and their streams (identity hash codes); whether
   `withoutPadding()` returns a new object each time; how many `write` calls the encoding stream makes
   on `out` for the same bytes; whether its `flush()` flushes `out`.
-- The decoding stream after it has thrown an `IOException`: Java 8 can then return stray bytes;
-  tests never read past an error.
+- Nothing about the decoding stream after an `IOException` is left free: B18 and B19 fix it. A
+  differential fuzz of 100,000 random inputs over the three decoders, reading on past every error
+  one byte, 3 bytes or 64 bytes at a time with empty reads mixed in, matched the oracle in every
+  count, every exception, the caller's array after each throw and the source position. The only
+  divergence is the defect below, which the fuzz avoids by not mixing read sizes.
 - A Java 8 defect: a decoding stream read with `read(b, off, len)` can return zeros or never end when
   the data ends in a 2-byte unit and the requested sizes split it badly (for 5 decoded bytes, reads of
   2 or 4 at a time; for 8, reads of 7). LazyVM must return the right bytes in every case. Tests read

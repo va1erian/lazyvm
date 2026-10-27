@@ -14,6 +14,9 @@ final class Base64In extends InputStream {
     private int pendingEnd;
     /** The bytes of the last unit nextUnit() decoded, high byte first. */
     private int unitBits;
+    /** B18: the characters (unitP) and bits (unitAcc) of a unit an error interrupted. */
+    private int unitP;
+    private int unitAcc;
     private boolean ended;
     private boolean closed;
     /** Reused by read(), which would otherwise allocate per byte. */
@@ -93,19 +96,22 @@ final class Base64In extends InputStream {
     /**
      * Reads one unit from `in` and returns how many bytes it gives (0 at the end of the data),
      * leaving them in unitBits. B17: `in` is read one byte at a time and never past the unit, so
-     * after padding nothing more of it is consumed. B18: the errors.
+     * after padding nothing more of it is consumed. B18: the errors. An error consumes the byte
+     * that caused it (and the byte read after a '=' at p = 2) but not the unit begun before it:
+     * that stays in unitP and unitAcc, and the next read goes on from there.
      */
     private int nextUnit() throws IOException {
         InputStream src = in;
         int[] t = table;
-        int bits = 0;
-        int p = 0;
+        int bits = unitAcc;
+        int p = unitP;
         while (p < 4) {
             int c = src.read();
             if (c < 0) {
                 // B19: the end of `in` finishes the stream even when it leaves a dangling byte;
                 // the '=' and illegal-byte errors below do not.
                 ended = true;
+                keep(0, 0);
                 if (p == 1) {
                     throw new IOException("Base64 stream has one un-decoded dangling byte.");
                 }
@@ -118,16 +124,26 @@ final class Base64In extends InputStream {
                 p++;
             } else if (c == '=') {
                 if (p < 2 || p == 2 && src.read() != '=') {
+                    keep(p, bits);
                     throw new IOException("Illegal base64 ending sequence:" + (18 - 6 * p));
                 }
                 ended = true;
+                keep(0, 0);
                 unitBits = bits << (6 * (4 - p));
                 return p - 1;
             } else if (!mime) {
+                keep(p, bits);
                 throw new IOException("Illegal base64 character -1");
             }
         }
+        keep(0, 0);
         unitBits = bits;
         return 3;
+    }
+
+    /** The unit begun so far, kept across a thrown error (B18). */
+    private void keep(int p, int bits) {
+        unitP = p;
+        unitAcc = bits;
     }
 }
