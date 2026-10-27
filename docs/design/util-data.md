@@ -292,15 +292,16 @@ unchanged, and keep only the words in use. Pinned by: UtilBuffers ("valueOf byte
 - The `toString()` of Base64 encoders, decoders and their streams (identity hash codes); whether
   `withoutPadding()` returns a new object each time; how many `write` calls the encoding stream makes
   on `out` for the same bytes; whether its `flush()` flushes `out`.
-- Nothing about the decoding stream after an `IOException` is left free: B18 and B19 fix it. A
-  differential fuzz of 100,000 random inputs over the three decoders, reading on past every error
-  one byte, 3 bytes or 64 bytes at a time with empty reads mixed in, matched the oracle in every
-  count, every exception, the caller's array after each throw and the source position. The only
-  divergence is the defect below, which the fuzz avoids by not mixing read sizes.
-- A Java 8 defect: a decoding stream read with `read(b, off, len)` can return zeros or never end when
-  the data ends in a 2-byte unit and the requested sizes split it badly (for 5 decoded bytes, reads of
-  2 or 4 at a time; for 8, reads of 7). LazyVM must return the right bytes in every case. Tests read
-  1 byte at a time, 3 at a time, or with room for everything, where Java 8 is correct.
+- Nothing about the decoding stream after an `IOException` is left free: B18 and B19 fix it.
+  Differential fuzzing over the three decoders, reading on past every error, matched the oracle in
+  every count, every exception, the caller's array after each throw and the source position, in
+  every case except those that hit the defect below.
+- A Java 8 defect: when the data ends in a 2-byte unit and a read splits that unit, the decoding
+  stream can return zeros or never end. A bulk read that splits it does this (for 5 decoded bytes,
+  reads of 2 or 4 at a time; for 8, reads of 7), and so does `read()` followed by `read(b, off, len)`
+  or `skip(n)`: on `QUI=`, `read()` gives 65, then `read(b, 0, 4)` gives 3 with `[66, 0, 0, 0]`.
+  LazyVM must return the right bytes in every case. Tests read 1 byte at a time, 3 at a time, or
+  with room for everything on short data, where Java 8 is correct.
 - A second Java 8 defect: its MIME decoder on arrays throws `ArrayIndexOutOfBoundsException` (with
   the signed byte, or no message) for a byte ≥ 0x80 after the padding. LazyVM follows B11 and skips
   it; no test reaches the case. (A scratch model of B8–B13 matched the oracle on 900,000 random
