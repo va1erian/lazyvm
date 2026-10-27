@@ -1,0 +1,112 @@
+n 2 pattern 0: calls 1 log 1521822 order 1473815 | 1?0
+n 2 pattern 1: calls 1 log 1521822 order 1473815 | 1?0
+n 2 pattern 2: calls 1 log 1521822 order 1473815 | 1?0
+n 2 pattern 3: calls 1 log 1521822 order 1503575 | 1?0
+n 2 pattern 4: calls 1 log 1521822 order 1473815 | 1?0
+n 2 pattern 5: calls 1 log 1521822 order 1473815 | 1?0
+n 2 pattern 6: calls 1 log 1521822 order 1503575 | 1?0
+n 3 pattern 0: calls 4 log -2020378413 order 1473566289 | 1?0 2?1 2?1 2?0
+n 3 pattern 1: calls 2 log 981821114 order 1416337809 | 1?0 2?1
+n 3 pattern 2: calls 2 log 981821114 order 1416337809 | 1?0 2?1
+n 3 pattern 3: calls 2 log 981821114 order 1473596049 | 1?0 2?1
+n 3 pattern 4: calls 2 log 981821114 order 1416337809 | 1?0 2?1
+n 3 pattern 5: calls 4 log -2020378413 order 1416367569 | 1?0 2?1 2?1 2?0
+n 3 pattern 6: calls 4 log -2049007533 order 1444996689 | 1?0 2?1 2?0 2?1
+n 5 pattern 0: calls 7 log -896525087 order 1652449890 | 1?0 2?1 2?0 3?0 3?1 4?0 4?3
+n 5 pattern 1: calls 7 log -896525087 order 1652449890 | 1?0 2?1 2?0 3?0 3?1 4?0 4?3
+n 5 pattern 2: calls 4 log -248879252 order -1693826142 | 1?0 2?1 3?2 4?3
+n 5 pattern 3: calls 4 log -248879252 order 1005680802 | 1?0 2?1 3?2 4?3
+n 5 pattern 4: calls 4 log -248879252 order -1693826142 | 1?0 2?1 3?2 4?3
+n 5 pattern 5: calls 7 log 715057278 order 1763195106 | 1?0 2?1 3?2 3?1 3?0 4?1 4?2
+n 5 pattern 6: calls 7 log -845395753 order -1349962654 | 1?0 2?1 3?2 4?3 4?1 4?2 4?3
+n 8 pattern 0: calls 17 log -1060791031 order 207363460 | 1?0 2?1 2?0 2?1 3?2 3?1 4?2 4?1 4?3 5?1 5?0 6?2 6?5 6?0 7?2 7?4 7?3
+n 8 pattern 1: calls 16 log -476292821 order -1344090748 | 1?0 2?1 3?2 3?1 3?0 4?1 4?2 5?1 5?0 5?3 6?1 6?4 6?2 7?1 7?5 7?3
+n 8 pattern 2: calls 7 log -2029223256 order -1011638972 | 1?0 2?1 3?2 4?3 5?4 6?5 7?6
+n 8 pattern 3: calls 7 log -2029223256 order -161349052 | 1?0 2?1 3?2 4?3 5?4 6?5 7?6
+n 8 pattern 4: calls 7 log -2029223256 order -1011638972 | 1?0 2?1 3?2 4?3 5?4 6?5 7?6
+n 8 pattern 5: calls 16 log -1079449018 order 1455642820 | 1?0 2?1 2?1 2?0 3?2 3?1 4?1 4?2 5?4 5?3 6?1 6?2 6?4 7?6 7?3 7?5
+n 8 pattern 6: calls 18 log 1015489237 order -510569084 | 1?0 2?1 2?0 2?1 3?2 3?1 4?2 4?1 4?3 5?1 5?3 5?4 6?1 6?5 6?4 7?3 7?4 7?6
+n 12 pattern 0: calls 31 log -2018322107 order 2002611046 | 1?0 2?1 3?2 3?1 3?0 4?1 4?0 4?3 5?0 5?2 5?1 6?1 6?3 6?0 7?6 7?5 7?1 8?7 8?0 8?6 9?6 9?5 9?2 10?7 10?2 10?5 10?1 11?7 11?5 11?9 11?2
+n 12 pattern 1: calls 28 log -298271044 order -1084942094 | 1?0 2?1 2?0 3?0 3?2 4?3 4?2 5?3 5?4 5?2 6?5 6?4 7?5 7?4 7?6 8?2 8?6 8?7 9?2 9?7 9?8 10?4 10?3 10?0 10?1 11?2 11?0 11?5
+n 12 pattern 2: calls 11 log -747422685 order 1228043530 | 1?0 2?1 3?2 4?3 5?4 6?5 7?6 8?7 9?8 10?9 11?10
+n 12 pattern 3: calls 11 log -747422685 order 1321657196 | 1?0 2?1 3?2 4?3 5?4 6?5 7?6 8?7 9?8 10?9 11?10
+n 12 pattern 4: calls 11 log -747422685 order 1228043530 | 1?0 2?1 3?2 4?3 5?4 6?5 7?6 8?7 9?8 10?9 11?10
+n 12 pattern 5: calls 31 log -1340342063 order 1507595366 | 1?0 2?1 3?2 3?1 3?0 4?1 4?2 5?1 5?3 5?0 6?1 6?2 6?4 7?1 7?5 7?0 8?1 8?4 8?6 9?1 9?5 9?7 9?0 10?1 10?4 10?6 10?8 11?1 11?7 11?9 11?0
+n 12 pattern 6: calls 33 log -2094915511 order -774474934 | 1?0 2?1 2?1 2?0 3?0 3?2 4?0 4?2 5?4 5?2 5?3 6?4 6?5 6?3 7?2 7?3 7?6 8?2 8?3 8?7 8?6 9?5 9?7 9?6 9?8 10?5 10?6 10?8 10?9 11?3 11?8 11?9 11?10
+n 31 pattern 0: calls 111 log 1107725021 order -1636605690
+n 31 pattern 1: calls 109 log -1430990357 order 1164455196
+n 31 pattern 2: calls 30 log -1573209901 order -2070325906
+n 31 pattern 3: calls 30 log -1573209901 order -1370295068
+n 31 pattern 4: calls 41 log 602325834 order 265795490
+n 31 pattern 5: calls 106 log 1076779674 order 1683824362
+n 31 pattern 6: calls 122 log 934770948 order -732847984
+n 32 pattern 0: calls 119 log -208871307 order 1115107826
+n 32 pattern 1: calls 119 log 1155567400 order 2019922932
+n 32 pattern 2: calls 31 log -51732811 order -1348644512
+n 32 pattern 3: calls 31 log -51732811 order 563636374
+n 32 pattern 4: calls 43 log -355308886 order 516473554
+n 32 pattern 5: calls 104 log 1683870718 order -1617980458
+n 32 pattern 6: calls 114 log 1784121065 order -601240194
+n 33 pattern 0: calls 131 log -940592552 order -343651221
+n 33 pattern 1: calls 127 log 347479485 order -1777553807
+n 33 pattern 2: calls 32 log -22467913 order 1950447693
+n 33 pattern 3: calls 87 log 760572295 order 1364993197
+n 33 pattern 4: calls 48 log 1695431828 order -1677724309
+n 33 pattern 5: calls 64 log 936993476 order -275743169
+n 33 pattern 6: calls 115 log 951288786 order 1821745495
+n 64 pattern 0: calls 308 log -521604350 order 887183090
+n 64 pattern 1: calls 281 log 12415839 order 1268214628
+n 64 pattern 2: calls 307 log 1851252166 order 2029015758
+n 64 pattern 3: calls 116 log -2105349517 order 1773384026
+n 64 pattern 4: calls 81 log -734234690 order -1544108446
+n 64 pattern 5: calls 284 log 129211879 order 1336555840
+n 64 pattern 6: calls 244 log -1338089199 order 1172058608
+n 65 pattern 0: calls 316 log -752935409 order -1121291900
+n 65 pattern 1: calls 298 log 623116264 order 196566528
+n 65 pattern 2: calls 308 log 992139661 order -300019452
+n 65 pattern 3: calls 152 log 1065751636 order -428208714
+n 65 pattern 4: calls 107 log -2010221455 order 853613298
+n 65 pattern 5: calls 285 log -291948085 order -177875252
+n 65 pattern 6: calls 249 log 589816249 order 1320709344
+n 100 pattern 0: calls 542 log 1251886002 order 1391318458
+n 100 pattern 1: calls 495 log 1214929597 order -1709460572
+n 100 pattern 2: calls 435 log -1132277764 order 297304182
+n 100 pattern 3: calls 516 log -971636349 order 1399349180
+n 100 pattern 4: calls 304 log 1289585972 order 545586690
+n 100 pattern 5: calls 265 log 646331273 order 844657536
+n 100 pattern 6: calls 421 log 1777935641 order 136039776
+n 257 pattern 0: calls 1751 log 1590736955 order 901137669
+n 257 pattern 1: calls 1435 log -1434042947 order -1408836941
+n 257 pattern 2: calls 1209 log -1376801245 order -1496406061
+n 257 pattern 3: calls 1023 log 2042270396 order -516878983
+n 257 pattern 4: calls 582 log 789920231 order 245021975
+n 257 pattern 5: calls 830 log -2129890226 order -702014343
+n 257 pattern 6: calls 1068 log 1375230091 order -1471367175
+n 1000 pattern 0: calls 8705 log -198838381 order -1778145714
+n 1000 pattern 1: calls 5845 log 1401608656 order 1180930348
+n 1000 pattern 2: calls 7348 log -1815830689 order 1179227434
+n 1000 pattern 3: calls 5644 log -610162628 order 2060137186
+n 1000 pattern 4: calls 2870 log 461997513 order 1900618878
+n 1000 pattern 5: calls 3665 log -451074909 order -322872424
+n 1000 pattern 6: calls 4469 log 357399172 order -758385774
+n 4000 pattern 0: calls 42728 log 437006690 order 1715294156
+n 4000 pattern 1: calls 23609 log 1575758160 order 1762933294
+n 4000 pattern 2: calls 27901 log -1459590358 order 1689888534
+n 4000 pattern 3: calls 30521 log 480286850 order -1169768502
+n 4000 pattern 4: calls 13685 log -1118271939 order -55733844
+n 4000 pattern 5: calls 13594 log -1352288468 order -1995808366
+n 4000 pattern 6: calls 17902 log -2086632734 order -359593236
+runs [98, 96, 129, 39, 29, 48, 126]: calls 1938 log -639950677 order -988214407
+range 40..250 of 300: calls 1359 log -2037978239 order -877389942
+LinkedList via Collections.sort: calls 22 log -440087880 order -1621832245 | 1?0 2?1 3?2 3?1 3?2 4?1 4?0 5?1 5?0 5?4 6?5 6?3 6?2 7?1 7?4 7?5 8?5 8?3 8?1 9?1 9?3 9?8
+ArrayList.sort: calls 22 log -440087880 order -1621832245 | 1?0 2?1 3?2 3?1 3?2 4?1 4?0 5?1 5?0 5?4 6?5 6?3 6?2 7?1 7?4 7?5 8?5 8?3 8?1 9?1 9?3 9?8
+inconsistent n 20: ok@59 ok@61 ok@61 ok@55 ok@29
+inconsistent n 40: ok@147 ok@129 ok@149 ok@128 ok@93
+inconsistent n 100: ok@432 ok@469 ok@480 ok@436 ok@432
+inconsistent n 300: IAE@567 ok@1629 ok@1567 ok@1625 ok@1437
+inconsistent n 1000: ok@6659 ok@6014 IAE@5853 ok@6846 IAE@1748
+inconsistent n 3000: IAE@970 IAE@4028 IAE@1641 IAE@993 IAE@755
+never equal: Comparison method violates its general contract!
+final merging of 30 runs: calls 51031 log 1056417089 order -105634517
+final merging with a tie: calls 49954 log -885160965 order 663174124
+done

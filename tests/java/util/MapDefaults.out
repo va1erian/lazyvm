@@ -1,0 +1,269 @@
+== HashMap
+1 9 null
+1 null {a=1, b=2, c=3, d=4}
+false true false {b=2, c=3, d=4}
+true false false {b=20, c=3, d=4}
+20 null {b=21, c=3, d=4}
+21 5 null false {b=21, c=3, d=4, e=5}
+6 null null false {b=21, c=3, d=4}
+22 7 null null false {b=22, c=3, d=4}
+122 100 null false {b=122, c=3, d=4}
+b122 c3 d4 | {b=244, c=6, d=8}
+HashMap forEach null: !java.lang.NullPointerException
+HashMap replaceAll null: !java.lang.NullPointerException
+HashMap computeIfAbsent null fn: !java.lang.NullPointerException
+HashMap computeIfPresent null fn: !java.lang.NullPointerException
+HashMap compute null fn: !java.lang.NullPointerException
+HashMap merge null fn: !java.lang.NullPointerException
+HashMap merge null value: !java.lang.NullPointerException
+HashMap merge null value absent: !java.lang.NullPointerException
+HashMap putIfAbsent null value: null true null
+HashMap computeIfAbsent over null value: 5 5
+HashMap computeIfPresent null value: null true
+HashMap compute null value: 42 42
+HashMap merge over null value: 9 9
+HashMap getOrDefault null value: null 5
+HashMap replace null value: true 3 null false
+HashMap remove null value: true false false
+HashMap null key: 5 null 5 6 6
+HashMap function modifies map: 2 truetrue
+HashMap forEach modifies map: !java.util.ConcurrentModificationException
+== LinkedHashMap
+1 9 null
+1 null {a=1, b=2, c=3, d=4}
+false true false {b=2, c=3, d=4}
+true false false {b=20, c=3, d=4}
+20 null {b=21, c=3, d=4}
+21 5 null false {b=21, c=3, d=4, e=5}
+6 null null false {b=21, c=3, d=4}
+22 7 null null false {b=22, c=3, d=4}
+122 100 null false {b=122, c=3, d=4}
+b122 c3 d4 | {b=244, c=6, d=8}
+LinkedHashMap forEach null: !java.lang.NullPointerException
+LinkedHashMap replaceAll null: !java.lang.NullPointerException
+LinkedHashMap computeIfAbsent null fn: !java.lang.NullPointerException
+LinkedHashMap computeIfPresent null fn: !java.lang.NullPointerException
+LinkedHashMap compute null fn: !java.lang.NullPointerException
+LinkedHashMap merge null fn: !java.lang.NullPointerException
+LinkedHashMap merge null value: !java.lang.NullPointerException
+LinkedHashMap merge null value absent: !java.lang.NullPointerException
+LinkedHashMap putIfAbsent null value: null true null
+LinkedHashMap computeIfAbsent over null value: 5 5
+LinkedHashMap computeIfPresent null value: null true
+LinkedHashMap compute null value: 42 42
+LinkedHashMap merge over null value: 9 9
+LinkedHashMap getOrDefault null value: null 5
+LinkedHashMap replace null value: true 3 null false
+LinkedHashMap remove null value: true false false
+LinkedHashMap null key: 5 null 5 6 6
+LinkedHashMap function modifies map: 2 truetrue
+LinkedHashMap forEach modifies map: !java.util.ConcurrentModificationException
+== LinkedHashMap access
+1 9 null
+1 null {b=2, c=3, a=1, d=4}
+false true false {b=2, c=3, d=4}
+true false false {c=3, d=4, b=20}
+20 null {c=3, d=4, b=21}
+21 5 null false {c=3, d=4, b=21, e=5}
+6 null null false {c=3, d=4, b=21}
+22 7 null null false {c=3, d=4, b=22}
+122 100 null false {c=3, d=4, b=122}
+c3 d4 b122 | {c=6, d=8, b=244}
+LinkedHashMap access forEach null: !java.lang.NullPointerException
+LinkedHashMap access replaceAll null: !java.lang.NullPointerException
+LinkedHashMap access computeIfAbsent null fn: !java.lang.NullPointerException
+LinkedHashMap access computeIfPresent null fn: !java.lang.NullPointerException
+LinkedHashMap access compute null fn: !java.lang.NullPointerException
+LinkedHashMap access merge null fn: !java.lang.NullPointerException
+LinkedHashMap access merge null value: !java.lang.NullPointerException
+LinkedHashMap access merge null value absent: !java.lang.NullPointerException
+LinkedHashMap access putIfAbsent null value: null true null
+LinkedHashMap access computeIfAbsent over null value: 5 5
+LinkedHashMap access computeIfPresent null value: null true
+LinkedHashMap access compute null value: 42 42
+LinkedHashMap access merge over null value: 9 9
+LinkedHashMap access getOrDefault null value: null 5
+LinkedHashMap access replace null value: true 3 null false
+LinkedHashMap access remove null value: true false false
+LinkedHashMap access null key: 5 null 5 6 6
+LinkedHashMap access function modifies map: 2 truetrue
+LinkedHashMap access forEach modifies map: !java.util.ConcurrentModificationException
+== TreeMap
+1 9 null
+1 null {a=1, b=2, c=3, d=4}
+false true false {b=2, c=3, d=4}
+true false false {b=20, c=3, d=4}
+20 null {b=21, c=3, d=4}
+21 5 null false {b=21, c=3, d=4, e=5}
+6 null null false {b=21, c=3, d=4}
+22 7 null null false {b=22, c=3, d=4}
+122 100 null false {b=122, c=3, d=4}
+b122 c3 d4 | {b=244, c=6, d=8}
+TreeMap forEach null: !java.lang.NullPointerException
+TreeMap replaceAll null: !java.lang.NullPointerException
+TreeMap computeIfAbsent null fn: !java.lang.NullPointerException
+TreeMap computeIfPresent null fn: !java.lang.NullPointerException
+TreeMap compute null fn: !java.lang.NullPointerException
+TreeMap merge null fn: !java.lang.NullPointerException
+TreeMap merge null value: !java.lang.NullPointerException
+TreeMap merge null value absent: !java.lang.NullPointerException
+TreeMap putIfAbsent null value: null true null
+TreeMap computeIfAbsent over null value: 5 5
+TreeMap computeIfPresent null value: null true
+TreeMap compute null value: 42 42
+TreeMap merge over null value: 9 9
+TreeMap getOrDefault null value: null 5
+TreeMap replace null value: true 3 null false
+TreeMap remove null value: true false false
+TreeMap null key: !java.lang.NullPointerException
+TreeMap function modifies map: 2 truetrue
+TreeMap forEach modifies map: !java.util.ConcurrentModificationException
+== TreeMap nullsFirst
+1 9 null
+1 null {a=1, b=2, c=3, d=4}
+false true false {b=2, c=3, d=4}
+true false false {b=20, c=3, d=4}
+20 null {b=21, c=3, d=4}
+21 5 null false {b=21, c=3, d=4, e=5}
+6 null null false {b=21, c=3, d=4}
+22 7 null null false {b=22, c=3, d=4}
+122 100 null false {b=122, c=3, d=4}
+b122 c3 d4 | {b=244, c=6, d=8}
+TreeMap nullsFirst forEach null: !java.lang.NullPointerException
+TreeMap nullsFirst replaceAll null: !java.lang.NullPointerException
+TreeMap nullsFirst computeIfAbsent null fn: !java.lang.NullPointerException
+TreeMap nullsFirst computeIfPresent null fn: !java.lang.NullPointerException
+TreeMap nullsFirst compute null fn: !java.lang.NullPointerException
+TreeMap nullsFirst merge null fn: !java.lang.NullPointerException
+TreeMap nullsFirst merge null value: !java.lang.NullPointerException
+TreeMap nullsFirst merge null value absent: !java.lang.NullPointerException
+TreeMap nullsFirst putIfAbsent null value: null true null
+TreeMap nullsFirst computeIfAbsent over null value: 5 5
+TreeMap nullsFirst computeIfPresent null value: null true
+TreeMap nullsFirst compute null value: 42 42
+TreeMap nullsFirst merge over null value: 9 9
+TreeMap nullsFirst getOrDefault null value: null 5
+TreeMap nullsFirst replace null value: true 3 null false
+TreeMap nullsFirst remove null value: true false false
+TreeMap nullsFirst null key: 5 null 5 6 6
+TreeMap nullsFirst function modifies map: 2 truetrue
+TreeMap nullsFirst forEach modifies map: !java.util.ConcurrentModificationException
+== Hashtable
+1 9 null
+1 null {b=2, a=1, d=4, c=3}
+false true false {b=2, d=4, c=3}
+true false false {b=20, d=4, c=3}
+20 null {b=21, d=4, c=3}
+21 5 null false {b=21, e=5, d=4, c=3}
+6 null null false {b=21, d=4, c=3}
+22 7 null null false {b=22, d=4, c=3}
+122 100 null false {b=122, d=4, c=3}
+c3 d4 b122 | {b=244, d=8, c=6}
+Hashtable forEach null: !java.lang.NullPointerException
+Hashtable replaceAll null: !java.lang.NullPointerException
+Hashtable computeIfAbsent null fn: !java.lang.NullPointerException
+Hashtable computeIfPresent null fn: !java.lang.NullPointerException
+Hashtable compute null fn: !java.lang.NullPointerException
+Hashtable merge null fn: !java.lang.NullPointerException
+Hashtable merge null value: !java.lang.NullPointerException
+Hashtable merge null value absent: null
+Hashtable putIfAbsent null value: !java.lang.NullPointerException
+Hashtable computeIfAbsent over null value: !java.lang.NullPointerException
+Hashtable computeIfPresent null value: !java.lang.NullPointerException
+Hashtable compute null value: !java.lang.NullPointerException
+Hashtable merge over null value: !java.lang.NullPointerException
+Hashtable getOrDefault null value: !java.lang.NullPointerException
+Hashtable replace null value: !java.lang.NullPointerException
+Hashtable remove null value: !java.lang.NullPointerException
+Hashtable null key: !java.lang.NullPointerException
+Hashtable function modifies map: 2 truetrue
+Hashtable forEach modifies map: !java.util.ConcurrentModificationException
+== Simple
+1 9 null
+1 null {a=1, b=2, c=3, d=4}
+false true false {b=2, c=3, d=4}
+true false false {b=20, c=3, d=4}
+20 null {b=21, c=3, d=4}
+21 5 null false {b=21, c=3, d=4, e=5}
+6 null null false {b=21, c=3, d=4}
+22 7 null null false {b=22, c=3, d=4}
+122 100 null false {b=122, c=3, d=4}
+b122 c3 d4 | {b=244, c=6, d=8}
+Simple forEach null: !java.lang.NullPointerException
+Simple replaceAll null: !java.lang.NullPointerException
+Simple computeIfAbsent null fn: !java.lang.NullPointerException
+Simple computeIfPresent null fn: !java.lang.NullPointerException
+Simple compute null fn: !java.lang.NullPointerException
+Simple merge null fn: !java.lang.NullPointerException
+Simple merge null value: !java.lang.NullPointerException
+Simple merge null value absent: !java.lang.NullPointerException
+Simple putIfAbsent null value: null true null
+Simple computeIfAbsent over null value: 5 5
+Simple computeIfPresent null value: null true
+Simple compute null value: 42 42
+Simple merge over null value: 9 9
+Simple getOrDefault null value: null 5
+Simple replace null value: true 3 null false
+Simple remove null value: true false false
+Simple null key: 5 null 5 6 6
+Simple function modifies map: 2 truetrue
+Simple forEach modifies map: !java.util.ConcurrentModificationException
+== synchronized
+1 9 null
+1 null {a=1, b=2, c=3, d=4}
+false true false {b=2, c=3, d=4}
+true false false {b=20, c=3, d=4}
+20 null {b=21, c=3, d=4}
+21 5 null false {b=21, c=3, d=4, e=5}
+6 null null false {b=21, c=3, d=4}
+22 7 null null false {b=22, c=3, d=4}
+122 100 null false {b=122, c=3, d=4}
+b122 c3 d4 | {b=244, c=6, d=8}
+synchronized forEach null: !java.lang.NullPointerException
+synchronized replaceAll null: !java.lang.NullPointerException
+synchronized computeIfAbsent null fn: !java.lang.NullPointerException
+synchronized computeIfPresent null fn: !java.lang.NullPointerException
+synchronized compute null fn: !java.lang.NullPointerException
+synchronized merge null fn: !java.lang.NullPointerException
+synchronized merge null value: !java.lang.NullPointerException
+synchronized merge null value absent: !java.lang.NullPointerException
+synchronized putIfAbsent null value: null true null
+synchronized computeIfAbsent over null value: 5 5
+synchronized computeIfPresent null value: null true
+synchronized compute null value: 42 42
+synchronized merge over null value: 9 9
+synchronized getOrDefault null value: null 5
+synchronized replace null value: true 3 null false
+synchronized remove null value: true false false
+synchronized null key: 5 null 5 6 6
+synchronized function modifies map: 2 truetrue
+synchronized forEach modifies map: !java.util.ConcurrentModificationException
+unmodifiable getOrDefault: 1 0
+unmodifiable forEach: k1
+unmodifiable putIfAbsent: !java.lang.UnsupportedOperationException
+unmodifiable remove2: !java.lang.UnsupportedOperationException
+unmodifiable replace: !java.lang.UnsupportedOperationException
+unmodifiable replace3: !java.lang.UnsupportedOperationException
+unmodifiable computeIfAbsent: !java.lang.UnsupportedOperationException
+unmodifiable computeIfPresent: !java.lang.UnsupportedOperationException
+unmodifiable compute: !java.lang.UnsupportedOperationException
+unmodifiable merge: !java.lang.UnsupportedOperationException
+unmodifiable replaceAll: !java.lang.UnsupportedOperationException
+singletonMap: 1 0
+singletonMap putIfAbsent: !java.lang.UnsupportedOperationException
+singletonMap compute: !java.lang.UnsupportedOperationException
+singletonMap forEach: s1
+emptyMap: 7 0 {}
+emptyMap forEach: ok
+emptyMap forEach null: !java.lang.NullPointerException
+emptyMap replaceAll null: !java.lang.NullPointerException
+emptyMap putIfAbsent: !java.lang.UnsupportedOperationException
+emptyMap computeIfAbsent: !java.lang.UnsupportedOperationException
+emptyMap merge: !java.lang.UnsupportedOperationException
+entry comparators: [a=3, b=2, c=1][c=1, b=2, a=3][c=1, b=2, a=3][a=3, b=2, c=1]
+entry comparators null: !java.lang.NullPointerException
+entry comparators null value: !java.lang.NullPointerException
+simple entry: k=1 k=1 true true 1k=5
+immutable entry set: !java.lang.UnsupportedOperationException
+entry null parts: null=null 0
+done

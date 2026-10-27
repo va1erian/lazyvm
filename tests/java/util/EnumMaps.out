@@ -1,0 +1,44 @@
+{MON=mon, WED=null, FRI=fri, SUN=sun} 4 [MON, WED, FRI, SUN] [mon, null, fri, sun] [MON=mon, WED=null, FRI=fri, SUN=sun]
+mon null null true false true true false
+mon null fri null {MON=MON, TUE=tue, WED=null, SUN=sun}
+get non-enum: null null false null false
+put null key: !java.lang.NullPointerException
+put wrong enum: !java.lang.ClassCastException: class util.EnumMaps$Level$1 != class util.EnumMaps$Day
+iterator remove: {TUE=tue}
+entry setValue: {TUE=tue!}
+entry toString/equals: TUE=tue! TUE tue! true
+entry removed: !java.lang.IllegalStateException: Entry was removed
+modify during iteration: MONTUESUN {MON=1, TUE=2, SUN=7}
+copy ctors: {SAT=1} {THU=4} {SAT=1}
+copy empty map: !java.lang.IllegalArgumentException: Specified map is empty
+not an enum: !java.lang.NullPointerException
+putAll: {SUN=1} 1
+putAll wrong type: !java.lang.ClassCastException: class util.EnumMaps$Level != class util.EnumMaps$Day
+equals/clone: false true {MON=1} {MON=1, TUE=2} true
+constant bodies: {LOW=1, HIGH=2} false Level
+clear/values remove: {TUE=y} {} true
+[MON, WED, SAT] 3 true false false false false
+[MON, TUE, WED, THU, FRI, SAT, SUN] [] [TUE, THU, FRI, SUN] [TUE, WED, THU, FRI] [TUE] [MON, WED, SAT] [TUE, SUN]
+[MON, TUE] [MON, TUE, WED] [MON, TUE, WED, THU] [MON, TUE, WED, THU, FRI] [MON, TUE, WED, THU, FRI, SUN]
+range bad: !java.lang.IllegalArgumentException: FRI > TUE
+copyOf empty: !java.lang.IllegalArgumentException: Collection is empty
+copyOf empty EnumSet: []
+of null: !java.lang.NullPointerException
+add null: !java.lang.NullPointerException
+add/remove: false true true false false [MON, FRI, SAT]
+bulk: true true false true true [MON, SUN] true []
+bulk other collections: [MON] true
+mixed types: false false false false
+addAll wrong type: !java.lang.ClassCastException: class util.EnumMaps$Level != class util.EnumMaps$Day
+iterator: 0123456 [MON, WED, FRI, SUN]
+iterator snapshot: MONWED [MON, TUE]
+wide iterator: W0W5W64W65 [W0, W1, W5, W6, W64, W65]
+iterator errors: false
+iterator next empty: !java.util.NoSuchElementException
+iterator remove first: !java.lang.IllegalStateException
+equals/hash/clone: true true false [MON, TUE][MON, TUE, WED] false3
+not an enum: !java.lang.ClassCastException: class java.lang.String not an enum
+wide: 64 [W1, W2, W64, W67, W68, W69] true false 70 [W1, W64, W69] JumboEnumSet RegularEnumSet JumboEnumSet
+wide map: {W0=2, W64=3, W69=1} [W0, W64, W69]
+set classes: 64 java.util.RegularEnumSet, 65 java.util.JumboEnumSet, 0 java.util.RegularEnumSet [], 65 range [A62, A63, A64] [A0, A64]
+done

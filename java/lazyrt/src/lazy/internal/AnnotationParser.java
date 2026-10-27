@@ -7,6 +7,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Builds annotation objects from the attribute bytes the VM hands out (JVMS 4.7.16 to 4.7.22).
@@ -84,14 +86,14 @@ public final class AnnotationParser {
 
     private Annotation[] annotationList() {
         int n = u2();
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             Annotation a = annotation();
             if (a != null) {
                 out.add(a);
             }
         }
-        return (Annotation[]) out.toArray(Annotation.class);
+        return out.toArray(new Annotation[0]);
     }
 
     // ---- annotations ---------------------------------------------------
@@ -110,7 +112,7 @@ public final class AnnotationParser {
         }
         Method[] members = elements(type);
         Object[] values = new Object[members.length];
-        Buf explicitOrder = new Buf();
+        ArrayList<Object> explicitOrder = new ArrayList<>();
         for (int i = 0; i < pairs; i++) {
             String name = utf8();
             int at = indexOf(members, name);
@@ -127,14 +129,14 @@ public final class AnnotationParser {
     /** The elements of an annotation type: its abstract instance methods, in class-file order. */
     static Method[] elements(Class<?> type) {
         Method[] all = type.getDeclaredMethods();
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         for (int i = 0; i < all.length; i++) {
             int mods = all[i].getModifiers();
             if ((mods & java.lang.reflect.Modifier.ABSTRACT) != 0 && (mods & java.lang.reflect.Modifier.STATIC) == 0) {
                 out.add(all[i]);
             }
         }
-        return (Method[]) out.toArray(Method.class);
+        return out.toArray(new Method[0]);
     }
 
     private static int indexOf(Method[] members, String name) {
@@ -171,7 +173,7 @@ public final class AnnotationParser {
     }
 
     /** Fills defaults, fixes the toString order the way a hash map of defaults would list it, and instantiates. */
-    private Annotation create(Class<?> type, Method[] members, Object[] values, Buf explicitOrder) {
+    private Annotation create(Class<?> type, Method[] members, Object[] values, ArrayList<Object> explicitOrder) {
         String[] names = new String[members.length];
         boolean[] hasDefault = new boolean[members.length];
         for (int i = 0; i < members.length; i++) {
@@ -184,8 +186,8 @@ public final class AnnotationParser {
         }
         // Colliding hash buckets list in an order the reference JVM derives from symbol addresses;
         // experiments show no rule, so ties keep declaration order.
-        Buf defaultNames = new Buf();
-        Buf defaultIndexes = new Buf();
+        ArrayList<Object> defaultNames = new ArrayList<>();
+        ArrayList<Object> defaultIndexes = new ArrayList<>();
         for (int i = 0; i < members.length; i++) {
             if (hasDefault[i]) {
                 defaultNames.add(names[i]);
@@ -203,12 +205,17 @@ public final class AnnotationParser {
         }
     }
 
-    private static int[] printOrder(boolean[] hasDefault, Buf defaultNames, Buf defaultIndexes, Buf explicitOrder) {
+    private static int[] printOrder(boolean[] hasDefault, ArrayList<Object> defaultNames,
+            ArrayList<Object> defaultIndexes, ArrayList<Object> explicitOrder) {
         int[] order = new int[hasDefault.length];
         int k = 0;
-        int[] hashed = HashOrder.order((String[]) defaultNames.toArray(String.class));
-        for (int i = 0; i < hashed.length; i++) {
-            order[k++] = ((Integer) defaultIndexes.get(hashed[i])).intValue();
+        // Java 8 lists the members with defaults in the order a HashMap of their names iterates.
+        HashMap<Object, Object> byName = new HashMap<>(0);
+        for (int i = 0; i < defaultNames.size(); i++) {
+            byName.put(defaultNames.get(i), defaultIndexes.get(i));
+        }
+        for (Object at : byName.values()) {
+            order[k++] = ((Integer) at).intValue();
         }
         for (int i = 0; i < explicitOrder.size(); i++) {
             int at = ((Integer) explicitOrder.get(i)).intValue();

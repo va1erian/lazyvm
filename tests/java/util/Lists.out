@@ -1,0 +1,81 @@
+[5, 3, 8, 1] 4 false true 1 -1
+[9, 5, 7, 3, 8, 1, 3] 3 6
+get(-1): !java.lang.ArrayIndexOutOfBoundsException: -1
+get(size): !java.lang.IndexOutOfBoundsException: Index: 7, Size: 7
+set(9): !java.lang.IndexOutOfBoundsException: Index: 9, Size: 7
+add(9,x): !java.lang.IndexOutOfBoundsException: Index: 9, Size: 7
+add(-1,x): !java.lang.IndexOutOfBoundsException: Index: -1, Size: 7
+remove(9): !java.lang.IndexOutOfBoundsException: Index: 9, Size: 7
+remove(obj): true [9, 5, 7, 8, 1, 3]
+remove(missing): false
+set: 9 [10, 5, 7, 8, 1, 3]
+addAll: true [10, 5, 7, 8, 1, 3, 4, 4]
+addAll@: true [10, 6, 6, 5, 7, 8, 1, 3, 4, 4]
+addAll@bad: !java.lang.IndexOutOfBoundsException: Index: 99, Size: 10
+addAll empty: false
+removeAll: true [10, 5, 7, 8, 1, 3]
+retainAll: true [10, 7, 8, 1]
+removeAll null: !java.lang.NullPointerException
+containsAll: true false
+[1, 2, 2, 4, 6, 7, 8, 10]
+[10, 8, 7, 6, 4, 2, 2, 1]
+[6, 10, 7, 4, 1, 8, 2, 2]
+[12, 20, 14, 8, 2, 16, 4, 4]
+replaceAll null: !java.lang.NullPointerException
+removeIf: true [14, 2]
+removeIf none: false [14, 2]
+removeIf null: !java.lang.NullPointerException
+14;2;
+forEach null: !java.lang.NullPointerException
+forEach CME: !java.util.ConcurrentModificationException
+sort CME: !java.util.ConcurrentModificationException
+removeIf CME: !java.util.ConcurrentModificationException
+replaceAll CME: !java.util.ConcurrentModificationException
+[3, 4, 5, 6] 4 3 2 false
+[20, 30, 5, 6, 60] [1, 2, 20, 30, 5, 6, 60, 7, 8]
+[20, 6, 60] [1, 2, 20, 6, 60, 7, 8]
+subList bad from: !java.lang.IndexOutOfBoundsException: fromIndex = -1
+subList bad to: !java.lang.IndexOutOfBoundsException: toIndex = 99
+subList reversed: !java.lang.IllegalArgumentException: fromIndex(3) > toIndex(2)
+sub get bad: !java.lang.IndexOutOfBoundsException: Index: 3, Size: 3
+sub add bad: !java.lang.IndexOutOfBoundsException: Index: 99, Size: 3
+sub stale size: !java.util.ConcurrentModificationException
+sub stale get: !java.util.ConcurrentModificationException
+sub stale iterator: !java.util.ConcurrentModificationException
+sub sort: [4, 1, 2, 9, 7]
+sub removeIf: [4, 1, 7]
+sub replaceAll: [4, -2, -9, -1, 7]
+sub addAll: [4, 2, 8, 8]
+sub equals: true 994
+[1, 2, 3] [1, 2, 3, 4] false true 30817 1
+new ArrayList(-1): !java.lang.IllegalArgumentException: Illegal Capacity: -1
+new ArrayList(null): !java.lang.NullPointerException
+toArray: [1, 2, 3] [1, 2, 3] [1, 2, 3, null, null]
+toArray bad type: !java.lang.ArrayStoreException
+toArray null: !java.lang.NullPointerException
+toArray reuse: true [1, 2, 3, null, 9]
+asList set: y [x, Y, z]
+asList add: !java.lang.UnsupportedOperationException
+asList remove: !java.lang.UnsupportedOperationException
+asList removeAll: !java.lang.UnsupportedOperationException
+asList removeIf: false
+asList clear: !java.lang.UnsupportedOperationException
+asList get bad: !java.lang.ArrayIndexOutOfBoundsException: 3
+asList sort: [z, x, Y]
+asList replaceAll: [zz, xx, YY]
+asList iterator: !java.lang.UnsupportedOperationException
+asList null: !java.lang.NullPointerException
+asList write-through: [q, r]
+asList toArray type: String[] Object[]
+asList indexOf: 0 false 1
+asList equals: false 3903423
+ensureCapacity modCount: 0:0. 0:1. 0:5. 0:10. 0:11! 0:12! 1:0. 1:1! 1:5! 1:10! 1:11! 1:12! 2:0. 2:1! 2:5! 2:10! 2:11! 2:12! 3:0. 3:1! 3:5! 3:10! 3:11! 3:12! 
+trimToSize modCount: !java.util.ConcurrentModificationException
+self: [(this Collection), 1]
+nulls: [null, null] 0 1 true [null]
+growth: 1000 499500
+AbstractList listIterator bad: !java.lang.IndexOutOfBoundsException: Index: 5, Size: 3
+HashSet toArray bad type: !java.lang.ArrayStoreException: java.lang.Integer
+capacity through a sort that adds: 7 1 0 1 0 1 0 | 0 0 3 5 4 7 6 | 2 1 0 1 0 1 0 | 0 0 0 0 0 0 0 | 0 0 0 0 0 0 0 | 9 3 2 4 3 6 5 | 
+HashMap values compared by identity first: true true true false false
+done

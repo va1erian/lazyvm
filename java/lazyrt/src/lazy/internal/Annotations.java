@@ -3,6 +3,7 @@ package lazy.internal;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 
 /** Lookups over an array of annotations, shared by every AnnotatedElement. */
 public final class Annotations {
@@ -33,7 +34,7 @@ public final class Annotations {
         }
         Repeatable repeatable = type.getAnnotation(Repeatable.class);
         Class<? extends Annotation> container = repeatable == null ? null : repeatable.value();
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         for (int i = 0; i < all.length; i++) {
             Class<? extends Annotation> t = all[i].annotationType();
             if (t == type) {
@@ -42,10 +43,10 @@ public final class Annotations {
                 addContained(out, all[i], container);
             }
         }
-        return (T[]) out.toArray(type);
+        return out.toArray((T[]) java.lang.reflect.Array.newInstance(type, 0));
     }
 
-    private static void addContained(Buf out, Annotation container, Class<? extends Annotation> type) {
+    private static void addContained(ArrayList<Object> out, Annotation container, Class<? extends Annotation> type) {
         try {
             Method value = type.getDeclaredMethod("value");
             value.setAccessible(true);

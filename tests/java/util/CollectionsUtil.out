@@ -1,0 +1,107 @@
+array sort [1, 2, 3, 5, 7, 8, 9]
+array bsearch 4 -4 -1 -8
+array sort rev [9, 8, 7, 5, 3, 2, 1] 2 -5
+array reverse [1, 2, 3, 5, 7, 8, 9]
+array swap [9, 2, 3, 5, 7, 8, 1]
+array rotate 2 [8, 1, 9, 2, 3, 5, 7]
+array rotate -3 [2, 3, 5, 7, 8, 1, 9]
+array rotate 100 [1, 9, 2, 3, 5, 7, 8]
+array shuffle 42 [2, 8, 5, 1, 7, 3, 9]
+array shuffle 7 [3, 9, 8, 7, 2, 5, 1]
+array min/max 1 9 9 1 1
+array frequency 1 0 2
+array replaceAll true false [33, 9, 8, 7, 2, 5, 1]
+array subList idx 1 4 -1 0 8 -1
+array copy [1, 2, 3, 0, 0]
+array fill [8, 8, 8, 8, 8]
+array copy too small: !java.lang.IndexOutOfBoundsException: Source does not fit in dest
+array min empty: !java.util.NoSuchElementException
+array max empty: !java.util.NoSuchElementException
+array swap bad: !java.lang.IndexOutOfBoundsException: Index: 5, Size: 2
+array rotate empty: []
+linked sort [1, 2, 3, 5, 7, 8, 9]
+linked bsearch 4 -4 -1 -8
+linked sort rev [9, 8, 7, 5, 3, 2, 1] 2 -5
+linked reverse [1, 2, 3, 5, 7, 8, 9]
+linked swap [9, 2, 3, 5, 7, 8, 1]
+linked rotate 2 [8, 1, 9, 2, 3, 5, 7]
+linked rotate -3 [2, 3, 5, 7, 8, 1, 9]
+linked rotate 100 [1, 9, 2, 3, 5, 7, 8]
+linked shuffle 42 [2, 8, 5, 1, 7, 3, 9]
+linked shuffle 7 [3, 9, 8, 7, 2, 5, 1]
+linked min/max 1 9 9 1 1
+linked frequency 1 0 2
+linked replaceAll true false [33, 9, 8, 7, 2, 5, 1]
+linked subList idx 1 4 -1 0 8 -1
+linked copy [1, 2, 3, 0, 0]
+linked fill [8, 8, 8, 8, 8]
+linked copy too small: !java.lang.IndexOutOfBoundsException: Source does not fit in dest
+linked min empty: !java.util.NoSuchElementException
+linked max empty: !java.util.NoSuchElementException
+linked swap bad: !java.lang.IndexOutOfBoundsException: Index: 5, Size: 2
+linked rotate empty: []
+true [73, 69, 151, 98, 187, 160, 3, 34, 92, 145, 14, 195]
+[76, 35, 158, 142, 174, 51, 84, 97, 79, 89, 150, 127]
+150 -201 100
+sort null element: !java.lang.NullPointerException
+sort not comparable: !java.lang.ClassCastException: java.lang.Object cannot be cast to java.lang.Comparable
+sort stable: [a, d, f, h, j, l, bb, cc, ee, gg, ii, kk]
+sort unmodifiable: !java.lang.UnsupportedOperationException
+sort asList: [1, 2, 3]
+nCopies: [ab, ab, ab] [] 0 36742 true
+nCopies bad: !java.lang.IllegalArgumentException: List length = -2
+nCopies get bad: !java.lang.IndexOutOfBoundsException: Index: 2, Size: 2
+nCopies add: !java.lang.UnsupportedOperationException
+emptyList: [] 0 true 1 true
+emptyList iterator: !java.util.NoSuchElementException
+emptyList iterator remove: !java.lang.IllegalStateException
+emptyList get: !java.lang.IndexOutOfBoundsException: Index: 0
+emptySet/emptyMap: [] {} false null [][][]
+emptySet add: !java.lang.UnsupportedOperationException
+emptyMap put: !java.lang.UnsupportedOperationException
+emptyMap equals: true 0
+empty iterators: false false 0 false
+empty enumeration: !java.util.NoSuchElementException
+emptySorted: [] {} [] {}
+singleton: [5] [null] {k=v} true 5 1 3
+singletonList get bad: !java.lang.IndexOutOfBoundsException: Index: 1, Size: 1
+singleton add: !java.lang.UnsupportedOperationException
+singleton remove: !java.lang.UnsupportedOperationException
+singleton iterator: !java.util.NoSuchElementException
+singletonMap entries: !java.lang.UnsupportedOperationException
+unmodifiableList: [1, 2, 3, 4] 4 true true 955331 [2, 3] 2
+unmodifiableList add: !java.lang.UnsupportedOperationException
+unmodifiableList set: !java.lang.UnsupportedOperationException
+unmodifiableList remove: !java.lang.UnsupportedOperationException
+unmodifiableList iterator: !java.lang.UnsupportedOperationException
+unmodifiableList listIterator set: !java.lang.UnsupportedOperationException
+unmodifiableList subList add: !java.lang.UnsupportedOperationException
+unmodifiableList sort: !java.lang.UnsupportedOperationException
+unmodifiableList null: !java.lang.NullPointerException
+unmodifiableCollection: !java.lang.UnsupportedOperationException
+unmodifiableSet: !java.lang.UnsupportedOperationException
+unmodifiableSortedSet: !java.lang.UnsupportedOperationException
+unmodifiableNavigableSet: !java.lang.UnsupportedOperationException
+unmodifiableMap: {a=1, b=2} 2 2 [a, b][1, 2][a=1, b=2] true 192
+unmodifiableMap put: !java.lang.UnsupportedOperationException
+unmodifiableMap entry: !java.lang.UnsupportedOperationException
+unmodifiableMap keySet remove: !java.lang.UnsupportedOperationException
+unmodifiableMap entrySet contains: true false 1 1 1
+unmodifiableSortedMap: {a=1, b=2} a b {a=1}{b=2}{a=1} null
+unmodifiableNavigableMap: !java.lang.UnsupportedOperationException
+synchronized: [0, 1, 2, 3] [0, 1, 2, 3] {1=7} [0, 1, 2, 3] 0 [0, 1] 1 [1, 2] 2 [1][7][1=7] false924547
+synchronized null: !java.lang.NullPointerException
+newSetFromMap: [x, p, q] 3 true true 345
+newSetFromMap non-empty: !java.lang.IllegalArgumentException: Map is non-empty
+asLifoQueue: [3, 2, 1] 3 3 [2, 1] 2 2 1truefalse
+enumeration/list: [1, 2, 3] false [4, 5]
+enumeration end: !java.util.NoSuchElementException
+addAll: true false [1, 2, 3] false true
+addAll null: !java.lang.NullPointerException
+disjoint: true false false true true
+reverseOrder: [c, b, a] 1 -1 1 -1
+singletonList sort: [1]
+empty iterator kinds: -I- LI- --E -I- LI- -I- -I- --E --E false false
+list iterator kinds: ILIIILLLLILIIIILII true IllegalArgumentException: fromIndex(2) > toIndex(1) IndexOutOfBoundsException: toIndex = 4
+checked iterator forEachRemaining: quiet ConcurrentModificationException: null quiet 
+done

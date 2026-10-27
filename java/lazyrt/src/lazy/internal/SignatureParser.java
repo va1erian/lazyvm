@@ -5,6 +5,7 @@ import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.util.ArrayList;
 
 /**
  * Reads the Signature attribute grammar of JVMS 4.7.9.1 into java.lang.reflect types.
@@ -43,22 +44,22 @@ public final class SignatureParser {
         pos = 0;
         skipFormals();
         type();
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         while (pos < sig.length()) {
             out.add(type());
         }
-        return (Type[]) out.toArray(Type.class);
+        return out.toArray(new Type[0]);
     }
 
     public Type[] methodParameters() {
         pos = 0;
         skipFormals();
         expect('(');
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         while (peek() != ')') {
             out.add(type());
         }
-        return (Type[]) out.toArray(Type.class);
+        return out.toArray(new Type[0]);
     }
 
     public Type methodReturn() {
@@ -73,12 +74,12 @@ public final class SignatureParser {
         skipFormals();
         skipParameters();
         type();
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         while (pos < sig.length() && sig.charAt(pos) == '^') {
             pos++;
             out.add(type());
         }
-        return (Type[]) out.toArray(Type.class);
+        return out.toArray(new Type[0]);
     }
 
     /** The formal type parameters; their bounds are parsed when asked for. */
@@ -89,7 +90,7 @@ public final class SignatureParser {
             return GenericTypes.none();
         }
         pos++;
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         while (peek() != '>') {
             int colon = sig.indexOf(':', pos);
             if (colon < 0) {
@@ -100,21 +101,21 @@ public final class SignatureParser {
             out.add(new GenericTypes.Variable<D>(name, (D) decl, this, colon));
             skipBounds();
         }
-        return (TypeVariable<D>[]) out.toArray(TypeVariable.class);
+        return (TypeVariable<D>[]) out.toArray(new TypeVariable<?>[0]);
     }
 
     /** The bounds of the type parameter whose first ':' is at `at`. */
     Type[] bounds(int at) {
         SignatureParser p = new SignatureParser(sig, decl, holder);
         p.pos = at;
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         while (p.peek() == ':') {
             p.pos++;
             if (p.peek() != ':') {
                 out.add(p.type());
             }
         }
-        return (Type[]) out.toArray(Type.class);
+        return out.toArray(new Type[0]);
     }
 
     // ---- scanning ------------------------------------------------------
@@ -300,12 +301,12 @@ public final class SignatureParser {
 
     private Type[] arguments() {
         expect('<');
-        Buf out = new Buf();
+        ArrayList<Object> out = new ArrayList<>();
         while (peek() != '>') {
             out.add(argument());
         }
         pos++;
-        return (Type[]) out.toArray(Type.class);
+        return out.toArray(new Type[0]);
     }
 
     private Type argument() {

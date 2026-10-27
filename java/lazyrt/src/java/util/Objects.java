@@ -9,6 +9,10 @@ public final class Objects {
         return a == b || (a != null && a.equals(b));
     }
 
+    public static boolean deepEquals(Object a, Object b) {
+        return AnyArray.deepElementSame(a, b);
+    }
+
     public static int hashCode(Object o) {
         return o != null ? o.hashCode() : 0;
     }

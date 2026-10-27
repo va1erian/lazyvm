@@ -1,0 +1,22 @@
+ArrayList: [(this Collection), 1] hash StackOverflowError
+LinkedList: [(this Collection)] hash StackOverflowError
+Vector: [(this Collection)] hash StackOverflowError
+Stack: [(this Collection)] hash StackOverflowError
+ArrayDeque: [(this Collection), 2]
+HashSet: [a, (this Collection)] hash StackOverflowError
+LinkedHashSet: [(this Collection)] hash StackOverflowError
+HashMap value: {k=(this Map)} hash StackOverflowError
+LinkedHashMap key and value: {(this Map)=(this Map)} hash StackOverflowError
+TreeMap value: {k=(this Map)} hash StackOverflowError
+Hashtable value: {k=(this Map)} hash 107
+IdentityHashMap key and value: {(this Map)=(this Map)} hash 0
+EnumMap value: {NEW=(this Map)} hash StackOverflowError
+list holding its unmodifiable view: StackOverflowError hash StackOverflowError
+list holding its synchronized view: StackOverflowError hash StackOverflowError
+subList over the list: [0, [0, (this Collection)]] hash StackOverflowError
+map holding its unmodifiable view: StackOverflowError hash StackOverflowError
+values view: [{k=(this Map)}] keySet [k] entrySet [k={k=(this Map)}]
+Arrays.deepToString: [[...], [[...]]] deepHashCode StackOverflowError asList true
+two lists holding each other: StackOverflowError / StackOverflowError
+two Hashtables holding each other: hash 32 30 toString StackOverflowError
+done

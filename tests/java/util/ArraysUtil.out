@@ -1,0 +1,38 @@
+[true, true, true, true][-7, -7, -7, -7][q, q, q, q][300, 300, 300, 300][42, 42, 42, 42][1099511627776, 1099511627776, 1099511627776, 1099511627776][1.5, 1.5, 1.5, 1.5][-0.0, -0.0, -0.0, -0.0][o, o, o, o][s, s, s, s]
+[true, false, false, true][1, 1, -7, -7][q, q, x, x][300, -1, 300, 300][42, 42, 42, 0][0, 1099511627776, 1099511627776, 1099511627776][1.5, NaN, 1.5, 1.5][-0.0, -0.0, Infinity, Infinity][null, o, o, o][s, t, t, s]
+fill bad range: !java.lang.IllegalArgumentException: fromIndex(3) > toIndex(2)
+fill neg: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: -1
+fill past end: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 5
+fill null array: !java.lang.NullPointerException
+fill ArrayStore: !java.lang.ArrayStoreException: java.lang.Integer
+null[][null, x, 1][1.0, 0.1, 1.0E10, 1.0E-5, NaN][0.33333334, 100.0]6
+[1, 2, 3][1, 2, 3, 4, 5, 0, 0, 0][][2, 3, 4][4, 5, 0, 0, 0][]
+[true, false, false, true, false, false][1, 1, -7, -7, 0]15[300, -1, 300, 300, 0][0, 1099511627776, 1099511627776, 1099511627776, 0][1.5, NaN, 1.5, 1.5, 0.0][-0.0, -0.0, Infinity, Infinity, 0.0][s, t, t, s, null]
+[false, false, true, false, false][1, -7, -7, 0, 0][-1, 300, 300, 0, 0][1099511627776, 1099511627776, 1099511627776, 0, 0][NaN, 1.5, 1.5, 0.0, 0.0][-0.0, Infinity, Infinity, 0.0, 0.0][t, t, s, null, null]2
+copyOf neg: !java.lang.NegativeArraySizeException
+copyOfRange reversed: !java.lang.IllegalArgumentException: 3 > 1
+copyOfRange from past end: !java.lang.ArrayIndexOutOfBoundsException
+copyOfRange from neg: !java.lang.ArrayIndexOutOfBoundsException
+copyOfRange objects: !java.lang.ArrayIndexOutOfBoundsException
+copyOf null: !java.lang.NullPointerException
+copyOf type: Number[] Integer[] Integer[]
+copyOf bad type: !java.lang.ArrayStoreException
+true false true false true false true true truetruetruetruetrue
+29615266 0 1 1023 1057489857 1069547551 40359 128 28 872 123015 33759
+2 -1 -6 -3 -1 1-32-21-3-3112
+binarySearch signed zero/NaN: 1 0 2 1
+binarySearch bad range: !java.lang.IllegalArgumentException: fromIndex(3) > toIndex(1)
+binarySearch past end: !java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 6
+binarySearch null cmp: 1
+binarySearch not comparable: !java.lang.ClassCastException: java.lang.Object cannot be cast to java.lang.Comparable
+[[1, 2], [a, [3, 4]], [null], []] [] null [[true], [c], [1.5], [2], [3], [4], [5.0]]
+[[...], [[...], 1]]
+true false true 65663 false true false 0 true
+[ALPHA, bravo, charlie, delta] [ALPHA, bravo, charlie, delta] 4 true ArrayList java.util.Arrays$ArrayList 0 1 2
+[0, 1, 4][0, 1, 4, 9, 16, 25][1099511627776, 2199023255552, 4398046511104][0.0, 0.5, 1.0]
+[0, 1, 5, 14, 30, 55][1, 2, 6, 4][1.0, 2.0, 6.0][a, ab, abc]
+setAll null: !java.lang.NullPointerException
+parallelPrefix bad range: !java.lang.IllegalArgumentException: fromIndex(2) > toIndex(1)
+parallelSetAll: [1, 2, 3, 4]
+Objects.deepEquals true true true true false false
+done
