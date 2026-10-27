@@ -180,22 +180,24 @@ needs the D6 "Compiler support" row confirmed.
       from the Javadoc. `tools.jar` is the oracle's: `lib/tools.jar` of the
       JDK 8 whose `bin/java` `LAZYVM_ORACLE_JAVA` names. This repo does not
       carry it, and `tools/lazyos_test.py` stages it into the test image only.
-      Every run compiles the sources under `tests/java` with the
-      `-bootclasspath` and `-sourcepath` that `tools/testlib.py` uses. Debug from what javac prints, its exit status, and
-      exception messages and stack traces only: no `-Xtrace:interp`, `javap`,
+      Every run compiles the sources under `tests/java` with
+      `-bootclasspath dist/lazyrt.jar` (a jar, so javac's own jar reading is
+      exercised), the `-sourcepath` of `tools/testlib.py` and the flags of
+      `tools/javac.py`, and copies the tests' resources next to the classes
+      as `testlib.copy_resources` does. Debug from what javac prints, its exit
+      status, and exception messages and stack traces only: no `-Xtrace:interp`, `javap`,
       or bytecode or verifier dumps of `tools.jar` classes (shared rule 1). If
       javac on LazyVM fails with `NoClassDefFoundError` for a `sun.*` or
       `com.sun.*` class outside `tools.jar`, stop and report.
       Files: `java/lazyrt/src/javax/{lang/model,tools,annotation/processing}`,
       `java/lazyrt/src/java/{lang,util,util/zip,util/jar,text,net}` as far as
       javac needs them, `tools/javac_on_lazyvm.py`, `tools/lazyos_test.py`.
-      Check: on Windows, `tools/javac_on_lazyvm.py` compiles the sources with javac 8 on the oracle JVM and with javac 8 on LazyVM, and every class file is byte-identical. On LazyOS, `tools/lazyos_test.py --javac` compiles each test with javac 8 on LazyVM into a writable guest directory (`/tmp`), runs it there, and its stdout matches the test's `.out`. Local only: both need the oracle's `tools.jar`, so CI skips them.
+      Check: on Windows, `tools/javac_on_lazyvm.py` compiles the sources with javac 8 on the oracle JVM and with javac 8 on LazyVM, and every class file is byte-identical. On LazyOS, `tools/lazyos_test.py --javac` compiles each test with javac 8 on LazyVM into a writable guest directory (`/tmp`) with its resources beside it, runs it there, and its stdout matches the test's `.out`. Local only: both need the oracle's `tools.jar`, so CI skips them.
       Needs: S4, S5, S7, S8, S11 (the S11-05 performance pass comes first: an interpreted javac's speed is the main risk to the stage).
 
-Gate: on both platforms (LazyOS through `tools/lazyos_test.py`), `lazyvm -cp
-tools.jar com.sun.tools.javac.Main -bootclasspath lazyrt.jar -d out
-s4/Showcase.java` compiles `tests/java/s4/Showcase`, and `lazyvm -cp out
-s4.Showcase` prints `tests/java/s4/Showcase.out`.
+Gate: `tests/java/s4/Showcase` compiled by javac 8 on LazyVM prints its
+`.out`, on Windows (`tools/javac_on_lazyvm.py --filter s4.Showcase --run`)
+and on LazyOS (`tools/lazyos_test.py --javac --filter s4.Showcase`).
 
 ## LazyOS-side work items
 

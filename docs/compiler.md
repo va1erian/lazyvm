@@ -4,8 +4,9 @@ Can a LazyOS machine turn `.java` sources into class files LazyVM runs? Today
 it cannot: apps are compiled on Windows with JDK 25 (`-source 8 -target 8`,
 [`decisions.md`](decisions.md) D3) and the jar is copied over. This note
 weighs three ways to change that, records a probe run on 2026-10-26, and ends
-with a recommendation. It is a proposal: nothing here is decided until the
-owner confirms it in `decisions.md`.
+with a recommendation. It is a proposal: A, B and the class library B needs
+are proposed in `decisions.md` (D4 for A, D6 and `plan-2.md` S14 for B) and
+nothing is decided until the owner confirms them there.
 
 ## 1. Constraints
 
@@ -28,8 +29,9 @@ owner confirms it in `decisions.md`.
   self-hosting work (LazyOS `docs/self-hosting-plan.md`, SH0 and SH1) already
   runs rustc, cargo and rust-lld on the machine. Its Linux ABI delivers faults
   as `SIGSEGV` to a handler and supports JIT-style executable memory (W^X
-  flips under `mprotect`, used by JavaScriptCore), threads, futexes and
-  `posix_spawn` (LazyOS `docs/linux-abi-plan.md`).
+  flips under `mprotect`, used by JavaScriptCore), threads and futexes
+  (LazyOS `docs/linux-abi-plan.md`); SH0 found rustc's `posix_spawn` of the
+  linker working too.
 
 ## 2. Options
 
@@ -50,8 +52,10 @@ and can be any version, emitting `--release 8` for LazyVM.
   requires. The staging strips the JDK's `src.zip`, and the source offer is
   kept outside both repos and the image: agents read LazyOS, and shared rule
   1 forbids them OpenJDK source.
-- **Where:** entirely in the LazyOS repo (a `LOS-` item and a staging script
-  modelled on `tools/selfhost/`). Nothing in this repo changes.
+- **Where:** entirely in the LazyOS repo, tracked in its own plan (not a
+  `LOS-` item, which is LazyOS work LazyVM needs), with a staging script
+  modelled on `tools/selfhost/`. Nothing in this repo changes beyond the
+  proposed D4 note.
 - **Unknowns:** whether HotSpot's startup probes (cgroups, `/proc`, `/sys`,
   CPU detection) and its safepoint and implicit-null-check signal handling
   work on LazyOS's ABI. A spike answers that: boot the image, run

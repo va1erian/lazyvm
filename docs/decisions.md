@@ -89,6 +89,9 @@ decision marked **(proposed)** is not in force until the owner confirms it.
     `os.lazy.display.v1` client mode; Messenger through `lazyos-sys`.
 - HotSpot is not a runtime target. It is the **test oracle** for `java.*`
   behaviour (D9).
+- **(proposed)** A stock JDK may ship in a LazyOS image as a developer tool
+  for compiling, never as the way apps run; tracked in the LazyOS repo. See
+  [`compiler.md`](compiler.md) option A.
 - "xui rehauled for Windows" means whatever the xui `winit-backend` lacks for
   real apps (DPI, menus, file dialogs, clipboard). That work is tracked as xui
   issues in `va1erian/xui`, found in S9 rather than guessed now.
