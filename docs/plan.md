@@ -271,7 +271,7 @@ Goal: the everyday `java.util` and `java.io` surface from
       Check: `tests/java/util/HashOrder`, `TreeMaps`, `MapDefaults`.
 - [ ] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
       Javadoc except `%t` dates, which come with S11), `Double.toString`
-      (shortest repr as Java 8 prints it), `Integer.parseInt` and friends,
+      (the shortest form its Javadoc asks for, D9), `Integer.parseInt` and friends,
       `StringJoiner`, `String.split`, and `java.util.regex` (`Pattern` and
       `Matcher` backtracking engine, Java syntax subset documented in
       `docs/regex.md`).
