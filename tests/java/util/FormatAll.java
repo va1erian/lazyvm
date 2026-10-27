@@ -86,7 +86,7 @@ public class FormatAll {
         System.out.format("%5s|%n", "ab");
         System.out.format(Locale.ROOT, "%5s|%n", "ab");
         System.out.println(System.out.printf("") == System.out);
-        System.out.println(String.format("%d%%", 50) + String.format("%n").length());
+        System.out.println(String.format("%d%%", 50) + String.format("%n").equals(System.lineSeparator()));
         System.out.println(Locale.US + "|" + Locale.ROOT + "|" + Locale.ENGLISH);
         System.out.println(new Locale("EN", "us") + " " + new Locale("de") + " " + new Locale("de", "", "x")
                 + " " + new Locale("", "DE") + " " + new Locale("EN", "us", "Var") + " [" + new Locale("", "", "v") + "]");
