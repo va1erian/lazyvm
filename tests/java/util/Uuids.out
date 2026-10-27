@@ -1,0 +1,95 @@
+uuid 00000000-0000-0000-0000-000000000000 hash 0 version 0 variant 0 bits truetrue
+uuid ffffffff-ffff-ffff-ffff-ffffffffffff hash 0 version 15 variant 7 bits truetrue
+uuid 00000000-0000-0001-0000-000000000002 hash 3 version 0 variant 0 bits truetrue
+uuid 12345678-9abc-def0-0fed-cba987654321 hash 0 version 13 variant 0 bits truetrue
+uuid 80000000-0000-0000-7fff-ffffffffffff hash 0 version 0 variant 0 bits truetrue
+uuid 00000000-ffff-ffff-ffff-ffff00000000 hash 0 version 15 variant 7 bits truetrue
+uuid 00001000-0000-1000-0001-000000000001 hash 65537 version 1 variant 0 bits truetrue
+parse [1-2-3-4-5] 00000001-0002-0003-0004-000000000005 100020003/4000000000005
+parse [0-0-0-0-0] 00000000-0000-0000-0000-000000000000 0/0
+parse [ffffffff-ffff-ffff-ffff-ffffffffffff] ffffffff-ffff-ffff-ffff-ffffffffffff ffffffffffffffff/ffffffffffffffff
+parse [FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF] ffffffff-ffff-ffff-ffff-ffffffffffff ffffffffffffffff/ffffffffffffffff
+parse [AbCdEf01-2345-6789-aBcD-ef0123456789] abcdef01-2345-6789-abcd-ef0123456789 abcdef0123456789/abcdef0123456789
+parse [123456789-1-1-1-1] 23456789-0001-0001-0001-000000000001 2345678900010001/1000000000001
+parse [1-12345-1-1-1] 00000001-2345-0001-0001-000000000001 123450001/1000000000001
+parse [1-1-12345-1-1] 00000001-0001-2345-0001-000000000001 100012345/1000000000001
+parse [1-1-1-12345-1] 00000001-0001-0001-2345-000000000001 100010001/2345000000000001
+parse [1-1-1-1-1234567890123] 00000001-0001-0001-0001-234567890123 100010001/1234567890123
+parse [1-1-1-1-12345678901234567] NumberFormatException: For input string: "12345678901234567"
+parse [fffffffff-fffff-fffff-fffff-fffffffffffff] ffffffff-ffff-ffff-ffff-ffffffffffff ffffffffffffffff/ffffffffffffffff
+parse [1-1-1-1] IllegalArgumentException: Invalid UUID string: 1-1-1-1
+parse [1-1-1-1-1-1] IllegalArgumentException: Invalid UUID string: 1-1-1-1-1-1
+parse [-1-1-1-1] NumberFormatException: For input string: ""
+parse [1--1-1-1] NumberFormatException: For input string: ""
+parse [] IllegalArgumentException: Invalid UUID string: 
+parse [-] IllegalArgumentException: Invalid UUID string: -
+parse [----] IllegalArgumentException: Invalid UUID string: ----
+parse [-----] IllegalArgumentException: Invalid UUID string: -----
+parse [g-1-1-1-1] NumberFormatException: For input string: "g"
+parse [+1-1-1-1-1] NumberFormatException: Sign character in wrong position
+parse [-1-1-1-1-1] IllegalArgumentException: Invalid UUID string: -1-1-1-1-1
+parse [1-1-1-1-+1] NumberFormatException: Sign character in wrong position
+parse [1-1-1-1--1] IllegalArgumentException: Invalid UUID string: 1-1-1-1--1
+parse [1-1-1-1-+] NumberFormatException: Sign character in wrong position
+parse [1-1-1-1--] IllegalArgumentException: Invalid UUID string: 1-1-1-1--
+parse [0x1-1-1-1-1] NumberFormatException: For input string: "0x1"
+parse [#1-1-1-1-1] NumberFormatException: For input string: "#1"
+parse [ 1-1-1-1-1] NumberFormatException: For input string: " 1"
+parse [1-1-1-1-1 ] NumberFormatException: For input string: "1 "
+parse [1-1-1-1-ffffffffffffffff] NumberFormatException: For input string: "ffffffffffffffff"
+parse [1-1-1-1-10000000000000000] NumberFormatException: For input string: "10000000000000000"
+parse [1-1-1-1-8000000000000000] NumberFormatException: For input string: "8000000000000000"
+parse [1-1-1-1-7fffffffffffffff] 00000001-0001-0001-7fff-ffffffffffff 100010001/7fffffffffffffff
+parse [1-1-1-1-] IllegalArgumentException: Invalid UUID string: 1-1-1-1-
+parse [1-1-1--1-1] IllegalArgumentException: Invalid UUID string: 1-1-1--1-1
+parse [12345678123456781234567812345678] IllegalArgumentException: Invalid UUID string: 12345678123456781234567812345678
+parse [00000000-0000-1000-8000-000000000000] 00000000-0000-1000-8000-000000000000 1000/8000000000000000
+parse [1-1-1-1-1-] 00000001-0001-0001-0001-000000000001 100010001/1000000000001
+parse [1-1-1-1-1--] 00000001-0001-0001-0001-000000000001 100010001/1000000000001
+parse [1-1-1-1-1---] 00000001-0001-0001-0001-000000000001 100010001/1000000000001
+parse [0-0-0-0-0000000000000000000000001] 00000000-0000-0000-0000-000000000001 0/1
+parse [8000000000000000-0-0-0-0] NumberFormatException: For input string: "8000000000000000"
+parse [-0-0-0-0] NumberFormatException: For input string: ""
+parse [1-1-1-1-0x1] NumberFormatException: For input string: "0x1"
+parse [1-1-1-1-#1] NumberFormatException: For input string: "#1"
+parse [1-1-1-1-01] 00000001-0001-0001-0001-000000000001 100010001/1000000000001
+parse [١-1-1-1-1] 00000001-0001-0001-0001-000000000001 100010001/1000000000001
+parse [１-1-1-1-1] 00000001-0001-0001-0001-000000000001 100010001/1000000000001
+parse null NPE
+variants 0 0 0 0 0 0 0 0 2 2 2 2 6 6 7 7 | versions 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+v1 01234567-89ab-1cde-9234-567890abcdef ts cde89ab01234567 cs 4660 node 567890abcdef
+v1 variant 0 ts cde89ab01234567 cs 4660 node 567890abcdef
+v1 all ones ts fffffffffffffff cs 16383 node ffffffffffff
+v1 zero ts 0 cs 0 node 0
+v4 ts UnsupportedOperationException: Not a time-based UUID cs  Not a time-based UUID node  Not a time-based UUID
+v0 ts UnsupportedOperationException: Not a time-based UUID cs  Not a time-based UUID node  Not a time-based UUID
+compareTo 00 -1-1 -1-1 -1-1 -1-1 -1-1 11 00 -1-1 -1-1 -1-1 -1-1 11 11 00 -1-1 -1-1 -1-1 11 11 11 00 -1-1 -1-1 11 11 11 11 00 -1-1 11 11 11 11 11 00
+compare high first 1 equals truefalsefalsefalse
+compareTo null NPE
+md5 0 d41d8cd9-8f00-3204-a980-0998ecf8427e 32
+md5 1 55a54008-ad1b-3589-aa21-0d2629c1df41 32
+md5 2 05d531d2-76d6-39cc-a484-05423f54eff4 32
+md5 3 16b57f63-687c-3afa-a3b3-d4c506bc7d0b 32
+md5 15 978be0c5-29be-3888-9492-a127d693ccee 32
+md5 16 ceb981d7-947c-3cd4-ab7a-585613e9cd2e 32
+md5 31 5df9871e-bb48-300f-b1fd-84e9c6e5250a 32
+md5 32 e56466ae-6360-35f3-be83-2700647c9cd5 32
+md5 54 bebf69fd-f40b-34f6-9361-cbb20be2878c 32
+md5 55 a56c3713-5f4c-3f0f-923f-d9e774f418fc 32
+md5 56 0c3a6aef-fe09-3daa-88fe-06b1362f7c02 32
+md5 57 e1a0cbec-4de6-3ae1-93a3-9dbfcc9aa05f 32
+md5 63 a7b8bd22-0881-35a2-a9cf-3a46db5d152e 32
+md5 64 bba59758-cc80-3cb2-b68f-2229ce21c2c7 32
+md5 65 d9afb34c-7b0b-3400-83af-2dc1fe3cf3fe 32
+md5 119 64d95ab7-16ff-3ab4-ac1b-964ac6de33af 32
+md5 120 71373317-d703-3ae8-a32a-5236030e7f8a 32
+md5 127 622d99b1-5320-370c-bcf8-d0849d1e9a30 32
+md5 128 a3a8752b-9ed4-37f7-802f-def11c93374b 32
+md5 129 86ae43e1-e35a-34cb-a7c6-70446768bd0e 32
+md5 1000 9f24cdae-6323-371b-841f-61f53b59d8fd 32
+md5 abc 90015098-3cd2-3fb0-9696-3f7d28e17f72 zeros64 3b5d3c7d-207e-37dc-aeed-d301e35e2e58 ff 00594fd4-f42b-343f-81ca-0427a0576295
+md5 null NPE
+random 4 2 differ true len 36
+fuzz rounds 2000 parse 2000 sum 211610696
+fuzz short fields -932236184
+done

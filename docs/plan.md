@@ -281,8 +281,8 @@ Goal: the everyday `java.util` and `java.io` surface from
 - [ ] S5-02a `WeakHashMap` (needs S5-07): the `java.util` map whose keys are
       held through `WeakReference`, with entries expunged through a
       `ReferenceQueue`, behaviour specified in `design/collections.md` like
-      the other maps.
-      Check: `tests/java/util/WeakMaps` (both).
+      the other maps ([`design/weakhashmap.md`](design/weakhashmap.md)).
+      Check: `tests/java/util/WeakMaps`, `WeakMapOrder` (both).
 - [ ] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
       Javadoc except `%t` dates, which come with S11), `Double.toString`
       (the shortest form its Javadoc asks for, D9), `Integer.parseInt` and friends,
@@ -292,8 +292,11 @@ Goal: the everyday `java.util` and `java.io` surface from
       `docs/regex.md`).
       Check: `tests/java/util/FormatAll`, `DoubleToString` (100k random values against the oracle), `Regex`.
 - [ ] S5-04 Utilities: `Optional*`, `Objects`, `Random` (the exact LCG, done with S5-02),
-      `Scanner`, `Properties`, `UUID`, `Base64`, `BitSet`, `StringTokenizer`.
-      Check: `tests/java/util/Utilities`, `RandomSeq`.
+      `Scanner`, `Properties`, `UUID`, `Base64`, `BitSet`, `StringTokenizer`, to
+      [`design/util.md`](design/util.md) and the files it indexes.
+      Check: `tests/java/util/Utilities`, `RandomSeq`, `Base64s`, `Base64Streams`,
+      `Uuids`, `BitSets`, `UtilBuffers`, `Scanners`, `ScannerNumbers`, `PropertiesIO`,
+      `Tokenizers` (both).
 - [ ] S5-05 `java.io`: byte and char streams, `Buffered*`, `InputStreamReader`
       and `OutputStreamWriter` over the charsets, `File`, `FileInputStream`,
       `FileOutputStream`, `RandomAccessFile`, `Data*Stream`, `PrintWriter`,

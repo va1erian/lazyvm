@@ -1,0 +1,188 @@
+enc 0:  |  |  |  | 
+enc 1: +w== | -w== | +w== | +w | -w
+enc 2: +/8= | -_8= | +/8= | +/8 | -_8
+enc 3: +/+/ | -_-_ | +/+/ | +/+/ | -_-_
+enc 4: +/+/AA== | -_-_AA== | +/+/AA== | +/+/AA | -_-_AA
+enc 5: +/+/AAE= | -_-_AAE= | +/+/AAE= | +/+/AAE | -_-_AAE
+enc 6: +/+/AAEC | -_-_AAEC | +/+/AAEC | +/+/AAEC | -_-_AAEC
+enc 7: +/+/AAECgA== | -_-_AAECgA== | +/+/AAECgA== | +/+/AAECgA | -_-_AAECgA
+enc 8: +/+/AAECgH8= | -_-_AAECgH8= | +/+/AAECgH8= | +/+/AAECgH8 | -_-_AAECgH8
+encode(byte[]) aGVsbG8= len0 0 mime0 0
+mime 57 76 58 AAAAAA\r\nAA==
+mime 114 AAAAAA 115 160
+mime len -5: AAAAAAAAAAAAAAAAAA==
+mime len -1: AAAAAAAAAAAAAAAAAA==
+mime len 0: AAAAAAAAAAAAAAAAAA==
+mime len 1: AAAAAAAAAAAAAAAAAA==
+mime len 3: AAAAAAAAAAAAAAAAAA==
+mime len 4: AAAA\nAAAA\nAAAA\nAAAA\nAA==
+mime len 5: AAAA\nAAAA\nAAAA\nAAAA\nAA==
+mime len 7: AAAA\nAAAA\nAAAA\nAAAA\nAA==
+mime len 8: AAAAAAAA\nAAAAAAAA\nAA==
+mime len 11: AAAAAAAA\nAAAAAAAA\nAA==
+mime len 12: AAAAAAAAAAAA\nAAAAAA==
+mime len 76: AAAAAAAAAAAAAAAAAA==
+mime len 77: AAAAAAAAAAAAAAAAAA==
+mime len 79: AAAAAAAAAAAAAAAAAA==
+mime len 80: AAAAAAAAAAAAAAAAAA==
+mime len 2147483647: AAAAAAAAAAAAAAAAAA==
+mime len -2147483648: AAAAAAAAAAAAAAAAAA==
+sep 41: IllegalArgumentException: Illegal base64 line separator character 0x41
+sep 5a: IllegalArgumentException: Illegal base64 line separator character 0x5a
+sep 61: IllegalArgumentException: Illegal base64 line separator character 0x61
+sep 7a: IllegalArgumentException: Illegal base64 line separator character 0x7a
+sep 30: IllegalArgumentException: Illegal base64 line separator character 0x30
+sep 39: IllegalArgumentException: Illegal base64 line separator character 0x39
+sep 2b: IllegalArgumentException: Illegal base64 line separator character 0x2b
+sep 2f: IllegalArgumentException: Illegal base64 line separator character 0x2f
+sep 3d: IllegalArgumentException: Illegal base64 line separator character 0x3d
+sep 2d: AAAA-AAA=
+sep 5f: AAAA_AAA=
+sep d: AAAA\rAAA=
+sep a: AAAA\nAAA=
+sep 20: AAAA AAA=
+sep 0: AAAA\u0AAA=
+sep 80: AAAA\u80AAA=
+sep ff: AAAA\uffAAA=
+sep 2e: AAAA.AAA=
+sep 21: AAAA!AAA=
+sep empty: AAAAAAAAAA== | two: AAAAAAAA<>AAAAAAAA<>AA== | bad second: IllegalArgumentException: Illegal base64 line separator character 0x71 | bad, len 0: IllegalArgumentException: Illegal base64 line separator character 0x41
+sep null: NullPointerException: null | null len 0: NullPointerException: null | null len -1: NullPointerException: null
+mime nopad: AAAAAAAA!!AAAAAAAA!!AA | mime alphabet: +//+-+w==
+encInto 4: Output byte array is too small for encoding all input bytes | nopad Output byte array is too small for encoding all input bytes | mime4 Output byte array is too small for encoding all input bytes
+encInto 5: Output byte array is too small for encoding all input bytes | nopad Output byte array is too small for encoding all input bytes | mime4 Output byte array is too small for encoding all input bytes
+encInto 6: Output byte array is too small for encoding all input bytes | nopad 6 AQIDBA | mime4 Output byte array is too small for encoding all input bytes
+encInto 7: Output byte array is too small for encoding all input bytes | nopad 6 AQIDBA. | mime4 Output byte array is too small for encoding all input bytes
+encInto 8: 8 AQIDBA== | nopad 6 AQIDBA.. | mime4 Output byte array is too small for encoding all input bytes
+encInto 9: 8 AQIDBA==. | nopad 6 AQIDBA... | mime4 9 AQID\nBAUG
+encInto 10: 8 AQIDBA==.. | nopad 6 AQIDBA.... | mime4 9 AQID\nBAUG.
+encInto empty 0 
+encode null NPE
+encodeToString null NPE
+decode null NPE
+decode bytes null NPE
+wrap null NPE
+dec wrap null NPE
+singletons true true true
+dec  | B [] | U [] | M []
+dec A | B IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes | U IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes | M IllegalArgumentException: Last unit does not have enough valid bits
+dec = | B IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes | U IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec \u0 | B IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes | U IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes | M []
+dec ! | B IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes | U IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes | M []
+dec AA | B [0] | U [0] | M [0]
+dec AAA | B [0 0] | U [0 0] | M [0 0]
+dec AAAA | B [0 0 0] | U [0 0 0] | M [0 0 0]
+dec AA== | B [0] | U [0] | M [0]
+dec AAA= | B [0 0] | U [0 0] | M [0 0]
+dec AA= | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec AA=A | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec A=== | B IllegalArgumentException: Last unit does not have enough valid bits | U IllegalArgumentException: Last unit does not have enough valid bits | M IllegalArgumentException: Last unit does not have enough valid bits
+dec A= | B IllegalArgumentException: Last unit does not have enough valid bits | U IllegalArgumentException: Last unit does not have enough valid bits | M IllegalArgumentException: Last unit does not have enough valid bits
+dec AAA== | B IllegalArgumentException: Input byte array has incorrect ending byte at 4 | U IllegalArgumentException: Input byte array has incorrect ending byte at 4 | M [0 0]
+dec AAAA= | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec AAAA== | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec == | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec === | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec ==== | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec AA==AA== | B IllegalArgumentException: Input byte array has incorrect ending byte at 4 | U IllegalArgumentException: Input byte array has incorrect ending byte at 4 | M IllegalArgumentException: Input byte array has incorrect ending byte at 5
+dec QUI=QUI= | B IllegalArgumentException: Input byte array has incorrect ending byte at 4 | U IllegalArgumentException: Input byte array has incorrect ending byte at 4 | M IllegalArgumentException: Input byte array has incorrect ending byte at 5
+dec QQ | B [65] | U [65] | M [65]
+dec QUI | B [65 66] | U [65 66] | M [65 66]
+dec QUJD | B [65 66 67] | U [65 66 67] | M [65 66 67]
+dec QUJDQ | B IllegalArgumentException: Last unit does not have enough valid bits | U IllegalArgumentException: Last unit does not have enough valid bits | M IllegalArgumentException: Last unit does not have enough valid bits
+dec QUJDQUJDQ | B IllegalArgumentException: Last unit does not have enough valid bits | U IllegalArgumentException: Last unit does not have enough valid bits | M IllegalArgumentException: Last unit does not have enough valid bits
+dec Q=Q= | B IllegalArgumentException: Last unit does not have enough valid bits | U IllegalArgumentException: Last unit does not have enough valid bits | M IllegalArgumentException: Last unit does not have enough valid bits
+dec AB== | B [0] | U [0] | M [0]
+dec AE== | B [0] | U [0] | M [0]
+dec AAB= | B [0 0] | U [0 0] | M [0 0]
+dec AAE= | B [0 1] | U [0 1] | M [0 1]
+dec AP// | B [0 -1 -1] | U IllegalArgumentException: Illegal base64 character 2f | M [0 -1 -1]
+dec -_ | B IllegalArgumentException: Illegal base64 character 2d | U [-5] | M []
+dec +/ | B [-5] | U IllegalArgumentException: Illegal base64 character 2b | M [-5]
+dec +/+/ | B [-5 -1 -65] | U IllegalArgumentException: Illegal base64 character 2b | M [-5 -1 -65]
+dec -_-_ | B IllegalArgumentException: Illegal base64 character 2d | U [-5 -1 -65] | M []
+dec A A | B IllegalArgumentException: Illegal base64 character 20 | U IllegalArgumentException: Illegal base64 character 20 | M [0]
+dec A\nA== | B IllegalArgumentException: Illegal base64 character a | U IllegalArgumentException: Illegal base64 character a | M [0]
+dec QUJD\r\nQUJD | B IllegalArgumentException: Illegal base64 character d | U IllegalArgumentException: Illegal base64 character d | M [65 66 67 65 66 67]
+dec QUJD\uff | B IllegalArgumentException: Illegal base64 character -1 | U IllegalArgumentException: Illegal base64 character -1 | M [65 66 67]
+dec QUJD\u100 | B IllegalArgumentException: Illegal base64 character 3f | U IllegalArgumentException: Illegal base64 character 3f | M [65 66 67]
+dec AA==\n | B IllegalArgumentException: Input byte array has incorrect ending byte at 4 | U IllegalArgumentException: Input byte array has incorrect ending byte at 4 | M [0]
+dec AA==x | B IllegalArgumentException: Input byte array has incorrect ending byte at 4 | U IllegalArgumentException: Input byte array has incorrect ending byte at 4 | M IllegalArgumentException: Input byte array has incorrect ending byte at 5
+dec AA==! | B IllegalArgumentException: Input byte array has incorrect ending byte at 4 | U IllegalArgumentException: Input byte array has incorrect ending byte at 4 | M [0]
+dec AA=== | B IllegalArgumentException: Input byte array has incorrect ending byte at 4 | U IllegalArgumentException: Input byte array has incorrect ending byte at 4 | M [0]
+dec AAAA\n= | B IllegalArgumentException: Illegal base64 character a | U IllegalArgumentException: Illegal base64 character a | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec QUJD! | B IllegalArgumentException: Illegal base64 character 21 | U IllegalArgumentException: Illegal base64 character 21 | M [65 66 67]
+dec Q!JD | B IllegalArgumentException: Illegal base64 character 21 | U IllegalArgumentException: Illegal base64 character 21 | M [64 -112]
+dec !QUJD | B IllegalArgumentException: Illegal base64 character 21 | U IllegalArgumentException: Illegal base64 character 21 | M [65 66 67]
+dec QUJD\n | B IllegalArgumentException: Illegal base64 character a | U IllegalArgumentException: Illegal base64 character a | M [65 66 67]
+dec \nQUJD | B IllegalArgumentException: Illegal base64 character a | U IllegalArgumentException: Illegal base64 character a | M [65 66 67]
+dec QU=JD | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec QQ=\n= | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec QQ\n== | B IllegalArgumentException: Illegal base64 character a | U IllegalArgumentException: Illegal base64 character a | M [65]
+dec QUJ\n= | B IllegalArgumentException: Illegal base64 character a | U IllegalArgumentException: Illegal base64 character a | M [65 66]
+dec QQ==QUJD | B IllegalArgumentException: Input byte array has incorrect ending byte at 4 | U IllegalArgumentException: Input byte array has incorrect ending byte at 4 | M IllegalArgumentException: Input byte array has incorrect ending byte at 5
+dec =A | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec QUJD==== | B IllegalArgumentException: Input byte array has wrong 4-byte ending unit | U IllegalArgumentException: Input byte array has wrong 4-byte ending unit | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit
+dec Q\u80UJD | B IllegalArgumentException: Illegal base64 character -80 | U IllegalArgumentException: Illegal base64 character -80 | M [65 66 67]
+dec QUJ\u7fD | B IllegalArgumentException: Illegal base64 character 7f | U IllegalArgumentException: Illegal base64 character 7f | M [65 66 67]
+dec \r\n | B IllegalArgumentException: Illegal base64 character d | U IllegalArgumentException: Illegal base64 character d | M []
+dec QUJD\r\n\r\n | B IllegalArgumentException: Illegal base64 character d | U IllegalArgumentException: Illegal base64 character d | M [65 66 67]
+dec QUJDQ!!! | B IllegalArgumentException: Illegal base64 character 21 | U IllegalArgumentException: Illegal base64 character 21 | M IllegalArgumentException: Last unit does not have enough valid bits
+dec QUJDQQ\n== | B IllegalArgumentException: Illegal base64 character a | U IllegalArgumentException: Illegal base64 character a | M [65 66 67 65]
+into QUJD\n\n\n\n: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Output byte array is too small for decoding all input bytes [7 7 7 7] B5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] B6=Illegal base64 character a [65 66 67 7 7 7]
+into QUJD\n\n\n\n: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=3 [65 66 67] M4=3 [65 66 67 7] M5=3 [65 66 67 7 7] M6=3 [65 66 67 7 7 7]
+into QUJD====: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Input byte array has wrong 4-byte ending unit [65 66 67 7] B5=Input byte array has wrong 4-byte ending unit [65 66 67 7 7] B6=Input byte array has wrong 4-byte ending unit [65 66 67 7 7 7]
+into QUJD====: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=Input byte array has wrong 4-byte ending unit [65 66 67] M4=Input byte array has wrong 4-byte ending unit [65 66 67 7] M5=Input byte array has wrong 4-byte ending unit [65 66 67 7 7] M6=Input byte array has wrong 4-byte ending unit [65 66 67 7 7 7]
+into QUI=\n\n: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Input byte array has incorrect ending byte at 4 [65 66 7 7] B5=Input byte array has incorrect ending byte at 4 [65 66 7 7 7] B6=Input byte array has incorrect ending byte at 4 [65 66 7 7 7 7]
+into QUI=\n\n: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=2 [65 66] M3=2 [65 66 7] M4=2 [65 66 7 7] M5=2 [65 66 7 7 7] M6=2 [65 66 7 7 7 7]
+into QQ==: B0=Output byte array is too small for decoding all input bytes [] B1=1 [65] B2=1 [65 7] B3=1 [65 7 7] B4=1 [65 7 7 7] B5=1 [65 7 7 7 7] B6=1 [65 7 7 7 7 7]
+into QQ==: M0=Output byte array is too small for decoding all input bytes [] M1=1 [65] M2=1 [65 7] M3=1 [65 7 7] M4=1 [65 7 7 7] M5=1 [65 7 7 7 7] M6=1 [65 7 7 7 7 7]
+into QQ: B0=Output byte array is too small for decoding all input bytes [] B1=1 [65] B2=1 [65 7] B3=1 [65 7 7] B4=1 [65 7 7 7] B5=1 [65 7 7 7 7] B6=1 [65 7 7 7 7 7]
+into QQ: M0=Output byte array is too small for decoding all input bytes [] M1=1 [65] M2=1 [65 7] M3=1 [65 7 7] M4=1 [65 7 7 7] M5=1 [65 7 7 7 7] M6=1 [65 7 7 7 7 7]
+into QUI: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=2 [65 66] B3=2 [65 66 7] B4=2 [65 66 7 7] B5=2 [65 66 7 7 7] B6=2 [65 66 7 7 7 7]
+into QUI: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=2 [65 66] M3=2 [65 66 7] M4=2 [65 66 7 7] M5=2 [65 66 7 7 7] M6=2 [65 66 7 7 7 7]
+into QUJDQQ: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=4 [65 66 67 65] B5=4 [65 66 67 65 7] B6=4 [65 66 67 65 7 7]
+into QUJDQQ: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=Output byte array is too small for decoding all input bytes [7 7 7] M4=4 [65 66 67 65] M5=4 [65 66 67 65 7] M6=4 [65 66 67 65 7 7]
+into QUJD\nQQ==: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Output byte array is too small for decoding all input bytes [7 7 7 7] B5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] B6=Output byte array is too small for decoding all input bytes [7 7 7 7 7 7]
+into QUJD\nQQ==: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=Output byte array is too small for decoding all input bytes [7 7 7] M4=4 [65 66 67 65] M5=4 [65 66 67 65 7] M6=4 [65 66 67 65 7 7]
+into Q\nQ: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Illegal base64 character a [7 7] B3=Illegal base64 character a [7 7 7] B4=Illegal base64 character a [7 7 7 7] B5=Illegal base64 character a [7 7 7 7 7] B6=Illegal base64 character a [7 7 7 7 7 7]
+into Q\nQ: M0=Output byte array is too small for decoding all input bytes [] M1=1 [65] M2=1 [65 7] M3=1 [65 7 7] M4=1 [65 7 7 7] M5=1 [65 7 7 7 7] M6=1 [65 7 7 7 7 7]
+into QUJD!!!!!!!!: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Output byte array is too small for decoding all input bytes [7 7 7 7] B5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] B6=Output byte array is too small for decoding all input bytes [7 7 7 7 7 7]
+into QUJD!!!!!!!!: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=3 [65 66 67] M4=3 [65 66 67 7] M5=3 [65 66 67 7 7] M6=3 [65 66 67 7 7 7]
+into QQ==QUJD: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Output byte array is too small for decoding all input bytes [7 7 7 7] B5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] B6=Input byte array has incorrect ending byte at 4 [65 7 7 7 7 7]
+into QQ==QUJD: M0=Output byte array is too small for decoding all input bytes [] M1=Input byte array has incorrect ending byte at 5 [65] M2=Input byte array has incorrect ending byte at 5 [65 7] M3=Input byte array has incorrect ending byte at 5 [65 7 7] M4=Input byte array has incorrect ending byte at 5 [65 7 7 7] M5=Input byte array has incorrect ending byte at 5 [65 7 7 7 7] M6=Input byte array has incorrect ending byte at 5 [65 7 7 7 7 7]
+into QUJDQ: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Last unit does not have enough valid bits [65 66 67] B4=Last unit does not have enough valid bits [65 66 67 7] B5=Last unit does not have enough valid bits [65 66 67 7 7] B6=Last unit does not have enough valid bits [65 66 67 7 7 7]
+into QUJDQ: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=Last unit does not have enough valid bits [65 66 67] M4=Last unit does not have enough valid bits [65 66 67 7] M5=Last unit does not have enough valid bits [65 66 67 7 7] M6=Last unit does not have enough valid bits [65 66 67 7 7 7]
+into Q!U!J!D!: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Output byte array is too small for decoding all input bytes [7 7 7 7] B5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] B6=Illegal base64 character 21 [7 7 7 7 7 7]
+into Q!U!J!D!: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=3 [65 66 67] M4=3 [65 66 67 7] M5=3 [65 66 67 7 7] M6=3 [65 66 67 7 7 7]
+into QU=JD: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Input byte array has wrong 4-byte ending unit [7 7 7] B4=Input byte array has wrong 4-byte ending unit [7 7 7 7] B5=Input byte array has wrong 4-byte ending unit [7 7 7 7 7] B6=Input byte array has wrong 4-byte ending unit [7 7 7 7 7 7]
+into QU=JD: M0=Output byte array is too small for decoding all input bytes [] M1=Input byte array has wrong 4-byte ending unit [7] M2=Input byte array has wrong 4-byte ending unit [7 7] M3=Input byte array has wrong 4-byte ending unit [7 7 7] M4=Input byte array has wrong 4-byte ending unit [7 7 7 7] M5=Input byte array has wrong 4-byte ending unit [7 7 7 7 7] M6=Input byte array has wrong 4-byte ending unit [7 7 7 7 7 7]
+into QQ=: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Input byte array has wrong 4-byte ending unit [7 7] B3=Input byte array has wrong 4-byte ending unit [7 7 7] B4=Input byte array has wrong 4-byte ending unit [7 7 7 7] B5=Input byte array has wrong 4-byte ending unit [7 7 7 7 7] B6=Input byte array has wrong 4-byte ending unit [7 7 7 7 7 7]
+into QQ=: M0=Output byte array is too small for decoding all input bytes [] M1=Input byte array has wrong 4-byte ending unit [7] M2=Input byte array has wrong 4-byte ending unit [7 7] M3=Input byte array has wrong 4-byte ending unit [7 7 7] M4=Input byte array has wrong 4-byte ending unit [7 7 7 7] M5=Input byte array has wrong 4-byte ending unit [7 7 7 7 7] M6=Input byte array has wrong 4-byte ending unit [7 7 7 7 7 7]
+into A: B0=Input byte[] should at least have 2 bytes for base64 bytes [] B1=Input byte[] should at least have 2 bytes for base64 bytes [7] B2=Input byte[] should at least have 2 bytes for base64 bytes [7 7] B3=Input byte[] should at least have 2 bytes for base64 bytes [7 7 7] B4=Input byte[] should at least have 2 bytes for base64 bytes [7 7 7 7] B5=Input byte[] should at least have 2 bytes for base64 bytes [7 7 7 7 7] B6=Input byte[] should at least have 2 bytes for base64 bytes [7 7 7 7 7 7]
+into A: M0=Last unit does not have enough valid bits [] M1=Last unit does not have enough valid bits [7] M2=Last unit does not have enough valid bits [7 7] M3=Last unit does not have enough valid bits [7 7 7] M4=Last unit does not have enough valid bits [7 7 7 7] M5=Last unit does not have enough valid bits [7 7 7 7 7] M6=Last unit does not have enough valid bits [7 7 7 7 7 7]
+into =A: B0=Output byte array is too small for decoding all input bytes [] B1=Input byte array has wrong 4-byte ending unit [7] B2=Input byte array has wrong 4-byte ending unit [7 7] B3=Input byte array has wrong 4-byte ending unit [7 7 7] B4=Input byte array has wrong 4-byte ending unit [7 7 7 7] B5=Input byte array has wrong 4-byte ending unit [7 7 7 7 7] B6=Input byte array has wrong 4-byte ending unit [7 7 7 7 7 7]
+into =A: M0=Input byte array has wrong 4-byte ending unit [] M1=Input byte array has wrong 4-byte ending unit [7] M2=Input byte array has wrong 4-byte ending unit [7 7] M3=Input byte array has wrong 4-byte ending unit [7 7 7] M4=Input byte array has wrong 4-byte ending unit [7 7 7 7] M5=Input byte array has wrong 4-byte ending unit [7 7 7 7 7] M6=Input byte array has wrong 4-byte ending unit [7 7 7 7 7 7]
+into AA!: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Illegal base64 character 21 [7 7] B3=Illegal base64 character 21 [7 7 7] B4=Illegal base64 character 21 [7 7 7 7] B5=Illegal base64 character 21 [7 7 7 7 7] B6=Illegal base64 character 21 [7 7 7 7 7 7]
+into AA!: M0=Output byte array is too small for decoding all input bytes [] M1=1 [0] M2=1 [0 7] M3=1 [0 7 7] M4=1 [0 7 7 7] M5=1 [0 7 7 7 7] M6=1 [0 7 7 7 7 7]
+into !: B0=Input byte[] should at least have 2 bytes for base64 bytes [] B1=Input byte[] should at least have 2 bytes for base64 bytes [7] B2=Input byte[] should at least have 2 bytes for base64 bytes [7 7] B3=Input byte[] should at least have 2 bytes for base64 bytes [7 7 7] B4=Input byte[] should at least have 2 bytes for base64 bytes [7 7 7 7] B5=Input byte[] should at least have 2 bytes for base64 bytes [7 7 7 7 7] B6=Input byte[] should at least have 2 bytes for base64 bytes [7 7 7 7 7 7]
+into !: M0=0 [] M1=0 [7] M2=0 [7 7] M3=0 [7 7 7] M4=0 [7 7 7 7] M5=0 [7 7 7 7 7] M6=0 [7 7 7 7 7 7]
+into QUJD=: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Output byte array is too small for decoding all input bytes [7 7 7 7] B5=Input byte array has wrong 4-byte ending unit [65 66 67 7 7] B6=Input byte array has wrong 4-byte ending unit [65 66 67 7 7 7]
+into QUJD=: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=Input byte array has wrong 4-byte ending unit [65 66 67] M4=Input byte array has wrong 4-byte ending unit [65 66 67 7] M5=Input byte array has wrong 4-byte ending unit [65 66 67 7 7] M6=Input byte array has wrong 4-byte ending unit [65 66 67 7 7 7]
+into QUJDQUJD!: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Output byte array is too small for decoding all input bytes [7 7 7 7] B5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] B6=Illegal base64 character 21 [65 66 67 65 66 67]
+into QUJDQUJD!: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=Output byte array is too small for decoding all input bytes [7 7 7] M4=Output byte array is too small for decoding all input bytes [7 7 7 7] M5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] M6=6 [65 66 67 65 66 67]
+into QUJDQUJDQ: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Output byte array is too small for decoding all input bytes [7 7 7 7] B5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] B6=Last unit does not have enough valid bits [65 66 67 65 66 67]
+into QUJDQUJDQ: M0=Output byte array is too small for decoding all input bytes [] M1=Output byte array is too small for decoding all input bytes [7] M2=Output byte array is too small for decoding all input bytes [7 7] M3=Output byte array is too small for decoding all input bytes [7 7 7] M4=Output byte array is too small for decoding all input bytes [7 7 7 7] M5=Output byte array is too small for decoding all input bytes [7 7 7 7 7] M6=Last unit does not have enough valid bits [65 66 67 65 66 67]
+into AA==AA==: B0=Output byte array is too small for decoding all input bytes [] B1=Output byte array is too small for decoding all input bytes [7] B2=Output byte array is too small for decoding all input bytes [7 7] B3=Output byte array is too small for decoding all input bytes [7 7 7] B4=Input byte array has incorrect ending byte at 4 [0 7 7 7] B5=Input byte array has incorrect ending byte at 4 [0 7 7 7 7] B6=Input byte array has incorrect ending byte at 4 [0 7 7 7 7 7]
+into AA==AA==: M0=Output byte array is too small for decoding all input bytes [] M1=Input byte array has incorrect ending byte at 5 [0] M2=Input byte array has incorrect ending byte at 5 [0 7] M3=Input byte array has incorrect ending byte at 5 [0 7 7] M4=Input byte array has incorrect ending byte at 5 [0 7 7 7] M5=Input byte array has incorrect ending byte at 5 [0 7 7 7 7] M6=Input byte array has incorrect ending byte at 5 [0 7 7 7 7 7]
+into big Last unit does not have enough valid bits [65 66 67 65 66 67 7 7 7] | Illegal base64 character 21 [65 66 67 65 66 67 7 7 7] | empty 0 []
+latin1 [65 66 67] | IllegalArgumentException: Illegal base64 character 3f
+fuzz encode sum 1123408486 roundtrips 2800
+fuzz decode sum 1372882583
+  IllegalArgumentException: Illegal base64 character # x2758
+  IllegalArgumentException: Input byte array has incorrect ending byte at # x100
+  IllegalArgumentException: Input byte array has wrong 4-byte ending # x370
+  IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 # x414
+  IllegalArgumentException: Last unit does not have enough valid # x1371
+  ok x3987
+done

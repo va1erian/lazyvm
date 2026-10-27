@@ -1,0 +1,230 @@
+int [0] true 0
+int [-0] true 0
+int [+0] true 0
+int [00012] true 12
+int [-007] true -7
+int [+-5] false IME(null) left +-5
+int [-+1] false IME(null) left -+1
+int [--5] false IME(null) left --5
+int [1-] false IME(null) left 1-
+int [1+] false IME(null) left 1+
+int [-] false IME(null) left -
+int [+] false IME(null) left +
+int [5.] false IME(null) left 5.
+int [5.0] false IME(null) left 5.0
+int [1e3] false IME(null) left 1e3
+int [0x10] false IME(null) left 0x10
+int [1_0] false IME(null) left 1_0
+int [(5)] false IME(null) left (5)
+group [1,234] true 1234
+group [1,23] false IME(null) left 1,23
+group [1,2345] false IME(null) left 1,2345
+group [12,34,567] false IME(null) left 12,34,567
+group [1234,567] false IME(null) left 1234,567
+group [,123] false IME(null) left ,123
+group [123,] false IME(null) left 123,
+group [1,,234] false IME(null) left 1,,234
+group [-1,234,567] true -1234567
+group [+1,234] true 1234
+group [0,123] false IME(null) left 0,123
+group [01,234] false IME(null) left 01,234
+group [999,999] true 999999
+group [1,000,000] true 1000000
+group [12,345,678] true 12345678
+digits [<661><662><663>] true 123
+digits [<661>,<662><663><664>] true 1234
+digits [1<662>] true 12
+digits [<ff11><ff12>] true 12
+digits [<96b>] true 5
+digits [<d835><dfce>] false IME(For input string: "<d835><dfce>") left <d835><dfce>
+digits [-<661>] true -1
+digits [<660><660><661>] true 1
+range [2147483647] true 2147483647
+range [2147483648] false IME(For input string: "2147483648") left 2147483648
+range [-2147483648] true -2147483648
+range [-2147483649] false IME(For input string: "-2147483649") left -2147483649
+range [2,147,483,647] true 2147483647
+range [2,147,483,648] false IME(For input string: "2147483648") left 2,147,483,648
+range [+2147483648] false IME(For input string: "+2147483648") left +2147483648
+range [99999999999999999999] false IME(For input string: "99999999999999999999") left 99999999999999999999
+range [<662><661><664><667><664><668><663><666><664><668>] false IME(For input string: "<662><661><664><667><664><668><663><666><664><668>") left <662><661><664><667><664><668><663><666><664><668>
+range [1<662>,345,678,901] false IME(For input string: "1<662>345678901") left 1<662>,345,678,901
+long [9223372036854775807] true 9223372036854775807
+long [9223372036854775808] false IME(For input string: "9223372036854775808") left 9223372036854775808
+long [-9,223,372,036,854,775,808] true -9223372036854775808
+long [-9223372036854775809] false IME(For input string: "-9223372036854775809") left -9223372036854775809
+byte [127] true 127
+byte [128] false IME(Value out of range. Value:"128" Radix:10) left 128
+byte [-128] true -128
+byte [-129] false IME(Value out of range. Value:"-129" Radix:10) left -129
+byte [1,000] false IME(Value out of range. Value:"1000" Radix:10) left 1,000
+byte16 [7f] true 127
+byte16 [ff] false IME(Value out of range. Value:"ff" Radix:16) left ff
+byte16 [-80] true -128
+byte16 [-81] false IME(Value out of range. Value:"-81" Radix:16) left -81
+byte16 [FF] false IME(Value out of range. Value:"FF" Radix:16) left FF
+short [32767] true 32767
+short [32768] false IME(Value out of range. Value:"32768" Radix:10) left 32768
+short [-32,768] true -32768
+short [-32769] false IME(Value out of range. Value:"-32769" Radix:10) left -32769
+hex [ff] true 255
+hex [FF] true 255
+hex [-ff] true -255
+hex [+ff] true 255
+hex [7fffffff] true 2147483647
+hex [80000000] false IME(For input string: "80000000") left 80000000
+hex [-80000000] true -2147483648
+hex [f,fff] false IME(null) left f,fff
+hex [0xff] false IME(null) left 0xff
+hex [<ff26>] false IME(null) left <ff26>
+hex [z] false IME(null) left z
+hex [<661>f] true 31
+group16 [a,bcd] false IME(null) left a,bcd
+group16 [1,fff] true 8191
+group16 [f,123] false IME(null) left f,123
+group16 [9,abc] true 39612
+group16 [<661>,abc] true 6844
+group16 [1,FFF] true 8191
+group16 [ab,cde] false IME(null) left ab,cde
+group16 [0,fff] false IME(null) left 0,fff
+r36 [z] true 35
+r36 [Z] true 35
+r36 [zz] true 1295
+r36 [-zik0zj] true -2147483647
+r36 [zik0zk] false IME(For input string: "zik0zk") left zik0zk
+r36 [0xff] true 43323
+r2 [101] true 5
+r2 [102] false IME(For input string: "102") left 102
+r2 [-1111111111111111111111111111111] true -2147483647
+r2 [10000000000000000000000000000000] false IME(For input string: "10000000000000000000000000000000") left 10000000000000000000000000000000
+r2 [1,010] true 10
+dbl [1.5] true 1.5
+dbl [.5] true 0.5
+dbl [5.] true 5.0
+dbl [1e5] true 100000.0
+dbl [1E+5] true 100000.0
+dbl [1e-5] true 1.0E-5
+dbl [1.e5] true 100000.0
+dbl [.e5] false IME(null) left .e5
+dbl [e5] false IME(null) left e5
+dbl [1e] false IME(null) left 1e
+dbl [1e+] false IME(null) left 1e+
+dbl [00.5] true 0.5
+dbl [-0.0] true -0.0
+dbl [+.5] true 0.5
+dbl [1.2.3] false IME(null) left 1.2.3
+dbl [-] false IME(null) left -
+dbl [.] false IME(null) left .
+dbl [1,234.5] true 1234.5
+dbl [1,23.5] false IME(null) left 1,23.5
+dbl [1.234,5] false IME(null) left 1.234,5
+dbl [1,234e5] true 1.234E8
+dbl [1e1,000] false IME(null) left 1e1,000
+dbl [1.5d] false IME(null) left 1.5d
+dbl [1.5f] false IME(null) left 1.5f
+dbl [1_000] false IME(null) left 1_000
+dbl range [1.7976931348623157E309] true Infinity
+dbl range [4.9e-325] true 0.0
+dbl range [-1e400] true -Infinity
+dbl range [123456789012345678901234567890] true 1.2345678901234568E29
+dbl digits [<661>.<662>] true 1.2
+dbl digits [<661>e<662>] true 100.0
+dbl digits [<d835><dfce>.5] false IME(For input string: "<d835><dfce>.5") left <d835><dfce>.5
+dbl digits [1.<d835><dfce>] false IME(For input string: "1.<d835><dfce>") left 1.<d835><dfce>
+dbl digits [<661>.<d835><dfce>] false IME(For input string: "1.<d835><dfce>") left <661>.<d835><dfce>
+nonnum [NaN] true NaN
+nonnum [nan] false IME(null) left nan
+nonnum [-NaN] true NaN
+nonnum [+NaN] true NaN
+nonnum [Infinity] true Infinity
+nonnum [-Infinity] true -Infinity
+nonnum [+Infinity] true Infinity
+nonnum [infinity] false IME(null) left infinity
+nonnum [INFINITY] false IME(null) left INFINITY
+nonnum [<221e>] false IME(For input string: "<221e>") left <221e>
+nonnum [-<221e>] false IME(For input string: "-<221e>") left -<221e>
+nonnum [<fffd>] false IME(For input string: "<fffd>") left <fffd>
+nonnum [Inf] false IME(null) left Inf
+hexdbl [0x1p3] false IME(null) left 0x1p3
+hexdbl [0x1.8p1] true 3.0
+hexdbl [-0x1.8p1] true -3.0
+hexdbl [+0x1.8p1] true 3.0
+hexdbl [0x.8p1] true 1.0
+hexdbl [0x1.8] false IME(For input string: "0x1.8") left 0x1.8
+hexdbl [0X1.8P-1] true 0.75
+hexdbl [0x.p1] false IME(null) left 0x.p1
+hexdbl [0x1.] false IME(null) left 0x1.
+hexdbl [0x1.8P+1] true 3.0
+hexdbl [0x<661>.8p1] false IME(null) left 0x<661>.8p1
+hexdbl [0x1.8p<661>] false IME(null) left 0x1.8p<661>
+hexdbl [0x1.8p1,0] false IME(null) left 0x1.8p1,0
+flt [1.5] true 1.5
+flt [3.4028236e38] true Infinity
+flt [1e-46] true 0.0
+flt [0x1.8p1] true 3.0
+flt [NaN] true NaN
+flt [-Infinity] true -Infinity
+flt [1,000.25] true 1000.25
+bool [true] true true
+bool [TRUE] true true
+bool [tRuE] true true
+bool [false] true false
+bool [FALSE] true false
+bool [yes] false IME(null) left yes
+bool [1] false IME(null) left 1
+bool [t] false IME(null) left t
+bool [true,] false IME(null) left true,
+radix 1 use IAE(radix:1) hasNextInt false nextInt java.util.InputMismatchException(radix 1 less than Character.MIN_RADIX) hasNextLong false
+radix 2 use 2 hasNextInt true nextInt 2 hasNextLong true
+radix 36 use 36 hasNextInt true nextInt 36 hasNextLong true
+radix 37 use IAE(radix:37) hasNextInt java.lang.StringIndexOutOfBoundsException(String index out of range: 37) nextInt java.lang.StringIndexOutOfBoundsException(String index out of range: 37) hasNextLong java.lang.StringIndexOutOfBoundsException(String index out of range: 37)
+radix 0 use IAE(radix:0) hasNextInt false nextInt java.util.InputMismatchException(radix 0 less than Character.MIN_RADIX) hasNextLong false
+radix -1 use IAE(radix:-1) hasNextInt java.lang.StringIndexOutOfBoundsException(String index out of range: -1) nextInt java.lang.StringIndexOutOfBoundsException(String index out of range: -1) hasNextLong java.lang.StringIndexOutOfBoundsException(String index out of range: -1)
+hasNextInt(16) then nextInt(): true IME(null) ff
+hasNextInt(10) then nextInt(16): true 16
+useRadix(16): 16 true 16 true 26 true 1.5 false true
+no consume: truetrue 12 false IME(null) abc 7
+delimiter change: false 1 2 3
+US: true 1234.5 false 1.5
+fuzz [5] true 5 | true 5 | true 5 | true 5 | true 5.0 | 
+fuzz [ae] false IME(null) left ae | false IME(null) left ae | true 174 | false IME(null) left ae | false IME(null) left ae | 
+fuzz [8] true 8 | true 8 | true 8 | true 8 | true 8.0 | 
+fuzz [0] true 0 | true 0 | true 0 | true 0 | true 0.0 | 
+fuzz [6FF32] false IME(null) left 6FF32 | false IME(null) left 6FF32 | true 458546 | false IME(null) left 6FF32 | false IME(null) left 6FF32 | 
+fuzz [5e228] false IME(null) left 5e228 | false IME(null) left 5e228 | true 385576 | false IME(null) left 5e228 | true 5.0E228 | 
+fuzz [e] false IME(null) left e | false IME(null) left e | true 14 | false IME(null) left e | false IME(null) left e | 
+fuzz [-31,05a] false IME(null) left -31,05a | false IME(null) left -31,05a | true -200794 | false IME(null) left -31,05a | false IME(null) left -31,05a | 
+fuzz [5197] true 5197 | true 5197 | true 20887 | true 5197 | true 5197.0 | 
+fuzz [<661>a] false IME(null) left <661>a | false IME(null) left <661>a | true 26 | false IME(null) left <661>a | false IME(null) left <661>a | 
+fuzz [3] true 3 | true 3 | true 3 | true 3 | true 3.0 | 
+fuzz [5.] false IME(null) left 5. | false IME(null) left 5. | false IME(null) left 5. | false IME(null) left 5. | true 5.0 | 
+fuzz [60] true 60 | true 60 | true 96 | true 60 | true 60.0 | 
+fuzz [a] false IME(null) left a | false IME(null) left a | true 10 | false IME(null) left a | false IME(null) left a | 
+fuzz [06e64a0] false IME(null) left 06e64a0 | false IME(null) left 06e64a0 | true 7234720 | false IME(null) left 06e64a0 | false IME(null) left 06e64a0 | 
+fuzz [1746] true 1746 | true 1746 | true 5958 | true 1746 | true 1746.0 | 
+fuzz [1E7] false IME(null) left 1E7 | false IME(null) left 1E7 | true 487 | false IME(null) left 1E7 | true 1.0E7 | 
+fuzz [4e41] false IME(null) left 4e41 | false IME(null) left 4e41 | true 20033 | false IME(null) left 4e41 | true 4.0E41 | 
+fuzz [e] false IME(null) left e | false IME(null) left e | true 14 | false IME(null) left e | false IME(null) left e | 
+fuzz [F1369e] false IME(null) left F1369e | false IME(null) left F1369e | true 15808158 | false IME(null) left F1369e | false IME(null) left F1369e | 
+fuzz [2F2] false IME(null) left 2F2 | false IME(null) left 2F2 | true 754 | false IME(null) left 2F2 | false IME(null) left 2F2 | 
+fuzz [5] true 5 | true 5 | true 5 | true 5 | true 5.0 | 
+fuzz [F9FF97] false IME(null) left F9FF97 | false IME(null) left F9FF97 | true 16383895 | false IME(null) left F9FF97 | false IME(null) left F9FF97 | 
+fuzz [<661>222] true 1222 | true 1222 | true 4642 | true 1222 | true 1222.0 | 
+fuzz [4<661>e4F] false IME(null) left 4<661>e4F | false IME(null) left 4<661>e4F | true 269903 | false IME(null) left 4<661>e4F | false IME(null) left 4<661>e4F | 
+fuzz [1.] false IME(null) left 1. | false IME(null) left 1. | false IME(null) left 1. | false IME(null) left 1. | true 1.0 | 
+fuzz [11] true 11 | true 11 | true 17 | true 11 | true 11.0 | 
+fuzz [<661>] true 1 | true 1 | true 1 | true 1 | true 1.0 | 
+fuzz [8e] false IME(null) left 8e | false IME(null) left 8e | true 142 | false IME(null) left 8e | false IME(null) left 8e | 
+fuzz [+e] false IME(null) left +e | false IME(null) left +e | true 14 | false IME(null) left +e | false IME(null) left +e | 
+fuzz [93a5] false IME(null) left 93a5 | false IME(null) left 93a5 | true 37797 | false IME(null) left 93a5 | false IME(null) left 93a5 | 
+fuzz [3a] false IME(null) left 3a | false IME(null) left 3a | true 58 | false IME(null) left 3a | false IME(null) left 3a | 
+fuzz [.02] false IME(null) left .02 | false IME(null) left .02 | false IME(null) left .02 | false IME(null) left .02 | true 0.02 | 
+fuzz [4] true 4 | true 4 | true 4 | true 4 | true 4.0 | 
+fuzz [F43] false IME(null) left F43 | false IME(null) left F43 | true 3907 | false IME(null) left F43 | false IME(null) left F43 | 
+fuzz [90] true 90 | true 90 | true 144 | true 90 | true 90.0 | 
+fuzz [483.78<661><661>] false IME(null) left 483.78<661><661> | false IME(null) left 483.78<661><661> | false IME(null) left 483.78<661><661> | false IME(null) left 483.78<661><661> | true 483.7811 | 
+fuzz [3a3752e] false IME(null) left 3a3752e | false IME(null) left 3a3752e | true 61044014 | false IME(null) left 3a3752e | false IME(null) left 3a3752e | 
+fuzz [a2<661>] false IME(null) left a2<661> | false IME(null) left a2<661> | true 2593 | false IME(null) left a2<661> | false IME(null) left a2<661> | 
+fuzz [80F] false IME(null) left 80F | false IME(null) left 80F | true 2063 | false IME(null) left 80F | false IME(null) left 80F | 
+fuzz accepted [572, 572, 1316, 572, 764] hash -3209521800777647745
+done

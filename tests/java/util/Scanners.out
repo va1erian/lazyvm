@@ -1,0 +1,69 @@
+ws [a][b][c][<a0>d][e][f][g][h]
+comma [a][][b] [a][b] [][] [][][x]
+empty delimiter [a][b][c] lookahead [a][Bc][De] multi [a][b-c][-d]
+no token ||java.util.NoSuchElementException: null|java.util.NoSuchElementException: null|java.util.NoSuchElementException: null|java.util.NoSuchElementException: null|java.util.NoSuchElementException: null
+delimiter \p{javaWhitespace}+ [,;] a|b 0
+pattern falsetruetrue java.util.InputMismatchException: null abc false java.util.NoSuchElementException: null
+pattern groups b 1 3 1
+pattern then token false true ab12 x
+lines [a][b][c][d][e][f][g][][h] []|[x]|[][]||[][]|[a<b>b<c>c]
+nextLine none java.util.NoSuchElementException: No line found | java.util.NoSuchElementException: No line found
+int then line 12[ rest of line][next]
+int then line2 12[][x]
+line match  b  b<a> 1 4
+findInLine 1b2 d4 null z9
+findInLine none null abc null null true
+findInLine newline null  x
+horizon null wor ld o null o
+horizon errors java.lang.IllegalArgumentException: horizon < 0 | null
+skip abc java.util.NoSuchElementException: null bc abc java.util.NoSuchElementException: null
+skip keeps position java.util.NoSuchElementException: null aab
+match int 42 0 2
+match none java.lang.IllegalStateException: No match result available | java.lang.IllegalStateException: No match result available | java.lang.IllegalStateException: No match result available | java.lang.IllegalStateException: No match result available | a
+closed source true
+closed java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed
+closed still fine \p{javaWhitespace}+ |  | 10 | , | null | x | 10 | 8
+nulls java.lang.NullPointerException: null | java.lang.NullPointerException: source | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.util.Scanner[delimiters=null][position=0][match valid=false][need input=false][source closed=false][skipped=false][group separator=\x{2c}][decimal separator=\x{2e}][positive prefix=][negative prefix=\Q-\E][positive suffix=][negative suffix=][NaN string=\Q<fffd>\E][infinity string=\Q<221e>\E] | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null
+charset java.lang.IllegalArgumentException: java.nio.charset.UnsupportedCharsetException: bogus | java.lang.NullPointerException: charsetName
+remove java.lang.UnsupportedOperationException: null iterator true
+bad delimiter java.util.regex.PatternSyntaxException: Unclosed group near index 1<d><a>(
+reset \p{javaWhitespace}+ 10 true
+toString java.util.Scanner[delimiters=\p{javaWhitespace}+][position=0][match valid=false][need input=false][source closed=false][skipped=false][group separator=\x{2c}][decimal separator=\x{2e}][positive prefix=][negative prefix=\Q-\E][positive suffix=][negative suffix=][NaN string=\Q<fffd>\E][infinity string=\Q<221e>\E]
+toString US java.util.Scanner[delimiters=\p{javaWhitespace}+][position=0][match valid=false][need input=false][source closed=false][skipped=false][group separator=\x{2c}][decimal separator=\x{2e}][positive prefix=][negative prefix=\Q-\E][positive suffix=][negative suffix=][NaN string=\Q<fffd>\E][infinity string=\Q<221e>\E]
+toString radix/delim java.util.Scanner[delimiters=,][position=0][match valid=false][need input=false][source closed=false][skipped=false][group separator=\x{2c}][decimal separator=\x{2e}][positive prefix=][negative prefix=\Q-\E][positive suffix=][negative suffix=][NaN string=\Q<fffd>\E][infinity string=\Q<221e>\E]
+io before null
+io tokens ab true cd false java.io.IOException: boom 2 reads 2
+io again false false java.util.NoSuchElementException: null java.io.IOException: boom 2 reads 2
+utf8 bytewise [h<e9>llo][w<20ac>rld][<d83d><de00>][x]
+latin1 h<c3><a9>llo w<e2><82><ac>rld <f0><9f><98><80> x
+malformed a<fffd> [a][<fffd>]
+long token 5000 tail 0 5000 last
+crlf split [a][b][c]
+horizon chunked 1- y
+fuzz <d><a>|- [,1-1<a>-<a><a><d>- <d><d><a>,a] dInputMismatchException|dInputMismatchException|ifalse|L,1-1|wnull|ifalse|Htrue|n<a><a><d>|htrue|ifalse|wnull|sfalse|
+fuzz null [1,-1<2028>1,,<2028><2028><a><2028>1<a>a] L1,-1|n1,,|d1.0|fnull|na|INoSuchElementException|Hfalse|sfalse|LNoSuchElementException|sfalse|LNoSuchElementException|INoSuchElementException|
+fuzz , [<d>,a] htrue|dInputMismatchException|htrue|sfalse|Htrue|htrue|wnull|L|ifalse|htrue|strue|Htrue|
+fuzz , [.a1<2028><a>.. <d>a a] L.a1|ifalse|Htrue|IInputMismatchException|IInputMismatchException|wnull|L|Htrue|n.. <d>a a|fnull|nNoSuchElementException|dNoSuchElementException|
+fuzz <d><a>|- [<a>1-<d>a1<a>,,aa] sfalse|sfalse|IInputMismatchException|L|w1-|L|wnull|Htrue|sfalse|wnull|ifalse|ifalse|
+fuzz , [<a>,<a><a> ,<a><a>-<2028>a.,aa<2028> <a>-<2028><d>,a] IInputMismatchException|wnull|Htrue|fnull|n<a>|L,|IInputMismatchException|htrue|L|fnull|L ,|n<a>-<2028>a.|
+fuzz <d><a>|- [.<2028> <a><2028>a] fnull|ifalse|Htrue|sfalse|Htrue|wnull|htrue|IInputMismatchException|dInputMismatchException|L.|n <a><2028>a|wnull|
+fuzz null [a] IInputMismatchException|ifalse|La|Hfalse|INoSuchElementException|LNoSuchElementException|Hfalse|Hfalse|ifalse|wnull|sfalse|Hfalse|
+fuzz <d><a>|- [a] wnull|htrue|La|hfalse|hfalse|fnull|ifalse|Hfalse|hfalse|nNoSuchElementException|ifalse|nNoSuchElementException|
+fuzz , [1,<a>-a--a] itrue|wnull|itrue|L1,|n-a--a|Hfalse|Hfalse|ifalse|hfalse|hfalse|nNoSuchElementException|Hfalse|
+fuzz , [1.,a] L1.,a|ifalse|sfalse|INoSuchElementException|ifalse|Hfalse|hfalse|dNoSuchElementException|hfalse|nNoSuchElementException|wnull|dNoSuchElementException|
+fuzz , [,-1aa ,<2028><d>aa1,1<2028>,<a>1a] wnull|wnull|ifalse|wnull|IInputMismatchException|L-1aa ,|dInputMismatchException|dInputMismatchException|htrue|n<d>aa1|L,1|ifalse|
+fuzz <d><a>|- [<a>.11  a] fnull|Htrue|wnull|ifalse|htrue|wnull|htrue|n<a>.11  a|nNoSuchElementException|fnull|fnull|nNoSuchElementException|
+fuzz null [<d>.a 1<2028> 1...a,-a,<a><d>1<a>a] htrue|sfalse|ifalse|L|dInputMismatchException|ifalse|sfalse|htrue|wnull|fnull|htrue|dInputMismatchException|
+fuzz , [<2028>. a<2028><2028>. --a-a<2028> a,11<2028>,,a] L|L. a|IInputMismatchException|fnull|L|L. --a-a|ifalse|sfalse|fnull|fnull|wnull|sfalse|
+fuzz null [<d> 1,<a><d>a1,, a] dInputMismatchException|n1,|ifalse|wnull|Htrue|Htrue|na1,,|ifalse|fnull|ifalse|htrue|wnull|
+fuzz , [<2028> <d><a> ,-  <d>1-<a>a1,a] fnull|IInputMismatchException|wnull|htrue|fnull|wnull|sfalse|Htrue|htrue|ifalse|n<2028> <d><a> |dInputMismatchException|
+fuzz , [-a] ifalse|ifalse|L-a|fnull|wnull|sfalse|ifalse|Hfalse|wnull|hfalse|nNoSuchElementException|nNoSuchElementException|
+fuzz null [ <d><d><d><a> a,a. <a>a] na,a.|strue|IInputMismatchException|Htrue|wnull|fnull|strue|wnull|La|nNoSuchElementException|hfalse|hfalse|
+fuzz null [a.a] na.a|LNoSuchElementException|hfalse|hfalse|nNoSuchElementException|INoSuchElementException|sfalse|Hfalse|LNoSuchElementException|ifalse|nNoSuchElementException|INoSuchElementException|
+fuzz <d><a>|- [,<a><2028>,,<2028>aa<2028><a>,a] L,|wnull|n<2028>,,<2028>aa<2028><a>,a|hfalse|hfalse|LNoSuchElementException|fnull|LNoSuchElementException|fnull|INoSuchElementException|hfalse|hfalse|
+fuzz <d><a>|- [<2028><2028>,a] sfalse|ifalse|n<2028><2028>,a|fnull|dNoSuchElementException|ifalse|hfalse|dNoSuchElementException|INoSuchElementException|ifalse|fnull|sfalse|
+fuzz , [<d><a>-1. <2028>-.<a><d>.a] ifalse|IInputMismatchException|IInputMismatchException|Htrue|htrue|Htrue|n<d><a>-1. <2028>-.<a><d>.a|INoSuchElementException|fnull|hfalse|nNoSuchElementException|fnull|
+fuzz <d><a>|- [<d> -a] IInputMismatchException|n<d> |L-a|wnull|dNoSuchElementException|wnull|fnull|dNoSuchElementException|nNoSuchElementException|dNoSuchElementException|INoSuchElementException|Hfalse|
+fuzz <d><a>|- [--  <a><2028>--<d>-.-<a> -.1<d>a] sfalse|L--  |sfalse|sfalse|IInputMismatchException|Htrue|Htrue|wnull|sfalse|dInputMismatchException|ifalse|L|
+fuzz chunked same 2500 of 2500, hash 8903365510396098268
+done

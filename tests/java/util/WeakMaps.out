@@ -1,0 +1,102 @@
+W10 before 10 {k9=v9, k8=v8, k7=v7, k6=v6, k5=v5, k4=v4, k3=v3, k2=v2, k1=v1, k0=v0}
+W10 settled true {k8=v8, k6=v6, k4=v4, k2=v2, k0=v0} empty false
+W10 queries get null containsKey false containsValue false remove null
+W10 views 5 5 5 [k8, k6, k4, k2, k0] [v8, v6, v4, v2, v0] [k8=v8, k6=v6, k4=v4, k2=v2, k0=v0]
+W10 walked 5 hash 1936590504 kept [k0, null, k2, null, k4, null, k6, null, k8, null]
+W10 all dropped true {} true
+W11 an equal key keeps the first key object true {k2=v22} true
+W10 a third of 300 dropped true null v4
+W10 order of survivors 37 38 32 35 34 31 28 29 26 25 22 23 20 19 16 17 14 13 11 10 8 7 5 4 2 1 
+W10 refill then drop true false k299
+W12 settled true 5 true lit true null true heap false big false self-held true
+W12 null key get null key put null key remove again gone false 3
+W12 a value that is another key keeps it true {k2=k3}
+W13 hasNext true then only the announced key stays true
+k5 false | W13 next after expunge ok
+W13 the returned key stays true
+0 | W13 remove it ok
+W13 first k3 settled true
+k101 k100 | W13 rest after expunge ok
+W13 cleared true
+W13 a walk skips cleared keys k50=0 size 1
+W14 held entry k7=seven settled true key null value null null=null hash 0
+W14 setValue on it null null=x map {}
+W15 puts h10 h20 20.eq(10) h30 h40 h50 
+W15 get 1 h11 11.eq(20) 11.eq(10) 
+W15 get same object 2 h20 
+W15 containsKey miss false h99 99.eq(20) 99.eq(10) 
+W15 put equal 1 h12 12.eq(20) 12.eq(10) [L40, L50, L20, L10, L30]
+W15 remove 6 h13 13.eq(20) 13.eq(10) [L40, L50, L20, L30]
+W15 containsValue true false 
+W15 hashCode 65583 h40 h50 h20 h30 
+W15 toString {L40=4, L50=5, L20=2, L30=3} 
+W15 equals HashMap true h40 h10 h50 h20 20.eq(10) h30 h40 h10 h50 h20 20.eq(10) h30 
+W15 HashMap equals it true h40 h10 h50 h20 20.eq(10) h30 h50 h10 h20 20.eq(10) h30 h40 
+W15 self equals true 
+W16 equals same key true 
+W16 equals equal key true 30.eq(31) 
+W16 equals other value false 
+W16 equals non-entry false false 
+W16 hashCode 123 h30  toString L30=x 
+W16 setValue x y h30 
+W16 null entry null=null null 0 true true
+W16 entrySet contains true false false
+W16 entrySet remove false true {null=null} false
+W16 self value 2 true
+W17 same views true true true
+W17 keySet true true false {7=s1, 6=s0, 5=s2, 4=s1, 2=s2, 1=s1, 0=s0}
+W17 values remove first match true true {6=s0, 5=s2, 4=s1, 2=s2, 1=s1, 0=s0}
+W17 removeAll true retainAll true {6=s0, 5=s2, 2=s2}
+W17 removeIf true {5=s2, 2=s2}
+W17 toArray [5, 2] [s2, s2] [5=s2, 2=s2]
+W17 iterator remove {2=s2}
+W17 remove again java.lang.IllegalStateException
+W17 remove before next java.lang.IllegalStateException
+W17 next past end java.util.NoSuchElementException
+W17 keySet clear {} true 0
+W17 keySet add java.lang.UnsupportedOperationException
+W17 values add java.lang.UnsupportedOperationException
+W17 entrySet add java.lang.UnsupportedOperationException
+W17 empty next java.util.NoSuchElementException
+W18 value replaced, next ok
+W18 absent removed, next ok
+W18 key added, hasNext true, next java.util.ConcurrentModificationException
+W18 at end after a remove, hasNext false, next java.util.ConcurrentModificationException
+W18 cleared, hasNext false, next java.util.ConcurrentModificationException
+W18 clear of an empty map, next java.util.ConcurrentModificationException
+1 W18 putAll of nothing new, next ok
+W18 putAll that adds, next java.util.ConcurrentModificationException
+W18 removed through another view, next java.util.ConcurrentModificationException
+W18 own remove then put, hasNext false, remove java.lang.IllegalStateException
+W18 removed before first next, next java.util.ConcurrentModificationException
+W19 forEach adds java.util.ConcurrentModificationException
+W19 visited 0 1 2 3 {4=4, 3=3, 2=2, 103=0, 1=1, 0=0}
+W19 replaceAll adds java.util.ConcurrentModificationException
+W19 visited 0 103 1 2 {200=0, 4=4, 3=3, 2=3, 103=1, 1=2, 0=1}
+W19 forEach removes at the last key java.util.ConcurrentModificationException
+W19 visited 0 103 1 2 3 4 {200=0, 4=4, 3=3, 2=3, 103=1, 1=2}
+W19 forEach replaces a value ok
+W19 visited 103 1 2 3 4 200 {200=-1, 4=-1, 3=-1, 2=-1, 103=-1, 1=-1}
+W19 forEach null java.lang.NullPointerException
+W19 replaceAll null java.lang.NullPointerException
+W19 forEach null on empty java.lang.NullPointerException
+W19 replaceAll null on empty java.lang.NullPointerException
+W19 keySet forEach adds at the last key ok
+W19 visited 200 4 3 2 103 1 {300=0, 200=-1, 4=-1, 3=-1, 2=-1, 103=-1, 1=-1}
+W19 values forEach adds java.util.ConcurrentModificationException
+W19 visited 0 
+W20 computeIfAbsent 10 10 computeIfPresent 11 compute 20 merge 25 putIfAbsent null 30 getOrDefault -9 replace 30 false remove(k,v) false true {2=25, 1=11}
+W20 computeIfAbsent that puts 2 {56=1, 55=2, 2=25, 1=11}
+W20 compute to null removes null null {2=25, 1=11}
+W20 null value true null null null {8=6, 2=25, 1=11}
+W21 capacity -1 java.lang.IllegalArgumentException: Illegal Initial Capacity: -1
+W21 capacity MIN java.lang.IllegalArgumentException: Illegal Initial Capacity: -2147483648
+W21 load factor 0 java.lang.IllegalArgumentException: Illegal Load factor: 0.0
+W21 load factor -1 java.lang.IllegalArgumentException: Illegal Load factor: -1.0
+W21 load factor NaN java.lang.IllegalArgumentException: Illegal Load factor: NaN
+W21 capacity -1 and load factor 0 java.lang.IllegalArgumentException: Illegal Initial Capacity: -1
+W21 load factor infinite ok
+W21 copy of null java.lang.NullPointerException
+W21 putAll null java.lang.NullPointerException
+W21 putAll empty into null-free ok
+done
