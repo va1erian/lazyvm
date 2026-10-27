@@ -235,7 +235,7 @@ Pinned by: WeakMapViews ("W23 …" lines), the fuzzer.
 | `entrySet().remove(e)`, same objects | `S.h` only |
 | stored entry `equals(o)` | key identity or `S.eq(otherKey)`, then value identity or `SV.eq(otherValue)` |
 | stored entry `hashCode()` | `S.h SV.h`; `toString` and `setValue` call nothing |
-| any lookup or removal by the `null` key, `entrySet().remove(null=v)` included | no calls: only the null key's own entry is considered, even when a stored key has hash code 0 and claims to equal `null` |
+| any lookup or removal by the `null` key, `entrySet().remove(null=v)` included | no calls on any key: only the null key's own entry is considered, even when a stored key has hash code 0 and claims to equal `null`; `entrySet().contains/remove(null=v)` still calls the stored value's `equals` when a null-key entry exists |
 
 `removeAll`, `retainAll` and `containsAll` on the views behave as `AbstractSet` and
 `AbstractCollection` do (collections.md 1.H11): they call the views' own `contains` and `remove`
