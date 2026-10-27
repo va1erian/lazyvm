@@ -353,10 +353,11 @@ iterations) overflows, and so does a loop that recurses:
   group kind compile, `(`, `(?=`, `(?!`, `(?<=` and `(?<!` fail at 5000, and
   `(?:`, `(?>`, `(?i:` and `(?:x|` compile at 200000. The oracle at its default
   stack size (no `-Xss`) fails somewhere between 1000 and 5000 levels for every
-  group kind; the exact level depends on what already ran in the same JVM (two
-  runs of one probe disagreed for `(?:`, `(?<!` and `(?>`), so no finer figure is
-  given. Inside a lookbehind body, nesting fails earlier here than outside one
-  (about 400 to 1000 levels, depending on the shape). Nested character
+  group kind; the exact level depends on what already ran in the same JVM (separate
+  runs disagreed for `(?:`, `(?<!`, `(?>`, `(?!` and `(?<=`), so no finer figure
+  is given. Inside a lookbehind body, quantified nesting such as `(?:..)?` or
+  `(?>..)?` fails earlier here than outside one (about 500 to 1400 levels,
+  depending on the shape); unquantified nesting does not. Nested character
   classes recurse: here 2000 levels compile and 5000 fail, on the oracle 5000
   compile and 20000 fail.
 - A class or alternation of ten thousand single characters is one sorted range
