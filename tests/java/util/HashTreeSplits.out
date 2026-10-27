@@ -1,0 +1,28 @@
+grown 1x, kept 1, compute: held entry wrote through true, bin C33 C3000
+grown 1x, kept 1, put: held entry wrote through true, bin C33 C3000
+grown 1x, kept 1, computeIfAbsent: held entry wrote through true, bin C33 C3000
+grown 1x, kept 2, compute: held entry wrote through false, bin C3000 C30 C33
+grown 1x, kept 2, put: held entry wrote through false, bin C30 C33 C3000
+grown 1x, kept 2, computeIfAbsent: held entry wrote through false, bin C3000 C30 C33
+grown 1x, kept 3, compute: held entry wrote through false, bin C3000 C27 C30 C33
+grown 1x, kept 3, put: held entry wrote through false, bin C27 C30 C33 C3000
+grown 1x, kept 3, computeIfAbsent: held entry wrote through false, bin C3000 C27 C30 C33
+grown 2x, kept 1, compute: held entry wrote through true, bin C33 C3000
+grown 2x, kept 1, put: held entry wrote through true, bin C33 C3000
+grown 2x, kept 1, computeIfAbsent: held entry wrote through true, bin C33 C3000
+grown 2x, kept 2, compute: held entry wrote through false, bin C3000 C30 C33
+grown 2x, kept 2, put: held entry wrote through false, bin C30 C33 C3000
+grown 2x, kept 2, computeIfAbsent: held entry wrote through false, bin C3000 C30 C33
+grown 2x, kept 3, compute: held entry wrote through false, bin C3000 C27 C30 C33
+grown 2x, kept 3, put: held entry wrote through false, bin C27 C30 C33 C3000
+grown 2x, kept 3, computeIfAbsent: held entry wrote through false, bin C3000 C27 C30 C33
+grown 3x, kept 1, compute: held entry wrote through true, bin C33 C3000
+grown 3x, kept 1, put: held entry wrote through true, bin C33 C3000
+grown 3x, kept 1, computeIfAbsent: held entry wrote through true, bin C33 C3000
+grown 3x, kept 2, compute: held entry wrote through false, bin C3000 C30 C33
+grown 3x, kept 2, put: held entry wrote through false, bin C30 C33 C3000
+grown 3x, kept 2, computeIfAbsent: held entry wrote through false, bin C3000 C30 C33
+grown 3x, kept 3, compute: held entry wrote through false, bin C3000 C27 C30 C33
+grown 3x, kept 3, put: held entry wrote through false, bin C27 C30 C33 C3000
+grown 3x, kept 3, computeIfAbsent: held entry wrote through false, bin C3000 C27 C30 C33
+done

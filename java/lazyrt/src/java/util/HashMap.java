@@ -119,7 +119,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     // searched down its tree (spec 1.H6).
     private Cell<K, V> findIn(int i, int h, Object key) {
         if (isTree(i)) {
-            return HashTree.lookup(roots[i], h, key);
+            return HashTree.lookup(table[i], roots[i], h, key);
         }
         for (Cell<K, V> e = table[i]; e != null; e = e.next) {
             if (e.hash == h && Objects.equals(key, e.key)) {
@@ -433,11 +433,12 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     /**
      * Section 12: records v for key at the end of a remapping, e being key's entry beforehand. If
      * the function changed the map structurally (the count is no longer `seen`), key is looked up
-     * again: v is dropped when e has left the map, and goes to an entry the function added.
+     * again. A null v removes key's entry then, if the call began from one; any other v is dropped
+     * when e has left the map, and goes to an entry the function added.
      */
     private V finish(int seen, Cell<K, V> e, K key, V v) {
         Cell<K, V> at = modCount == seen ? e : find(key);
-        if (e != null && at != e) {
+        if (v == null ? e == null || at == null : e != null && at != e) {
             return v;
         }
         if (at != null) {

@@ -8,6 +8,11 @@ HashMap compute removes the key: 33 -> {1=10, 2=20, 4=40} size 3 consistent
 HashMap compute clears, returns null: null -> {} size 0 consistent
 HashMap merge removes the key: 25 -> {1=10, 3=30, 4=40} size 3 consistent
 HashMap merge clears: 25 -> {} size 0 consistent
+HashMap compute puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+HashMap computeIfPresent puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+HashMap merge puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+HashMap compute clears and puts the key, returns null: null -> {} size 0 consistent
+HashMap compute puts the absent key, returns null: null -> {1=10, 2=20, 3=30, 4=40, 7=79} size 5 consistent
 LinkedHashMap computeIfAbsent removes another key: 71 -> {1=10, 3=30, 4=40, 7=71} size 4 consistent
 LinkedHashMap computeIfAbsent clears: 71 -> {7=71} size 1 consistent
 LinkedHashMap computeIfAbsent puts another key: 71 -> {1=10, 2=20, 3=30, 4=40, 8=80, 7=71} size 6 consistent
@@ -18,6 +23,11 @@ LinkedHashMap compute removes the key: 33 -> {1=10, 2=20, 4=40} size 3 consisten
 LinkedHashMap compute clears, returns null: null -> {} size 0 consistent
 LinkedHashMap merge removes the key: 25 -> {1=10, 3=30, 4=40} size 3 consistent
 LinkedHashMap merge clears: 25 -> {} size 0 consistent
+LinkedHashMap compute puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+LinkedHashMap computeIfPresent puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+LinkedHashMap merge puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+LinkedHashMap compute clears and puts the key, returns null: null -> {} size 0 consistent
+LinkedHashMap compute puts the absent key, returns null: null -> {1=10, 2=20, 3=30, 4=40, 7=79} size 5 consistent
 Hashtable computeIfAbsent removes another key: 71 -> {7=71, 4=40, 3=30, 1=10} size 4 consistent
 Hashtable computeIfAbsent clears: 71 -> {7=71} size 1 consistent
 Hashtable computeIfAbsent puts another key: 71 -> {8=80, 7=71, 4=40, 3=30, 2=20, 1=10} size 6 consistent
@@ -27,4 +37,18 @@ Hashtable computeIfPresent clears: 31 -> {} size 0 consistent
 Hashtable compute removes the key: 33 -> {4=40, 2=20, 1=10} size 3 consistent
 Hashtable merge removes the key: 25 -> {4=40, 3=30, 1=10} size 3 consistent
 Hashtable merge clears: 25 -> {} size 0 consistent
+Hashtable compute puts back the key, returns null: null -> {4=40, 2=20, 1=10} size 3 consistent
+Hashtable computeIfPresent puts back the key, returns null: null -> {4=40, 2=20, 1=10} size 3 consistent
+Hashtable merge puts back the key, returns null: null -> {4=40, 2=20, 1=10} size 3 consistent
+Hashtable compute clears and puts the key, returns null: null -> {} size 0 consistent
+Hashtable compute puts the absent key, returns null: null -> {7=79, 4=40, 3=30, 2=20, 1=10} size 5 consistent
+LinkedHashMap computeIfAbsent removes another key: 71 -> {1=10, 3=30, 4=40, 7=71} size 4 consistent
+LinkedHashMap computeIfAbsent clears: 71 -> {7=71} size 1 consistent
+LinkedHashMap computeIfAbsent puts another key: 71 -> {1=10, 2=20, 3=30, 4=40, 8=80, 7=71} size 6 consistent
+LinkedHashMap compute clears, returns null: null -> {} size 0 consistent
+LinkedHashMap compute puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+LinkedHashMap computeIfPresent puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+LinkedHashMap merge puts back the key, returns null: null -> {1=10, 2=20, 4=40} size 3 consistent
+LinkedHashMap compute clears and puts the key, returns null: null -> {} size 0 consistent
+LinkedHashMap compute puts the absent key, returns null: null -> {1=10, 2=20, 3=30, 4=40, 7=79} size 5 consistent
 done

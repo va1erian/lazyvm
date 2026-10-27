@@ -103,11 +103,13 @@ when the set is larger than `c` (it then removes each element of `c`). Iterator-
 `removeAll(c)` when the set is not larger than `c` (it then iterates the set). Pinned by:
 HashTreeRules ("removal by …").
 
-**H12.** On growth, a tree bin's entries split by H5's bit rule, keeping sequence order. A half of
-at most 6 entries becomes a list bin. A half of 7 or more becomes a new tree built from its sequence
+**H12.** On growth, a bin holding a single entry moves to its new place as it is: a tree bin of one
+entry (iterator removals, H10, can leave one) stays a tree bin of that same entry, which keeps
+writing through (no H15 replacement). A tree bin of two or more entries splits by H5's bit rule,
+keeping sequence order. A half of at most 6 entries becomes a list bin. A half of 7 or more becomes a new tree built from its sequence
 as in H7, if the other half is non-empty; if all entries stay together, the bin moves unchanged
 (same tree, same sequence, even if the root is not first). Pinned by: HashTreeRules ("split",
-"unsplit"), HashTreeBins ("split").
+"unsplit"), HashTreeBins ("split"), HashTreeSplits.
 
 **H15.** When a bin becomes a tree (H7), or a tree bin becomes a list (H9 shrink, an H12 half of at
 most 6), its entries are replaced by new entry objects in the same order. An entry obtained earlier
@@ -572,19 +574,27 @@ run-stack size; IdentityHashMap's order (IdentityMaps sorts its output); the see
 and the hidden Random of `Collections.shuffle(l)`; and identity hash codes themselves (only H6's
 use of them is fixed).
 
-Observable but left free: which `compareTo` calls a HashMap makes to find an existing key in a
-tree bin. This specification pins only the calls of H6 to H8 insertion: a `put`-style insertion
-finds the key and the place for a new one in a single descent, so it makes exactly those calls. A
-lookup goes down the tree by mixed hash and, for two keys of one qualifying class, by `compareTo`;
-where neither decides it searches both sides. So for keys of one qualifying class even a bin
-holding every key costs logarithmic time per lookup, which is what tree bins are for (spec 1.H7).
-Pinned by: HashTreeLookups, HashTreeRules ("compareTo calls").
+Which `compareTo` calls a HashMap makes to find a key in a tree bin. Every search of a tree bin
+first tries the first entry of the bin's sequence (after H10 removals it need not be the root), then
+the tree. A `put`-style insertion then finds the key and the place for a new one in a single descent:
+by mixed hash, else by H6's `compareTo` (one call per node passed where H6 asks for it), else, at the
+first node where `compareTo` cannot decide, by searching both sides of that node for the key once
+and then going on by H6 steps 3 and 4. Those searches, and plain lookups, go down by mixed hash; at a
+node with one child they take it without a call; at a node with two children they use `compareTo`
+for keys of one qualifying class, and where that cannot decide they search the right side and then
+go left. These counts match the oracle's (pinned, with exact counts per call, by HashTreeLookups and
+the reviewer's Hz fuzzer); the identity-hash step 4 makes a tree's shape, and so the counts, depend on
+identity hash codes for keys that reach it, so only keys that never reach it are pinned. For keys of
+one qualifying class even a bin holding every key costs logarithmic time per lookup, which is what
+tree bins are for (spec 1.H7). Pinned by: HashTreeLookups, HashTreeRules ("compareTo calls").
 
 What a compute-family call (`computeIfAbsent`, `computeIfPresent`, `compute`, `merge`) of a HashMap,
 LinkedHashMap or Hashtable stores when its function changes the map structurally. LazyVM's rule:
-the key is looked up again after the function returns. If the call started from an entry that has
-since left the map, the function's result is dropped (what the function itself put stays). If the
-key had no entry, the result goes to an entry the function added for it, or else a new one. The map
+the key is looked up again after the function returns. A null result removes the key's current
+entry (even one the function put back) if the call started from an entry, and otherwise leaves the
+map alone (so an entry the function put for an absent key stays). Any other result is dropped when
+the entry the call started from has since left the map (what the function itself put stays); when
+the key had no entry, it goes to an entry the function added for it, or else to a new one. The map
 always stays consistent. This matches the oracle wherever the oracle's own map stays consistent
 (pinned by MapReentry). In other cases the oracle keeps a key twice, loses one, or ends with a
 wrong size; LazyVM's outcome there is pinned by lazy.util.ReentrantCompute.

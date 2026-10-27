@@ -420,11 +420,10 @@ public class Hashtable<K, V> extends Dictionary<K, V> implements Map<K, V>, Clon
         return finish(seen, e, key, remappingFunction.apply(key, e == null ? null : e.value));
     }
 
-    // Section 12: records v for key after a remapping, as HashMap.finish does: v is dropped when
-    // the entry e it started from has left the table, and goes to an entry the function added.
+    // Section 12: records v for key after a remapping, by HashMap.finish's rule.
     private V finish(int seen, Link<K, V> e, K key, V v) {
         Link<K, V> at = modCount == seen ? e : find(key);
-        if (e != null && at != e) {
+        if (v == null ? e == null || at == null : e != null && at != e) {
             return v;
         }
         if (at != null) {
