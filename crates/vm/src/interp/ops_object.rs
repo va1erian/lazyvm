@@ -156,6 +156,10 @@ impl Vm {
         if self.heap.would_exceed(bytes) {
             self.collect_garbage();
             if self.heap.would_exceed(bytes) {
+                // Soft references are cleared before running out of memory.
+                self.collect_garbage_all();
+            }
+            if self.heap.would_exceed(bytes) {
                 return Err(VmError::OutOfMemory);
             }
         }

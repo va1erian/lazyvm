@@ -89,3 +89,43 @@ fn alloc_past_twice_the_limit_fails() {
     };
     assert!(matches!(heap.alloc(big), Err(VmError::OutOfMemory)));
 }
+
+#[test]
+fn weak_referents_are_cleared_and_soft_ones_kept_until_asked() {
+    let mut heap = Heap::new(64 << 20);
+    // Class 1 is a weak reference class, class 2 a soft one; slot 0 is the referent.
+    let classes = [None, Some((0u32, false)), Some((0u32, true))];
+    let target = alloc(&mut heap, vec![]);
+    let weak = heap
+        .alloc(Object {
+            class: ClassId(1),
+            body: Body::Fields(vec![Value::Ref(Some(target))].into()),
+        })
+        .unwrap_or_else(|e| panic!("{e:?}"));
+    let soft_target = alloc(&mut heap, vec![]);
+    let soft = heap
+        .alloc(Object {
+            class: ClassId(2),
+            body: Body::Fields(vec![Value::Ref(Some(soft_target))].into()),
+        })
+        .unwrap_or_else(|e| panic!("{e:?}"));
+    let info = WeakInfo {
+        classes: &classes,
+        clear_soft: false,
+    };
+    let (_, cleared) = heap.collect_weak([weak, soft], Some(&info));
+    assert_eq!(cleared, vec![weak]);
+    assert!(heap.get(target).is_err(), "the weak referent is freed");
+    assert_eq!(heap.fields(weak).ok().map(|f| f[0]), Some(Value::NULL));
+    assert!(
+        heap.get(soft_target).is_ok(),
+        "soft referents survive a normal collection"
+    );
+    let info = WeakInfo {
+        classes: &classes,
+        clear_soft: true,
+    };
+    let (_, cleared) = heap.collect_weak([weak, soft], Some(&info));
+    assert_eq!(cleared, vec![soft]);
+    assert!(heap.get(soft_target).is_err());
+}

@@ -267,7 +267,7 @@ Goal: the everyday `java.util` and `java.io` surface from
 - [ ] S5-02 Collections II: `HashMap`/`LinkedHashMap`/`HashSet` (the Java 8
       hash spreading and table growth, so iteration order matches the oracle),
       `TreeMap`/`TreeSet` (red-black), `PriorityQueue`, `IdentityHashMap`,
-      `WeakHashMap` (with S5-07), `Map` default methods.
+      `WeakHashMap` (after S5-07 lands), `Map` default methods.
       Check: `tests/java/util/HashOrder`, `TreeMaps`, `MapDefaults`.
 - [ ] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
       Javadoc except `%t` dates, which come with S11), `Double.toString`
@@ -296,7 +296,7 @@ Goal: the everyday `java.util` and `java.io` surface from
       differ for U+0130, U+1F80, combining marks and non-ASCII digits).
       Check: `tests/java/lang/CharacterTables` (a per-property checksum over
       every code point, diffed with the oracle).
-- [ ] S5-07 References: `WeakReference`, `SoftReference` (cleared on memory
+- [x] S5-07 References: `WeakReference`, `SoftReference` (cleared on memory
       pressure), `ReferenceQueue`, and finalization not supported (documented:
       `finalize` is never called).
       Check: `tests/java/lang/WeakRefs`.

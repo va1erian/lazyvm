@@ -7,10 +7,12 @@
 //! across allocations, but not across a call into Java code.
 
 pub mod array;
+mod weak;
 
 use std::num::NonZeroU32;
 
 pub use array::Array;
+pub use weak::WeakInfo;
 
 use crate::VmError;
 use crate::class::ClassId;
@@ -174,7 +176,20 @@ impl Heap {
     /// Marks everything reachable from `roots`, frees the rest, and returns
     /// how many objects were freed.
     pub fn collect(&mut self, roots: impl IntoIterator<Item = Ref>) -> usize {
+        self.collect_weak(roots, None).0
+    }
+
+    /// Marks from `roots`, treating the referent of every reference object
+    /// (`weak`) as not reaching it, then clears the referents nothing else
+    /// reached and frees the rest. Returns how many objects were freed and
+    /// the references whose referents were cleared, for their queues.
+    pub fn collect_weak(
+        &mut self,
+        roots: impl IntoIterator<Item = Ref>,
+        weak: Option<&WeakInfo<'_>>,
+    ) -> (usize, Vec<Ref>) {
         let mut work: Vec<Ref> = roots.into_iter().collect();
+        let mut discovered = Vec::new();
         while let Some(r) = work.pop() {
             let Some(slot) = self.slots.get_mut(r.index() as usize) else {
                 continue;
@@ -184,9 +199,14 @@ impl Heap {
             }
             slot.marked = true;
             if let Some(object) = &slot.object {
-                trace(object, &mut work);
+                let skip = weak.and_then(|w| w.referent_slot(object.class));
+                if skip.is_some() {
+                    discovered.push(r);
+                }
+                trace(object, &mut work, skip);
             }
         }
+        let cleared = self.clear_dead_referents(&discovered, weak);
         let mut freed = 0;
         let mut live = 0;
         for (index, slot) in self.slots.iter_mut().enumerate().skip(1) {
@@ -202,7 +222,44 @@ impl Heap {
         self.live_bytes = live;
         self.next_gc = live.saturating_mul(2).max(MIN_GC_BYTES).min(self.limit);
         self.collections += 1;
-        freed
+        (freed, cleared)
+    }
+
+    /// Clears the referent field of each discovered reference whose referent
+    /// was not marked; called between marking and sweeping.
+    fn clear_dead_referents(
+        &mut self,
+        discovered: &[Ref],
+        weak: Option<&WeakInfo<'_>>,
+    ) -> Vec<Ref> {
+        let Some(weak) = weak else { return Vec::new() };
+        let mut cleared = Vec::new();
+        for &d in discovered {
+            let Ok(obj) = self.get(d) else { continue };
+            let Some(slot) = weak.referent_slot(obj.class) else {
+                continue;
+            };
+            let referent = match &obj.body {
+                Body::Fields(f) => f.get(slot as usize).copied(),
+                Body::Array(_) => None,
+            };
+            let Some(Value::Ref(Some(x))) = referent else {
+                continue;
+            };
+            let alive = self
+                .slots
+                .get(x.index() as usize)
+                .is_some_and(|s| s.marked && s.generation == x.generation && s.object.is_some());
+            if !alive {
+                if let Ok(Body::Fields(f)) = self.get_mut(d).map(|o| &mut o.body)
+                    && let Some(v) = f.get_mut(slot as usize)
+                {
+                    *v = Value::NULL;
+                }
+                cleared.push(d);
+            }
+        }
+        cleared
     }
 
     pub fn object_count(&self) -> usize {
@@ -216,11 +273,13 @@ fn make_ref(index: u32, generation: u32) -> Ref {
     Ref { index, generation }
 }
 
-fn trace(object: &Object, work: &mut Vec<Ref>) {
+/// Pushes what `object` references; `skip` is a reference object's
+/// referent slot, which does not keep its referent alive.
+fn trace(object: &Object, work: &mut Vec<Ref>, skip: Option<u32>) {
     match &object.body {
         Body::Fields(fields) => {
-            work.extend(fields.iter().filter_map(|v| match v {
-                Value::Ref(Some(r)) => Some(*r),
+            work.extend(fields.iter().enumerate().filter_map(|(i, v)| match v {
+                Value::Ref(Some(r)) if Some(i as u32) != skip => Some(*r),
                 _ => None,
             }));
         }
