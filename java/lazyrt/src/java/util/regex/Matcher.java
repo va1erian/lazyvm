@@ -84,6 +84,7 @@ public final class Matcher implements MatchResult {
         clearGroups();
         lastAppendPosition = 0;
         textLength = text.length();
+        starts = new StartIndex[parentPattern.lookCount];
         regionStart = 0;
         regionEnd = textLength;
         return this;
@@ -94,7 +95,6 @@ public final class Matcher implements MatchResult {
             throw new NullPointerException();
         }
         text = input;
-        starts = new StartIndex[parentPattern.lookCount];
         return reset();
     }
 
@@ -254,7 +254,8 @@ public final class Matcher implements MatchResult {
                     s = hints.skipTo(this, s);
                 }
             }
-            if (skipsPairs && s + 1 < hi && Character.isSurrogatePair(text.charAt(s), text.charAt(s + 1))) {
+            // Observed on the oracle: the step reads the pair even when the region end splits it.
+            if (skipsPairs && s + 1 < textLength && Character.isSurrogatePair(text.charAt(s), text.charAt(s + 1))) {
                 s++;
             }
         }

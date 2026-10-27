@@ -111,6 +111,11 @@ abstract class CharClass {
         return this;
     }
 
+    /** True for a folded literal that was loosened: it is part of a literal string. */
+    boolean isLoose() {
+        return false;
+    }
+
     /** Answers ASCII queries from a bitmap, which is how character classes are used almost always. */
     static CharClass cached(CharClass inner) {
         return new Cached(inner);

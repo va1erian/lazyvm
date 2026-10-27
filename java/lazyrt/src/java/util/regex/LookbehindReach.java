@@ -56,12 +56,12 @@ final class LookbehindReach {
 
     private void study(Node n) {
         if (n instanceof Atoms.One) {
-            sum++;
+            sum += ((Atoms.One) n).width;
             if (((Atoms.One) n).fromAlternation) {
                 restart();
             }
         } else if (n instanceof Atoms.Str) {
-            sum += ((Atoms.Str) n).chars.length;
+            sum += ((Atoms.Str) n).reach;
         } else if (n instanceof Atoms.LineBreak) {
             sum += 2;
         } else if (n instanceof Atoms.BackRef) {

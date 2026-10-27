@@ -42,18 +42,11 @@ final class SearchHints {
                 quiet &= isQuiet(items[k]);
             }
         }
-        CharClass startClass = null;
-        int startChar = -1;
+        CharClass startClass = mustStartWith(tree);
+        int startChar = startClass == null && first instanceof Atoms.Str ? ((Atoms.Str) first).chars[0] : -1;
         CharClass run = null;
-        if (first instanceof Atoms.One) {
-            startClass = ((Atoms.One) first).cc;
-        } else if (first instanceof Atoms.Str) {
-            startChar = ((Atoms.Str) first).chars[0];
-        } else if (first instanceof Repeat.CharRepeat) {
+        if (first instanceof Repeat.CharRepeat) {
             Repeat.CharRepeat r = (Repeat.CharRepeat) first;
-            if (r.minCount() > 0) {
-                startClass = r.cc;
-            }
             if (quiet && r.group < 0 && r.maxCount() == Node.UNBOUNDED) {
                 run = r.cc;
             }

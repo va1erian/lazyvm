@@ -89,7 +89,7 @@ final class Parser extends GroupReader {
             i += Character.charCount(cp);
             items[n++] = literal(cp);
         }
-        return sequenceOf(items, n);
+        return Merge.sequenceOf(items, n);
     }
 
     // The open groups.
@@ -110,7 +110,7 @@ final class Parser extends GroupReader {
     }
 
     private void endBranch(Frame f) {
-        Node branch = sequenceOf(f.items, f.itemCount);
+        Node branch = Merge.sequenceOf(f.items, f.itemCount);
         f.itemCount = 0;
         if (f.branchCount == f.branches.length) {
             Node[] bigger = new Node[f.branchCount * 2];
@@ -128,7 +128,7 @@ final class Parser extends GroupReader {
         }
         Node[] exact = new Node[f.branchCount];
         System.arraycopy(f.branches, 0, exact, 0, f.branchCount);
-        return alternation(exact);
+        return Merge.alternation(exact);
     }
 
     /** Handles the ')' that ends group f (the cursor is on it) and returns the group's node. */
@@ -194,60 +194,11 @@ final class Parser extends GroupReader {
         return new GroupNodes.Atomic(body, true);
     }
 
-    /** Alternatives that are each one char of a class are one class, which runs without recursion. */
-    private static Node alternation(Node[] branches) {
-        CharClass[] parts = new CharClass[branches.length];
-        for (int k = 0; k < branches.length; k++) {
-            if (!(branches[k] instanceof Atoms.One)) {
-                return new Node.Alt(branches);
-            }
-            parts[k] = ((Atoms.One) branches[k]).cc;
-        }
-        Atoms.One one = new Atoms.One(CharClass.cached(CharClass.anyOf(parts, parts.length)));
-        one.fromAlternation = true;
+    private Atoms.One classAtom() {
+        wideClass = false;
+        Atoms.One one = new Atoms.One(parseClass());
+        one.width = rawSurrogates && wideClass ? 2 : 1;
         return one;
-    }
-
-    /** Builds a sequence, merging runs of plain literal chars into one string node. */
-    private Node sequenceOf(Node[] items, int n) {
-        // Observed on the oracle (RegexFolding): two or more case-folded literals in a row form a
-        // literal string, which folds without the single character's exceptions (CharClass.FoldChar).
-        for (int k = 1; k < n; k++) {
-            if (isFoldedLiteral(items[k - 1]) && isFoldedLiteral(items[k])) {
-                ((Atoms.One) items[k - 1]).cc.loosen();
-                ((Atoms.One) items[k]).cc.loosen();
-            }
-        }
-        Node[] out = new Node[n];
-        int m = 0;
-        int i = 0;
-        while (i < n) {
-            int j = i;
-            StringBuilder run = new StringBuilder();
-            while (j < n && items[j] instanceof Atoms.One && ((Atoms.One) items[j]).literal >= 0) {
-                run.appendCodePoint(((Atoms.One) items[j]).literal);
-                j++;
-            }
-            if (j - i >= 2) {
-                out[m++] = new Atoms.Str(run.toString().toCharArray());
-                i = j;
-            } else {
-                out[m++] = items[i++];
-            }
-        }
-        if (m == 0) {
-            return new Node.Empty();
-        }
-        if (m == 1) {
-            return out[0];
-        }
-        Node[] exact = new Node[m];
-        System.arraycopy(out, 0, exact, 0, m);
-        return new Node.Seq(exact);
-    }
-
-    private static boolean isFoldedLiteral(Node n) {
-        return n instanceof Atoms.One && ((Atoms.One) n).foldedLiteral;
     }
 
     // Atoms other than groups.
@@ -260,7 +211,7 @@ final class Parser extends GroupReader {
         switch (c) {
             case '[':
                 cursor++;
-                return new Atoms.One(parseClass());
+                return classAtom();
             case '\\':
                 cursor++;
                 return escape();
@@ -296,6 +247,12 @@ final class Parser extends GroupReader {
     }
 
     private Atoms.One literal(int cp) {
+        Atoms.One one = plainLiteral(cp);
+        one.width = rawSurrogates && cp > 0xFFFF ? 2 : 1;
+        return one;
+    }
+
+    private Atoms.One plainLiteral(int cp) {
         if (has(Pattern.CASE_INSENSITIVE)) {
             Atoms.One folded = new Atoms.One(CaseFold.single(cp, has(Pattern.UNICODE_CASE)));
             folded.foldedLiteral = true;

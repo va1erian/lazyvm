@@ -102,6 +102,10 @@ final class CaseFold {
             return this;
         }
 
+        boolean isLoose() {
+            return loose;
+        }
+
         /**
          * Observed on the oracle (RegexFolding): alone, a character whose upper case is its own
          * lower-cased form (the sharp s) matches only itself, so ß does not match the capital

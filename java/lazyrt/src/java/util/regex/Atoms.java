@@ -41,6 +41,12 @@ final class Atoms {
         final CharClass cc;
         /** The code point when this is a plain case-sensitive literal (so runs of them can merge into a Str), else -1. */
         int literal = -1;
+        /**
+         * Chars a lookbehind counts for this node. Observed on the oracle (RegexLookbehind): in a
+         * pattern with a surrogate char written raw anywhere, a character above U+FFFF (a literal
+         * or in a class) counts 2; otherwise it counts 1, so (?<=\x{1F600}y) looks back too little.
+         */
+        int width = 1;
         /** A single character written as a literal under CASE_INSENSITIVE (see Parser.sequenceOf). */
         boolean foldedLiteral;
         /** This class is the union of alternatives, as in (?:a|b); see LookbehindReach. */
@@ -56,7 +62,15 @@ final class Atoms {
                 return false;
             }
             int c = codePointAt(m, i);
-            return cc.test(c) && next.match(m, i + Character.charCount(c));
+            int end = i + Character.charCount(c);
+            if (end > m.hi && cc.isLoose()) {
+                // Observed on the oracle (RegexRegions): a case-folded literal that is part of a
+                // run is compared char by char, so it does not read a pair that a region end splits,
+                // as a class or a literal alone does.
+                m.hitEnd = true;
+                return false;
+            }
+            return cc.test(c) && next.match(m, end);
         }
 
         int min() {
@@ -72,8 +86,15 @@ final class Atoms {
     static final class Str extends Node {
         final char[] chars;
 
-        Str(char[] chars) {
+        /** Chars a lookbehind counts for the run (a pair written as \x{..} counts one). */
+        final int reach;
+        /** The number of characters written, a pair counting one. */
+        private final int count;
+
+        Str(char[] chars, int count, int reach) {
             this.chars = chars;
+            this.count = count;
+            this.reach = reach;
         }
 
         boolean match(Matcher m, int i) {
@@ -91,7 +112,7 @@ final class Atoms {
         }
 
         int min() {
-            return chars.length;
+            return count;
         }
 
         int max() {

@@ -66,7 +66,10 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
   binary properties or `[^\p{Lu}]`), skips the low half of a pair after a
   failed search attempt at the high half. An explicit start inside the pair
   (`find(1)`, a region) is not skipped. A literal `\uDC00` or `[\uDC00]` does
-  match the low half of a pair, in both engines (`RegexSurrogates`).
+  match the low half of a pair, in both engines (`RegexSurrogates`). The step
+reads the pair even when the end of a region splits it, so a start at the
+high half just before the end is followed by the end, not by the end minus one
+(`RegexRegionPairs`).
 - `\p{IsAlnum}`, `IsGraph`, `IsPrint`, `IsBlank` and `IsDigit` are the Unicode
   sets and the other `Is` + POSIX names (`IsLower`, `IsAlpha`, ...) stay ASCII,
   whatever `UNICODE_CHARACTER_CLASS` says; `\p{C}` leaves out unassigned code
@@ -77,6 +80,10 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
 - A region that ends between the halves of a surrogate pair has the pair read
   whole, and `$`, `\Z` and `(?m)$` (not `\z`) hold right after it when the bounds
   anchor (`RegexPairEnd`).
+- With case folding, a literal that is part of a run of literals reads one
+  char at a time, so at a region end that splits a pair it does not read the
+  pair; a single folded literal, or one after a non-literal, reads whole pairs
+  like a class (`RegexRegionPairs`).
 - Case folding (`RegexFolding`, 13 pattern forms over a sample of 2268
   characters): with `CASE_INSENSITIVE | UNICODE_CASE` a character written alone
   (a literal, or `[c]`) matches the characters with the same
@@ -121,9 +128,12 @@ Quirks reproduced on purpose, each seen on the oracle and pinned by a test:
 - Only `^` or `\A` written directly at the start of a pattern lets a failed
   search skip the other positions; inside any group it does not (`RegexRegions`).
 
-Oracle oddity not copied: `(?<=\x{1F600})A` failing on a text of the emoji
-followed by `A`. Here a lookbehind over a supplementary character behaves as
-code point semantics suggest.
+A lookbehind counts how far back it looks in chars of the pattern, as the oracle
+does (`RegexLookbehindPairs`): a character above U+FFFF counts one, so
+`(?<=\x{1F600})A` and `(?<=\x{1F600}y)A` fail on an emoji followed by `A` or `yA`;
+but in a pattern with a surrogate char written raw anywhere it counts two, so
+`(?<=😀)A` matches. This holds for a literal, a class that holds such a
+character, and an alternation of them; the minimum stays one char.
 
 ## Lookbehind reach
 
@@ -173,7 +183,9 @@ Two shortcuts keep the start-position loop of `find()` from being quadratic
 
 A lookbehind over an unbounded body that must begin with one class only tries
 the starts that can begin it, found by jumping through a bit set of the text
-(`StartIndex`), built once the way back is longer than 2048.
+(`StartIndex`), built once the way back is longer than 2048. The index is per
+matcher, and `reset()` and `reset(input)` drop it, since the text may have
+changed (`RegexIndexReset`).
 
 Measured with the oracle on the same machine (wall time including the start of
 the VM; the oracle's run is the second figure):
@@ -199,6 +211,9 @@ the VM; the oracle's run is the second figure):
   `*`/`+` loop over a group with a variable body) and then reports `hitEnd` and
   `requireEnd` differently after a failed `find()`.
 - Back references do not set `hitEnd` in `matches()` the way the oracle does.
+- A lookbehind over a negated class that holds a supplementary character, in a
+  pattern with a raw surrogate (`(?<=[^😀])A` on `😀A`), matches here and not on
+  the oracle.
 - `hitEnd` on the empty input for `(?:(?<=\xe5|\x{10400}Y)(..|..)(..))*+`, a possessive
   loop whose body begins with a failing lookbehind: the oracle reports true, here
   false. A literal supplementary character at the end of a region that splits a

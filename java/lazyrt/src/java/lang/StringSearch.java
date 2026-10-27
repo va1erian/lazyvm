@@ -137,44 +137,4 @@ final class StringSearch {
         }
         return true;
     }
-
-    /**
-     * String.split for patterns that match one literal string. Regular expressions come with
-     * java.util.regex (S5-03); until then any other pattern is refused.
-     */
-    static String[] split(String s, String regex, int limit) {
-        String sep = literal(regex);
-        if (sep == null) {
-            throw new UnsupportedOperationException("split by a regular expression: " + regex);
-        }
-        java.util.ArrayList<String> parts = new java.util.ArrayList<>();
-        int from = 0;
-        int at;
-        while ((limit <= 0 || parts.size() < limit - 1) && (at = s.indexOf(sep, from)) >= 0) {
-            parts.add(s.substring(from, at));
-            from = at + sep.length();
-        }
-        if (parts.isEmpty()) {
-            return new String[] {s};
-        }
-        parts.add(s.substring(from));
-        int n = parts.size();
-        while (limit == 0 && n > 0 && parts.get(n - 1).isEmpty()) {
-            n--;
-        }
-        return parts.subList(0, n).toArray(new String[n]);
-    }
-
-    /** The text a pattern matches if it is a plain string or one escaped symbol, else null. */
-    private static String literal(String regex) {
-        if (regex.length() == 2 && regex.charAt(0) == '\\' && !Character.isLetterOrDigit(regex.charAt(1))) {
-            return regex.substring(1);
-        }
-        for (int i = 0; i < regex.length(); i++) {
-            if (".$|()[{^?*+\\".indexOf(regex.charAt(i)) >= 0) {
-                return null;
-            }
-        }
-        return regex.isEmpty() ? null : regex;
-    }
 }

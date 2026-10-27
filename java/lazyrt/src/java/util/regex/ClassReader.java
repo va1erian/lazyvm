@@ -293,11 +293,13 @@ class ClassReader extends PatternReader {
     }
 
     private CharClass single(int c) {
+        wideClass |= c > 0xFFFF;
         return has(Pattern.CASE_INSENSITIVE)
             ? CaseFold.single(c, has(Pattern.UNICODE_CASE)) : CharClass.single(c);
     }
 
     private CharClass range(int lo, int hi) {
+        wideClass |= hi > 0xFFFF;
         if (hi < lo) {
             throw error("Illegal character range");
         }
