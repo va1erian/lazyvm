@@ -104,6 +104,20 @@ public class WriterBlocks {
         System.out.println("PrintStream over failing PrintStream: " + ps.checkError());
 
         System.out.println("clean after close: " + new Quiet(new Log(0)).closedCheck());
+
+        ps = new PrintStream(new PrintStream(new Log(0)));
+        ps.close();
+        ps.print("x");
+        System.out.println("closed outer, print: " + ps.checkError());
+        ps = new PrintStream(new PrintStream(new Log(0)));
+        ps.close();
+        ps.flush();
+        System.out.println("closed outer, flush: " + ps.checkError());
+        Quiet inner = new Quiet(new Log(0));
+        ps = new PrintStream(inner);
+        ps.close();
+        inner.fail();
+        System.out.println("closed outer, inner error: " + ps.checkError());
     }
 
     static class Quiet extends PrintStream {
@@ -113,6 +127,10 @@ public class WriterBlocks {
 
         void clear() {
             clearError();
+        }
+
+        void fail() {
+            setError();
         }
 
         boolean closedCheck() {

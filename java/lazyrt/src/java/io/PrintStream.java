@@ -56,11 +56,15 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         }
     }
 
-    /** Observed on the oracle: a PrintStream over a PrintStream reports the inner one's state. */
+    /**
+     * Observed on the oracle: once closed, a stream reports its own trouble;
+     * while open, a PrintStream over a PrintStream reports the inner one's.
+     */
     public boolean checkError() {
-        if (!closed) {
-            flush();
+        if (closed) {
+            return trouble;
         }
+        flush();
         if (out instanceof PrintStream) {
             return ((PrintStream) out).checkError();
         }

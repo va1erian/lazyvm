@@ -35,3 +35,6 @@ flush after close: true
 PrintWriter over failing PrintStream: true
 PrintStream over failing PrintStream: true
 clean after close: false
+closed outer, print: true
+closed outer, flush: true
+closed outer, inner error: false
