@@ -38,6 +38,11 @@ abstract class CharClass {
         return new Pred(kind);
     }
 
+    /** A set given as "lo-hi,lo-hi,..." in hex, sorted. */
+    static CharClass ranges(String spec) {
+        return new Ranges(spec);
+    }
+
     static CharClass categories(int mask) {
         return new Cat(mask);
     }
@@ -148,6 +153,47 @@ abstract class CharClass {
         }
     }
 
+    private static final class Ranges extends CharClass {
+        private final int[] lo;
+        private final int[] hi;
+
+        Ranges(String spec) {
+            int n = 1;
+            for (int i = 0; i < spec.length(); i++) {
+                if (spec.charAt(i) == ',') {
+                    n++;
+                }
+            }
+            lo = new int[n];
+            hi = new int[n];
+            int start = 0;
+            for (int k = 0; k < n; k++) {
+                int comma = spec.indexOf(',', start);
+                int end = comma < 0 ? spec.length() : comma;
+                int dash = spec.indexOf('-', start);
+                lo[k] = Integer.parseInt(spec.substring(start, dash), 16);
+                hi[k] = Integer.parseInt(spec.substring(dash + 1, end), 16);
+                start = end + 1;
+            }
+        }
+
+        boolean test(int cp) {
+            int a = 0;
+            int b = lo.length - 1;
+            while (a <= b) {
+                int mid = (a + b) >>> 1;
+                if (cp < lo[mid]) {
+                    b = mid - 1;
+                } else if (cp > hi[mid]) {
+                    a = mid + 1;
+                } else {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     private static final class Cached extends CharClass {
         private final CharClass inner;
         private long lowBits;
@@ -226,21 +272,21 @@ abstract class CharClass {
                 case U_CNTRL: return Category.type(cp) == Category.Cc;
                 case U_XDIGIT: return isHexDigit(cp);
                 case U_DIGIT: return Character.isDigit(cp);
-                case U_IDEOGRAPHIC: return isIdeographic(cp);
-                case U_ASSIGNED: return Category.type(cp) != Category.Cn;
+                case U_IDEOGRAPHIC: return Character.isIdeographic(cp);
+                case U_ASSIGNED: return Character.isDefined(cp);
                 case U_JOIN: return cp == 0x200C || cp == 0x200D;
                 case U_NONCHAR: return (cp & 0xFFFE) == 0xFFFE || (cp >= 0xFDD0 && cp <= 0xFDEF);
                 case J_WHITESPACE: return Character.isWhitespace(cp);
                 case J_SPACECHAR: return Character.isSpaceChar(cp);
                 case J_ISOCONTROL: return Character.isISOControl(cp);
-                case J_TITLE: return Category.type(cp) == Category.Lt;
-                case J_DEFINED: return Category.type(cp) != Category.Cn;
-                case J_MIRRORED: return "()<>[]{}«»".indexOf(cp) >= 0;
-                case J_JAVA_START: return isJavaStart(cp);
-                case J_JAVA_PART: return isJavaStart(cp) || isJavaPartOnly(cp);
-                case J_UNI_START: return Character.isLetter(cp) || Category.type(cp) == Category.Nl;
-                case J_UNI_PART: return Character.isLetterOrDigit(cp) || isJavaPartOnly(cp) && Category.type(cp) != Category.Sc;
-                case J_IGNORABLE: return isIgnorable(cp);
+                case J_TITLE: return Character.isTitleCase(cp);
+                case J_DEFINED: return Character.isDefined(cp);
+                case J_MIRRORED: return Character.isMirrored(cp);
+                case J_JAVA_START: return Character.isJavaIdentifierStart(cp);
+                case J_JAVA_PART: return Character.isJavaIdentifierPart(cp);
+                case J_UNI_START: return Character.isUnicodeIdentifierStart(cp);
+                case J_UNI_PART: return Character.isUnicodeIdentifierPart(cp);
+                case J_IGNORABLE: return Character.isIdentifierIgnorable(cp);
                 case J_LETTER_OR_DIGIT: return Character.isLetterOrDigit(cp);
                 case J_LETTER: return Character.isLetter(cp);
                 default: return false;
@@ -293,26 +339,5 @@ abstract class CharClass {
     private static boolean isHexDigit(int cp) {
         return (cp >= '0' && cp <= '9') || (cp >= 'a' && cp <= 'f') || (cp >= 'A' && cp <= 'F')
             || (cp >= 0xFF10 && cp <= 0xFF19) || (cp >= 0xFF21 && cp <= 0xFF26) || (cp >= 0xFF41 && cp <= 0xFF46);
-    }
-
-    private static boolean isIdeographic(int cp) {
-        return cp == 0x3006 || cp == 0x3007 || (cp >= 0x3021 && cp <= 0x3029) || (cp >= 0x3038 && cp <= 0x303A)
-            || (cp >= 0x3400 && cp <= 0x4DB5) || (cp >= 0x4E00 && cp <= 0x9FCB) || (cp >= 0xF900 && cp <= 0xFA6D)
-            || (cp >= 0xFA70 && cp <= 0xFAD9) || (cp >= 0x20000 && cp <= 0x2FA1D);
-    }
-
-    private static boolean isJavaStart(int cp) {
-        int t = Category.type(cp);
-        return Character.isLetter(cp) || t == Category.Nl || t == Category.Sc || t == Category.Pc;
-    }
-
-    private static boolean isIgnorable(int cp) {
-        return (cp >= 0 && cp <= 8) || (cp >= 0xE && cp <= 0x1B) || (cp >= 0x7F && cp <= 0x9F)
-            || Category.type(cp) == Category.Cf;
-    }
-
-    private static boolean isJavaPartOnly(int cp) {
-        int t = Category.type(cp);
-        return Character.isDigit(cp) || t == Category.Mn || t == Category.Mc || isIgnorable(cp);
     }
 }

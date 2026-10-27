@@ -204,7 +204,7 @@ final class Repeat {
             int c = m.loopCount[id];
             if (c > 0 && i == m.loopStart[id]) {
                 // The last iteration consumed nothing, so more would add nothing; the minimum
-                // counts as met (the reference implementation ends the loop here too).
+                // counts as met; observed on the oracle with (\n*?){2}a, see RegexQuantifiers).
                 return next.match(m, i);
             }
             boolean required = c < minCount;

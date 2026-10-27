@@ -66,6 +66,8 @@ public class RegexQuantifiers {
         all("(\\b)*x", "x");
         all("()*x", "x");
         all("(){0}x", "x");
+        all("(\\n*?){2}a", "\naa");
+        all("(?:(?<!(a))|.*+){2}", "xa");
         all("(a){0}b", "ab");
         all("(a){0,0}b", "ab");
         all("(a{0})*x", "x");

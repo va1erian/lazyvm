@@ -7,7 +7,7 @@ package java.util.regex;
  * <p>Error positions follow one rule: an error is reported at `cursor - 1`, so
  * a character that was consumed and found wrong is the one pointed at, and
  * reading past the end (which still advances the cursor) points one past it.
- * The tests compare these messages with the reference implementation's.
+ * RegexErrors compares the messages and indexes with the oracle's.
  */
 class PatternReader {
     final String original;

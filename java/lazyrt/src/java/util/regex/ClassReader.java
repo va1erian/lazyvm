@@ -4,7 +4,7 @@ package java.util.regex;
  * Parses bracketed character classes: ranges, nested classes, && intersection
  * and the predefined classes (\d \w \p{..} ...).
  *
- * <p>Two behaviours follow the reference implementation rather than intuition.
+ * <p>Two behaviours were found by running classes on the Temurin 8 oracle (RegexClasses).
  * A leading ^ negates only the items written directly in the first segment, one
  * by one (so [^a[b]] is "not a, or b" and [^a-c&&b-d] is "not a-c, and b-d"),
  * and an empty side of && is ignored.

@@ -326,7 +326,7 @@ final class Parser extends GroupReader {
         return suffix(atom, min, max, false);
     }
 
-    /** Decimal digits as an int, wrapping on overflow as the reference does. */
+    /** Decimal digits as an int, wrapping on overflow (a{2147483648} is rejected, as observed on the oracle). */
     private int digits() {
         int v = 0;
         while (!atEnd() && cur() >= '0' && cur() <= '9') {
@@ -348,7 +348,7 @@ final class Parser extends GroupReader {
         }
         if (min == 0 && max > 0 && mode == Repeat.GREEDY && !question && isEmptyGroup(atom)) {
             // A greedy optional group with a fixed zero-width body runs its body but never
-            // records a capture; the reference implementation does the same (but not for '?').
+            // records a capture; observed on the oracle for * and {0,n}, but not for '?'.
             return new Node.Alt(new Node[] {((GroupNodes.Group) atom).body(), new Node.Empty()});
         }
         if (atom instanceof Atoms.One) {

@@ -3,8 +3,8 @@ package java.util.regex;
 /**
  * Capturing groups, lookaround and atomic groups. Captures made inside a
  * lookaround body or an atomic group stay set even if the match later backs
- * out of it; the reference implementation behaves the same, so a failed
- * branch can leave a group set.
+ * out of it, so a failed branch can leave a group set. Observed on the oracle
+ * (RegexGroups, last block).
  */
 final class GroupNodes {
     private GroupNodes() {

@@ -14,14 +14,15 @@ streams exist (S11).
 | `Pattern`, `Matcher`, `MatchResult`, `PatternSyntaxException` | the public API |
 | `PatternReader`, `ClassReader`, `GroupReader`, `Parser` | one inheritance chain: cursor and escapes, character classes, groups, the rest of the grammar |
 | `Node`, `Atoms`, `Anchor`, `GroupNodes`, `Repeat` | the node tree the parser builds and `link` wires into a chain |
-| `CharClass`, `Props`, `Category`, `Blocks` | sets of code points and the `\p{..}` names |
+| `CharClass`, `Props`, `Category`, `Blocks`, `UnicodeData` | sets of code points and the `\p{..}` names |
 | `Lengths` | the length analysis whose results are observable (see below) |
 | `Replacement` | `$n`, `${name}` and `\` expansion for `appendReplacement` |
 
 A match is a walk down `next` pointers: a node consumes input and calls
 `next.match`; false means backtrack. Nodes undo their own state when they
 return false. Captures made inside a lookaround body or an atomic group are not
-undone when the match later backs out, because Java does not undo them either.
+undone when the match later backs out: the oracle leaves them set (`RegexGroups`,
+last block).
 
 ## Syntax
 
@@ -34,7 +35,8 @@ greedy, reluctant and possessive quantifiers, capturing, named, non-capturing,
 atomic and lookaround groups, back references (`\n`, `\k<name>`), inline flags
 (`(?idmsuxU-idmsuxU)` and `(?flags:x)`), and all flags except as noted.
 
-Quirks reproduced on purpose: a leading `^` in a class negates only the items
+Quirks reproduced on purpose, each seen on the oracle and covered by a test
+(`RegexClasses`, `RegexQuantifiers`, `RegexErrors`, `RegexGroups`): a leading `^` in a class negates only the items
 written directly in it (`[^a-c&&b-d]` is "not a-c, and b-d"); an empty side of
 `&&` is ignored; `{` where an atom is expected starts a repeat of nothing (`{1}`
 compiles); lookbehind bodies of unbounded length are accepted unless adding the
@@ -46,25 +48,23 @@ group; a zero-width iteration ends a loop even below its minimum.
 
 `PatternSyntaxException` messages and indexes are compared against the oracle:
 the description, `near index N`, the pattern and the caret line, with the line
-separator from `System.lineSeparator()` as Java uses. The parser keeps a cursor
-that, like Java's, can run one past the end, and reports `cursor - 1`.
+separator from `System.lineSeparator()`. The parser keeps a cursor that can run
+one past the end and reports `cursor - 1`; that rule reproduces the oracle's
+indexes.
 `RegexErrors` and the randomized runs cover the common and many odd cases;
 errors in patterns that mix `\Q..\E` with errors after them report indexes in
-the quote-expanded pattern, as Java does.
+the quote-expanded pattern, which is what the oracle's indexes show.
 
 ## Known gaps
 
-- **Unicode data.** lazyrt's `Character` has no `getType`, `UnicodeBlock` or
-  `UnicodeScript` yet (S5-08). General categories come from `Category.type`,
-  exact for U+0000..U+00FF and approximate above, built from `Character`'s
-  boolean tests plus block rules; swap its body for `Character.getType` once it
-  exists. Blocks and scripts are small tables (`Blocks`): about 40 blocks and
-  Latin, Greek, Cyrillic, Armenian, Hebrew, Arabic, Devanagari, Thai, Hiragana,
-  Katakana, Hangul and Han. Other names are rejected as unknown, not guessed.
-  Script `Common` and the other scripts are not available.
+- **Unicode data.** General categories use `Character.getType`, so they are as
+  exact as lazyrt's `Character` (S5-08). lazyrt has no `UnicodeBlock` or
+  `UnicodeScript`, so `UnicodeData` holds the code point ranges of every block
+  and script, dumped from those classes' behaviour on the oracle. Block names
+  match by constant name, display name and display name without spaces; the
+  hyphen rule is derived from the constant name and can differ for a few
+  names such as the "Extension A" blocks.
 - **CANON_EQ** is accepted and ignored.
-- `\b` and the Unicode `\w` use `Character.isLetterOrDigit`/`isAlphabetic`, so
-  they inherit `Character`'s data until S5-08.
 - Search does not look for a literal prefix; every start position is tried.
 
 ## Cost and limits
@@ -74,11 +74,11 @@ the quote-expanded pattern, as Java does.
 - Loops over a group, or over anything with alternation, recurse: about four
   Java frames per iteration, so with the default 4096-frame limit a pattern
   like `(ab|c)*` handles roughly a thousand iterations before
-  `StackOverflowError` (Java's own limit is a few thousand). A group of single
+  `StackOverflowError` (the oracle managed about three thousand in a probe). A group of single
   characters, `(a|b)*`, is folded into a class and is not affected.
 - Backtracking is exponential on patterns such as `(a+)+b` against `aaaa..c`,
   and on `(a|aa)+$`. Possessive quantifiers and atomic groups avoid it; nothing
-  is memoized. This matches the reference engine's behaviour.
-- `hitEnd` and `requireEnd` follow Java's rules for the nodes that set them,
-  including the minimum-length analysis that decides where a failed search
-  stops. A few exotic nestings of quantified groups differ.
+  is memoized. The oracle shows the same blow-up.
+- `hitEnd` and `requireEnd` were fitted to the oracle (`RegexRegions` and
+  randomized runs), including a minimum-length rule that decides where a
+  failed search stops (`Lengths`). A few exotic nestings of quantified groups differ.

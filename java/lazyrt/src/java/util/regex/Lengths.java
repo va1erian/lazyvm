@@ -1,17 +1,19 @@
 package java.util.regex;
 
 /**
- * Static analysis of a node tree that mimics the reference implementation's,
- * because both results are observable: whether a lookbehind body "has a
- * maximum length" (a compile error otherwise), and the minimum match length
- * that bounds where a search tries to start (it decides hitEnd after a failed
- * find).
+ * Two length analyses whose results are visible, both fitted to behaviour
+ * observed on the Temurin 8 oracle (RegexErrors for the first, RegexRegions
+ * and the hitEnd tests for the second):
  *
- * <p>The maximum-length rule: Its length arithmetic is 32-bit: an unbounded
- * repeat counts as Integer.MAX_VALUE chars and is accepted unless adding it to
- * the length before it overflows. So (?<=a*) and (?<=\w+x) are accepted and
- * (?<=ab*) is rejected; a loop over a group with branches or variable-width
- * parts is always rejected. (The matcher itself handles any width.)
+ * <p>Whether a lookbehind body is accepted. Unbounded repeats are accepted when
+ * nothing is added to the length around them and rejected otherwise: (?<=a*)
+ * and (?<=\w+x) compile, (?<=ab*) and (?<=a.*b) do not, and a loop over a group
+ * with branches or variable-width parts is rejected. The model that fits is
+ * 32-bit length arithmetic with an unbounded repeat counting as
+ * Integer.MAX_VALUE chars. (The matcher itself handles any width.)
+ *
+ * <p>The minimum match length that bounds where a failed search stops, which
+ * decides hitEnd afterwards.
  */
 final class Lengths {
     private int max;
@@ -29,9 +31,9 @@ final class Lengths {
     }
 
     /**
-     * The minimum match length as the reference implementation computes it: it
-     * stops adding at a loop over a body that can vary, so patterns with such
-     * a loop count as having a shorter minimum than they really have.
+     * The minimum match length that fits the oracle's hitEnd results: counting
+     * stops at a * + or {n,m} loop over a group whose body can vary, so such
+     * patterns count as shorter than they are.
      */
     static int minLength(Node root) {
         Lengths s = new Lengths();
