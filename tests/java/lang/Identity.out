@@ -1,0 +1,17 @@
+identityHashCode == hashCode = true
+same object same hash = true
+identityHashCode stable = true
+a == b = false
+a == a = true
+a.equals(b) = false
+a.equals(a) = true
+null identityHashCode = 0
+override hashCode = 12345
+identity of override stable = true
+String hashCode = 3556653
+hash stable after gc = true
+hash b stable after gc = true
+identity stable after gc = true
+array hashes stable after gc = true
+300 objects stable = true
+done

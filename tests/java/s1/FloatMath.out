@@ -1,0 +1,80 @@
+0.1+0.2 = 0.30000000000000004
+0.1*3 = 0.30000000000000004
+1/3 = 0.3333333333333333
+2/3f = 0.6666667
+0.1f+0.2f = 0.3
+1e10 = 1.0E10
+1e-5 = 1.0E-5
+100.0 = 100.0
+1.0E7 = 1.0E7
+9999999.0 = 9999999.0
+0.001 = 0.001
+0.0001 = 1.0E-4
+123456789.0f = 1.2345679E8
+1.5f = 1.5
+1.0E10f = 1.0E10
+max double = 1.7976931348623157E308
+min double = 4.9E-324
+max float = 3.4028235E38
+min float = 1.4E-45
+float to double 0.1f = 0.10000000149011612
+float to double 16777217 = 1.6777216E7
+long to float = 1.2345679E11
+long to double = 9.223372036854776E18
+int to float = 2.1474836E9
+double to float 1e40 = Infinity
+double to float 1e-50 = 0.0
+nan = NaN inf = Infinity -inf = -Infinity
+nan vs nan: < false <= false > false >= false == false != true
+nan vs 1: < false <= false > false >= false == false != true
+1 vs nan: < false <= false > false >= false == false != true
+0.0 vs -0.0: < false <= true > false >= true == true != false
+inf vs max: < false <= false > true >= true == false != true
+fnan vs fnan: < false <= false > false >= false == false != true
+fnan vs 2: < false <= false > false >= false == false != true
+2 vs fnan: < false <= false > false >= false == false != true
+1.5 vs 2.5: < true <= true > false >= false == false != true
+nan != nan true
+isNaN true false
+inf-inf = NaN, inf*0 = NaN
+1/0.0 = Infinity
+1/-0.0 = -Infinity
+-0.0 prints -0.0
+0.0 == -0.0 true
+0.0 + -0.0 = 0.0
+-0.0 + -0.0 = -0.0
+-0.0f prints -0.0
+0 * -1.0 = -0.0
+1e10: d2i=2147483647 d2l=10000000000 f2i=2147483647 f2l=10000000000
+-1e10: d2i=-2147483648 d2l=-10000000000 f2i=-2147483648 f2l=-10000000000
+1e30: d2i=2147483647 d2l=9223372036854775807 f2i=2147483647 f2l=9223372036854775807
+-1e30: d2i=-2147483648 d2l=-9223372036854775808 f2i=-2147483648 f2l=-9223372036854775808
+nan: d2i=0 d2l=0 f2i=0 f2l=0
+inf: d2i=2147483647 d2l=9223372036854775807 f2i=2147483647 f2l=9223372036854775807
+-inf: d2i=-2147483648 d2l=-9223372036854775808 f2i=-2147483648 f2l=-9223372036854775808
+2.9: d2i=2 d2l=2 f2i=2 f2l=2
+-2.9: d2i=-2 d2l=-2 f2i=-2 f2l=-2
+2147483647.5: d2i=2147483647 d2l=2147483647 f2i=2147483647 f2l=2147483648
+9.3e18: d2i=2147483647 d2l=9223372036854775807 f2i=2147483647 f2l=9223372036854775807
+d2i 2^31 = 2147483647
+d2l 2^63 = 9223372036854775807
+d2i -0.9 = 0
+f2i 3e9f = 2147483647
+5.5 % 2 = 1.5
+-5.5 % 2 = -1.5
+5.5 % -2 = 1.5
+-5.5 % -2 = -1.5
+5 % 0.0 = NaN
+inf % 3 = NaN
+3 % inf = 3.0
+-6.0 % 3 = -0.0
+5.5f % 2 = 1.5
+-7.25f % 2.5f = -2.25
+1.1f widened = 1.100000023841858
+1.1f * 1.1f = 1.21
+1.1 * 1.1 = 1.2100000000000002
+float sum = 1.0000001
+double sum = 0.9999999999999999
+neg = -1.100000023841858 -1.1
+iter = 29.33251953125
+done

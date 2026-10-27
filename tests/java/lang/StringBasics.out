@@ -1,0 +1,85 @@
+length = 12
+charAt(0) = H
+charAt(11) = d
+indexOf('o') = 4
+indexOf('o',5) = 8
+indexOf('o',9) = -1
+indexOf('z') = -1
+indexOf("World") = 7
+indexOf("o",5) = 8
+indexOf("") = 0
+indexOf("",50) = 12
+indexOf('H',-5) = 0
+lastIndexOf('o') = 8
+lastIndexOf('o',7) = 4
+lastIndexOf('o',3) = -1
+lastIndexOf("l") = 10
+lastIndexOf("l",9) = 3
+lastIndexOf("xyz") = -1
+substring(7) = World
+substring(0,5) = Hello
+substring(5,5) = []
+substring(12) = []
+substring(13) throws java.lang.StringIndexOutOfBoundsException
+substring(5,2) throws java.lang.StringIndexOutOfBoundsException
+charAt(12) throws java.lang.StringIndexOutOfBoundsException
+startsWith("Hell") = true
+startsWith("World",7) = true
+startsWith("") = true
+endsWith("World") = true
+endsWith("") = true
+endsWith("world") = false
+equals = true false false false
+equalsIgnoreCase = true false false
+compareTo = -1 1 0 -1 1 -3 -7 1
+compareToIgnoreCase = -1 0
+hash empty = 0
+hash a = 97
+hash hello = 99162322
+hash Hello, World = -505841268
+hash long = -609428141
+hash unicode = 909851
+hash Aa/BB = 2112 2112
+trim = [padded]
+trim none = [x] []
+toUpperCase = MIXED CASE 123 !
+toLowerCase = mixed case 123 !
+replace char = bonono
+replace missing char = banana
+replace str = bANANa
+replace grow = bbbbbb
+replace delete = bnn
+replace empty target = -a-b-
+contains = true false true
+concat = foobar true
+join = a, b, c | solo | 
+isEmpty = true false
+valueOf int = -17
+valueOf long = 1099511627776
+valueOf char = c
+valueOf boolean = true
+valueOf float = 1.5
+valueOf double = 2.25
+valueOf null object = null
+valueOf char[] = ok
+toCharArray = 12 HW
+toCharArray copy = H Jello, World
+new String(char[],1,3) = ell
+literal == literal = true
+constant fold == = true
+dynamic == literal = false
+dynamic equals literal = true
+intern == = true
+new String("x") == "x" = false
+new String("x").intern() == "x" = true
+intern idempotent = true
+utf8 bytes = 65 195 169 228 184 173
+utf8 round trip = 65 233 20013
+decode euro = 8364 65
+decode slice = 65
+codePointAt = 128512 3
+supplementary utf8 = 240 159 152 128
+empty string bytes = 0
+regionMatches = true false
+CharSequence = 12 He
+done

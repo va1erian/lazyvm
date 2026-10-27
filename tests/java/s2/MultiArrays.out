@@ -1,0 +1,27 @@
+2 3 3 0
+7 0
+rows distinct: true
+3d 2 3 4 total 33
+0 -9223372036854775808
+null 2 3
+z
+0.0 false 0
+null null 2
+5
+2 3 null
+null
+zero outer 0
+zero inner 0
+negative inner: java.lang.NegativeArraySizeException
+negative outer: java.lang.NegativeArraySizeException
+[[I [[[I [[Ljava.lang.String;
+1 100 true 3
+[I
+shallow: 50 same row true
+replaced row: 3 8
+Box77 true [Ls2.MultiArrays$Box;
+[Ljava.lang.String; q
+clone keeps String[] type
+abc
+0
+done

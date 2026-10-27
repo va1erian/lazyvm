@@ -1,0 +1,22 @@
+3[@s4.InheritedAnnotations$Inh(value=base), @s4.InheritedAnnotations$NotInh(), @s4.InheritedAnnotations$Level(value=1)]
+2[@s4.InheritedAnnotations$Inh(value=base), @s4.InheritedAnnotations$Level(value=1)] 0
+2[@s4.InheritedAnnotations$Inh(value=base), @s4.InheritedAnnotations$Level(value=2)] 1[@s4.InheritedAnnotations$Level(value=2)]
+0[] false
+@s4.InheritedAnnotations$Inh(value=iface) 0[]
+true false true true
+2 1 base
+true true
+1[@s4.InheritedAnnotations$Roles(value=[@s4.InheritedAnnotations$Role(value=a), @s4.InheritedAnnotations$Role(value=b)])] true
+2
+2[@s4.InheritedAnnotations$Role(value=a), @s4.InheritedAnnotations$Role(value=b)] 1
+1[@s4.InheritedAnnotations$Role(value=single)] 0 true
+2[@s4.InheritedAnnotations$Role(value=a), @s4.InheritedAnnotations$Role(value=b)] 0
+0 0 0
+2[@s4.InheritedAnnotations$Tg(value=1), @s4.InheritedAnnotations$Tg(value=2)] 1[@s4.InheritedAnnotations$Tags(value=[@s4.InheritedAnnotations$Tg(value=1), @s4.InheritedAnnotations$Tg(value=2)])] 0
+1[@s4.InheritedAnnotations$Tg(value=own)] 2[@s4.InheritedAnnotations$Tags(value=[@s4.InheritedAnnotations$Tg(value=1), @s4.InheritedAnnotations$Tg(value=2)]), @s4.InheritedAnnotations$Tg(value=own)]
+1[@s4.InheritedAnnotations$Roles(value=[@s4.InheritedAnnotations$Role(value=m1), @s4.InheritedAnnotations$Role(value=m2)])] true
+2[@s4.InheritedAnnotations$Role(value=m1), @s4.InheritedAnnotations$Role(value=m2)] 2
+1[@s4.InheritedAnnotations$Role(value=only)] 0 0[]
+@s4.InheritedAnnotations$Role(value=only) null
+3[@s4.InheritedAnnotations$Role(value=f1), @s4.InheritedAnnotations$Role(value=f2), @s4.InheritedAnnotations$Role(value=f3)] 1 f3
+done

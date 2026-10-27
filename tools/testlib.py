@@ -10,10 +10,12 @@ Optional header lines in the source, before `package`:
     // ARGS: a b c          program arguments, split on spaces
     // VMARGS: -Xmx16m      extra arguments for both VMs
     // TIMEOUT: 120         seconds, default 60
+    // ORACLE: modern       bless on JDK 19+ (docs/decisions.md D9: float printing)
 """
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -35,6 +37,7 @@ class Test:
     args: list[str] = field(default_factory=list)
     vm_args: list[str] = field(default_factory=list)
     timeout: int = DEFAULT_TIMEOUT
+    modern_oracle: bool = False
 
     @property
     def golden(self) -> Path:
@@ -63,6 +66,10 @@ def parse_test(source: Path) -> Test:
             test.args = value.split()
         elif key == "VMARGS":
             test.vm_args = value.split()
+        elif key == "ORACLE":
+            if value.strip() != "modern":
+                die(f"{source}: ORACLE must be 'modern', got {value.strip()!r}")
+            test.modern_oracle = True
         elif key == "TIMEOUT":
             if not value.strip().isdigit():
                 die(f"{source}: TIMEOUT must be whole seconds, got {value.strip()!r}")
@@ -86,6 +93,22 @@ def build(tests: list[Test], rebuild_lazyrt: bool = True) -> None:
         lazyrt.build()
     javac.compile([t.source for t in tests], TESTS_CLASSES,
                   bootclasspath=LAZYRT_CLASSES, sourcepath=TESTS_SRC)
+    copy_resources()
+
+
+def copy_resources() -> None:
+    """Every file under tests/java that is not a source or a golden is a
+    resource of its package and goes next to the classes."""
+    for path in TESTS_SRC.rglob("*"):
+        if path.is_file() and path.suffix not in (".java", ".out", ".md"):
+            target = TESTS_CLASSES / path.relative_to(TESTS_SRC)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, target)
+
+
+def tests_jar() -> Path:
+    """The compiled tests and their resources as one jar, for `--jar` runs."""
+    return lazyrt.write_jar(TESTS_CLASSES, TESTS_CLASSES.parent / "tests.jar")
 
 
 def close_line(text: str) -> str:
@@ -107,10 +130,10 @@ def transcript(stdout: str, stderr: str, code: int) -> str:
     return out
 
 
-def run(cmd: list[str], test: Test) -> str:
+def run(cmd: list[str], test: Test, classpath: Path = TESTS_CLASSES) -> str:
     """Run one VM command line for `test` and return its transcript."""
     try:
-        done = subprocess.run([*cmd, *test.vm_args, "-cp", str(TESTS_CLASSES),
+        done = subprocess.run([*cmd, *test.vm_args, "-cp", str(classpath),
                                test.main_class, *test.args],
                               capture_output=True, timeout=test.timeout)
     except subprocess.TimeoutExpired:

@@ -1,0 +1,156 @@
+Integer.parse null: java.lang.NumberFormatException | null
+Integer.parse empty: java.lang.NumberFormatException | For input string: ""
+Integer.parse minus: java.lang.NumberFormatException | For input string: "-"
+Integer.parse plus: java.lang.NumberFormatException | For input string: "+"
+Integer.parse 12x: java.lang.NumberFormatException | For input string: "12x"
+Integer.parse overflow: java.lang.NumberFormatException | For input string: "2147483648"
+Integer.parse 0x10: java.lang.NumberFormatException | For input string: "0x10"
+Integer.parse space: java.lang.NumberFormatException | For input string: " 1"
+Integer.parse radix1: java.lang.NumberFormatException | radix 1 less than Character.MIN_RADIX
+Integer.parse radix37: java.lang.NumberFormatException | radix 37 greater than Character.MAX_RADIX
+Integer.parse radix2 bad: java.lang.NumberFormatException | For input string: "12"
+Integer.valueOf null: java.lang.NumberFormatException | null
+Integer.valueOf bad radix: java.lang.NumberFormatException | radix 99 greater than Character.MAX_RADIX
+Integer.valueOf bad: java.lang.NumberFormatException | For input string: "zz"
+Integer.decode empty: java.lang.NumberFormatException | Zero length string
+Integer.decode 0x: java.lang.NumberFormatException | For input string: ""
+Integer.decode #: java.lang.NumberFormatException | For input string: ""
+Integer.decode null: java.lang.NullPointerException | null
+Integer.decode -0x80000001: java.lang.NumberFormatException | For input string: "-80000001"
+Integer.decode 0x-1: java.lang.NumberFormatException | Sign character in wrong position
+Integer.decode -: java.lang.NumberFormatException | For input string: "-"
+Long.parse null: java.lang.NumberFormatException | null
+Long.parse empty: java.lang.NumberFormatException | For input string: ""
+Long.parse minus: java.lang.NumberFormatException | For input string: "-"
+Long.parse plus: java.lang.NumberFormatException | For input string: "+"
+Long.parse 12x: java.lang.NumberFormatException | For input string: "12x"
+Long.parse overflow: java.lang.NumberFormatException | For input string: "9223372036854775808"
+Long.parse 0x10: java.lang.NumberFormatException | For input string: "0x10"
+Long.parse space: java.lang.NumberFormatException | For input string: " 1"
+Long.parse radix1: java.lang.NumberFormatException | radix 1 less than Character.MIN_RADIX
+Long.parse radix37: java.lang.NumberFormatException | radix 37 greater than Character.MAX_RADIX
+Long.parse radix2 bad: java.lang.NumberFormatException | For input string: "12"
+Long.valueOf null: java.lang.NumberFormatException | null
+Long.valueOf bad radix: java.lang.NumberFormatException | radix 99 greater than Character.MAX_RADIX
+Long.valueOf bad: java.lang.NumberFormatException | For input string: "zz"
+Long.decode empty: java.lang.NumberFormatException | Zero length string
+Long.decode 0x: java.lang.NumberFormatException | For input string: ""
+Long.decode #: java.lang.NumberFormatException | For input string: ""
+Long.decode null: java.lang.NullPointerException | null
+Long.decode -0x80000001: ok
+Long.decode 0x-1: java.lang.NumberFormatException | Sign character in wrong position
+Long.decode -: java.lang.NumberFormatException | For input string: "-"
+Short.parse null: java.lang.NumberFormatException | null
+Short.parse empty: java.lang.NumberFormatException | For input string: ""
+Short.parse minus: java.lang.NumberFormatException | For input string: "-"
+Short.parse plus: java.lang.NumberFormatException | For input string: "+"
+Short.parse 12x: java.lang.NumberFormatException | For input string: "12x"
+Short.parse overflow: java.lang.NumberFormatException | Value out of range. Value:"32768" Radix:10
+Short.parse 0x10: java.lang.NumberFormatException | For input string: "0x10"
+Short.parse space: java.lang.NumberFormatException | For input string: " 1"
+Short.parse radix1: java.lang.NumberFormatException | radix 1 less than Character.MIN_RADIX
+Short.parse radix37: java.lang.NumberFormatException | radix 37 greater than Character.MAX_RADIX
+Short.parse radix2 bad: java.lang.NumberFormatException | For input string: "12"
+Short.valueOf null: java.lang.NumberFormatException | null
+Short.valueOf bad radix: java.lang.NumberFormatException | radix 99 greater than Character.MAX_RADIX
+Short.valueOf bad: java.lang.NumberFormatException | For input string: "zz"
+Short.decode empty: java.lang.NumberFormatException | Zero length string
+Short.decode 0x: java.lang.NumberFormatException | For input string: ""
+Short.decode #: java.lang.NumberFormatException | For input string: ""
+Short.decode null: java.lang.NullPointerException | null
+Short.decode -0x80000001: java.lang.NumberFormatException | For input string: "-80000001"
+Short.decode 0x-1: java.lang.NumberFormatException | Sign character in wrong position
+Short.decode -: java.lang.NumberFormatException | For input string: "-"
+Byte.parse null: java.lang.NumberFormatException | null
+Byte.parse empty: java.lang.NumberFormatException | For input string: ""
+Byte.parse minus: java.lang.NumberFormatException | For input string: "-"
+Byte.parse plus: java.lang.NumberFormatException | For input string: "+"
+Byte.parse 12x: java.lang.NumberFormatException | For input string: "12x"
+Byte.parse overflow: java.lang.NumberFormatException | Value out of range. Value:"128" Radix:10
+Byte.parse 0x10: java.lang.NumberFormatException | For input string: "0x10"
+Byte.parse space: java.lang.NumberFormatException | For input string: " 1"
+Byte.parse radix1: java.lang.NumberFormatException | radix 1 less than Character.MIN_RADIX
+Byte.parse radix37: java.lang.NumberFormatException | radix 37 greater than Character.MAX_RADIX
+Byte.parse radix2 bad: java.lang.NumberFormatException | For input string: "12"
+Byte.valueOf null: java.lang.NumberFormatException | null
+Byte.valueOf bad radix: java.lang.NumberFormatException | radix 99 greater than Character.MAX_RADIX
+Byte.valueOf bad: java.lang.NumberFormatException | For input string: "zz"
+Byte.decode empty: java.lang.NumberFormatException | Zero length string
+Byte.decode 0x: java.lang.NumberFormatException | For input string: ""
+Byte.decode #: java.lang.NumberFormatException | For input string: ""
+Byte.decode null: java.lang.NullPointerException | null
+Byte.decode -0x80000001: java.lang.NumberFormatException | For input string: "-80000001"
+Byte.decode 0x-1: java.lang.NumberFormatException | Sign character in wrong position
+Byte.decode -: java.lang.NumberFormatException | For input string: "-"
+Integer.parseUnsignedInt neg: java.lang.NumberFormatException | Illegal leading minus sign on unsigned string -1.
+Integer.parseUnsignedInt ovf: java.lang.NumberFormatException | String value 4294967296 exceeds range of unsigned int.
+Integer.parseUnsignedInt null: java.lang.NumberFormatException | null
+Integer.parseUnsignedInt empty: java.lang.NumberFormatException | For input string: ""
+5
+Integer.parseUnsignedInt plus: ok
+Long.parseUnsignedLong neg: java.lang.NumberFormatException | Illegal leading minus sign on unsigned string -1.
+Long.parseUnsignedLong ovf: java.lang.NumberFormatException | String value 18446744073709551616 exceeds range of unsigned long.
+Long.parseUnsignedLong null: java.lang.NumberFormatException | null
+Integer.divideUnsigned 0: java.lang.ArithmeticException | / by zero
+Integer.remainderUnsigned 0: java.lang.ArithmeticException | / by zero
+Long.divideUnsigned 0: java.lang.ArithmeticException | / by zero
+Long.remainderUnsigned 0: java.lang.ArithmeticException | BigInteger divide by zero
+int / 0: java.lang.ArithmeticException | / by zero
+int % 0: java.lang.ArithmeticException | / by zero
+addExact int: java.lang.ArithmeticException | integer overflow
+addExact long: java.lang.ArithmeticException | long overflow
+subtractExact int: java.lang.ArithmeticException | integer overflow
+subtractExact long: java.lang.ArithmeticException | long overflow
+multiplyExact int: java.lang.ArithmeticException | integer overflow
+multiplyExact long: java.lang.ArithmeticException | long overflow
+toIntExact: java.lang.ArithmeticException | integer overflow
+negateExact int: java.lang.ArithmeticException | integer overflow
+negateExact long: java.lang.ArithmeticException | long overflow
+incrementExact: java.lang.ArithmeticException | integer overflow
+decrementExact: java.lang.ArithmeticException | integer overflow
+floorDiv 0: java.lang.ArithmeticException | / by zero
+floorDiv long 0: java.lang.ArithmeticException | / by zero
+floorMod 0: java.lang.ArithmeticException | / by zero
+floorMod long 0: java.lang.ArithmeticException | / by zero
+Double.parseDouble null: java.lang.NullPointerException | null
+Double.parseDouble empty: java.lang.NumberFormatException | empty String
+Double.parseDouble abc: java.lang.NumberFormatException | For input string: "abc"
+Double.parseDouble 1e: java.lang.NumberFormatException | For input string: "1e"
+Double.parseDouble 0x1p: java.lang.NumberFormatException | For input string: "0x1p"
+Double.parseDouble space: java.lang.NumberFormatException | empty String
+Double.parseDouble dot: java.lang.NumberFormatException | For input string: "."
+Double.parseDouble 1.0x: java.lang.NumberFormatException | For input string: "1.0x"
+Double.parseDouble --1: java.lang.NumberFormatException | For input string: "--1"
+Double.valueOf bad: java.lang.NumberFormatException | For input string: "x"
+Float.parseFloat null: java.lang.NullPointerException | null
+Float.parseFloat empty: java.lang.NumberFormatException | empty String
+Float.parseFloat abc: java.lang.NumberFormatException | For input string: "abc"
+Float.parseFloat 1e: java.lang.NumberFormatException | For input string: "1e"
+Float.parseFloat 0x1p: java.lang.NumberFormatException | For input string: "0x1p"
+Float.parseFloat space: java.lang.NumberFormatException | empty String
+Float.parseFloat dot: java.lang.NumberFormatException | For input string: "."
+Float.parseFloat 1.0x: java.lang.NumberFormatException | For input string: "1.0x"
+Float.parseFloat --1: java.lang.NumberFormatException | For input string: "--1"
+Float.valueOf bad: java.lang.NumberFormatException | For input string: "x"
+toChars -1: java.lang.IllegalArgumentException | null
+toChars 0x110000: java.lang.IllegalArgumentException | null
+toChars(cp,dst,0) small: java.lang.ArrayIndexOutOfBoundsException | 1
+toChars(cp,dst,-1): java.lang.ArrayIndexOutOfBoundsException | -1
+toChars(cp,dst) bad cp: java.lang.IllegalArgumentException | null
+codePointAt(char[],5): java.lang.ArrayIndexOutOfBoundsException | 5
+codePointAt(char[],-1): java.lang.ArrayIndexOutOfBoundsException | -1
+codePointAt(char[],idx,limit): java.lang.IndexOutOfBoundsException | null
+codePointAt(CS,5): java.lang.StringIndexOutOfBoundsException | String index out of range: 5
+codePointAt(char[]) null: java.lang.NullPointerException | null
+33
+Character.getNumericValue bad: ok
+-1
+Character.digit radix: ok
+0
+Character.forDigit radix: ok
+10
+Integer.toString radix 99: ok
+10
+Long.toString radix 1: ok
+Integer.toUnsignedString radix: ok
+done

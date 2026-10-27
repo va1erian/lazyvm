@@ -1,0 +1,29 @@
+C.who A.callWho->C.who
+C.who
+A.priv B.priv
+A.stat A.stat B.stat B.stat
+C>A.who|A.callWho->C.who|A.f(String)
+C>A.who|A.callWho->C.who|A.f(String)
+A.who B.who
+B.f(Object)
+A.f(String)
+A.f(int)
+A.f(int)
+A.f(int)
+A.f(int)
+A.f(long)
+A.f(Integer)
+B.f(Object)
+B.f(Object)
+A.f(Object)
+A.g(A)
+A.g(A)
+B.g(B)
+A.g(A)
+B.g(B)
+-1 1 0
+-1
+1
+CCE from bridge
+comparable 1
+done

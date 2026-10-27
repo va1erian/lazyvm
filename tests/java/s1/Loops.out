@@ -1,0 +1,25 @@
+row 1: 1,2,3,4
+row 2: 2,4,6,8
+row 3: 3,6,9,12
+pair 0,0
+pair 0,1
+pair 0,2
+pair 1,0
+pair 1,1
+pair 1,2
+pair 2,0
+pair 2,1
+pair 2,2
+do-while n = 12
+do-while once = 101
+while w = 6
+while w = -2
+count = 6
+two-var sum = 70
+in block
+total = 270000
+abcd
+10 7 4 1 
+wide: sum 5309 long 1099511629035 double 647.5
+wide returned 5309
+done

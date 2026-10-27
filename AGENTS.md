@@ -98,6 +98,9 @@ python tools/check_rules.py            # shared blocks, 500 lines, SAFETY commen
 python tools/licenses.py               # permissive dependency tree
 python tools/lazyrt.py                 # the class library builds
 python tools/test.py                   # the differential suite
+python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
+python tools/launcher_test.py          # -jar, manifests and jar errors
+python tools/lazyos_test.py --lazyos <LazyOS checkout>   # the suite inside LazyOS; slow, before each PR
 cargo build -p launcher --target x86_64-unknown-linux-musl
 ```
 
@@ -128,9 +131,11 @@ cargo test --workspace
 python tools/lazyrt.py                 # dist/lazyrt.jar
 python tools/test.py --filter <area>   # differential suite on lazyvm
 python tools/golden.py --bless tests/java/<area>/<Name>.java
-python tools/lazyos_test.py --filter <area>
+python tools/lazyos_test.py --lazyos <LazyOS checkout> --filter <area>   # inside LazyOS (QEMU)
+python tools/sdk.py                    # dist/lazyvm-sdk for IntelliJ (docs/intellij.md)
 python tools/check_rules.py
 python tools/licenses.py
+python tools/unicode.py                # regenerate + verify crates/natives/data/unicode.bin on the Java 8 oracle
 ```
 
 These tools are created by S0. Until then, only `cargo build` exists.

@@ -1,0 +1,35 @@
+4 4
+Kinds
+Explicit
+Mark
+Deprecated
+true false false true
+1 2 c 3 4 5.5 6.5 true
+str class java.lang.Object LOW dflt 0
+[a, b] [int, class [Ljava.lang.String;] [HIGH] [@s4.Annotations$Tag(value=x), @s4.Annotations$Tag(value=y)] [1.5]
+a true
+@s4.Annotations$Kinds(dd=[1.5], b=1, c=c, d=6.5, level=LOW, f=5.5, classes=[int, class [Ljava.lang.String;], i=3, cls=class java.lang.Object, l=4, tags=[@s4.Annotations$Tag(value=x), @s4.Annotations$Tag(value=y)], shortv=2, s=str, strs=[a, b], ints=[], z=true, tag=@s4.Annotations$Tag(value=dflt), levels=[HIGH])
+1xjava.lang.StringHIGHt[1, 2]0pq[true, false]
+@s4.Annotations$Explicit(b=x, a=1, c=class java.lang.String, d=HIGH, e=@s4.Annotations$Tag(value=t), f=[1, 2], g=[], h=[p, q], i=[true, false])
+@s4.Annotations$Mark(value=class) @java.lang.Deprecated()
+@java.lang.FunctionalInterface() true
+true
+true false true false false false true true
+true false
+1245286007 1335633787 1526262969 @s4.Annotations$Prim(ss=[a], d=1.5, ch=x, ls=[1, 2], i=1, z=true, text=s)
+true true
+true false
+[@s4.Annotations$Mark(value=method), @s4.Annotations$Tag(value=m)] 2
+method m false
+3 [@s4.Annotations$Mark(value=p0)] [] [@s4.Annotations$Tag(value=p2), @s4.Annotations$Mark(value=p2b)]
+@s4.Annotations$Mark(value=p0) 0 @s4.Annotations$Tag(value=p2) true 2
+@s4.Annotations$Mark(value=p0)
+@s4.Annotations$Mark(value=ctor) 0
+@s4.Annotations$Mark(value=field) 0
+@s4.Annotations$Mark(value=high) 0
+6.5 class java.lang.Object @s4.Annotations$Tag(value=dflt) null
+[a, b] 0 [int, class [Ljava.lang.String;]
+RUNTIME
+true true java.lang.annotation.Annotation @java.lang.annotation.Retention(value=RUNTIME)
+java.lang.Deprecated
+done

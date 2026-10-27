@@ -1,0 +1,18 @@
+relative: line one
+line two: café
+absolute: nested resource
+sub relative: nested resource
+missing: null
+system: line one
+line two: café
+string loader null: true
+app loader set: true
+same loader: true
+int[] loader null: true
+Resources[] loader set: true
+forName: true
+boot forName String: java.lang.String
+boot forName app: java.lang.ClassNotFoundException
+above root: null
+loadClass: s3.Resources
+done

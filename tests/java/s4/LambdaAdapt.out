@@ -1,0 +1,9 @@
+identity==identity true
+unary identity true
+same site true
+capturing distinct true
+generic Integer as long 9
+heap-polluted Short as int 7
+heap-polluted Long as int 5
+Character as int -> ClassCastException
+done

@@ -12,3 +12,5 @@ workspace = true
 [dependencies]
 vm = { path = "../vm" }
 platform = { path = "../platform" }
+libm = "0.2"
+classfile = { path = "../classfile" }

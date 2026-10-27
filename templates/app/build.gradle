@@ -1,0 +1,40 @@
+// A LazyVM app: Java 8 bytecode compiled against LazyVM's class library,
+// never the JDK's, so only APIs LazyVM provides can be used.
+//
+//   gradle jar      build/libs/lazyvm-app.jar
+//   gradle run      runs it on LazyVM (-PappArgs="a b" passes arguments)
+//
+// `lazyvmSdk` is dist/lazyvm-sdk of a LazyVM checkout (python tools/sdk.py),
+// set in gradle.properties or with -PlazyvmSdk=...
+plugins {
+    id 'java'
+}
+
+def sdk = file(findProperty('lazyvmSdk') ?: '../../dist/lazyvm-sdk')
+def rt = new File(sdk, 'jre/lib/rt.jar')
+def launcher = new File(sdk, System.getProperty('os.name').startsWith('Windows') ? 'bin/java.exe' : 'bin/java')
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    // -bootclasspath replaces the JDK's class library with LazyVM's.
+    options.compilerArgs += ['-bootclasspath', rt.path, '-Xlint:-options']
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'app.Main'
+    }
+}
+
+tasks.register('run', Exec) {
+    dependsOn jar
+    description = 'Runs the app on LazyVM.'
+    commandLine launcher.path, '-jar', jar.archiveFile.get().asFile.path
+    // gradle run -PappArgs="a b"
+    args((findProperty('appArgs') ?: '').tokenize())
+}

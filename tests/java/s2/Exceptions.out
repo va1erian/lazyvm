@@ -1,0 +1,43 @@
+app branch plain code 7
+deep branch 99
+multi branch s2.Exceptions$BadState
+multi branch java.lang.ArithmeticException
+runtime branch java.lang.NullPointerException
+runtime branch java.lang.ArrayIndexOutOfBoundsException
+no throw for 6
+rethrowing plain
+main got s2.Exceptions$AppException: plain
+inner finally;outer caught inner;in catch;caught second
+null | java.lang.Exception | null
+msg | java.lang.Exception: msg
+wrap | java.lang.Exception: wrap | true
+java.lang.Exception: msg | java.lang.Exception: java.lang.Exception: msg | true
+null | java.lang.RuntimeException
+s2.Exceptions$AppException: x
+msg
+initCause -> msg
+second initCause: IllegalStateException
+self cause: IllegalArgumentException
+java.lang.NullPointerException: custom npe
+open a
+open b
+body
+close b
+close a
+caught body failed suppressed 1
+  suppressed: java.lang.IllegalStateException: close-b
+open c
+body ok
+close c
+close threw close-c suppressed 0
+open d
+open f
+close f
+close d
+suppressed count 2
+  suppressed: close-f
+  suppressed: close-d
+java.lang.Error: manual
+self suppress rejected
+java.lang.StackOverflowError is VirtualMachineError true
+done

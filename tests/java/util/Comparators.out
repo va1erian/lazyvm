@@ -1,0 +1,27 @@
+amy25 amy20 bob30 cat30
+cat30 bob30 amy25 amy20
+amy20 amy25 bob30 cat30
+amy20 amy25 cat30 bob30
+amy20 amy25 cat30 bob30
+bob30 cat30 amy20 amy25
+amy20 bob30 amy25 cat30
+bob30 cat30 amy20 amy25
+amy20 amy25 bob30 cat30
+1 3 5 9 | 9 5 3 1
+9 5 3 1 | 1 3 5 9
+null null a b c
+a b c null null
+null null c b a
+b a c null null
+c b a null null
+0
+natural null: NullPointerException
+natural null 2: NullPointerException
+reverse null: NullPointerException
+comparing null: NullPointerException
+comparing 2 null: NullPointerException
+comparingInt null: NullPointerException
+comparingLong null: NullPointerException
+comparingDouble null: NullPointerException
+thenComparing null: NullPointerException
+done
