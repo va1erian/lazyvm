@@ -263,7 +263,7 @@ mod tests {
             (0.5, "0.5"),
             (9999999.0, "9999999.0"),
             // An exact tie between ...312 and ...313: the even digit wins.
-            (512.90997314453125, "512.9099731445312"),
+            (512.0 + 14909.0 / 16384.0, "512.9099731445312"),
         ];
         for (x, want) in cases {
             assert_eq!(double_to_string(x), want, "{x:e}");
