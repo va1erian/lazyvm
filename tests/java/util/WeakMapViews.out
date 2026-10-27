@@ -1,0 +1,60 @@
+W24 keySet.contains equal true : P.h P.eq(S) 
+W24 keySet.contains same true : S.h 
+W24 keySet.remove unequal false : Q.h Q.eq(S) 
+W24 keySet.remove equal true : P.h P.eq(S) P.h P.eq(S) 
+W24 keySet.remove same true : S.h S.h 
+W24 entrySet.contains equal true : P.h P.eq(S) S.eq(P) SV.eq(PV) 
+W24 entrySet.contains same true : S.h 
+W24 entrySet.contains other value false : P.h P.eq(S) S.eq(P) SV.eq(QV) 
+W24 entrySet.contains unequal key false : Q.h Q.eq(S) 
+W24 entrySet.remove unequal key false : Q.h S.eq(Q) 
+W24 entrySet.remove other value false : P.h S.eq(P) SV.eq(QV) 
+W24 entrySet.remove equal true : P.h S.eq(P) SV.eq(PV) 
+W24 entrySet.remove same true : S.h 
+W24 entrySet.remove same key equal value true : S.h SV.eq(PV) 
+W25 containsValue equal true : PV.eq(SV) 
+W25 containsValue same true : SV.eq(SV) 
+W25 containsValue null false : 
+W25 values.contains unequal false : QV.eq(SV) 
+W25 values.remove unequal false : QV.eq(SV) 
+W25 values.remove equal true : PV.eq(SV) S.h 
+W25 values.remove same true : SV.eq(SV) S.h 
+W24 entry equals equal true : S.eq(P) SV.eq(PV) 
+W24 entry equals same true : 
+W24 entry equals unequal key false : S.eq(Q) 
+W24 SimpleEntry equals entry true : P.eq(S) PV.eq(SV) 
+W24 entry hashCode 6 : S.h SV.h 
+W24 entry toString setValue S=SV SV PV : 
+W25 order {S3=V3, S2=V2, S1=V1, S0=V0} : 
+W25 containsValue miss false : X.eq(V3) X.eq(V2) X.eq(V1) X.eq(V0) 
+W25 containsValue hit true : PV1.eq(V3) PV1.eq(V2) PV1.eq(V1) 
+W25 values.contains hit true : PV2.eq(V3) PV2.eq(V2) 
+W25 values.remove hit true : PV2.eq(V3) PV2.eq(V2) S2.h 
+W25 containsValue hit with a null key present true true
+W24 hashCode 604 : S3.h V3.h S2.h V2.h S1.h V1.h S0.h V0.h 
+W24 keySet.removeAll smaller true : P1.h P1.eq(S1) P1.h P1.eq(S1) 
+W24 keySet.removeAll equal size true : S3.eq(P1) S3.eq(X) S3.eq(Y) S3.eq(Z) S2.eq(P1) S2.eq(X) S2.eq(Y) S2.eq(Z) S1.eq(P1) S1.h S0.eq(P1) S0.eq(X) S0.eq(Y) S0.eq(Z) 
+W24 keySet.retainAll false : S3.eq(P1) S3.eq(P0) S3.eq(P2) S3.eq(P3) S2.eq(P1) S2.eq(P0) S2.eq(P2) S1.eq(P1) S0.eq(P1) S0.eq(P0) 
+W24 entrySet.removeAll smaller true : P1.h S1.eq(P1) V1.eq(PV1) 
+W24 entrySet.retainAll its own entries false : S2.eq(S3) S1.eq(S3) S1.eq(S2) S0.eq(S3) S0.eq(S2) S0.eq(S1) 
+W24 values.removeAll true : V3.eq(PV1) V2.eq(PV1) V1.eq(PV1) S1.h V0.eq(PV1) 
+W24 values.retainAll false : V3.eq(PV1) V3.eq(PV0) V3.eq(PV2) V3.eq(PV3) V2.eq(PV1) V2.eq(PV0) V2.eq(PV2) V1.eq(PV1) V0.eq(PV1) V0.eq(PV0) 
+W24 keySet.containsAll true : P1.h P1.eq(S1) 
+W24 keySet.hashCode 600 : S3.h S2.h S1.h S0.h 
+W24 entrySet.hashCode 604 : S3.h V3.h S2.h V2.h S1.h V1.h S0.h V0.h 
+W26 remove after a put java.util.ConcurrentModificationException : 
+W26 remove before next after a change java.lang.IllegalStateException : 
+W26 chain C2 C1 : 
+W26 remove the second of a chain ok : C1.h C1.eq(C2) 
+W26 remove twice java.lang.IllegalStateException : 
+W26 remove after the walk ended removes the null key {a=A, b=B}
+W26 and without one removes nothing {a=A, b=B}
+W26 next past the end java.util.NoSuchElementException : 
+W26 remove after NoSuchElementException {a=A, b=B}
+W26 then remove again java.lang.IllegalStateException : 
+W26 remove before the end {b=B}
+W23 made on an empty map false, made on a non-empty map true
+W23 after next at bucket 8, a key added at 12 false 8 false 2 true, after the end false false
+W23 chain successor removed true, cleared with a successor true, cleared without one false, then a key added ahead false
+W23 growth after 0 true, 6 true, 12 false
+done
