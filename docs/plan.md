@@ -5,7 +5,7 @@ written in Rust, a small class library covering the essentials of Java SE 8,
 and a `lazy.*` API for xui, Messenger and async I/O. Apps are written and built
 in IntelliJ on Windows, run there on LazyVM, and run unchanged on LazyOS.
 
-Stages S8-S13 are in [`plan-2.md`](plan-2.md). Read [`decisions.md`](decisions.md) first: it fixes the target level, the
+Stages S8-S14 are in [`plan-2.md`](plan-2.md). Read [`decisions.md`](decisions.md) first: it fixes the target level, the
 license position, the toolchain and the scope this plan assumes. Every change
 follows [`../AGENTS.md`](../AGENTS.md).
 
@@ -48,6 +48,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S11 | Streams, `java.time`, logging, JDWP | not started |
 | S12 | Explore: AWT on xui | not started |
 | S13 | Explore: Swing and media | not started |
+| S14 | Proposed: javac 8 on LazyVM | not started |
 
 ## S0. Workspace and harness
 
@@ -385,4 +386,4 @@ Gate: `samples/fetch` downloads a page over HTTPS with `lazy.net.Http` and
 prints its status and size on both platforms (manual live run, recorded in the PR).
 
 
-S8-S13 and the LazyOS-side items continue in [`plan-2.md`](plan-2.md).
+S8-S14 and the LazyOS-side items continue in [`plan-2.md`](plan-2.md).
