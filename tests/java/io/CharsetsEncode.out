@@ -1,0 +1,223 @@
+US-ASCII getBytes [] = 
+US-ASCII getBytes [0041] = 41
+US-ASCII getBytes [00E9] = 3F
+US-ASCII getBytes [00FF 0100] = 3F 3F
+US-ASCII getBytes [20AC] = 3F
+US-ASCII getBytes [D83D DE00] = 3F
+US-ASCII getBytes [D800] = 3F
+US-ASCII getBytes [DC00] = 3F
+US-ASCII getBytes [0041 D800 0042] = 41 3F 42
+US-ASCII getBytes [DC00 D800] = 3F 3F
+US-ASCII getBytes [D83D D83D DE00] = 3F 3F
+US-ASCII getBytes [FEFF] = 3F
+US-ASCII getBytes [FFFE] = 3F
+US-ASCII getBytes [FFFF] = 3F
+ISO-8859-1 getBytes [] = 
+ISO-8859-1 getBytes [0041] = 41
+ISO-8859-1 getBytes [00E9] = E9
+ISO-8859-1 getBytes [00FF 0100] = FF 3F
+ISO-8859-1 getBytes [20AC] = 3F
+ISO-8859-1 getBytes [D83D DE00] = 3F
+ISO-8859-1 getBytes [D800] = 3F
+ISO-8859-1 getBytes [DC00] = 3F
+ISO-8859-1 getBytes [0041 D800 0042] = 41 3F 42
+ISO-8859-1 getBytes [DC00 D800] = 3F 3F
+ISO-8859-1 getBytes [D83D D83D DE00] = 3F 3F
+ISO-8859-1 getBytes [FEFF] = 3F
+ISO-8859-1 getBytes [FFFE] = 3F
+ISO-8859-1 getBytes [FFFF] = 3F
+UTF-8 getBytes [] = 
+UTF-8 getBytes [0041] = 41
+UTF-8 getBytes [00E9] = C3 A9
+UTF-8 getBytes [00FF 0100] = C3 BF C4 80
+UTF-8 getBytes [20AC] = E2 82 AC
+UTF-8 getBytes [D83D DE00] = F0 9F 98 80
+UTF-8 getBytes [D800] = 3F
+UTF-8 getBytes [DC00] = 3F
+UTF-8 getBytes [0041 D800 0042] = 41 3F 42
+UTF-8 getBytes [DC00 D800] = 3F 3F
+UTF-8 getBytes [D83D D83D DE00] = 3F F0 9F 98 80
+UTF-8 getBytes [FEFF] = EF BB BF
+UTF-8 getBytes [FFFE] = EF BF BE
+UTF-8 getBytes [FFFF] = EF BF BF
+UTF-16 getBytes [] = 
+UTF-16 getBytes [0041] = FE FF 00 41
+UTF-16 getBytes [00E9] = FE FF 00 E9
+UTF-16 getBytes [00FF 0100] = FE FF 00 FF 01 00
+UTF-16 getBytes [20AC] = FE FF 20 AC
+UTF-16 getBytes [D83D DE00] = FE FF D8 3D DE 00
+UTF-16 getBytes [D800] = FE FF FF FD
+UTF-16 getBytes [DC00] = FE FF FF FD
+UTF-16 getBytes [0041 D800 0042] = FE FF 00 41 FF FD 00 42
+UTF-16 getBytes [DC00 D800] = FE FF FF FD FF FD
+UTF-16 getBytes [D83D D83D DE00] = FE FF FF FD D8 3D DE 00
+UTF-16 getBytes [FEFF] = FE FF FE FF
+UTF-16 getBytes [FFFE] = FE FF FF FE
+UTF-16 getBytes [FFFF] = FE FF FF FF
+UTF-16BE getBytes [] = 
+UTF-16BE getBytes [0041] = 00 41
+UTF-16BE getBytes [00E9] = 00 E9
+UTF-16BE getBytes [00FF 0100] = 00 FF 01 00
+UTF-16BE getBytes [20AC] = 20 AC
+UTF-16BE getBytes [D83D DE00] = D8 3D DE 00
+UTF-16BE getBytes [D800] = FF FD
+UTF-16BE getBytes [DC00] = FF FD
+UTF-16BE getBytes [0041 D800 0042] = 00 41 FF FD 00 42
+UTF-16BE getBytes [DC00 D800] = FF FD FF FD
+UTF-16BE getBytes [D83D D83D DE00] = FF FD D8 3D DE 00
+UTF-16BE getBytes [FEFF] = FE FF
+UTF-16BE getBytes [FFFE] = FF FE
+UTF-16BE getBytes [FFFF] = FF FF
+UTF-16LE getBytes [] = 
+UTF-16LE getBytes [0041] = 41 00
+UTF-16LE getBytes [00E9] = E9 00
+UTF-16LE getBytes [00FF 0100] = FF 00 00 01
+UTF-16LE getBytes [20AC] = AC 20
+UTF-16LE getBytes [D83D DE00] = 3D D8 00 DE
+UTF-16LE getBytes [D800] = FD FF
+UTF-16LE getBytes [DC00] = FD FF
+UTF-16LE getBytes [0041 D800 0042] = 41 00 FD FF 42 00
+UTF-16LE getBytes [DC00 D800] = FD FF FD FF
+UTF-16LE getBytes [D83D D83D DE00] = FD FF 3D D8 00 DE
+UTF-16LE getBytes [FEFF] = FF FE
+UTF-16LE getBytes [FFFE] = FE FF
+UTF-16LE getBytes [FFFF] = FF FF
+US-ASCII new String [FE FF 00 41] = FFFD FFFD 0000 0041
+US-ASCII new String [FF FE 41 00] = FFFD FFFD 0041 0000
+US-ASCII new String [00 41] = 0000 0041
+US-ASCII new String [41 00] = 0041 0000
+US-ASCII new String [FE FF] = FFFD FFFD
+US-ASCII new String [FF FE] = FFFD FFFD
+US-ASCII new String [FE] = FFFD
+US-ASCII new String [00 41 00] = 0000 0041 0000
+US-ASCII new String [FE FF D8 3D] = FFFD FFFD FFFD 003D
+US-ASCII new String [D8 3D DE 00] = FFFD 003D FFFD 0000
+US-ASCII new String [DE 00 D8 3D] = FFFD 0000 FFFD 003D
+US-ASCII new String [D8 3D 00 41] = FFFD 003D 0000 0041
+US-ASCII new String [D8 3D D8 3D DE 00] = FFFD 003D FFFD 003D FFFD 0000
+US-ASCII new String [FF FE FF FE] = FFFD FFFD FFFD FFFD
+US-ASCII new String [FE FF FF FE] = FFFD FFFD FFFD FFFD
+US-ASCII new String [00 41 FF FE 00 42] = 0000 0041 FFFD FFFD 0000 0042
+US-ASCII new String [EF BB BF 41] = FFFD FFFD FFFD 0041
+US-ASCII new String [80 FF] = FFFD FFFD
+ISO-8859-1 new String [FE FF 00 41] = 00FE 00FF 0000 0041
+ISO-8859-1 new String [FF FE 41 00] = 00FF 00FE 0041 0000
+ISO-8859-1 new String [00 41] = 0000 0041
+ISO-8859-1 new String [41 00] = 0041 0000
+ISO-8859-1 new String [FE FF] = 00FE 00FF
+ISO-8859-1 new String [FF FE] = 00FF 00FE
+ISO-8859-1 new String [FE] = 00FE
+ISO-8859-1 new String [00 41 00] = 0000 0041 0000
+ISO-8859-1 new String [FE FF D8 3D] = 00FE 00FF 00D8 003D
+ISO-8859-1 new String [D8 3D DE 00] = 00D8 003D 00DE 0000
+ISO-8859-1 new String [DE 00 D8 3D] = 00DE 0000 00D8 003D
+ISO-8859-1 new String [D8 3D 00 41] = 00D8 003D 0000 0041
+ISO-8859-1 new String [D8 3D D8 3D DE 00] = 00D8 003D 00D8 003D 00DE 0000
+ISO-8859-1 new String [FF FE FF FE] = 00FF 00FE 00FF 00FE
+ISO-8859-1 new String [FE FF FF FE] = 00FE 00FF 00FF 00FE
+ISO-8859-1 new String [00 41 FF FE 00 42] = 0000 0041 00FF 00FE 0000 0042
+ISO-8859-1 new String [EF BB BF 41] = 00EF 00BB 00BF 0041
+ISO-8859-1 new String [80 FF] = 0080 00FF
+UTF-8 new String [FE FF 00 41] = FFFD FFFD 0000 0041
+UTF-8 new String [FF FE 41 00] = FFFD FFFD 0041 0000
+UTF-8 new String [00 41] = 0000 0041
+UTF-8 new String [41 00] = 0041 0000
+UTF-8 new String [FE FF] = FFFD FFFD
+UTF-8 new String [FF FE] = FFFD FFFD
+UTF-8 new String [FE] = FFFD
+UTF-8 new String [00 41 00] = 0000 0041 0000
+UTF-8 new String [FE FF D8 3D] = FFFD FFFD FFFD 003D
+UTF-8 new String [D8 3D DE 00] = FFFD 003D FFFD 0000
+UTF-8 new String [DE 00 D8 3D] = FFFD 0000 FFFD 003D
+UTF-8 new String [D8 3D 00 41] = FFFD 003D 0000 0041
+UTF-8 new String [D8 3D D8 3D DE 00] = FFFD 003D FFFD 003D FFFD 0000
+UTF-8 new String [FF FE FF FE] = FFFD FFFD FFFD FFFD
+UTF-8 new String [FE FF FF FE] = FFFD FFFD FFFD FFFD
+UTF-8 new String [00 41 FF FE 00 42] = 0000 0041 FFFD FFFD 0000 0042
+UTF-8 new String [EF BB BF 41] = FEFF 0041
+UTF-8 new String [80 FF] = FFFD FFFD
+UTF-16 new String [FE FF 00 41] = 0041
+UTF-16 new String [FF FE 41 00] = 0041
+UTF-16 new String [00 41] = 0041
+UTF-16 new String [41 00] = 4100
+UTF-16 new String [FE FF] = 
+UTF-16 new String [FF FE] = 
+UTF-16 new String [FE] = FFFD
+UTF-16 new String [00 41 00] = 0041 FFFD
+UTF-16 new String [FE FF D8 3D] = FFFD
+UTF-16 new String [D8 3D DE 00] = D83D DE00
+UTF-16 new String [DE 00 D8 3D] = FFFD FFFD
+UTF-16 new String [D8 3D 00 41] = FFFD
+UTF-16 new String [D8 3D D8 3D DE 00] = FFFD FFFD
+UTF-16 new String [FF FE FF FE] = FEFF
+UTF-16 new String [FE FF FF FE] = FFFD
+UTF-16 new String [00 41 FF FE 00 42] = 0041 FFFD 0042
+UTF-16 new String [EF BB BF 41] = EFBB BF41
+UTF-16 new String [80 FF] = 80FF
+UTF-16BE new String [FE FF 00 41] = FEFF 0041
+UTF-16BE new String [FF FE 41 00] = FFFD 4100
+UTF-16BE new String [00 41] = 0041
+UTF-16BE new String [41 00] = 4100
+UTF-16BE new String [FE FF] = FEFF
+UTF-16BE new String [FF FE] = FFFD
+UTF-16BE new String [FE] = FFFD
+UTF-16BE new String [00 41 00] = 0041 FFFD
+UTF-16BE new String [FE FF D8 3D] = FEFF FFFD
+UTF-16BE new String [D8 3D DE 00] = D83D DE00
+UTF-16BE new String [DE 00 D8 3D] = FFFD FFFD
+UTF-16BE new String [D8 3D 00 41] = FFFD
+UTF-16BE new String [D8 3D D8 3D DE 00] = FFFD FFFD
+UTF-16BE new String [FF FE FF FE] = FFFD FFFD
+UTF-16BE new String [FE FF FF FE] = FEFF FFFD
+UTF-16BE new String [00 41 FF FE 00 42] = 0041 FFFD 0042
+UTF-16BE new String [EF BB BF 41] = EFBB BF41
+UTF-16BE new String [80 FF] = 80FF
+UTF-16LE new String [FE FF 00 41] = FFFD 4100
+UTF-16LE new String [FF FE 41 00] = FEFF 0041
+UTF-16LE new String [00 41] = 4100
+UTF-16LE new String [41 00] = 0041
+UTF-16LE new String [FE FF] = FFFD
+UTF-16LE new String [FF FE] = FEFF
+UTF-16LE new String [FE] = FFFD
+UTF-16LE new String [00 41 00] = 4100 FFFD
+UTF-16LE new String [FE FF D8 3D] = FFFD 3DD8
+UTF-16LE new String [D8 3D DE 00] = 3DD8 00DE
+UTF-16LE new String [DE 00 D8 3D] = 00DE 3DD8
+UTF-16LE new String [D8 3D 00 41] = 3DD8 4100
+UTF-16LE new String [D8 3D D8 3D DE 00] = 3DD8 3DD8 00DE
+UTF-16LE new String [FF FE FF FE] = FEFF FEFF
+UTF-16LE new String [FE FF FF FE] = FFFD FEFF
+UTF-16LE new String [00 41 FF FE 00 42] = 4100 FEFF 4200
+UTF-16LE new String [EF BB BF 41] = BBEF 41BF
+UTF-16LE new String [80 FF] = FF80
+UTF-8 writer pair split: 41 F0 9F 98 80 42 (after each flush 1,6,)
+UTF-8 writer lone high then end: 41 3F (after each flush 1,)
+UTF-8 writer high then high: 3F F0 9F 98 80 (after each flush 0,1,5,)
+UTF-8 writer two parts: 41 42 (after each flush 1,2,)
+UTF-16 writer pair split: FE FF 00 41 D8 3D DE 00 00 42 (after each flush 4,10,)
+UTF-16 writer lone high then end: FE FF 00 41 FF FD (after each flush 4,)
+UTF-16 writer high then high: FE FF FF FD D8 3D DE 00 (after each flush 2,4,8,)
+UTF-16 writer two parts: FE FF 00 41 00 42 (after each flush 4,6,)
+UTF-16LE writer pair split: 41 00 3D D8 00 DE 42 00 (after each flush 2,8,)
+UTF-16LE writer lone high then end: 41 00 FD FF (after each flush 2,)
+UTF-16LE writer high then high: FD FF 3D D8 00 DE (after each flush 0,2,6,)
+UTF-16LE writer two parts: 41 00 42 00 (after each flush 2,4,)
+US-ASCII writer pair split: 41 3F 42 (after each flush 1,3,)
+US-ASCII writer lone high then end: 41 3F (after each flush 1,)
+US-ASCII writer high then high: 3F 3F (after each flush 0,1,2,)
+US-ASCII writer two parts: 41 42 (after each flush 1,2,)
+reader UTF-16 [FE FF 00 41 FE FF 00 42] = 0041 FEFF 0042
+reader UTF-16 [FF FE 41 00 42 00] = 0041 0042
+reader UTF-16 [00 41 00] = 0041 FFFD
+reader UTF-16 [D8 3D] = FFFD
+reader with REPORT decoder: java.nio.charset.MalformedInputException: Input length = 1
+writer with REPORT encoder: java.nio.charset.MalformedInputException: Input length = 1
+getBytes bad name: no-such-charset
+new String bad name: no-such-charset
+reader bad name: no-such-charset
+writer illegal name: java.io.UnsupportedEncodingException: bad name!
+getBytes null: java.lang.NullPointerException
+getEncoding: UTF8 ISO8859_1 UTF-16 UnicodeLittleUnmarked ASCII UnicodeBigUnmarked
+closed getEncoding: null
+closed write: Stream closed
+done

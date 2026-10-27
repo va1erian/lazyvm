@@ -1,0 +1,41 @@
+isr read(): 97 log=r8192=8192;
+isr read() small chunks: 97 log=r8192=7;
+isr read(c,0,10): 10 log=r8192=7;av;r8192=7;
+isr read(c,0,20000): 20000 log=r8192=8192;av;r8192=8192;av;r8192=8192;
+isr read(c,0,1) latin1: 1 log=r8192=8192;
+isr read(c,0,1) twice: 1 log=r8192=8192;
+isr read(c,0,0): 0
+isr eof: 2 -1 -1 log=r8192=2;av;r8192=-1;r8192=-1;
+isr ready fresh: true log=av;
+isr ready empty: false log=av;
+isr ready after read: true log=r8192=7;
+isr markSupported: false
+isr mark: !java.io.IOException: mark() not supported
+isr close twice: ok log=close;
+isr read after close: !java.io.IOException: Stream closed log=close;
+isr ready after close: !java.io.IOException: Stream closed log=close;
+isr skip 3: 3 7 log=r8192=10;av;
+isr bounds: !java.lang.IndexOutOfBoundsException
+osw write char: 
+osw write char flush:  log=w1;fl;
+osw write 8192: 
+osw write 8193:  log=w8192;
+osw write 8191 then 2:  log=w8192;
+osw write 20000:  log=w8192;w8192;
+osw write 3000 euros:  log=w8190;
+osw utf16 empty flush:  log=fl;w4;fl;
+osw close:  log=w1;close;
+osw flush after close: !java.io.IOException: Stream closed log=close;
+osw write empty:  log=fl;
+osw bounds: !java.lang.IndexOutOfBoundsException
+PrintWriter(OutputStream) println: false log=w[ab$];fl;
+PrintWriter autoflush println:  log=w[ab$];fl;
+PrintWriter autoflush print: 
+PrintWriter close: true log=w[x];close;
+PrintStream println:  log=w[ab];w[$];
+PrintStream autoflush:  log=w[a\nb];fl;fl;
+PrintStream write byte autoflush:  log=w[a];w[\n];fl;
+PrintStream write(b) autoflush:  log=w[abc];fl;
+PrintStream close: true log=w[x];close;
+PrintStream encoding: 2
+done

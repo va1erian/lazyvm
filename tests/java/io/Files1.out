@@ -1,0 +1,73 @@
+[] path= name= parent=null abs=false absPath=<cwd> str=
+[.] path=. name=. parent=null abs=false absPath=<cwd>/. str=.
+[..] path=.. name=.. parent=null abs=false absPath=<cwd>/.. str=..
+[a] path=a name=a parent=null abs=false absPath=<cwd>/a str=a
+[a/] path=a name=a parent=null abs=false absPath=<cwd>/a str=a
+[a//b] path=a/b name=b parent=a abs=false absPath=<cwd>/a/b str=a/b
+[a/./b] path=a/./b name=b parent=a/. abs=false absPath=<cwd>/a/./b str=a/./b
+[a/../b] path=a/../b name=b parent=a/.. abs=false absPath=<cwd>/a/../b str=a/../b
+[a/b/] path=a/b name=b parent=a abs=false absPath=<cwd>/a/b str=a/b
+[a/b//] path=a/b name=b parent=a abs=false absPath=<cwd>/a/b str=a/b
+[a/b/c.txt] path=a/b/c.txt name=c.txt parent=a/b abs=false absPath=<cwd>/a/b/c.txt str=a/b/c.txt
+[./a] path=./a name=a parent=. abs=false absPath=<cwd>/./a str=./a
+[../a] path=../a name=a parent=.. abs=false absPath=<cwd>/../a str=../a
+[.x] path=.x name=.x parent=null abs=false absPath=<cwd>/.x str=.x
+[a.b.c] path=a.b.c name=a.b.c parent=null abs=false absPath=<cwd>/a.b.c str=a.b.c
+File(a,b): a/b
+File(a/,b): a/b
+File(a,/b): a/b
+File(a,b/): a/b
+File('',b): /b
+File(null,b): b
+File(a,''): a
+File(File a,b): a/b
+File(null File,b): b
+File(null): !java.lang.NullPointerException
+File(a,null): !java.lang.NullPointerException
+equals: true true false
+hashCode of x: true
+compareTo: -1 0
+separators: 1 1 true
+createTempFile shape: true true 0 true
+createTempFile suffix: true
+prefix too short: !java.lang.IllegalArgumentException: Prefix string too short
+delete temp: true true true true
+createTempFile in dir: true true true
+createTempFile in missing dir: !java.io.IOException
+missing: false false false 0 0 false false false false null null
+missing renameTo: false
+missing setLastModified: false
+missing canonical: true
+mkdir: true false true true false
+mkdir missing parent: false
+mkdirs: true false true
+mkdirs trailing sep: true true
+createNewFile: true false true 0
+createNewFile in missing dir: !java.io.IOException
+createNewFile on dir: false
+mkdir on file: false false
+length: 300
+setLastModified: true 1234567890000
+setLastModified -1: !java.lang.IllegalArgumentException: Negative time
+lastModified recent: true
+delete non-empty dir: false true
+list: [a, a.txt, a1, b.txt, c, f.txt]
+list filter: [a.txt, b.txt, f.txt]
+listFiles: <tmp>/d/a <tmp>/d/a.txt <tmp>/d/a1 <tmp>/d/b.txt <tmp>/d/c <tmp>/d/f.txt 
+listFiles parent: true
+list on file: null null
+list empty dir: 0
+renameTo: true false 2
+renameTo other dir: true true
+renameTo missing dir: false
+rename dir: true true
+canonical dots: true
+canonicalFile: true
+absoluteFile: true
+toURI dir: true true
+toURI file: true
+toURI space: true
+isFile/isDirectory: true false false true true true
+setReadOnly: true true true
+cleanup: true
+done

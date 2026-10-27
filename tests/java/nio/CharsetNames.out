@@ -1,0 +1,81 @@
+US-ASCII: name=US-ASCII display=US-ASCII toString=US-ASCII registered=true canEncode=true aliases=[646, ANSI_X3.4-1968, ANSI_X3.4-1986, ASCII, IBM367, ISO646-US, ISO_646.irv:1991, ascii7, cp367, csASCII, default, iso-ir-6, iso_646.irv:1983, us]
+ISO-8859-1: name=ISO-8859-1 display=ISO-8859-1 toString=ISO-8859-1 registered=true canEncode=true aliases=[819, 8859_1, IBM-819, IBM819, ISO8859-1, ISO8859_1, ISO_8859-1, ISO_8859-1:1987, ISO_8859_1, cp819, csISOLatin1, iso-ir-100, l1, latin1]
+UTF-8: name=UTF-8 display=UTF-8 toString=UTF-8 registered=true canEncode=true aliases=[UTF8, unicode-1-1-utf-8]
+UTF-16: name=UTF-16 display=UTF-16 toString=UTF-16 registered=true canEncode=true aliases=[UTF_16, UnicodeBig, unicode, utf16]
+UTF-16BE: name=UTF-16BE display=UTF-16BE toString=UTF-16BE registered=true canEncode=true aliases=[ISO-10646-UCS-2, UTF_16BE, UnicodeBigUnmarked, X-UTF-16BE]
+UTF-16LE: name=UTF-16LE display=UTF-16LE toString=UTF-16LE registered=true canEncode=true aliases=[UTF_16LE, UnicodeLittleUnmarked, X-UTF-16LE]
+forName utf-8: UTF-8
+forName Utf-8: UTF-8
+forName UTF8: UTF-8
+forName utf8: UTF-8
+forName unicode-1-1-utf-8: UTF-8
+forName ASCII: US-ASCII
+forName ascii: US-ASCII
+forName us-ascii: US-ASCII
+forName 646: US-ASCII
+forName iso_646.irv:1983: US-ASCII
+forName ANSI_X3.4-1968: US-ASCII
+forName cp367: US-ASCII
+forName csASCII: US-ASCII
+forName default: US-ASCII
+forName ISO8859_1: ISO-8859-1
+forName iso8859_1: ISO-8859-1
+forName latin1: ISO-8859-1
+forName l1: ISO-8859-1
+forName 8859_1: ISO-8859-1
+forName ISO_8859-1: ISO-8859-1
+forName cp819: ISO-8859-1
+forName IBM819: ISO-8859-1
+forName 819: ISO-8859-1
+forName csISOLatin1: ISO-8859-1
+forName UTF_16: UTF-16
+forName utf16: UTF-16
+forName UnicodeBig: UTF-16
+forName UTF_16BE: UTF-16BE
+forName X-UTF-16BE: UTF-16BE
+forName UnicodeBigUnmarked: UTF-16BE
+forName ISO-10646-UCS-2: UTF-16BE
+forName UTF_16LE: UTF-16LE
+forName X-UTF-16LE: UTF-16LE
+forName UnicodeLittleUnmarked: UTF-16LE
+forName unicode: UTF-16
+forName [null]: !java.lang.IllegalArgumentException: Null charset name
+isSupported [null]: !java.lang.IllegalArgumentException: Null charset name
+forName []: !java.nio.charset.IllegalCharsetNameException: 
+isSupported []: !java.nio.charset.IllegalCharsetNameException: 
+forName [-utf8]: !java.nio.charset.IllegalCharsetNameException: -utf8
+isSupported [-utf8]: !java.nio.charset.IllegalCharsetNameException: -utf8
+forName [utf 8]: !java.nio.charset.IllegalCharsetNameException: utf 8
+isSupported [utf 8]: !java.nio.charset.IllegalCharsetNameException: utf 8
+forName [utf8!]: !java.nio.charset.IllegalCharsetNameException: utf8!
+isSupported [utf8!]: !java.nio.charset.IllegalCharsetNameException: utf8!
+forName [_x]: !java.nio.charset.IllegalCharsetNameException: _x
+isSupported [_x]: !java.nio.charset.IllegalCharsetNameException: _x
+forName [.x]: !java.nio.charset.IllegalCharsetNameException: .x
+isSupported [.x]: !java.nio.charset.IllegalCharsetNameException: .x
+forName [:x]: !java.nio.charset.IllegalCharsetNameException: :x
+isSupported [:x]: !java.nio.charset.IllegalCharsetNameException: :x
+forName [+x]: !java.nio.charset.IllegalCharsetNameException: +x
+isSupported [+x]: !java.nio.charset.IllegalCharsetNameException: +x
+forName [x+]: !java.nio.charset.UnsupportedCharsetException: x+
+isSupported [x+]: false
+forName [a.b:c-d_e+]: !java.nio.charset.UnsupportedCharsetException: a.b:c-d_e+
+isSupported [a.b:c-d_e+]: false
+forName [no-such-charset]: !java.nio.charset.UnsupportedCharsetException: no-such-charset
+isSupported [no-such-charset]: false
+forName [x-no-such]: !java.nio.charset.UnsupportedCharsetException: x-no-such
+isSupported [x-no-such]: false
+forName [été]: !java.nio.charset.IllegalCharsetNameException: été
+isSupported [été]: !java.nio.charset.IllegalCharsetNameException: été
+StandardCharsets identity: true true
+hashCode is name hash: true
+compareTo: 1 -1
+contains: true true false true true true
+default: UTF-8
+available has standard: truetrue truetrue truetrue truetrue truetrue truetrue 
+encode via Charset: [97, 63]
+encode limit: 3
+decode: true
+IllegalCharsetNameException: q q
+UnsupportedCharsetException: q q
+done

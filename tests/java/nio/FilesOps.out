@@ -1,0 +1,78 @@
+createTempDirectory shape: true true
+createTempFile shape: true
+createTempFile suffix: true true
+write bytes: <tmp>/f.txt 6
+readAllBytes: héllo
+write APPEND: héllo!
+write CREATE_NEW existing: !java.nio.file.FileAlreadyExistsException: <tmp>/f.txt
+write APPEND missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+write WRITE missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+write READ: !java.lang.IllegalArgumentException: READ not allowed
+write APPEND+TRUNCATE: !java.lang.IllegalArgumentException: APPEND + TRUNCATE_EXISTING not allowed
+write lines: a$$bé$ 4
+write lines latin1: 1
+write lines unmappable: !java.nio.charset.UnmappableCharacterException: Input length = 1
+readAllLines: [a, b, c, d, , e]
+readAllLines trailing: [a] 1
+readAllLines empty: []
+readAllLines malformed: !java.nio.charset.MalformedInputException: Input length = 1
+readAllLines latin1: true
+readAllBytes missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+readAllBytes dir: IOException
+newBufferedReader malformed: !java.nio.charset.MalformedInputException: Input length = 1
+newBufferedWriter: x€$
+newBufferedWriter unmappable: !java.nio.charset.UnmappableCharacterException: Input length = 1
+newBufferedWriter APPEND: z
+newInputStream missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+newOutputStream in missing dir: !java.nio.file.NoSuchFileException: <tmp>/nope/x
+newInputStream read: 122 0 0 -1
+newInputStream 10 bytes: 10 0 9 4 5 5 -1 false
+newInputStream closed: IOException
+copy(InputStream,Path): 5
+copy(InputStream,Path) existing: !java.nio.file.FileAlreadyExistsException: <tmp>/c1
+copy(InputStream,Path) replace: 3 3
+copy(Path,OutputStream): 1
+copy: <tmp>/c2 z
+copy existing: !java.nio.file.FileAlreadyExistsException: <tmp>/c2
+copy missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+copy replace: <tmp>/c2 3
+copy onto self: <tmp>/f.txt
+copy into missing dir: !java.nio.file.NoSuchFileException: <tmp>/f.txt -> <tmp>/nope/c
+copy attributes: 2009-02-13T23:31:30Z
+move: <tmp>/m1 false true
+move existing: !java.nio.file.FileAlreadyExistsException: <tmp>/c2
+move replace: <tmp>/c2 false
+move missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+move atomic: <tmp>/m3
+createDirectory: <tmp>/d true
+createDirectory existing: !java.nio.file.FileAlreadyExistsException: <tmp>/d
+createDirectory over file: !java.nio.file.FileAlreadyExistsException: <tmp>/f.txt
+createDirectory missing parent: !java.nio.file.NoSuchFileException: <tmp>/x/y
+createDirectories: <tmp>/x/y/z <tmp>/x/y/z
+createDirectories is file: !java.nio.file.FileAlreadyExistsException: <tmp>/f.txt
+createFile: <tmp>/d/e 0
+createFile existing: !java.nio.file.FileAlreadyExistsException: <tmp>/d/e
+delete non-empty: !java.nio.file.DirectoryNotEmptyException: <tmp>/d
+delete missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+deleteIfExists: true false true
+size missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+tests: true false false true true false true true true false false false
+isSameFile: true true
+isSameFile missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+lastModifiedTime: 1970-01-01T00:00:02Z 2000
+lastModifiedTime missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+basic attributes: 1 true false false false 1970-01-01T00:00:02Z
+basic attributes dir: false true false
+attributes missing: !java.nio.file.NoSuchFileException: <tmp>/missing
+attribute map: {isDirectory=false, lastModifiedTime=1970-01-01T00:00:02Z, size=1}
+attribute map basic:: {isRegularFile=true, size=1}
+attribute bad name: !java.lang.IllegalArgumentException: 'nosuch' not recognized
+attribute bad view: !java.lang.UnsupportedOperationException: View 'noview' not available
+getAttribute: 1 false 1970-01-01T00:00:02Z
+setAttribute: 6000
+FileTime: 1970-01-01T00:00:00Z 2009-02-13T23:31:30.123Z 1969-12-31T23:59:59.999Z 1970-01-01T00:01:30Z 1500
+FileTime compare: true -1 true
+FileTime.toString fraction: 1970-01-01T00:00:00.0015Z 1970-01-01T00:00:00.00000001Z
+exception messages: a | a -> b: why | a: r | d | a -> b | null | null
+cleanup: true false
+done

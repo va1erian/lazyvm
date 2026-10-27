@@ -1,0 +1,57 @@
+bis default read(): 0 log=r8192=8192;
+bis read 10: 10 log=r8192=8192;
+bis read 8192 direct: 8192 log=r8192=8192;
+bis read 9000 direct: 9000 log=r9000=9000;
+bis read 9000 after mark: 8192 log=r8192=8192;av;
+bis read 8191: 8191 log=r8192=8192;
+bis short chunks avail 0: 3 log=r16=3;av;
+bis short chunks avail 5: 10 log=r16=3;av;r16=3;av;r16=3;av;r16=3;
+bis short chunks avail 5, len 40: 40 log=r40=7;av;r33=7;av;r26=7;av;r19=7;av;r16=7;av;r16=7;
+bis eof: 3 -1 -1 log=r16=3;av;r16=-1;r16=-1;
+bis read len 0: 0
+bis available: 15 log=r16=9;av;
+bis available overflow: 2147483647 log=r16=9;av;
+bis skip empty buffer: 50 log=sk50;
+bis skip in buffer: 8 next 9 log=r16=9;r16=9;
+bis skip with mark: 16 next 16 log=r16=16;r14=14;
+bis skip -3: 0
+bis mark 20 in 4, read 15, reset: 1 then read(30)=30 b0=2 log=r4=4;r1=1;r4=4;r8=8;av;r4=4;av;r20=20;
+bis mark 2 in 4, read 5, reset: !java.io.IOException: Resetting to invalid mark log=r4=4;r4=4;
+bis mark 2 in 4, read 4, reset: 0 log=r4=4;
+bis mark 6 in 4, read 7, reset: !java.io.IOException: Resetting to invalid mark log=r4=4;r2=2;r6=6;
+bis reset no mark: !java.io.IOException: Resetting to invalid mark
+bis markSupported: true
+bis size 0: !java.lang.IllegalArgumentException: Buffer size <= 0
+bis close: !java.io.IOException: Stream closed log=close;
+bis closed available: !java.io.IOException: Stream closed log=close;
+bis closed skip: !java.io.IOException: Stream closed log=close;
+bos small:  log=w4;
+bos write = size:  log=w1;w4;
+bos write fits:  log=w3;
+bos flush:  log=w1;fl;fl;
+bos close:  log=w1;fl;close;fl;close;
+bos default size:  log=w8192;
+bos size 0: !java.lang.IllegalArgumentException: Buffer size <= 0
+br read(): 120 log=r8192=8192;
+br read 9000 direct: 9000 log=r9000=9000;
+br read 9000 after mark: 9000 log=r8192=8192;ready;r8192=8192;
+br read 100 short chunks: 10 log=r16=3;ready;r16=3;ready;r16=3;ready;r16=3;
+br read len 0: 0
+br ready: true true log=ready;r16=3;
+br skip: 50 log=r16=7;r16=7;r16=7;r16=7;r16=7;r16=7;r16=7;r16=7;
+br skip -1: !java.lang.IllegalArgumentException: skip value is negative
+br size 0: !java.lang.IllegalArgumentException: Buffer size <= 0
+br close: !java.io.IOException: Stream closed log=close;
+br closed ready: !java.io.IOException: Stream closed log=close;
+br closed readLine: !java.io.IOException: Stream closed log=close;
+bw small:  log=w4;
+bw write char[] = size:  log=w1;w4;
+bw write String > size:  log=w4;w4;
+bw flush close:  log=w1;fl;close;
+bw closed write: !java.io.IOException: Stream closed log=close;
+bw closed flush: !java.io.IOException: Stream closed log=close;
+bw newLine is line.separator: true
+bw default size:  log=w8192;
+bw flushBuffer on close only once:  log=w2;close;
+bw size 0: !java.lang.IllegalArgumentException: Buffer size <= 0
+done

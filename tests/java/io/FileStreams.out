@@ -1,0 +1,57 @@
+fis missing: !java.io.FileNotFoundException: <tmp>/missing (<os reason>)
+fis missing dir: !java.io.FileNotFoundException: <tmp>/nope/x (<os reason>)
+fis on dir: !java.io.FileNotFoundException: <tmp> (<os reason>)
+fos on dir: !java.io.FileNotFoundException: <tmp> (<os reason>)
+fos in missing dir: !java.io.FileNotFoundException: <tmp>/nope/x (<os reason>)
+fis null: !java.lang.NullPointerException: null
+fis null File: !java.lang.NullPointerException: null
+fos write: hello!
+fos truncates: X
+fos append: Xyz
+fos append by name: Xyz! 4
+fos append creates: 1
+fos write after close: !java.io.IOException: Stream Closed
+fos bounds: !java.lang.IndexOutOfBoundsException: null
+fos flush: 1
+fis read/available/skip: 100 0 10 10 89 50 61 38
+fis skip past end: 1000 0 -1 -1
+fis skip negative: -4 6
+fis skip negative at 0: !java.io.IOException
+fis read len 0: 0 -1
+fis read big: 100 -1
+fis bounds: !java.lang.IndexOutOfBoundsException: null
+fis mark: false
+fis reset: !java.io.IOException: mark/reset not supported
+fis read after close: !java.io.IOException: Stream Closed
+fis available after close: !java.io.IOException: Stream Closed
+fis skip after close: !java.io.IOException: Stream Closed
+fis empty file: 0 -1 -1
+FileWriter/FileReader: 6 héllo! 7
+FileReader missing: !java.io.FileNotFoundException: <tmp>/missing (<os reason>)
+raf r missing: !java.io.FileNotFoundException: <tmp>/missing (<os reason>)
+raf bad mode: !java.lang.IllegalArgumentException: Illegal mode "w" must be one of "r", "rw", "rws", or "rwd"
+raf bad mode rwx: !java.lang.IllegalArgumentException: Illegal mode "rwx" must be one of "r", "rw", "rws", or "rwd"
+raf on dir: !java.io.FileNotFoundException: <tmp> (<os reason>)
+raf rw: 3 3
+raf rws: 3 3
+raf rwd: 3 3
+raf rw keeps content: 3 1
+raf primitives: 41 1020304 -2 -32767 8364 true -1 1.5 -0.25 hé ab 65 122 -1
+raf seek past end: 41 -1 101 101
+raf gap is zero: 0 0
+raf seek -1: !java.io.IOException: Negative seek offset
+raf setLength shrink: 10 10 -1
+raf setLength grow: 20 5
+raf setLength -1: !java.io.IOException
+raf readInt at eof: !java.io.EOFException: null
+raf pointer after short readInt: 20
+raf readFully at eof: !java.io.EOFException: null
+raf skipBytes: 3 2 0 20
+raf readLine: [a][b][c][][éd] 233
+raf r write: !java.io.IOException
+raf r setLength: !java.io.IOException
+raf read after close: !java.io.IOException: Stream Closed
+raf length after close: !java.io.IOException: Stream Closed
+raf read(b) at eof: -1 0
+cleanup: true
+done
