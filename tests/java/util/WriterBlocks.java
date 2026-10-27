@@ -148,6 +148,43 @@ public class WriterBlocks {
         } catch (IllegalStateException e) {
             System.out.println("trace before the failure reached the stream: " + (o.log.length() > 0));
         }
+
+        o = new Log(0);
+        ps = new PrintStream(o);
+        ps.print("a\ud83d");
+        o.failures = 1;
+        ps.close();
+        System.out.println("held surrogate fails on close: " + o.log + "| " + ps.checkError());
+
+        Tagged tagged = new Tagged();
+        new Exception("t").printStackTrace(tagged);
+        tagged.println("s");
+        tagged.println(7);
+        System.out.println("overrides seen: " + tagged.seen);
+    }
+
+    /** Records which overridable print methods the stream's own calls go through. */
+    static class Tagged extends PrintStream {
+        final StringBuilder seen = new StringBuilder();
+
+        Tagged() {
+            super(new Log(0));
+        }
+
+        public void print(String s) {
+            seen.append("pS ");
+            super.print(s);
+        }
+
+        public void println(String s) {
+            seen.append("lnS ");
+            super.println(s);
+        }
+
+        public void println(Object o) {
+            seen.append("lnO ");
+            super.println(o);
+        }
     }
 
     static class Quiet extends PrintStream {

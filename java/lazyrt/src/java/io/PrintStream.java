@@ -56,6 +56,10 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
                 held = 0;
                 out.write('?');
             }
+        } catch (IOException e) {
+            trouble = true;
+        }
+        try {
             out.close();
         } catch (IOException e) {
             trouble = true;
@@ -122,7 +126,7 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     }
 
     /** Encodes `s` once and writes it with a single call to the underlying stream. */
-    private void writeText(String s, boolean newline) {
+    private void writeText(String s) {
         if (refused()) {
             return;
         }
@@ -130,20 +134,17 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
             s = held + s;
             held = 0;
         }
-        if (!newline && !s.isEmpty() && Character.isHighSurrogate(s.charAt(s.length() - 1))) {
+        if (!s.isEmpty() && Character.isHighSurrogate(s.charAt(s.length() - 1))) {
             held = s.charAt(s.length() - 1);
             s = s.substring(0, s.length() - 1);
             if (s.isEmpty()) {
                 return;
             }
         }
-        if (newline) {
-            s = s + System.lineSeparator();
-        }
         byte[] bytes = s.getBytes();
         try {
             out.write(bytes, 0, bytes.length);
-            if (autoFlush && (newline || s.indexOf('\n') >= 0)) {
+            if (autoFlush && s.indexOf('\n') >= 0) {
                 out.flush();
             }
         } catch (IOException e) {
@@ -152,79 +153,113 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
     }
 
     public void print(boolean b) {
-        writeText(String.valueOf(b), false);
+        writeText(String.valueOf(b));
     }
 
     public void print(char c) {
-        writeText(String.valueOf(c), false);
+        writeText(String.valueOf(c));
     }
 
     public void print(int i) {
-        writeText(String.valueOf(i), false);
+        writeText(String.valueOf(i));
     }
 
     public void print(long l) {
-        writeText(String.valueOf(l), false);
+        writeText(String.valueOf(l));
     }
 
     public void print(float f) {
-        writeText(String.valueOf(f), false);
+        writeText(String.valueOf(f));
     }
 
     public void print(double d) {
-        writeText(String.valueOf(d), false);
+        writeText(String.valueOf(d));
     }
 
     public void print(char[] s) {
-        writeText(new String(s), false);
+        writeText(new String(s));
     }
 
     public void print(String s) {
-        writeText(String.valueOf(s), false);
+        writeText(String.valueOf(s));
     }
 
     public void print(Object obj) {
-        writeText(String.valueOf(obj), false);
+        writeText(String.valueOf(obj));
+    }
+
+    /** The line separator, written as its own print so subclasses see it as Java 8 shows. */
+    private void newLine() {
+        writeText(System.lineSeparator());
     }
 
     public void println() {
-        writeText("", true);
+        newLine();
     }
 
     public void println(boolean x) {
-        writeText(String.valueOf(x), true);
+        synchronized (this) {
+            print(x);
+            newLine();
+        }
     }
 
     public void println(char x) {
-        writeText(String.valueOf(x), true);
+        synchronized (this) {
+            print(x);
+            newLine();
+        }
     }
 
     public void println(int x) {
-        writeText(String.valueOf(x), true);
+        synchronized (this) {
+            print(x);
+            newLine();
+        }
     }
 
     public void println(long x) {
-        writeText(String.valueOf(x), true);
+        synchronized (this) {
+            print(x);
+            newLine();
+        }
     }
 
     public void println(float x) {
-        writeText(String.valueOf(x), true);
+        synchronized (this) {
+            print(x);
+            newLine();
+        }
     }
 
     public void println(double x) {
-        writeText(String.valueOf(x), true);
+        synchronized (this) {
+            print(x);
+            newLine();
+        }
     }
 
     public void println(char[] x) {
-        writeText(new String(x), true);
+        synchronized (this) {
+            print(x);
+            newLine();
+        }
     }
 
     public void println(String x) {
-        writeText(String.valueOf(x), true);
+        synchronized (this) {
+            print(x);
+            newLine();
+        }
     }
 
+    /** Observed on the oracle: this one goes through print(String). */
     public void println(Object x) {
-        writeText(String.valueOf(x), true);
+        String s = String.valueOf(x);
+        synchronized (this) {
+            print(s);
+            newLine();
+        }
     }
 
     public PrintStream append(CharSequence csq) {
@@ -262,7 +297,7 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
 
     /** With autoflush, formatted text is flushed even without a newline. */
     private PrintStream formatted(String text) {
-        writeText(text, false);
+        writeText(text);
         if (autoFlush) {
             flush();
         }

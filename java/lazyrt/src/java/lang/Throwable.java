@@ -199,7 +199,7 @@ public class Throwable implements Serializable {
         }
     }
 
-    /** Where a trace goes: println on a PrintStream or a PrintWriter. */
+    /** Where a trace goes: println(Object) on a PrintStream or a PrintWriter, as observed. */
     private static final class Sink {
         private final PrintStream stream;
         private final PrintWriter writer;
@@ -211,9 +211,9 @@ public class Throwable implements Serializable {
 
         void line(String text) {
             if (stream != null) {
-                stream.println(text);
+                stream.println((Object) text);
             } else {
-                writer.println(text);
+                writer.println((Object) text);
             }
         }
     }
