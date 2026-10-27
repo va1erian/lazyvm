@@ -1,0 +1,12 @@
+before gc: kept true, queued false
+after gc: kept true, dropped cleared true
+queued the dropped one true, enqueued now false
+queue empty true
+enqueue after removal false
+manual enqueue true again false
+manual polled true
+cleared true
+phantom get null true
+soft survives gc true
+OOM after soft cleared true
+done
