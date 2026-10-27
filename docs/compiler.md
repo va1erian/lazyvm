@@ -15,7 +15,10 @@ owner confirms it in `decisions.md`.
 - **Clean room** (shared rule 1). Running a compiled program and watching what
   it does is allowed; reading its source, or disassembling a JDK's classes, is
   not. A third-party compiler that fails on LazyVM is debugged from its
-  observable behaviour and the Javadoc only.
+  observable behaviour and the Javadoc only: what it prints, its exit status,
+  exception messages and stack traces. LazyVM's own `-Xtrace:interp`, `javap`
+  and bytecode or verifier dumps of a JDK's classes (javac's `tools.jar`
+  included) count as disassembly and are out.
 - **Namespace** (shared rule 2). Whatever `java.*`/`javax.*` the compiler needs
   must be part of the Java SE 8 API, with exact signatures. Nothing JDK-internal
   (`sun.*`, `com.sun.*` outside the compiler itself) can be provided, because
@@ -66,13 +69,13 @@ Run an existing Java 8-bytecode compiler with `lazyvm`. Candidates:
   runs, a strong end-to-end test of the interpreter, the verifier and the
   class library; the same jar works on Windows and LazyOS.
 - **Against:** it cannot start before S8 (D1: the verifier comes before any
-  jar we did not build) and needs most of S3-S5 and S11 plus three `javax`
-  packages that D6 rules out today (section 5). The compiler's internals are
+  jar we did not build) and needs S4, S5, S7 and S11 as well, plus three
+  `javax` packages that D6 rules out today (section 5). The compiler's internals are
   opaque to us under the clean room, so failures are found by differential
   output only. And LazyVM is an interpreter, so compiles are slower than on
   HotSpot.
 - **Shipping:** this repo would not carry `tools.jar`. The test harness takes
-  it from a local JDK 8. Whether LazyOS ships it in an image is a separate
+  it from the oracle JDK 8 (`LAZYVM_ORACLE_JAVA`). Whether LazyOS ships it in an image is a separate
   license decision (the same GPLv2 source offer as A).
 
 ### C. Our own compiler
@@ -109,8 +112,8 @@ same JVM were then subtracted.
 | total | 1,625 |
 
 No `sun.*` class in the 327 points at a direct call from javac. The likely
-cause of each, inferred from the load order only (not checked, and the S14
-rerun is the real test):
+cause of each, inferred from the load order only (not checked; running javac
+on LazyVM in S14-01 is the real test):
 
 - `sun.misc.URLClassPath`, `JarIndex`, `FileURLMapper`,
   `sun.security.util.SignatureFileVerifier`: the application class loader
@@ -148,7 +151,7 @@ The SE 8 API it used beyond the baseline, by area:
   rule 1. The test is running the jar on LazyVM: an unknown class is then a
   `NoClassDefFoundError` naming it.
 - One source file, no annotation processors, no `-sourcepath`, no
-  `-bootclasspath`. S14-01 reruns the probe on the whole test tree with
+  `-bootclasspath`. S14-01 compiles all of `tests/java` with
   `-bootclasspath dist/lazyrt.jar`, which is how javac would run on LazyVM.
 
 ## 4. Recommendation
@@ -170,10 +173,12 @@ these, as far as javac 8 uses them. It is not confirmed.
   `javax.annotation.processing`. All three are in the Java SE 8 API, so
   shared rule 2 allows them; D6's "other javax.*" in the "Out" row is what
   excludes them today.
-- `java.util.zip` and `java.util.jar` as public API: javac opens the
-  `-bootclasspath` jar through them. S3-01 reads jars inside the VM, which
-  javac cannot use.
-- `ResourceBundle` with locale fallback, `ServiceLoader`, `MessageFormat`,
+- `java.util.zip` and `java.util.jar` as public API: javac probably opens the
+  `-bootclasspath` jar through them (the probe cannot separate this from the
+  class loader opening `tools.jar`; S14-01 shows it). S3-01 reads jars inside
+  the VM, which javac cannot use.
+- `ResourceBundle` with locale fallback, `ServiceLoader`, `MessageFormat` and
+  the `java.text` it needs (`DecimalFormatSymbols`), `LinkedHashSet`,
   `URLClassLoader` and `java.lang.Package`.
 
 `java.util.regex` is needed too, but S5-03 already plans it.
