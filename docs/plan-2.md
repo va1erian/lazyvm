@@ -177,25 +177,28 @@ Proposed in [`compiler.md`](compiler.md); the owner has not confirmed it. It
 needs the D6 "Compiler support" row confirmed.
 
 - [ ] S14-01 Run javac 8 on LazyVM and fill what it is missing in `lazyrt`,
-      from the Javadoc. `tools.jar` is the oracle's: `lib/tools.jar` of the
-      JDK 8 whose `bin/java` `LAZYVM_ORACLE_JAVA` names. This repo does not
+      from the Javadoc. `tools.jar` is the oracle's: the top-level
+      `lib/tools.jar` of the JDK 8 the oracle resolves to
+      (`LAZYVM_ORACLE_JAVA`, else `java` on `PATH`). This repo does not
       carry it, and `tools/lazyos_test.py` stages it into the test image only.
       Every run compiles the sources under `tests/java` with
       `-bootclasspath dist/lazyrt.jar` (a jar, so javac's own jar reading is
-      exercised), the `-sourcepath` of `tools/testlib.py` and the flags of
+      exercised) and `-extdirs ""` (so both VMs search the same paths), the `-sourcepath` of `tools/testlib.py` and the flags of
       `tools/javac.py`, and copies the tests' resources next to the classes
       as `testlib.copy_resources` does. Debug from what javac prints, its exit
       status, and exception messages and stack traces only: no `-Xtrace:interp`, `javap`,
-      or bytecode or verifier dumps of `tools.jar` classes (shared rule 1). If
+      or bytecode or verifier dumps of `tools.jar` classes (shared rule 1);
+      a `VerifyError` or `ClassFormatError` on one is reproduced with a class
+      we compiled, without reading its bytecode details. If
       javac on LazyVM fails with `NoClassDefFoundError` for a `sun.*` or
       `com.sun.*` class outside `tools.jar`, stop and report.
       Files: `java/lazyrt/src/javax/{lang/model,tools,annotation/processing}`,
       `java/lazyrt/src/java/{lang,util,util/zip,util/jar,text,net}` as far as
       javac needs them, `tools/javac_on_lazyvm.py`, `tools/lazyos_test.py`.
-      Check: on Windows, `tools/javac_on_lazyvm.py` compiles the sources with javac 8 on the oracle JVM and with javac 8 on LazyVM, and every class file is byte-identical. On LazyOS, `tools/lazyos_test.py --javac` compiles each test with javac 8 on LazyVM into a writable guest directory (`/tmp`) with its resources beside it, runs it there, and its stdout matches the test's `.out`. Local only: both need the oracle's `tools.jar`, so CI skips them.
-      Needs: S4, S5, S7, S8, S11 (the S11-05 performance pass comes first: an interpreted javac's speed is the main risk to the stage).
+      Check: on Windows, `tools/javac_on_lazyvm.py` compiles the sources with javac 8 on the oracle JVM and with javac 8 on LazyVM, and every class file is byte-identical. On LazyOS, `tools/lazyos_test.py --javac` compiles each test with javac 8 on LazyVM into a writable guest directory (`/tmp`) with its resources beside it, runs it there, and its transcript matches the test's `.out`. Local only: both need the oracle's `tools.jar`, so CI skips them.
+      Needs: the owner's confirmation of S14 and the D6 "Compiler support" row; S4, S5, S7, S8, S11 (the S11-05 performance pass comes first: an interpreted javac's speed is the main risk to the stage).
 
-Gate: `tests/java/s4/Showcase` compiled by javac 8 on LazyVM prints its
+Gate: `tests/java/s4/Showcase` compiled by javac 8 on LazyVM matches its
 `.out`, on Windows (`tools/javac_on_lazyvm.py --filter s4.Showcase --run`)
 and on LazyOS (`tools/lazyos_test.py --javac --filter s4.Showcase`).
 

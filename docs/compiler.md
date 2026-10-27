@@ -19,7 +19,10 @@ nothing is decided until the owner confirms them there.
   observable behaviour and the Javadoc only: what it prints, its exit status,
   exception messages and stack traces. LazyVM's own `-Xtrace:interp`, `javap`
   and bytecode or verifier dumps of a JDK's classes (javac's `tools.jar`
-  included) count as disassembly and are out.
+  included) count as disassembly and are out. A `VerifyError` or
+  `ClassFormatError` that LazyVM raises on a `tools.jar` class is a LazyVM
+  bug: it is reproduced with a class we compiled, and the bytecode details
+  in its message are not read.
 - **Namespace** (shared rule 2). Whatever `java.*`/`javax.*` the compiler needs
   must be part of the Java SE 8 API, with exact signatures. Nothing JDK-internal
   (`sun.*`, `com.sun.*` outside the compiler itself) can be provided, because
@@ -49,9 +52,10 @@ and can be any version, emitting `--release 8` for LazyVM.
   be presented as a developer tool for building, never as the way apps run.
   It is GPLv2 with the Classpath Exception: shipped beside the GPLv3 OS as a
   separate program (aggregation, no linking), with the source offer GPLv2
-  requires. The staging strips the JDK's `src.zip`, and the source offer is
-  kept outside both repos and the image: agents read LazyOS, and shared rule
-  1 forbids them OpenJDK source.
+  requires. The staging strips the JDK's `src.zip`; the image carries only
+  the written source offer, and the corresponding source is kept outside
+  both repos and the image: agents read LazyOS, and shared rule 1 forbids
+  them OpenJDK source.
 - **Where:** entirely in the LazyOS repo, tracked in its own plan (not a
   `LOS-` item, which is LazyOS work LazyVM needs), with a staging script
   modelled on `tools/selfhost/`. Nothing in this repo changes beyond the
