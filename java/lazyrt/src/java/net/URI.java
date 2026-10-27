@@ -1,18 +1,16 @@
 package java.net;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
+import lazy.internal.UriText;
 
 /**
  * The part of URI that file names need before java.net (S7-02): parsing
- * into scheme, authority, path, query and fragment (RFC 2396's shape), the
- * component getters, and the (scheme, host, path, fragment) constructor.
+ * into scheme, authority, path, query and fragment (RFC 2396's shape, with
+ * the component checks and messages of the Javadoc), the component getters,
+ * comparison, and the (scheme, host, path, fragment) constructor.
  * Server-based authority parsing (user info, port), normalize, resolve and
- * relativize come with S7-02.
+ * relativize come with S7-02. Escaping is lazy.internal.UriText's.
  */
 public final class URI implements Comparable<URI>, java.io.Serializable {
-    private static final String PUNCT = "-_.!~*'();/?:@&=+$,[]%";
-
     private final String string;
     private String scheme;
     private String authority;
@@ -38,7 +36,8 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
         }
     }
 
-    private static String build(String scheme, String host, String path, String fragment) {
+    private static String build(String scheme, String host, String path, String fragment)
+            throws URISyntaxException {
         StringBuilder sb = new StringBuilder();
         if (scheme != null) {
             sb.append(scheme).append(':');
@@ -47,76 +46,88 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
             sb.append("//").append(host);
         }
         if (path != null) {
-            sb.append(quote(path));
+            sb.append(UriText.escape(path, UriText.PATH, true));
         }
         if (fragment != null) {
-            sb.append('#').append(quote(fragment));
+            sb.append('#').append(UriText.escape(fragment, UriText.QUERY, true));
         }
-        return sb.toString();
+        String s = sb.toString();
+        if (scheme != null && path != null && !path.isEmpty() && path.charAt(0) != '/') {
+            throw new URISyntaxException(s, "Relative path in absolute URI");
+        }
+        return s;
     }
 
-    /** Escapes what is not legal in a component; non-ASCII "other" chars stay (Javadoc). */
-    private static String quote(String s) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (legal(c) && c != '%' && c != '?' && c != '#') {
-                sb.append(c);
-            } else {
-                for (byte b : String.valueOf(c).getBytes(StandardCharsets.UTF_8)) {
-                    sb.append('%').append("0123456789ABCDEF".charAt((b >> 4) & 15))
-                            .append("0123456789ABCDEF".charAt(b & 15));
-                }
-            }
-        }
-        return sb.toString();
+    private URISyntaxException fail(String what, int at) {
+        return new URISyntaxException(string, what, at);
     }
 
-    private static boolean legal(char c) {
-        if (c > 0x7F) {
-            return !Character.isISOControl(c) && !Character.isSpaceChar(c);
+    /** Checks `string[from, to)` as the named component may hold it. */
+    private void check(int from, int to, String legal, String component) throws URISyntaxException {
+        int bad = UriText.illegal(string, from, to, legal);
+        if (bad >= 0) {
+            // Observed: an authority is reported at its start, other components at the char.
+            throw fail("Illegal character in " + component, component.equals("authority") ? from : bad);
         }
-        return Character.isLetterOrDigit(c) || PUNCT.indexOf(c) >= 0;
+        bad = UriText.badEscape(string, from, to);
+        if (bad >= 0) {
+            throw fail("Malformed escape pair", bad);
+        }
     }
 
     private void parse() throws URISyntaxException {
         String s = string;
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (!legal(c) && c != '#') {
-                throw new URISyntaxException(s, "Illegal character in URI", i);
-            }
-        }
+        int end = s.length();
         int hash = s.indexOf('#');
         if (hash >= 0) {
+            check(hash + 1, end, UriText.QUERY, "fragment");
             fragment = s.substring(hash + 1);
-            s = s.substring(0, hash);
+            end = hash;
         }
         int colon = s.indexOf(':');
-        int stop = firstOf(s, "/?");
-        if (colon > 0 && (stop < 0 || colon < stop) && validScheme(s.substring(0, colon))) {
+        int stop = firstOf(s, "/?#");
+        int start = 0;
+        if (colon == 0) {
+            throw fail("Expected scheme name", 0);
+        }
+        if (colon > 0 && (stop < 0 || colon < stop)) {
+            checkScheme(colon);
             scheme = s.substring(0, colon);
-            s = s.substring(colon + 1);
-            if (s.isEmpty()) {
-                throw new URISyntaxException(string, "Expected scheme-specific part", string.length());
+            start = colon + 1;
+            if (start == end) {
+                throw fail("Expected scheme-specific part", start);
             }
-            if (!s.startsWith("/")) {
+            if (s.charAt(start) != '/') {
+                check(start, end, UriText.QUERY, "opaque part");
                 opaque = true;
                 return;
             }
         }
-        int q = s.indexOf('?');
-        if (q >= 0) {
-            query = s.substring(q + 1);
-            s = s.substring(0, q);
+        int q = s.indexOf('?', start);
+        if (q >= 0 && q < end) {
+            check(q + 1, end, UriText.QUERY, "query");
+            query = s.substring(q + 1, end);
+            end = q;
         }
-        if (s.startsWith("//")) {
-            int end = s.indexOf('/', 2);
-            end = end < 0 ? s.length() : end;
-            authority = end > 2 ? s.substring(2, end) : null;
-            s = s.substring(end);
+        if (s.startsWith("//", start)) {
+            int slash = s.indexOf('/', start + 2);
+            int authEnd = slash < 0 || slash > end ? end : slash;
+            check(start + 2, authEnd, UriText.AUTHORITY, "authority");
+            authority = authEnd > start + 2 ? s.substring(start + 2, authEnd) : null;
+            start = authEnd;
         }
-        path = s;
+        check(start, end, UriText.PATH, "path");
+        path = s.substring(start, end);
+    }
+
+    private void checkScheme(int colon) throws URISyntaxException {
+        for (int i = 0; i < colon; i++) {
+            char c = string.charAt(i);
+            boolean letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+            if (!letter && (i == 0 || !((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.'))) {
+                throw fail("Illegal character in scheme name", i);
+            }
+        }
     }
 
     private static int firstOf(String s, String chars) {
@@ -126,48 +137,6 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
             }
         }
         return -1;
-    }
-
-    private static boolean validScheme(String s) {
-        if (!Character.isLetter(s.charAt(0)) || s.charAt(0) > 0x7F) {
-            return false;
-        }
-        for (int i = 1; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c > 0x7F || !(Character.isLetterOrDigit(c) || c == '+' || c == '-' || c == '.')) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /** %XX escapes as UTF-8 bytes. */
-    private static String decode(String s) {
-        if (s == null || s.indexOf('%') < 0) {
-            return s;
-        }
-        StringBuilder sb = new StringBuilder();
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '%' && i + 2 < s.length() && Character.digit(s.charAt(i + 1), 16) >= 0
-                    && Character.digit(s.charAt(i + 2), 16) >= 0) {
-                bytes.write(Character.digit(s.charAt(i + 1), 16) * 16 + Character.digit(s.charAt(i + 2), 16));
-                i += 2;
-                continue;
-            }
-            flush(bytes, sb);
-            sb.append(c);
-        }
-        flush(bytes, sb);
-        return sb.toString();
-    }
-
-    private static void flush(ByteArrayOutputStream bytes, StringBuilder sb) {
-        if (bytes.size() > 0) {
-            sb.append(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
-            bytes.reset();
-        }
     }
 
     public String getScheme() {
@@ -187,7 +156,7 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String getAuthority() {
-        return decode(authority);
+        return UriText.decode(authority);
     }
 
     /** The authority as a host name; user info and ports come with S7-02. */
@@ -200,7 +169,7 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String getPath() {
-        return decode(path);
+        return UriText.decode(path);
     }
 
     public String getRawQuery() {
@@ -208,7 +177,7 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String getQuery() {
-        return decode(query);
+        return UriText.decode(query);
     }
 
     public String getRawFragment() {
@@ -216,7 +185,7 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String getFragment() {
-        return decode(fragment);
+        return UriText.decode(fragment);
     }
 
     public String toString() {
@@ -224,27 +193,32 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public String toASCIIString() {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : string.getBytes(StandardCharsets.UTF_8)) {
-            if (b >= 0) {
-                sb.append((char) b);
-            } else {
-                sb.append('%').append("0123456789ABCDEF".charAt((b >> 4) & 15))
-                        .append("0123456789ABCDEF".charAt(b & 15));
-            }
+        return UriText.escape(string, UriText.ASCII + "%", false);
+    }
+
+    /**
+     * Javadoc of equals: the scheme and host ignore case, and so do the hex digits of escapes.
+     * Observed: compareTo ignores case in the scheme and host only.
+     */
+    private String comparable(boolean escapes) {
+        String rest = scheme == null ? string : string.substring(scheme.length());
+        String lower = scheme == null ? "" : scheme.toLowerCase();
+        if (authority != null) {
+            int at = rest.indexOf(authority);
+            rest = rest.substring(0, at) + authority.toLowerCase() + rest.substring(at + authority.length());
         }
-        return sb.toString();
+        return lower + (escapes ? UriText.normalEscapes(rest) : rest);
     }
 
     public boolean equals(Object ob) {
-        return ob instanceof URI && string.equals(((URI) ob).string);
+        return ob instanceof URI && comparable(true).equals(((URI) ob).comparable(true));
     }
 
     public int hashCode() {
-        return string.hashCode();
+        return comparable(true).hashCode();
     }
 
     public int compareTo(URI that) {
-        return string.compareTo(that.string);
+        return comparable(false).compareTo(that.comparable(false));
     }
 }

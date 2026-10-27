@@ -6,6 +6,7 @@
 
 mod boxing;
 mod char_props;
+mod file_attrs;
 mod files;
 mod floats;
 mod hexfloat;
@@ -36,6 +37,7 @@ pub fn register_all(vm: &mut Vm) {
     lang_string_case::register(vm);
     internal::register(vm);
     files::register(vm);
+    file_attrs::register(vm);
     reflect::register(vm);
     reflect_access::register(vm);
 }

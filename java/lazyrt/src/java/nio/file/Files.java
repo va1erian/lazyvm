@@ -18,7 +18,7 @@ import java.util.Set;
 import lazy.internal.FileSystem;
 
 /**
- * Operations on files (io.md section 13). The work is in FileAccess (opening),
+ * Operations on files (nio-file.md section 2). The work is in FileAccess (opening),
  * FileOps (changes), FileAttrs (attributes) and FileTree (listing, walking).
  * File attributes at creation, links and the stream methods (S11) are out of scope.
  */
@@ -162,7 +162,7 @@ public final class Files {
     }
 
     public static Path setLastModifiedTime(Path path, FileTime time) throws IOException {
-        FileAttrs.setModified(path, time);
+        FileAttrs.setTime(path, FileSystem.MODIFIED, time);
         return path;
     }
 
@@ -196,6 +196,9 @@ public final class Files {
 
     public static Path walkFileTree(Path start, Set<FileVisitOption> options, int maxDepth,
             FileVisitor<? super Path> visitor) throws IOException {
+        if (options == null) {
+            throw new NullPointerException();
+        }
         return FileTree.walk(start, maxDepth, visitor);
     }
 

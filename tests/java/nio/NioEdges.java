@@ -1,0 +1,162 @@
+package nio;
+
+import java.io.*;
+import java.nio.*;
+import java.nio.charset.*;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
+import java.util.Arrays;
+import java.util.concurrent.Callable;
+
+/** Edge cases of java.nio found by review: overlapping bulk copies, compact on views, read-only
+ *  and self checks, coder results at a full output and from a broken coder, glob classes and
+ *  separators, URIs of odd names, and argument checks of Files. */
+public class NioEdges {
+    static Path root;
+
+    static void t(String label, Callable<Object> c) {
+        String r;
+        try {
+            r = String.valueOf(c.call());
+        } catch (Throwable e) {
+            r = "!" + e.getClass().getName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
+        }
+        System.out.println(label + ": " + r.replace(root.toString(), "<T>").replace(File.separatorChar, '/'));
+    }
+
+    public static void main(String[] args) throws Exception {
+        root = Files.createTempDirectory("lazynioedge").toRealPath();
+        buffers();
+        charsets();
+        globs();
+        files();
+        System.out.println("done");
+    }
+
+    static String bytes(ByteBuffer b) {
+        return Arrays.toString(b.array());
+    }
+
+    static void buffers() {
+        t("overlapping put forward", () -> { ByteBuffer b = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6, 7}); ByteBuffer src = b.duplicate(); src.limit(6); b.position(2); b.put(src); return bytes(b); });
+        t("overlapping put back", () -> { ByteBuffer b = ByteBuffer.wrap(new byte[] {0, 1, 2, 3, 4, 5, 6, 7}); ByteBuffer src = b.duplicate(); src.position(2); b.put(src); return bytes(b); });
+        t("overlapping int put", () -> { int[] a = {0, 1, 2, 3, 4, 5}; IntBuffer b = IntBuffer.wrap(a); IntBuffer src = b.duplicate(); src.limit(4); b.position(2); b.put(src); return Arrays.toString(a); });
+        t("overlapping char put", () -> { char[] a = "abcdef".toCharArray(); CharBuffer b = CharBuffer.wrap(a); CharBuffer src = b.duplicate(); src.limit(4); b.position(2); b.put(src); return new String(a); });
+        t("overlapping put through a view", () -> { ByteBuffer b = ByteBuffer.wrap(new byte[16]); for (int i = 0; i < 8; i++) b.putShort(i * 2, (short) i); ShortBuffer v = b.asShortBuffer(); ShortBuffer src = v.duplicate(); src.limit(6); v.position(2); v.put(src); v.clear(); StringBuilder sb = new StringBuilder(); while (v.hasRemaining()) sb.append(v.get()).append(' '); return sb; });
+        t("read-only put of itself", () -> { ByteBuffer b = ByteBuffer.allocate(4).asReadOnlyBuffer(); return b.put(b); });
+        t("read-only char put of itself", () -> { CharBuffer b = CharBuffer.allocate(4).asReadOnlyBuffer(); return b.put(b); });
+        t("put of itself", () -> { IntBuffer b = IntBuffer.allocate(4); return b.put(b); });
+        t("char read of itself, empty", () -> { CharBuffer b = CharBuffer.allocate(4); b.position(4); return b.read(b); });
+        t("char read of itself", () -> { CharBuffer b = CharBuffer.allocate(4); return b.read(b); });
+        t("int hashCode", () -> IntBuffer.wrap(new int[] {1, 2, 3}).hashCode());
+        t("long hashCode", () -> LongBuffer.wrap(new long[] {1, 2, 3}).hashCode());
+        t("view compact table", NioEdges::compactTable);
+        t("direct view compact", () -> { ByteBuffer b = ByteBuffer.allocateDirect(24); b.position(4); IntBuffer v = b.slice().asIntBuffer(); v.compact(); return v.position(); });
+        t("zero-capacity view compact", () -> { ByteBuffer b = ByteBuffer.allocate(8); b.position(5); IntBuffer v = b.slice().asIntBuffer(); return v.capacity() + " " + v.compact(); });
+        t("read-only view compact", () -> { ByteBuffer b = ByteBuffer.allocate(8); b.position(4); return b.slice().asReadOnlyBuffer().asIntBuffer().compact(); });
+    }
+
+    /** Which views of a sliced 40-byte heap buffer compact, by slice offset and view limit. */
+    static String compactTable() {
+        StringBuilder sb = new StringBuilder();
+        for (int size : new int[] {2, 4, 8}) {
+            sb.append(" s").append(size).append(':');
+            for (int off = 0; off <= 17; off += 1) {
+                ByteBuffer b = ByteBuffer.allocate(40);
+                b.position(off);
+                ByteBuffer s = b.slice();
+                Buffer v = size == 2 ? s.asCharBuffer() : size == 4 ? s.asIntBuffer() : s.asLongBuffer();
+                for (int cut = 0; cut <= 2 && cut <= v.capacity(); cut++) {
+                    v.clear();
+                    v.limit(v.capacity() - cut);
+                    try {
+                        if (v instanceof CharBuffer) ((CharBuffer) v).compact(); else if (v instanceof IntBuffer) ((IntBuffer) v).compact(); else ((LongBuffer) v).compact();
+                        sb.append('o');
+                    } catch (IllegalArgumentException e) {
+                        sb.append('X');
+                    }
+                }
+                sb.append(',');
+            }
+        }
+        return sb.toString();
+    }
+
+    static String result(CoderResult r, Buffer in, Buffer out) {
+        return r + " in=" + in.position() + " out=" + out.position();
+    }
+
+    static void charsets() {
+        Charset latin = StandardCharsets.ISO_8859_1;
+        t("latin1 encode, full then unmappable", () -> { CharBuffer in = CharBuffer.wrap("ab€"); ByteBuffer out = ByteBuffer.allocate(2); return result(latin.newEncoder().encode(in, out, true), in, out); });
+        t("latin1 encode, full then mappable", () -> { CharBuffer in = CharBuffer.wrap("abc"); ByteBuffer out = ByteBuffer.allocate(2); return result(latin.newEncoder().encode(in, out, true), in, out); });
+        t("ascii encode, full then unmappable", () -> { CharBuffer in = CharBuffer.wrap("ab€"); ByteBuffer out = ByteBuffer.allocate(2); return result(StandardCharsets.US_ASCII.newEncoder().encode(in, out, true), in, out); });
+        t("direct decode with errors", () -> { ByteBuffer d = ByteBuffer.allocateDirect(300); for (int i = 0; i < 300; i++) d.put(i, (byte) (i % 3 == 0 ? 0xFF : 'a')); CharBuffer c = StandardCharsets.UTF_8.decode(d); return c.remaining() + " " + c.charAt(0) + c.charAt(1); });
+        t("string encode with errors", () -> { StringBuilder sb = new StringBuilder(); for (int i = 0; i < 300; i++) sb.append(i % 3 == 0 ? 'é' : 'a'); ByteBuffer e = StandardCharsets.US_ASCII.encode(sb.toString()); return e.remaining() + " " + e.get(0) + " " + e.get(1); });
+        t("decoder averageCharsPerByte 0", () -> new CharsetDecoder(latin, 0f, 1f) {
+            protected CoderResult decodeLoop(ByteBuffer in, CharBuffer out) { return CoderResult.UNDERFLOW; }
+        });
+        t("decoder maxCharsPerByte 0", () -> new CharsetDecoder(latin, 1f, 0f) {
+            protected CoderResult decodeLoop(ByteBuffer in, CharBuffer out) { return CoderResult.UNDERFLOW; }
+        });
+        t("encoder averageBytesPerChar -1", () -> new CharsetEncoder(latin, -1f, 1f) {
+            protected CoderResult encodeLoop(CharBuffer in, ByteBuffer out) { return CoderResult.UNDERFLOW; }
+        });
+        t("coder throwing IllegalStateException", () -> new CharsetDecoder(latin, 1f, 1f) {
+            protected CoderResult decodeLoop(ByteBuffer in, CharBuffer out) { throw new IllegalStateException("inner"); }
+        }.decode(ByteBuffer.allocate(1), CharBuffer.allocate(1), true));
+        t("coder throwing BufferUnderflowException", () -> new CharsetDecoder(latin, 1f, 1f) {
+            protected CoderResult decodeLoop(ByteBuffer in, CharBuffer out) { throw new BufferUnderflowException(); }
+        }.decode(ByteBuffer.allocate(1), CharBuffer.allocate(1), true));
+    }
+
+    static String glob(String pattern, String... paths) {
+        try {
+            PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+            StringBuilder sb = new StringBuilder();
+            for (String p : paths) sb.append(p).append('=').append(m.matches(Paths.get(p))).append(' ');
+            return sb.toString().trim();
+        } catch (java.util.regex.PatternSyntaxException e) {
+            // The index of an empty class is in the oracle's own regex: not compared (io.md section 17).
+            return "PSE " + e.getDescription() + (pattern.contains("[]") || pattern.contains("[!]") ? "" : " at " + e.getIndex());
+        }
+    }
+
+    static void globs() {
+        t("glob [!b] and the separator", () -> glob("a[!b]c", "axc", "abc", "a/c"));
+        t("glob *[!~]* across names", () -> glob("*[!~]*", "dir/file", "file"));
+        t("glob [/]", () -> glob("[/]"));
+        t("glob [a/b]", () -> glob("x[a/b]"));
+        t("glob []a]", () -> glob("[]a]", "]", "a"));
+        t("glob [!]a]", () -> glob("[!]a]", "]", "b"));
+        t("glob []", () -> glob("[]"));
+        t("glob unclosed [", () -> glob("a[bc"));
+        t("glob unclosed {", () -> glob("a{bc"));
+    }
+
+    static void files() throws IOException {
+        Path f = Files.write(root.resolve("f"), new byte[] {1, 2});
+        Path d = Files.createDirectory(root.resolve("d"));
+        t("FileTime 100 ms", () -> FileTime.fromMillis(100));
+        t("FileTime 1 ms", () -> FileTime.fromMillis(1));
+        t("FileTime 1234567 us", () -> FileTime.from(1234567, java.util.concurrent.TimeUnit.MICROSECONDS));
+        t("dir set modified time", () -> { Files.setLastModifiedTime(d, FileTime.fromMillis(1000000000000L)); return Files.getLastModifiedTime(d).toMillis(); });
+        t("set access time", () -> { Files.setAttribute(f, "lastAccessTime", FileTime.fromMillis(1200000000000L)); return Files.getAttribute(f, "lastAccessTime"); });
+        t("getAttribute *", () -> Files.getAttribute(f, "*"));
+        t("getAttribute two names", () -> Files.getAttribute(f, "size,isDirectory"));
+        t("setAttribute unknown", () -> { Files.setAttribute(f, "basic:x", 1); return "set"; });
+        t("temp prefix with a separator", () -> Files.createTempFile(root, "a/b", null));
+        t("temp suffix with a separator", () -> Files.createTempFile(root, "ab", "/x"));
+        t("temp dir prefix climbing", () -> Files.createTempDirectory(root, "../x"));
+        t("move into itself", () -> { try { Files.move(d, d.resolve("sub")); return "moved"; } catch (FileSystemException e) { return e.getClass().getName() + " sub=" + Files.exists(d.resolve("sub")) + " d=" + Files.isDirectory(d); } });
+        t("newInputStream null option", () -> Files.newInputStream(f, (OpenOption) null));
+        t("newOutputStream copy option", () -> Files.newOutputStream(f, new OpenOption() {}));
+        t("copy stream atomic", () -> Files.copy(new ByteArrayInputStream(new byte[1]), root.resolve("g"), StandardCopyOption.ATOMIC_MOVE));
+        t("copy null option", () -> Files.copy(f, root.resolve("g"), (CopyOption) null));
+        t("toUri nbsp and line separator", () -> { String u = root.resolve("a b c").toUri().getRawPath(); return u.substring(u.lastIndexOf('/')); });
+        t("toUri brackets", () -> { String u = root.resolve("u[v]").toUri().getRawPath(); return u.substring(u.lastIndexOf('/')); });
+        for (Path p : new Path[] {f, d}) Files.deleteIfExists(p);
+        System.out.println("left " + Arrays.toString(root.toFile().list()));
+        Files.delete(root);
+    }
+}

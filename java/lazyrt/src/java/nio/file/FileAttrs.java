@@ -8,9 +8,9 @@ import java.util.Map;
 import lazy.internal.FileSystem;
 
 /**
- * The "basic" attribute view (io.md NF6). The natives know one time stamp,
- * so creation and access times report the last-modified time, a default the
- * Javadoc allows.
+ * The "basic" attribute view (nio-file.md NF6), with the three time stamps in
+ * microseconds. A time the platform does not keep reports the last-modified
+ * time, a default the Javadoc allows.
  */
 final class FileAttrs implements BasicFileAttributes {
     private static final String[] NAMES = {"lastModifiedTime", "lastAccessTime", "creationTime", "size",
@@ -19,11 +19,23 @@ final class FileAttrs implements BasicFileAttributes {
     private final int bits;
     private final long size;
     private final FileTime modified;
+    private final FileTime accessed;
+    private final FileTime created;
 
-    private FileAttrs(int bits, long size, FileTime modified) {
+    private FileAttrs(int bits, long size, String name) {
         this.bits = bits;
         this.size = size;
-        this.modified = modified;
+        this.modified = time(name, FileSystem.MODIFIED, null);
+        this.accessed = time(name, FileSystem.ACCESSED, modified);
+        this.created = time(name, FileSystem.CREATED, modified);
+    }
+
+    private static FileTime time(String name, int which, FileTime otherwise) {
+        long us = FileSystem.fileTime(name, which);
+        if (us == Long.MIN_VALUE) {
+            return otherwise != null ? otherwise : FileTime.fromMillis(0);
+        }
+        return FileTime.from(us, java.util.concurrent.TimeUnit.MICROSECONDS);
     }
 
     static FileAttrs read(Path p) throws NoSuchFileException {
@@ -32,7 +44,7 @@ final class FileAttrs implements BasicFileAttributes {
         if (bits == 0) {
             throw new NoSuchFileException(name);
         }
-        return new FileAttrs(bits, FileSystem.length(name), FileTime.fromMillis(FileSystem.lastModified(name)));
+        return new FileAttrs(bits, FileSystem.length(name), name);
     }
 
     public FileTime lastModifiedTime() {
@@ -40,11 +52,11 @@ final class FileAttrs implements BasicFileAttributes {
     }
 
     public FileTime lastAccessTime() {
-        return modified;
+        return accessed;
     }
 
     public FileTime creationTime() {
-        return modified;
+        return created;
     }
 
     public boolean isRegularFile() {
@@ -74,9 +86,11 @@ final class FileAttrs implements BasicFileAttributes {
     private Object get(String name) {
         switch (name) {
             case "lastModifiedTime":
-            case "lastAccessTime":
-            case "creationTime":
                 return modified;
+            case "lastAccessTime":
+                return accessed;
+            case "creationTime":
+                return created;
             case "size":
                 return size;
             case "isRegularFile":
@@ -135,27 +149,37 @@ final class FileAttrs implements BasicFileAttributes {
         return out;
     }
 
+    // Observed: one attribute only; "*" or a list is IllegalArgumentException(attribute).
     static Object getOne(Path p, String attribute) throws IOException {
-        return readMap(p, attribute).get(names(attribute));
+        String name = names(attribute);
+        if (name.equals("*") || name.indexOf(',') >= 0) {
+            throw new IllegalArgumentException(attribute);
+        }
+        return readMap(p, attribute).get(name);
     }
 
-    // Spec NF6: lastModifiedTime can be set. Observed: other names are "'basic:x' not recognized".
-    // The natives keep no other time, so lastAccessTime and creationTime are refused.
+    // Spec NF6: the three times can be set. Observed: other names are "'basic:x' not recognized".
     static void set(Path p, String attribute, Object value) throws IOException {
         String name = names(attribute);
-        if (name.equals("lastAccessTime") || name.equals("creationTime")) {
-            throw new UnsupportedOperationException("'" + name + "' cannot be set yet");
-        }
-        if (!name.equals("lastModifiedTime")) {
+        int which = name.equals("lastModifiedTime") ? FileSystem.MODIFIED
+                : name.equals("lastAccessTime") ? FileSystem.ACCESSED
+                : name.equals("creationTime") ? FileSystem.CREATED : -1;
+        if (which < 0) {
             throw new IllegalArgumentException("'basic:" + name + "' not recognized");
         }
-        setModified(p, (FileTime) value);
+        setTime(p, which, (FileTime) value);
     }
 
-    static void setModified(Path p, FileTime time) throws IOException {
+    /** Observed: a null time changes nothing; a time the OS refuses is FileSystemException. */
+    static void setTime(Path p, int which, FileTime time) throws IOException {
         FileAccess.requireExists(p);
-        if (!FileSystem.setLastModified(p.toString(), time.toMillis())) {
-            throw new AccessDeniedException(p.toString());
+        if (time == null) {
+            return;
+        }
+        try {
+            FileSystem.setFileTime(p.toString(), which, time.to(java.util.concurrent.TimeUnit.MICROSECONDS));
+        } catch (IOException e) {
+            throw new FileSystemException(p.toString(), null, e.getMessage());
         }
     }
 }

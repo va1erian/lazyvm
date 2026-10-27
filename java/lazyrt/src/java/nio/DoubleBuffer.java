@@ -68,8 +68,12 @@ public abstract class DoubleBuffer extends Buffer implements Comparable<DoubleBu
     public DoubleBuffer get(double[] dst, int offset, int length) {
         checkRange(offset, length, dst.length);
         int p = takeForGet(length);
-        for (int i = 0; i < length; i++) {
-            dst[offset + i] = get(p + i);
+        if (store != null) {
+            System.arraycopy(store, storeOffset + p, dst, offset, length);
+        } else {
+            for (int i = 0; i < length; i++) {
+                dst[offset + i] = get(p + i);
+            }
         }
         return this;
     }
@@ -78,18 +82,24 @@ public abstract class DoubleBuffer extends Buffer implements Comparable<DoubleBu
         return get(dst, 0, dst.length);
     }
 
+    // Observed: read-only is checked before the source being this buffer. Between arrays the
+    // copy moves overlapping windows as if through a temporary; views copy element by element.
     public DoubleBuffer put(DoubleBuffer src) {
-        if (src == this) {
-            throw new IllegalArgumentException();
-        }
         if (readOnly) {
             throw new ReadOnlyBufferException();
+        }
+        if (src == this) {
+            throw new IllegalArgumentException();
         }
         int n = src.remaining();
         int p = takeForPut(n);
         int s = src.takeForGet(n);
-        for (int i = 0; i < n; i++) {
-            put(p + i, src.get(s + i));
+        if (store != null && src.store != null) {
+            System.arraycopy(src.store, src.storeOffset + s, store, storeOffset + p, n);
+        } else {
+            for (int i = 0; i < n; i++) {
+                put(p + i, src.get(s + i));
+            }
         }
         return this;
     }
@@ -100,8 +110,12 @@ public abstract class DoubleBuffer extends Buffer implements Comparable<DoubleBu
         }
         checkRange(offset, length, src.length);
         int p = takeForPut(length);
-        for (int i = 0; i < length; i++) {
-            put(p + i, src[offset + i]);
+        if (store != null) {
+            System.arraycopy(src, offset, store, storeOffset + p, length);
+        } else {
+            for (int i = 0; i < length; i++) {
+                put(p + i, src[offset + i]);
+            }
         }
         return this;
     }

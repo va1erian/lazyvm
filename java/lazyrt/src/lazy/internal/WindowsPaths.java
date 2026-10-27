@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.util.List;
 
-/** Windows path rules: drives, UNC shares, `\` and `/` alike, names ignoring case (io.md W1, PW1). */
+/** Windows path rules: drives, UNC shares, `\` and `/` alike, names ignoring case (io.md W1, nio-file.md PW1). */
 final class WindowsPaths extends PathSyntax {
     private static final String ILLEGAL = "<>:\"|?*";
 
@@ -125,18 +125,45 @@ final class WindowsPaths extends PathSyntax {
 
     // Observed: a UNC path without a share has no canonical form.
     public String precanonical(String absolute) throws IOException {
-        if (absolute.startsWith("\\\\") && split(absolute, 2, '\\').size() < 2) {
+        // Observed: wildcards (and so `\\?\` names) have no canonical form either.
+        if ((absolute.startsWith("\\\\") && split(absolute, 2, '\\').size() < 2)
+                || absolute.indexOf('*') >= 0 || absolute.indexOf('?') >= 0) {
             throw new IOException("Invalid argument");
+        }
+        if (absolute.indexOf(':', 2) >= 0) {
+            throw new IOException("The filename, directory name, or volume label syntax is incorrect");
         }
         return absolute;
     }
 
     // Spec W1: the canonical drive letter is upper case.
-    public String postcanonical(String canonical) {
+    // Observed: a UNC host and share keep the case they were given.
+    String postcanonical(String absolute, String canonical) {
+        if (absolute.startsWith("\\\\") && canonical.startsWith("\\\\")) {
+            int a = nth(absolute, 2);
+            int c = nth(canonical, 2);
+            if (a > 0 && c > 0 && absolute.substring(0, a).equalsIgnoreCase(canonical.substring(0, c))) {
+                return absolute.substring(0, a) + canonical.substring(c);
+            }
+            return canonical;
+        }
         if (hasDrive(canonical)) {
             return Character.toUpperCase(canonical.charAt(0)) + canonical.substring(1);
         }
         return canonical;
+    }
+
+    /** The index of the `n`th separator after the leading `\\`, or the length. */
+    private static int nth(String s, int n) {
+        int i = 2;
+        for (int k = 0; k < n; k++) {
+            int j = s.indexOf('\\', i);
+            if (j < 0) {
+                return k == n - 1 ? s.length() : -1;
+            }
+            i = j + 1;
+        }
+        return i - 1;
     }
 
     private static InvalidPathException invalid(String input, String reason, int index) {
@@ -275,6 +302,38 @@ final class WindowsPaths extends PathSyntax {
     // Observed: file:///C:/x%20y/z for a drive, file://host/share/x for UNC.
     public String uriPath(String absolute) {
         String s = quotePath(absolute.replace('\\', '/'));
-        return absolute.startsWith("\\\\") ? "file:" + s : "file:///" + s;
+        if (!absolute.startsWith("\\\\")) {
+            return "file:///" + s;
+        }
+        // Observed: a host that is not a host name keeps the share under an empty authority.
+        int end = absolute.indexOf('\\', 2);
+        return hostName(absolute.substring(2, end < 0 ? absolute.length() : end)) ? "file:" + s : "file://" + s;
+    }
+
+    /** RFC 2396 host names: dot-separated labels of letters, digits and inner '-'; or IPv4. */
+    private static boolean hostName(String host) {
+        String h = host.endsWith(".") ? host.substring(0, host.length() - 1) : host;
+        boolean numeric = true;
+        int labels = 0;
+        char top = 0;
+        for (String l : split(h, 0, '.')) {
+            if (l.startsWith("-") || l.endsWith("-")) {
+                return false;
+            }
+            for (int i = 0; i < l.length(); i++) {
+                char c = l.charAt(i);
+                boolean alnum = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+                if (!alnum && c != '-') {
+                    return false;
+                }
+                numeric &= c >= '0' && c <= '9';
+            }
+            labels++;
+            top = l.charAt(0);
+        }
+        if (labels == 0 || h.contains("..") || h.startsWith(".")) {
+            return false;
+        }
+        return numeric ? labels == 4 : Character.isLetter(top);
     }
 }

@@ -78,10 +78,17 @@ final class FloatWindow extends FloatBuffer {
         if (readOnly) {
             throw new ReadOnlyBufferException();
         }
+        if (bytes != null) {
+            bytes.checkViewCompact(storeOffset, limit(), 4);
+        }
         int n = remaining();
         int p = position();
-        for (int i = 0; i < n; i++) {
-            save(i, load(p + i));
+        if (store != null) {
+            System.arraycopy(store, storeOffset + p, store, storeOffset, n);
+        } else {
+            for (int i = 0; i < n; i++) {
+                save(i, load(p + i));
+            }
         }
         compacted(n);
         return this;

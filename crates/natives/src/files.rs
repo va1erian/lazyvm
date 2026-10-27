@@ -50,6 +50,21 @@ pub fn register(vm: &mut Vm) {
     register_paths(vm);
 }
 
+/// The OS's text for an error as Java 8 puts it in a FileSystemException
+/// reason: without Rust's "(os error N)", keeping the final period.
+pub(crate) fn os_text(e: &std::io::Error) -> String {
+    let text = e.to_string();
+    let mut text = match text.rfind(" (os error ") {
+        Some(i) => text[..i].to_owned(),
+        None => text,
+    };
+    // Windows' message texts end in a line break, which Java 8 keeps.
+    if cfg!(windows) && e.raw_os_error().is_some() {
+        text.push_str("\r\n");
+    }
+    text
+}
+
 fn io_exception(msg: impl Into<String>) -> VmError {
     VmError::exception("java/io/IOException", msg)
 }
@@ -65,9 +80,17 @@ fn path_arg(vm: &Vm, args: &[Value], i: usize) -> VmResult<String> {
 
 fn open(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let path = path_arg(vm, args, 0)?;
-    let mode =
-        Mode::from_int(int(args, 1)?).ok_or_else(|| VmError::Internal("bad open mode".into()))?;
-    match files::open(&path, mode) {
+    let m = int(args, 1)?;
+    // A public class: a bad mode is the caller's error, not the VM's.
+    // Bit 4 of the mode: let others delete the file while it is open.
+    let shared_delete = m & 0x10 != 0;
+    let mode = Mode::from_int(m & !0x10).ok_or_else(|| {
+        VmError::exception(
+            "java/lang/IllegalArgumentException",
+            format!("bad open mode {m}"),
+        )
+    })?;
+    match files::open(&path, mode, shared_delete) {
         Ok(h) => Ok(Some(Value::Long(h))),
         Err(e) => {
             let msg = format!("{path} ({})", files::reason(&e));
@@ -116,34 +139,8 @@ fn write(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
 }
 
 fn register_paths(vm: &mut Vm) {
-    vm.register_native(FS, "attributes", "(Ljava/lang/String;)I", |vm, a| {
-        ret_int(attributes(&path_arg(vm, a, 0)?))
-    });
-    vm.register_native(FS, "length", "(Ljava/lang/String;)J", |vm, a| {
-        let len = std::fs::metadata(path_arg(vm, a, 0)?)
-            .map(|m| m.len())
-            .unwrap_or(0);
-        Ok(Some(Value::Long(len as i64)))
-    });
-    vm.register_native(FS, "lastModified", "(Ljava/lang/String;)J", |vm, a| {
-        Ok(Some(Value::Long(modified_millis(&path_arg(vm, a, 0)?))))
-    });
-    vm.register_native(FS, "setLastModified", "(Ljava/lang/String;J)Z", |vm, a| {
-        let path = path_arg(vm, a, 0)?;
-        let millis = long(a, 1)?;
-        ret_bool(set_modified(&path, millis))
-    });
     vm.register_native(FS, "list", "(Ljava/lang/String;)[Ljava/lang/String;", list);
-    vm.register_native(FS, "delete", "(Ljava/lang/String;)Z", |vm, a| {
-        let path = path_arg(vm, a, 0)?;
-        let p = Path::new(&path);
-        let ok = if p.is_dir() {
-            std::fs::remove_dir(p).is_ok()
-        } else {
-            std::fs::remove_file(p).is_ok()
-        };
-        ret_bool(ok)
-    });
+    vm.register_native(FS, "delete", "(Ljava/lang/String;)V", delete);
     vm.register_native(
         FS,
         "rename",
@@ -151,6 +148,20 @@ fn register_paths(vm: &mut Vm) {
         |vm, a| {
             let (from, to) = (path_arg(vm, a, 0)?, path_arg(vm, a, 1)?);
             ret_bool(std::fs::rename(from, to).is_ok())
+        },
+    );
+    vm.register_native(
+        FS,
+        "move",
+        "(Ljava/lang/String;Ljava/lang/String;)Z",
+        |vm, a| {
+            let (from, to) = (path_arg(vm, a, 0)?, path_arg(vm, a, 1)?);
+            match std::fs::rename(from, to) {
+                Ok(()) => ret_bool(true),
+                // Another volume: the caller copies instead.
+                Err(e) if e.kind() == std::io::ErrorKind::CrossesDevices => ret_bool(false),
+                Err(e) => Err(io_exception(os_text(&e))),
+            }
         },
     );
     vm.register_native(FS, "mkdir", "(Ljava/lang/String;)Z", |vm, a| {
@@ -179,128 +190,35 @@ fn register_paths(vm: &mut Vm) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         canonicalize,
     );
-    vm.register_native(FS, "setReadOnly", "(Ljava/lang/String;)Z", |vm, a| {
-        let path = path_arg(vm, a, 0)?;
-        let ok = std::fs::metadata(&path).and_then(|m| {
-            let mut perms = m.permissions();
-            perms.set_readonly(true);
-            std::fs::set_permissions(&path, perms)
-        });
-        ret_bool(ok.is_ok())
-    });
-    vm.register_native(FS, "setAccess", "(Ljava/lang/String;IZZ)Z", |vm, a| {
-        let path = path_arg(vm, a, 0)?;
-        let (access, enable, owner_only) = (int(a, 1)?, int(a, 2)? != 0, int(a, 3)? != 0);
-        ret_bool(set_access(&path, access, enable, owner_only))
-    });
     vm.register_native(FS, "tempDir", "()Ljava/lang/String;", |vm, _| {
         let dir = std::env::temp_dir().display().to_string();
         ret_ref(Some(vm.new_string(&dir)?))
     });
 }
 
-fn attributes(path: &str) -> i32 {
-    let p = Path::new(path);
-    let Ok(m) = std::fs::metadata(p) else {
-        // A dangling link exists as a link.
-        return if std::fs::symlink_metadata(p).is_ok() {
-            1 | 8
+/// Deletes a file or an empty directory. Failures are the java.nio.file
+/// exception Files.delete throws: no such file, access denied, not empty,
+/// or an IOException with the OS's text.
+fn delete(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let path = path_arg(vm, args, 0)?;
+    let p = Path::new(&path);
+    let result = std::fs::symlink_metadata(p).and_then(|m| {
+        if m.is_dir() {
+            std::fs::remove_dir(p)
         } else {
-            0
-        };
+            std::fs::remove_file(p)
+        }
+    });
+    let Err(e) = result else {
+        return ret_void();
     };
-    let link = std::fs::symlink_metadata(p).is_ok_and(|l| l.file_type().is_symlink());
-    let name_hidden = p
-        .file_name()
-        .is_some_and(|n| n.to_string_lossy().starts_with('.'));
-    let mut bits = 1;
-    bits |= i32::from(m.is_file()) << 1;
-    bits |= i32::from(m.is_dir()) << 2;
-    bits |= i32::from(link) << 3;
-    bits |= 1 << 4;
-    bits |= i32::from(!m.permissions().readonly()) << 5;
-    bits |= i32::from(executable(&m)) << 6;
-    bits |= i32::from(hidden(&m) || (cfg!(unix) && name_hidden)) << 7;
-    bits
-}
-
-#[cfg(unix)]
-fn executable(m: &std::fs::Metadata) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    m.permissions().mode() & 0o111 != 0
-}
-
-#[cfg(not(unix))]
-fn executable(m: &std::fs::Metadata) -> bool {
-    // Windows has no execute bit; Java reports files and directories as executable.
-    m.is_file() || m.is_dir()
-}
-
-#[cfg(windows)]
-fn hidden(m: &std::fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    const FILE_ATTRIBUTE_HIDDEN: u32 = 0x2;
-    m.file_attributes() & FILE_ATTRIBUTE_HIDDEN != 0
-}
-
-#[cfg(not(windows))]
-fn hidden(_: &std::fs::Metadata) -> bool {
-    false
-}
-
-/// `access` is 4 read, 2 write, 1 execute, as in a Unix mode digit.
-#[cfg(unix)]
-fn set_access(path: &str, access: i32, enable: bool, owner_only: bool) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    let Ok(m) = std::fs::metadata(path) else {
-        return false;
+    let class = match e.kind() {
+        std::io::ErrorKind::NotFound => "java/nio/file/NoSuchFileException",
+        std::io::ErrorKind::PermissionDenied => "java/nio/file/AccessDeniedException",
+        std::io::ErrorKind::DirectoryNotEmpty => "java/nio/file/DirectoryNotEmptyException",
+        _ => return Err(io_exception(os_text(&e))),
     };
-    let digit = (access & 7) as u32;
-    let bits = if owner_only {
-        digit << 6
-    } else {
-        (digit << 6) | (digit << 3) | digit
-    };
-    let mut perms = m.permissions();
-    let mode = perms.mode();
-    perms.set_mode(if enable { mode | bits } else { mode & !bits });
-    std::fs::set_permissions(path, perms).is_ok()
-}
-
-/// Windows has only a read-only flag: write access maps to it; read and
-/// execute access cannot be taken away, so only granting them succeeds.
-#[cfg(not(unix))]
-fn set_access(path: &str, access: i32, enable: bool, _owner_only: bool) -> bool {
-    let Ok(m) = std::fs::metadata(path) else {
-        return false;
-    };
-    if access & 2 == 0 {
-        return enable;
-    }
-    let mut perms = m.permissions();
-    perms.set_readonly(!enable);
-    std::fs::set_permissions(path, perms).is_ok()
-}
-
-fn modified_millis(path: &str) -> i64 {
-    std::fs::metadata(path)
-        .and_then(|m| m.modified())
-        .ok()
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map_or(0, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
-}
-
-fn set_modified(path: &str, millis: i64) -> bool {
-    let Ok(ms) = u64::try_from(millis) else {
-        return false;
-    };
-    let when = std::time::UNIX_EPOCH + std::time::Duration::from_millis(ms);
-    std::fs::File::options()
-        .write(true)
-        .open(path)
-        .or_else(|_| std::fs::File::open(path))
-        .and_then(|f| f.set_modified(when))
-        .is_ok()
+    Err(VmError::exception(class, path))
 }
 
 fn list(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
@@ -348,9 +266,16 @@ fn canonicalize(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         out.push(name);
     }
     let mut text = out.display().to_string();
-    // Windows' canonical form has a `\\?\` prefix Java does not show.
-    if let Some(stripped) = text.strip_prefix(r"\\?\") {
+    // Windows' canonical form has a `\\?\` prefix Java does not show, `\\?\UNC\` for a share.
+    if let Some(share) = text.strip_prefix(r"\\?\UNC\") {
+        text = format!(r"\\{share}");
+    } else if let Some(stripped) = text.strip_prefix(r"\\?\") {
         text = stripped.to_owned();
+    }
+    // Observed: a separator the absolute form ends with stays (`dir\...` is `Dir\`).
+    let sep = std::path::MAIN_SEPARATOR;
+    if absolute.as_os_str().to_string_lossy().ends_with(sep) && !text.ends_with(sep) {
+        text.push(sep);
     }
     ret_ref(Some(vm.new_string(&text)?))
 }

@@ -84,6 +84,7 @@ final class DefaultFileSystem extends FileSystem {
         String notSep = sep == '\\' ? "[^\\\\]" : "[^/]";
         StringBuilder sb = new StringBuilder();
         boolean inGroup = false;
+        boolean emptyClass = false;
         for (int i = 0; i < glob.length(); i++) {
             char c = glob.charAt(i);
             switch (c) {
@@ -105,7 +106,9 @@ final class DefaultFileSystem extends FileSystem {
                     sb.append(notSep);
                     break;
                 case '[':
-                    i = bracket(glob, i, sb);
+                    int end = bracket(glob, i, sb, sep);
+                    emptyClass |= end == i + 1 || (end == i + 2 && glob.charAt(i + 1) == '!');
+                    i = end;
                     break;
                 case '{':
                     if (inGroup) {
@@ -138,7 +141,12 @@ final class DefaultFileSystem extends FileSystem {
             }
         }
         if (inGroup) {
-            throw new PatternSyntaxException("Missing '}'", glob, glob.length() - 1);
+            // Observed: the message lacks the closing quote.
+            throw new PatternSyntaxException("Missing '}", glob, glob.length() - 1);
+        }
+        if (emptyClass) {
+            // Observed: an empty class passes the glob checks but not the regular expression.
+            throw new PatternSyntaxException("Unclosed character class", sb.toString(), sb.length() - 1);
         }
         return sb.toString();
     }
@@ -150,27 +158,33 @@ final class DefaultFileSystem extends FileSystem {
         sb.append(c);
     }
 
-    /** A `[...]` class from `start`; returns the index of its `]`. */
-    private static int bracket(String glob, int start, StringBuilder sb) {
+    /**
+     * A `[...]` class from `start`; returns the index of its `]`. Observed: a
+     * `]` right after `[` or `[!` ends an empty class; a separator inside is
+     * refused; `[!...]` does not match the separator either.
+     */
+    private static int bracket(String glob, int start, StringBuilder sb, char sep) {
         int i = start + 1;
         sb.append('[');
         if (i < glob.length() && glob.charAt(i) == '!') {
             sb.append('^');
+            literal(sb, sep);
             i++;
         }
-        boolean first = true;
         for (; i < glob.length(); i++) {
             char c = glob.charAt(i);
-            if (c == ']' && !first) {
+            if (c == ']') {
                 sb.append(']');
                 return i;
             }
-            first = false;
+            if (c == '/' || c == sep) {
+                throw new PatternSyntaxException("Explicit 'name separator' in class", glob, i);
+            }
             if (c != '-' && !Character.isLetterOrDigit(c)) {
                 sb.append('\\');
             }
             sb.append(c);
         }
-        throw new PatternSyntaxException("Missing ']'", glob, glob.length() - 1);
+        throw new PatternSyntaxException("Missing ']", glob, glob.length() - 1);
     }
 }

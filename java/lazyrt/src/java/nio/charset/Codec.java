@@ -19,6 +19,8 @@ abstract class Codec {
 
     int in;
     int out;
+    /** Whether the coder runs on the buffers' own arrays (an observed difference for ISO-8859-1). */
+    boolean arrays;
 
     int decode(byte[] src, int sp, int sl, char[] dst, int dp, int dl) {
         throw new UnsupportedOperationException();
@@ -86,6 +88,10 @@ abstract class Codec {
         int encode(char[] src, int sp, int sl, byte[] dst, int dp, int dl) {
             while (sp < sl) {
                 char c = src[sp];
+                // Observed: on arrays ISO-8859-1 reports a full output before the char after it.
+                if (arrays && max == 0xFF && dp >= dl) {
+                    return stop(sp, dp, OVERFLOW);
+                }
                 if (c <= max) {
                     if (dp >= dl) {
                         return stop(sp, dp, OVERFLOW);

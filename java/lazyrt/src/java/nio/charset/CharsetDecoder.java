@@ -20,8 +20,12 @@ public abstract class CharsetDecoder {
     private int state = RESET;
 
     protected CharsetDecoder(Charset cs, float averageCharsPerByte, float maxCharsPerByte) {
-        if (averageCharsPerByte <= 0 || maxCharsPerByte <= 0) {
-            throw new IllegalArgumentException("Non-positive chars per byte");
+        // Observed: the messages name the parameter.
+        if (averageCharsPerByte <= 0) {
+            throw new IllegalArgumentException("Non-positive averageCharsPerByte");
+        }
+        if (maxCharsPerByte <= 0) {
+            throw new IllegalArgumentException("Non-positive maxCharsPerByte");
         }
         if (averageCharsPerByte > maxCharsPerByte) {
             throw new IllegalArgumentException("averageCharsPerByte exceeds maxCharsPerByte");
@@ -114,7 +118,8 @@ public abstract class CharsetDecoder {
             CoderResult cr;
             try {
                 cr = decodeLoop(in, out);
-            } catch (RuntimeException x) {
+            } catch (java.nio.BufferUnderflowException | java.nio.BufferOverflowException x) {
+                // Observed: only these mean a broken coding loop; other exceptions pass through.
                 throw new CoderMalfunctionError(x);
             }
             if (cr.isOverflow()) {

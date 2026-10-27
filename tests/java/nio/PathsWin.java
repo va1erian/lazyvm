@@ -102,6 +102,12 @@ public class PathsWin {
             check("toUri UNC", Paths.get(b("||s|h|x")).toUri(), "file://s/h/x");
             String drive = System.getProperty("user.dir").substring(0, 2);
             check("toAbsolutePath |a", Paths.get("/a").toAbsolutePath(), u(drive) + "|a");
+            String userDir = u(System.getProperty("user.dir"));
+            char letter = drive.charAt(0);
+            String other = String.valueOf(Character.isUpperCase(letter) ? Character.toLowerCase(letter) : Character.toUpperCase(letter));
+            check("toAbsolutePath other-case drive", Paths.get(other + ":").toAbsolutePath(), userDir + "|");
+            check("toAbsolutePath other-case drive x", Paths.get(other + ":x").toAbsolutePath(), userDir + "|x");
+            check("File other-case drive x", new File(other + ":x").getAbsolutePath(), other + userDir.substring(1) + "|x");
             check("File.toPath of a*b", tryToPath("a*b"), "Illegal char <*> at index 1: a*b");
             check("separator", FileSystems.getDefault().getSeparator(), "|");
         }

@@ -14,6 +14,8 @@ public final class FileSystem {
     public static final int APPEND = 2;
     public static final int READ_WRITE = 3;
     public static final int READ_WRITE_EXISTING = 4;
+    /** Added to a mode: others may rename or delete the file while it is open. */
+    public static final int SHARE_DELETE = 0x10;
 
     public static final int EXISTS = 1;
     public static final int REGULAR = 2;
@@ -51,15 +53,32 @@ public final class FileSystem {
 
     public static native long length(String path);
 
-    public static native long lastModified(String path);
+    public static final int MODIFIED = 0;
+    public static final int ACCESSED = 1;
+    public static final int CREATED = 2;
 
-    public static native boolean setLastModified(String path, long millis);
+    /** A time stamp in microseconds from the epoch, Long.MIN_VALUE when missing or not kept. */
+    public static native long fileTime(String path, int which);
+
+    /** Sets a time stamp; the IOException's message is the OS's text. */
+    public static native void setFileTime(String path, int which, long micros) throws IOException;
 
     public static native String[] list(String path);
 
-    public static native boolean delete(String path);
+    /**
+     * Deletes a file or an empty directory. A failure is NoSuchFileException,
+     * AccessDeniedException or DirectoryNotEmptyException with the path, or an
+     * IOException with the OS's text.
+     */
+    public static native void delete(String path) throws IOException;
 
     public static native boolean rename(String from, String to);
+
+    /**
+     * Renames: false when the target is on another volume (copy instead),
+     * else IOException whose message is the OS's text (with its final period).
+     */
+    public static native boolean move(String from, String to) throws IOException;
 
     public static native boolean mkdir(String path);
 

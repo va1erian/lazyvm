@@ -82,21 +82,26 @@ public abstract class CharBuffer extends Buffer
     public abstract CharBuffer subSequence(int start, int end);
 
     // Spec NB6: copies the smaller remaining; -1 when empty, 0 when the target is full.
+    // Observed: an empty buffer is -1 even when the target is itself.
     public int read(CharBuffer target) throws IOException {
-        if (target == this) {
-            throw new IllegalArgumentException();
-        }
         int n = remaining();
         if (n == 0) {
             return -1;
+        }
+        if (target == this) {
+            throw new IllegalArgumentException();
         }
         n = Math.min(n, target.remaining());
         if (n == 0) {
             return 0;
         }
         int p = takeForGet(n);
-        for (int i = 0; i < n; i++) {
-            target.put(get(p + i));
+        if (store != null && target.store != null && !target.readOnly) {
+            System.arraycopy(store, storeOffset + p, target.store, target.storeOffset + target.takeForPut(n), n);
+        } else {
+            for (int i = 0; i < n; i++) {
+                target.put(get(p + i));
+            }
         }
         return n;
     }
@@ -104,8 +109,14 @@ public abstract class CharBuffer extends Buffer
     public CharBuffer get(char[] dst, int offset, int length) {
         checkRange(offset, length, dst.length);
         int p = takeForGet(length);
-        for (int i = 0; i < length; i++) {
-            dst[offset + i] = get(p + i);
+        if (store != null) {
+            System.arraycopy(store, storeOffset + p, dst, offset, length);
+        } else if (text instanceof String) {
+            ((String) text).getChars(storeOffset + p, storeOffset + p + length, dst, offset);
+        } else {
+            for (int i = 0; i < length; i++) {
+                dst[offset + i] = get(p + i);
+            }
         }
         return this;
     }
@@ -114,16 +125,22 @@ public abstract class CharBuffer extends Buffer
         return get(dst, 0, dst.length);
     }
 
+    // Observed: read-only is checked before the source being this buffer. Between arrays the
+    // copy moves overlapping windows as if through a temporary; other backings go char by char.
     public CharBuffer put(CharBuffer src) {
+        writable();
         if (src == this) {
             throw new IllegalArgumentException();
         }
-        writable();
         int n = src.remaining();
         int p = takeForPut(n);
         int s = src.takeForGet(n);
-        for (int i = 0; i < n; i++) {
-            put(p + i, src.get(s + i));
+        if (store != null && src.store != null) {
+            System.arraycopy(src.store, src.storeOffset + s, store, storeOffset + p, n);
+        } else {
+            for (int i = 0; i < n; i++) {
+                put(p + i, src.get(s + i));
+            }
         }
         return this;
     }
@@ -132,8 +149,12 @@ public abstract class CharBuffer extends Buffer
         writable();
         checkRange(offset, length, src.length);
         int p = takeForPut(length);
-        for (int i = 0; i < length; i++) {
-            put(p + i, src[offset + i]);
+        if (store != null) {
+            System.arraycopy(src, offset, store, storeOffset + p, length);
+        } else {
+            for (int i = 0; i < length; i++) {
+                put(p + i, src[offset + i]);
+            }
         }
         return this;
     }
@@ -150,8 +171,12 @@ public abstract class CharBuffer extends Buffer
         }
         writable();
         int p = takeForPut(end - start);
-        for (int i = start; i < end; i++) {
-            put(p + i - start, src.charAt(i));
+        if (store != null) {
+            src.getChars(start, end, store, storeOffset + p);
+        } else {
+            for (int i = start; i < end; i++) {
+                put(p + i - start, src.charAt(i));
+            }
         }
         return this;
     }
@@ -218,6 +243,9 @@ public abstract class CharBuffer extends Buffer
 
     /** The remaining chars (Spec NB5), without moving the position. */
     public String toString() {
+        if (store != null) {
+            return new String(store, storeOffset + position(), remaining());
+        }
         StringBuilder sb = new StringBuilder(remaining());
         for (int i = position(); i < limit(); i++) {
             sb.append(get(i));

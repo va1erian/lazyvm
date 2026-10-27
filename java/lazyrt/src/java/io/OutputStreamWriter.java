@@ -55,6 +55,7 @@ public class OutputStreamWriter extends Writer {
 
     public void write(char[] cbuf, int off, int len) throws IOException {
         synchronized (lock) {
+            // Observed: the closed state is checked before the bounds.
             ensureOpen();
             if (off < 0 || len < 0 || off > cbuf.length - len) {
                 throw new IndexOutOfBoundsException();
@@ -79,28 +80,15 @@ public class OutputStreamWriter extends Writer {
         }
     }
 
+    // Observed: a negative len is IndexOutOfBoundsException; the chars are then taken with
+    // String.getChars (its own exceptions for a bad range), before the closed state is checked.
     public void write(String str, int off, int len) throws IOException {
-        synchronized (lock) {
-            ensureOpen();
-            if (str == null) {
-                throw new NullPointerException();
-            }
-            // Observed on the oracle (S5-03, StreamWriter): an empty or overflowing range writes
-            // nothing; any other bad range names its out-of-range end.
-            int end = off + len;
-            if (end <= off) {
-                return;
-            }
-            if (off < 0) {
-                throw new StringIndexOutOfBoundsException(off);
-            }
-            if (end > str.length()) {
-                throw new StringIndexOutOfBoundsException(end);
-            }
-            char[] chars = new char[len];
-            str.getChars(off, end, chars, 0);
-            write(chars, 0, len);
+        if (len < 0) {
+            throw new IndexOutOfBoundsException();
         }
+        char[] chars = new char[len];
+        str.getChars(off, off + len, chars, 0);
+        write(chars, 0, len);
     }
 
     /** Encodes `in`, writing the buffer out whenever the next char does not fit. */

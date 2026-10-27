@@ -309,9 +309,12 @@ public final class String implements java.io.Serializable, Comparable<String>, C
         if (endIndex > value.length) {
             throw new StringIndexOutOfBoundsException(endIndex);
         }
-        if (beginIndex > endIndex) {
-            throw new StringIndexOutOfBoundsException(endIndex - beginIndex);
+        // Observed: the length is taken first, so an overflowing end fails as a range.
+        int count = endIndex - beginIndex;
+        if (count < 0) {
+            throw new StringIndexOutOfBoundsException(count);
         }
+        checkRange(beginIndex, count, value.length);
         if (beginIndex == 0 && endIndex == value.length) {
             return this;
         }

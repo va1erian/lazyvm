@@ -73,20 +73,36 @@ public class DataInputStream extends FilterInputStream implements DataInput {
         return next();
     }
 
+    /** Observed: shorts, chars and ints are read a byte at a time, longs with readFully. */
+    private int bytes(int n) throws IOException {
+        int v = 0;
+        int all = 0;
+        for (int i = 0; i < n; i++) {
+            int c = in.read();
+            all |= c;
+            v = (v << 8) | (c & 0xff);
+        }
+        // Observed: every byte is asked for before the end is reported.
+        if (all < 0) {
+            throw new EOFException();
+        }
+        return v;
+    }
+
     public final short readShort() throws IOException {
-        return (short) readBits(2);
+        return (short) bytes(2);
     }
 
     public final int readUnsignedShort() throws IOException {
-        return (int) readBits(2);
+        return bytes(2);
     }
 
     public final char readChar() throws IOException {
-        return (char) readBits(2);
+        return (char) bytes(2);
     }
 
     public final int readInt() throws IOException {
-        return (int) readBits(4);
+        return bytes(4);
     }
 
     public final long readLong() throws IOException {
@@ -116,7 +132,11 @@ public class DataInputStream extends FilterInputStream implements DataInput {
             }
 
             public void unread() {
-                in = new Pushback(in, last);
+                if (in instanceof Pushback) {
+                    ((Pushback) in).pending = last;
+                } else {
+                    in = new Pushback(in, last);
+                }
             }
         });
     }
@@ -151,15 +171,24 @@ public class DataInputStream extends FilterInputStream implements DataInput {
         }
 
         public int read(byte[] b, int off, int len) throws IOException {
-            if (pending < 0 || len == 0) {
-                return in.read(b, off, len);
-            }
             if ((off | len) < 0 || len > b.length - off) {
                 throw new IndexOutOfBoundsException();
             }
+            // Observed: once a line was read, a request for no bytes does not reach the stream.
+            if (len == 0) {
+                return 0;
+            }
+            if (pending < 0) {
+                return in.read(b, off, len);
+            }
             b[off] = (byte) pending;
             pending = -1;
-            return 1;
+            if (len == 1) {
+                return 1;
+            }
+            // Observed: the rest of the request goes on to the stream, as a pushback stream does.
+            int n = in.read(b, off + 1, len - 1);
+            return n < 0 ? 1 : n + 1;
         }
 
         public long skip(long n) throws IOException {

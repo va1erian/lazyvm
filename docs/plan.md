@@ -315,7 +315,7 @@ Goal: the everyday `java.util` and `java.io` surface from
       `CharBuffer.chars` return streams and come with S11, as do the
       `java.time` conversions of `FileTime`; channels, watch services,
       providers and non-basic attribute views are out of scope (`design/io.md`
-      section 15).
+      section 15). Behaviour: `design/io.md` and `design/nio-file.md`.
       Check: `tests/java/nio/Buffers`, `FilesWalk` (both).
 - [x] S5-08 Unicode tables: `tools/unicode.py` generates
       `crates/natives/data/unicode.bin` by observing the Java 8 oracle (no

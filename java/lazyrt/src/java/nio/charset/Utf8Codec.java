@@ -8,6 +8,14 @@ final class Utf8Codec extends Codec {
 
     int decode(byte[] src, int sp, int sl, char[] dst, int dp, int dl) {
         while (sp < sl) {
+            // ASCII runs first, a byte per char, with no unit checks.
+            int run = sp + Math.min(sl - sp, dl - dp);
+            while (sp < run && src[sp] >= 0) {
+                dst[dp++] = (char) src[sp++];
+            }
+            if (sp >= sl) {
+                break;
+            }
             int b0 = src[sp] & 0xff;
             int n = length(b0);
             if (n == 0) {
@@ -95,6 +103,13 @@ final class Utf8Codec extends Codec {
 
     int encode(char[] src, int sp, int sl, byte[] dst, int dp, int dl) {
         while (sp < sl) {
+            int run = sp + Math.min(sl - sp, dl - dp);
+            while (sp < run && src[sp] < 0x80) {
+                dst[dp++] = (byte) src[sp++];
+            }
+            if (sp >= sl) {
+                break;
+            }
             char c = src[sp];
             int room = dl - dp;
             if (c < 0x80) {

@@ -78,10 +78,17 @@ final class ShortWindow extends ShortBuffer {
         if (readOnly) {
             throw new ReadOnlyBufferException();
         }
+        if (bytes != null) {
+            bytes.checkViewCompact(storeOffset, limit(), 2);
+        }
         int n = remaining();
         int p = position();
-        for (int i = 0; i < n; i++) {
-            save(i, load(p + i));
+        if (store != null) {
+            System.arraycopy(store, storeOffset + p, store, storeOffset, n);
+        } else {
+            for (int i = 0; i < n; i++) {
+                save(i, load(p + i));
+            }
         }
         compacted(n);
         return this;

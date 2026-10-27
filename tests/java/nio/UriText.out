@@ -1,0 +1,36 @@
+file:///C:/x%20y/z -> scheme=file auth=null path=/C:/x%20y/z query=null frag=null opaque=false decoded=/C:/x y/z
+file:/a/b -> scheme=file auth=null path=/a/b query=null frag=null opaque=false decoded=/a/b
+file://host/share/x -> scheme=file auth=host path=/share/x query=null frag=null opaque=false decoded=/share/x
+file:////host/share -> scheme=file auth=null path=//host/share query=null frag=null opaque=false decoded=//host/share
+a/b?q#f -> scheme=null auth=null path=a/b query=q frag=f opaque=false decoded=a/b
+%zz -> ! Malformed escape pair at 0
+a%2 -> ! Malformed escape pair at 1
+a#b#c -> ! Illegal character in fragment at 3
+:x -> ! Expected scheme name at 0
+file: -> ! Expected scheme-specific part at 5
+1a:b -> ! Illegal character in scheme name at 0
+mailto:x@y -> scheme=mailto auth=null path=null query=null frag=null opaque=true decoded=null
+file://h rel -> ! Illegal character in authority at 7
+a b -> ! Illegal character in path at 1
+a?b c -> ! Illegal character in query at 3
+file:/a/%C3%A9 -> scheme=file auth=null path=/a/%C3%A9 query=null frag=null opaque=false decoded=/a/é
+file:/aé -> scheme=file auth=null path=/aé query=null frag=null opaque=false decoded=/aé
+file:/a b -> ! Illegal character in path at 7
+x:#f -> ! Expected scheme-specific part at 2
+a[b] -> ! Illegal character in path at 1
+a?[b] -> scheme=null auth=null path=a query=[b] frag=null opaque=false decoded=a
+//h/p -> scheme=null auth=h path=/p query=null frag=null opaque=false decoded=/p
+ -> scheme=null auth=null path= query=null frag=null opaque=false decoded=
+# -> scheme=null auth=null path= query=null frag= opaque=false decoded=
+?q -> scheme=null auth=null path= query=q frag=null opaque=false decoded=
+build /a b/c[d] #null -> file:/a%20b/c%5Bd%5D
+build /a b cé #null -> file:/a%C2%A0b%E2%80%A8cé
+build rel #null -> ! Relative path in absolute URI at -1
+build /x #f g -> file:/x#f%20g
+build a:b #null -> a:b
+FILE:/a vs file:/a: equals=true hash=true compare=0
+file://HOST/a vs file://host/a: equals=true hash=true compare=0
+file:/a%c3%a9 vs file:/a%C3%A9: equals=true hash=true compare=1
+file:/A vs file:/a: equals=false hash=false compare=-1
+file:/a#X vs file:/a#x: equals=false hash=false compare=-1
+toASCII file:/a%C3%A9%20b

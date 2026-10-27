@@ -207,6 +207,7 @@ final class ByteWindow extends ByteBuffer {
     private ByteBuffer viewBytes() {
         ByteBuffer b = slice();
         b.bigEndian = bigEndian;
+        b.sourceCapacity = capacity();
         return b;
     }
 

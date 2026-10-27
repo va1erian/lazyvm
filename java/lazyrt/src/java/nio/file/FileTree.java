@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import lazy.internal.FileSystem;
 
-/** Directory listing and walking (io.md NF7, NF8). */
+/** Directory listing and walking (nio-file.md NF7, NF8). */
 final class FileTree {
     private FileTree() {
     }
@@ -99,6 +99,14 @@ final class FileTree {
         }
     }
 
+    /** Observed: a visitor returning null is NullPointerException. */
+    private static FileVisitResult nonNull(FileVisitResult r) {
+        if (r == null) {
+            throw new NullPointerException();
+        }
+        return r;
+    }
+
     // Spec NF8: depth-first in directory order; entries at maxDepth are visited as files.
     static Path walk(Path start, int maxDepth, FileVisitor<? super Path> visitor) throws IOException {
         if (maxDepth < 0) {
@@ -115,19 +123,19 @@ final class FileTree {
         try {
             attrs = FileAttrs.read(p);
         } catch (IOException e) {
-            return v.visitFileFailed(p, e);
+            return nonNull(v.visitFileFailed(p, e));
         }
         if (!attrs.isDirectory() || depth >= maxDepth) {
-            return v.visitFile(p, attrs);
+            return nonNull(v.visitFile(p, attrs));
         }
         DirectoryStream<Path> entries;
         try {
             entries = open(p, null);
         } catch (IOException e) {
-            return v.visitFileFailed(p, e);
+            return nonNull(v.visitFileFailed(p, e));
         }
         try (DirectoryStream<Path> ds = entries) {
-            FileVisitResult r = v.preVisitDirectory(p, attrs);
+            FileVisitResult r = nonNull(v.preVisitDirectory(p, attrs));
             if (r != FileVisitResult.CONTINUE) {
                 // Spec NF8: SKIP_SUBTREE skips the post-visit too.
                 return r == FileVisitResult.SKIP_SUBTREE ? FileVisitResult.CONTINUE : r;
@@ -142,7 +150,7 @@ final class FileTree {
                 }
             }
         }
-        FileVisitResult post = v.postVisitDirectory(p, null);
+        FileVisitResult post = nonNull(v.postVisitDirectory(p, null));
         return post == FileVisitResult.SKIP_SIBLINGS ? FileVisitResult.CONTINUE : post;
     }
 }

@@ -69,6 +69,10 @@ public class InputStreamReader extends Reader {
         if (n < 0) {
             return false;
         }
+        if (n == 0) {
+            // Observed: a stream that reads nothing while asked for bytes is an error, not a retry.
+            throw new IOException("Underlying input stream returned zero bytes");
+        }
         bytes.limit(bytes.limit() + n);
         if (ended && n > 0) {
             // More bytes after an end: a new decoding run.
@@ -77,6 +81,18 @@ public class InputStreamReader extends Reader {
             drained = false;
         }
         return true;
+    }
+
+    // Observed: a char already decoded is returned by read() even after close (not by read(char[])).
+    public int read() throws IOException {
+        synchronized (lock) {
+            if (spare >= 0) {
+                int c = spare;
+                spare = -1;
+                return c;
+            }
+            return super.read();
+        }
     }
 
     public int read(char[] cbuf, int off, int len) throws IOException {
@@ -95,7 +111,7 @@ public class InputStreamReader extends Reader {
                 spare = -1;
                 len--;
                 got = 1;
-                if (len == 0 || !(bytes.hasRemaining() || in.available() > 0)) {
+                if (len == 0 || closed || !(bytes.hasRemaining() || in.available() > 0)) {
                     return got;
                 }
             }

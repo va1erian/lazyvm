@@ -234,3 +234,18 @@ The work items live in [`plan.md`](plan.md) and [`plan-2.md`](plan-2.md), each w
 files and its checks. They are copied into GitHub issues on the LazyVM GitHub repo
 only when a stage starts, with the ID in the title. LazyOS-side items (`LOS-…`)
 become issues on the LazyOS repo.
+
+## D12. Default charset
+
+- **UTF-8 on every platform (default).** `file.encoding` is `UTF-8` and
+  `Charset.defaultCharset()` is UTF-8 on Windows and on LazyOS alike. Java 8
+  on Windows uses the ANSI code page (Cp1252 on the owner's machine), so
+  `FileReader`, `FileWriter`, `PrintStream(File)`, `String.getBytes()`,
+  `new String(byte[])` and the other calls without a charset give other bytes
+  there for non-ASCII text.
+- **Why:** one encoding for every platform, files written on Windows read
+  the same on LazyOS, every char can be written, and LazyVM ships no legacy
+  code page tables. Java 18 made the same choice (JEP 400).
+- **Tests** name their charsets wherever output depends on it, so goldens
+  blessed on Windows hold on LazyOS too. `design/io.md` (N3 and section 17)
+  lists the difference.

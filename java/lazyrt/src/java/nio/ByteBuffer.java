@@ -11,6 +11,21 @@ public abstract class ByteBuffer extends Buffer implements Comparable<ByteBuffer
     final boolean readOnly;
     final boolean direct;
     boolean bigEndian = true;
+    /** For the bytes of a view: the capacity of the buffer the view was made from. */
+    int sourceCapacity;
+
+    /**
+     * Observed (probes on Java 8): compact of a view of a heap buffer fails with
+     * IllegalArgumentException when the view's start in the array plus its limit in bytes
+     * passes the capacity of the buffer it was made from. That cannot happen unless the
+     * buffer had an array offset. Direct views never fail.
+     */
+    final void checkViewCompact(int element0, int limit, int size) {
+        long end = (long) storeOffset + (long) element0 * size + (long) limit * size;
+        if (!direct && end > sourceCapacity) {
+            throw new IllegalArgumentException();
+        }
+    }
 
     ByteBuffer(byte[] store, int storeOffset, int mark, int pos, int lim, int cap, boolean readOnly, boolean direct) {
         super(mark, pos, lim, cap);
@@ -126,9 +141,7 @@ public abstract class ByteBuffer extends Buffer implements Comparable<ByteBuffer
     public ByteBuffer get(byte[] dst, int offset, int length) {
         checkRange(offset, length, dst.length);
         int p = takeForGet(length);
-        for (int i = 0; i < length; i++) {
-            dst[offset + i] = get(p + i);
-        }
+        System.arraycopy(store, storeOffset + p, dst, offset, length);
         return this;
     }
 
@@ -136,19 +149,19 @@ public abstract class ByteBuffer extends Buffer implements Comparable<ByteBuffer
         return get(dst, 0, dst.length);
     }
 
+    // Observed: read-only is checked before the source being this buffer. The copy moves
+    // overlapping windows of one array as if through a temporary (System.arraycopy).
     public ByteBuffer put(ByteBuffer src) {
-        if (src == this) {
-            throw new IllegalArgumentException();
-        }
         if (readOnly) {
             throw new ReadOnlyBufferException();
+        }
+        if (src == this) {
+            throw new IllegalArgumentException();
         }
         int n = src.remaining();
         int p = takeForPut(n);
         int s = src.takeForGet(n);
-        for (int i = 0; i < n; i++) {
-            put(p + i, src.get(s + i));
-        }
+        System.arraycopy(src.store, src.storeOffset + s, store, storeOffset + p, n);
         return this;
     }
 
@@ -158,9 +171,7 @@ public abstract class ByteBuffer extends Buffer implements Comparable<ByteBuffer
         }
         checkRange(offset, length, src.length);
         int p = takeForPut(length);
-        for (int i = 0; i < length; i++) {
-            put(p + i, src[offset + i]);
-        }
+        System.arraycopy(src, offset, store, storeOffset + p, length);
         return this;
     }
 

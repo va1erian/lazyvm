@@ -52,7 +52,9 @@ pub fn closed() -> io::Error {
     io::Error::other("Stream Closed")
 }
 
-pub fn open(path: &str, mode: Mode) -> io::Result<i64> {
+/// Opens `path`; `shared_delete` lets others rename or delete it while it is
+/// open (java.nio.file's streams; java.io's are opened without it).
+pub fn open(path: &str, mode: Mode, shared_delete: bool) -> io::Result<i64> {
     let mut o = OpenOptions::new();
     match mode {
         Mode::Read => o.read(true),
@@ -61,8 +63,12 @@ pub fn open(path: &str, mode: Mode) -> io::Result<i64> {
         Mode::ReadWrite => o.read(true).write(true).create(true),
         Mode::ReadWriteExisting => o.read(true).write(true),
     };
+    if !shared_delete {
+        share_like_java(&mut o);
+    }
     let file = o.open(path)?;
-    if file.metadata()?.is_dir() {
+    // A device such as NUL has no metadata; only a directory is refused.
+    if file.metadata().is_ok_and(|m| m.is_dir()) {
         return Err(io::Error::new(
             io::ErrorKind::IsADirectory,
             if cfg!(windows) {
@@ -78,6 +84,19 @@ pub fn open(path: &str, mode: Mode) -> io::Result<i64> {
     t.open.insert(h, file);
     Ok(h)
 }
+
+/// Java 8's java.io opens files on Windows without delete sharing, so an
+/// open file cannot be renamed or deleted; LazyVM does the same.
+#[cfg(windows)]
+fn share_like_java(o: &mut OpenOptions) {
+    use std::os::windows::fs::OpenOptionsExt;
+    const FILE_SHARE_READ: u32 = 1;
+    const FILE_SHARE_WRITE: u32 = 2;
+    o.share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE);
+}
+
+#[cfg(not(windows))]
+fn share_like_java(_: &mut OpenOptions) {}
 
 fn with<T>(h: i64, f: impl FnOnce(&mut File) -> io::Result<T>) -> io::Result<T> {
     let mut t = table();
@@ -144,10 +163,10 @@ mod tests {
     fn round_trip_through_a_handle() {
         let path = std::env::temp_dir().join(format!("lazyvm-files-{}.txt", std::process::id()));
         let p = path.to_string_lossy().into_owned();
-        let h = open(&p, Mode::Write).unwrap_or_else(|e| panic!("{e}"));
+        let h = open(&p, Mode::Write, false).unwrap_or_else(|e| panic!("{e}"));
         assert!(write(h, b"hello").is_ok());
         close(h);
-        let h = open(&p, Mode::Read).unwrap_or_else(|e| panic!("{e}"));
+        let h = open(&p, Mode::Read, false).unwrap_or_else(|e| panic!("{e}"));
         let mut buf = [0u8; 16];
         assert_eq!(read(h, &mut buf).ok(), Some(5));
         assert_eq!(size(h).ok(), Some(5));

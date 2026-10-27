@@ -135,6 +135,12 @@ the encoder, not on an earlier flush. Built from a REPORT `CharsetEncoder`, a lo
 **R4.** `getEncoding()` gives historical names: `UTF8`, `ISO8859_1`, `ASCII`, `UTF-16`, `UnicodeBigUnmarked`
 (UTF-16BE), `UnicodeLittleUnmarked` (UTF-16LE). [CharsetsEncode: getEncoding]
 
+**R6.** Found by review. A stream whose `read(b, off, len > 0)` returns 0 → `IOException("Underlying input stream
+returned zero bytes")` from `InputStreamReader` (`BufferedReader` retries). After `close`, `read()` still returns a
+kept second char of a pair, `read(char[]…)` throws. `OutputStreamWriter.write(char[]…)` checks the closed state
+first; `write(String, off, len)`: `len < 0` → IOOBE, then `String.getChars` judges the range, then the closed
+state. `Writer.write(String)` uses its reused 1024-char array for up to 1024 chars. [IoEdges: isr…, osw…, write…]
+
 **R5.** `PrintWriter(OutputStream)` buffers (a `BufferedWriter` over an `OutputStreamWriter`); `checkError()`
 flushes; auto-flush acts on `println` only. `PrintStream(OutputStream)` writes each `print` at once; `println(s)`
 is two writes (`s`, separator); with auto-flush a `print` containing `\n` flushes (two `fl`), `write(int)` only
@@ -196,7 +202,9 @@ whose message is the name (also from `isSupported`). Legal but unknown → `Unsu
 
 **N3.** `hashCode()` = `name().hashCode()`; `compareTo` compares names ignoring case; `contains`: UTF-8 contains
 US-ASCII and UTF-16, UTF-16LE contains UTF-8, ISO-8859-1 contains US-ASCII, US-ASCII only itself. `defaultCharset()` follows `file.encoding`;
-`availableCharsets()` keys ignore case. [CharsetNames]
+`availableCharsets()` keys ignore case. LazyVM's default charset is UTF-8 on every platform, where the oracle uses
+Cp1252 on Windows (decisions.md D12): `FileReader`, `FileWriter`, `PrintStream(File)` and the no-charset
+constructors and `getBytes()` differ there, and the tests name their charsets. [CharsetNames]
 
 **K1.** `CharsetDecoder.decode(in, out, end)` reports each unit of §5 as `MALFORMED[n]` with `in` at its first byte.
 With `end` false a valid prefix at the end stays unconsumed (UNDERFLOW); a unit already known bad is reported. A char,
@@ -256,6 +264,15 @@ test names; on a file → null. `listFiles` entries are `new File(this, name)`. 
 → `IOException`. `toURI()` of an existing directory ends with `/`, spaces become `%20`. [Files1: createTempFile…,
 toURI…]
 
+**F7.** Found by review. `createTempFile` keeps only the prefix's last name; a suffix that would make more than one
+name → `IOException("Unable to create temporary file, <path>")`, so the file stays in the directory.
+`renameTo` onto the same file (itself, or another case on Windows) → true; onto another existing file on Windows →
+false. `getParentFile` keeps the parent string as it is (`\C:\` → `\C:`). `setLastModified` takes milliseconds to
+microseconds; a time that does not fit → false. A directory's time can be set; `setReadOnly` and
+`setWritable(false)` of a directory on Windows → false. `toURI` escapes as nio-file.md P4 (`u[v]` → `u%5Bv%5D`). Canonical
+forms drop Windows' `\\?\` and `\\?\UNC\` (→ `\\`) prefixes; a wildcard or a `:` past the drive has none
+(`IOException`). [IoEdges: temp…, renameTo…, … setLastModified, toURI…]
+
 **W1.** Windows, pinned by FilePathsWin (table there): `/` and `\` are separators, normalised to `\`; two or more
 leading separators make an absolute UNC path (`///a` → `\\a`); `\a` and `C:a` are relative, `C:\` absolute; `C:` has
 name `""`; `C:a` has parent `C:`; `1:` is a name, `a:b` is drive `a:`; `File("C:", "b")` → `C:\b`, `File("", "C:b")` →
@@ -305,7 +322,9 @@ first. Missing data → `EOFException`. [DataStreams: readUTF…]
 
 **D4.** Short `readInt`, `readLong`, `readChar`, `readBoolean`, `readByte`, `readFully` → `EOFException` (null
 message); `readFully(b, off, 0)` at the end is fine; `skipBytes` clamps, negative → 0; reads gather across short
-underlying reads; deprecated `readLine` as FS4. [DataStreams]
+underlying reads; deprecated `readLine` as FS4. After a `\r` `readLine` pushes the next byte back in front of
+the stream, reusing one pushback for every line; a `read(b, off, 0)` then returns 0 without a call. Reads of 2 and
+4 bytes call `read()` per byte. [DataStreams; IoEdges: dis…]
 
 ## 10. System.in
 
@@ -350,82 +369,17 @@ compareTo, hashCode…, toString; CharBuffers]
 `wrap(CharSequence[, s, e])`: read-only live view (later `StringBuilder` edits show), `hasArray()` false, `array()` →
 `UnsupportedOperationException`, `put`/`compact` → `ReadOnlyBufferException`. `put(String, s, e)` indexes the string,
 checking the range before the read-only state; overflow leaves the position. `read(t)`: copies the smaller remaining,
-−1 when empty, 0 when `t` is full, IAE for itself. [CharBuffers: … put(String)…]
+−1 when empty, 0 when `t` is full, IAE for itself (−1 first when it is empty). [CharBuffers: … put(String)…]
 
-## 12. Paths
+**NB7.** Found by review. Bulk `put` between overlapping windows of one array copies as if through a temporary
+(`System.arraycopy`); views over bytes copy element by element in order. Read-only is checked before `put(self)`
+(→ ROBE). `compact` on a view of a heap buffer → IAE when the view's start in the array plus its limit in bytes
+passes the capacity of the buffer it was made from, which needs an array offset (zero-capacity views included);
+direct views never fail. [NioEdges: overlapping…, … of itself, view compact…]
 
-**P1.** Relative paths (shown with `/`): separators collapse, a trailing one goes, `.`/`..` are names; `""` has one
-empty name, file name `""`, no parent or root. `getName`/`subpath` out of range → IAE. `Paths.get(first, more…)`
-skips empty parts. `normalize` drops `.` and `name/..` pairs, keeps leading `..`, may give `""`. `equals` and
-`compareTo` use the parsed string (`a/./b` ≠ `a/b`). [PathOps: […], normalize…, getName…, subpath…, Paths.get…]
+## 12. Paths and 13. Files
 
-**P2.** `resolve("")` → this, `"".resolve(x)` → x, an absolute argument wins; `resolveSibling` with no parent →
-argument. `relativize` does not normalise (`a/./b` to `a/c` → `../../c`); equal → `""`; `""` to `a` → `../a`; `a`
-to `""` → `../` (with the trailing separator); relative vs absolute → IAE. `startsWith`/`endsWith` match whole names
-(`a/b` starts with `a/`, `ab` not with `a`); `""` starts with `""`, `a` does not; `a/b` does not end with `""`. [PathOps:
-resolve…, relativize…, startsWith…, endsWith…]
-
-**P3.** `getPathMatcher`: only `glob:` and `regex:`, lower case (`GLOB:` → `UnsupportedOperationException`), no
-colon → IAE. Glob: `*`, `?` within a name, `**` across names, `[…]`, `[!…]`, `{a,b}`; nested or unclosed braces →
-`PatternSyntaxException`; `*.txt` matches `.txt`; the whole path must match. [PathOps: glob…, regex, … syntax]
-
-**PW1.** Windows, pinned by PathsWin (table there): roots `\`, `C:`, `C:\`, `\\host\share\`; `/a`, `C:a` relative;
-`\\host\share` has no names; `resolve` of `\b` keeps the drive, of `D:b` → `D:b`; `relativize` across roots → IAE
-`"'other' has different root"`, absolute vs relative → `"'other' is different type of Path"`; comparison, hash,
-`startsWith`, glob and regex ignore case; `InvalidPathException` messages `"Illegal char <c> at index i: input"`,
-`"Trailing char < > at index i: input"`, `"UNC path is missing hostname: input"` (or `sharename`), `getInput()` the
-original; `toUri` → `file:///C:/x%20y/z`, `file://host/share/x`. Found by the implementation's fuzz (the resolve and
-relativize ones pinned by the later rows): a drive-relative path's `toAbsolutePath` keeps a trailing separator when it
-has no names (`C:` → `C:\cwd\`), and on a missing drive throws `IOError(IOException("Unable to get working directory
-of drive 'B'"))`; `resolve` of a drive-relative argument joins only an absolute base on the same drive, appended as
-written (`c:\b` + `C:` → `c:\b\`), else the argument wins; for `relativize` a drive root and a UNC root are different
-types; a `/` in a glob matches the separator.
-
-## 13. Files
-
-**NF1.** `NoSuchFileException`, `FileAlreadyExistsException`, `DirectoryNotEmptyException`, `NotDirectoryException`
-carry the path as given; `getMessage()` is the file, `"file -> other"` when there is another, plus `": reason"`
-when there is one. Copying into a missing directory → `NoSuchFileException("src -> target")`. [FilesOps; FilesWalk:
-stream missing, stream on file]
-
-**NF2.** `write(p, bytes, opts)`: default CREATE, TRUNCATE_EXISTING, WRITE; `CREATE_NEW` on an existing file →
-`FileAlreadyExistsException`; `APPEND` or `WRITE` on a missing one → `NoSuchFileException`; `READ` → IAE `"READ not
-allowed"`; `APPEND` + `TRUNCATE_EXISTING` → IAE `"APPEND + TRUNCATE_EXISTING not allowed"`. `write(p, lines)`
-writes each line + `line.separator`, UTF-8, REPORT (`UnmappableCharacterException("Input length = 1")`).
-[FilesOps: write…]
-
-**NF3.** `readAllLines` uses L1 (no empty last line after a final terminator, empty file → `[]`) and REPORT
-(`MalformedInputException("Input length = 1")`), like `newBufferedReader`; `newBufferedWriter` encodes with
-REPORT. `newInputStream`: `available()` = bytes left, `skip` stops at the end, no mark; reading after close → an
-`IOException` (the oracle's is `java.nio.channels.ClosedChannelException`). [FilesOps]
-
-**NF4.** `copy`/`move`: existing target → `FileAlreadyExistsException` unless `REPLACE_EXISTING`; missing source →
-`NoSuchFileException(source)`; a file copied onto itself is untouched; `COPY_ATTRIBUTES` keeps the time;
-`ATOMIC_MOVE` works within a directory; the stream forms of `copy` return the byte count. [FilesOps: copy…, move…]
-
-**NF5.** `createDirectory` on an existing name → FAE, missing parent → NSFE; `createDirectories` accepts an existing
-directory, an existing file → FAE; `createFile` existing → FAE; `delete` missing → NSFE, non-empty → DNEE;
-`deleteIfExists` → true/false. `isSameFile` of equal paths → true without I/O, otherwise both must exist. Temp names:
-prefix (`""` if null) + digits + suffix (`.tmp` if null); directories have no suffix. [FilesOps]
-
-**NF6.** `readAttributes(p, "a,b")` (or `"basic:a,b"`) returns those keys only; unknown name → IAE `"'x' not
-recognized"`, unknown view → `UnsupportedOperationException("View 'v' not available")`;
-`getAttribute`/`setAttribute` know `lastModifiedTime`. `FileTime.toString()`: ISO-8601 UTC, seconds always, a
-fraction only if non-zero and without trailing zeros (`.0015`), times before 1970 too; equality ignores the unit.
-[FilesOps: attribute…, FileTime…]
-
-**NF7.** `DirectoryStream` yields `dir.resolve(name)` per entry, no `.`/`..`, in directory order (LazyVM: sorted);
-a glob filter sees the file name only (`a/*` matches nothing). Second `iterator()` → `IllegalStateException(
-"Iterator already obtained")`; `iterator()` after close → `"Directory stream is closed"`; after close `hasNext()`
-false; `next()` at the end → `NoSuchElementException`; `remove()` → `UnsupportedOperationException`. [FilesWalk:
-stream…]
-
-**NF8.** `walkFileTree`: `preVisitDirectory(start)`, each entry in order (directories entered in place),
-`postVisitDirectory`. Entries at depth `maxDepth` get `visitFile`, directories too; depth 0 → `visitFile(start)`; a
-file start → `visitFile` only; negative → IAE `"'maxDepth' is negative"`. `SKIP_SUBTREE` from pre-visit also skips
-the post-visit; `SKIP_SIBLINGS` from `visitFile` skips the rest, the parent's post-visit still runs; `TERMINATE`
-stops at once. Missing start → `visitFileFailed(start, NoSuchFileException)`, rethrown by `SimpleFileVisitor`.
-Returns `start`. [FilesWalk: walk…]
+Moved to [`nio-file.md`](nio-file.md) (rules P1–P4, PW1, NF1–NF9), with the `java.nio.file` rows of §18.
 
 ## 14. LazyOS
 
@@ -447,7 +401,27 @@ Temp-name digits; implementation class names (only `toString` prefixes show them
 `readAllBytes`); `BufferedReader` growth beyond L3; `availableCharsets()` beyond the six; `DirectoryStream`
 behaviour after close beyond NF7.
 
-## 17. API to provide
+## 17. Known differences
+
+Where LazyVM knowingly differs from the oracle; the reviewer's probes show each one.
+
+- The default charset is UTF-8 everywhere (D12, N3).
+- Huge times: `File.setLastModified(Long.MAX_VALUE)` and `Files.setLastModifiedTime` of a time Windows cannot hold
+  are false or `FileSystemException("The parameter is incorrect.")`; the oracle reports success and stores a wrong
+  time.
+- `Files.exists(Paths.get("NUL"))` is false (the oracle says true; `new File("NUL").exists()` is false on both).
+- The `dos` attribute view is not provided (`UnsupportedOperationException("View 'dos' not available")`).
+- The index and pattern of the `PatternSyntaxException` for an empty glob class (nio-file.md P4).
+- `URI.getHost` is the whole authority until S7-02 parses server authorities.
+- An array too large for the heap is `OutOfMemoryError("Java heap space")`, not `"Requested array size exceeds VM
+  limit"`.
+- Stack traces show LazyVM's line numbers and frames.
+- How often a wrapped stream is called is matched only where a rule above pins it; LazyVM has no finalizers, so an
+  unreferenced stream is not closed; a file open in `java.io` cannot be deleted on Windows (nio streams allow it).
+- Speed: LazyVM's interpreter runs about 15–25 times slower than the oracle with `-Xint`; bulk buffer copies and
+  file copies are close to it.
+
+## 18. API to provide
 
 Reflection on the oracle (public and protected members each class declares), limited to the plan's scope; section
 15's members are left out. Packages are dropped from type names; `new(…)` is a constructor; enum rows list their
@@ -520,33 +494,3 @@ constants; interface members are abstract unless marked `default`.
 | java.nio.charset | `IllegalCharsetNameException` | class extends IllegalArgumentException | new(String); getCharsetName(): String |
 | java.nio.charset | `UnsupportedCharsetException` | class extends IllegalArgumentException | new(String); getCharsetName(): String |
 | java.nio.charset | `CoderMalfunctionError` | class extends Error | new(Exception) |
-| java.nio.file | `Path` | interface extends Comparable<Path>, Iterable<Path>, Watchable | compareTo(Path): int; endsWith(Path): boolean; endsWith(String): boolean; equals(Object): boolean; getFileName(): Path; getFileSystem(): FileSystem; getName(int): Path; getNameCount(): int; getParent(): Path; getRoot(): Path; hashCode(): int; isAbsolute(): boolean; iterator(): Iterator<Path>; normalize(): Path; relativize(Path): Path; resolve(Path): Path; resolve(String): Path; resolveSibling(Path): Path; resolveSibling(String): Path; startsWith(Path): boolean; startsWith(String): boolean; subpath(int,int): Path; toAbsolutePath(): Path; toFile(): File; toRealPath(LinkOption...): Path; toString(): String; toUri(): java.net.URI |
-| java.nio.file | `Paths` | final class | static get(String,String...): Path; static get(java.net.URI): Path |
-| java.nio.file | `Files` | final class | static copy(InputStream,Path,CopyOption...): long; static copy(Path,OutputStream): long; static copy(Path,Path,CopyOption...): Path; static createDirectories(Path,FileAttribute<?>...): Path; static createDirectory(Path,FileAttribute<?>...): Path; static createFile(Path,FileAttribute<?>...): Path; static createTempDirectory(Path,String,FileAttribute<?>...): Path; static createTempDirectory(String,FileAttribute<?>...): Path; static createTempFile(Path,String,String,FileAttribute<?>...): Path; static createTempFile(String,String,FileAttribute<?>...): Path; static delete(Path): void; static deleteIfExists(Path): boolean; static exists(Path,LinkOption...): boolean; static getAttribute(Path,String,LinkOption...): Object; static getLastModifiedTime(Path,LinkOption...): FileTime; static isDirectory(Path,LinkOption...): boolean; static isExecutable(Path): boolean; static isHidden(Path): boolean; static isReadable(Path): boolean; static isRegularFile(Path,LinkOption...): boolean; static isSameFile(Path,Path): boolean; static isSymbolicLink(Path): boolean; static isWritable(Path): boolean; static move(Path,Path,CopyOption...): Path; static newBufferedReader(Path): BufferedReader; static newBufferedReader(Path,Charset): BufferedReader; static newBufferedWriter(Path,Charset,OpenOption...): BufferedWriter; static newBufferedWriter(Path,OpenOption...): BufferedWriter; static newDirectoryStream(Path): DirectoryStream<Path>; static newDirectoryStream(Path,DirectoryStream.Filter<? super Path>): DirectoryStream<Path>; static newDirectoryStream(Path,String): DirectoryStream<Path>; static newInputStream(Path,OpenOption...): InputStream; static newOutputStream(Path,OpenOption...): OutputStream; static notExists(Path,LinkOption...): boolean; static readAllBytes(Path): byte[]; static readAllLines(Path): List<String>; static readAllLines(Path,Charset): List<String>; static <A extends BasicFileAttributes> readAttributes(Path,Class<A>,LinkOption...): A; static readAttributes(Path,String,LinkOption...): Map<String, Object>; static setAttribute(Path,String,Object,LinkOption...): Path; static setLastModifiedTime(Path,FileTime): Path; static size(Path): long; static walkFileTree(Path,FileVisitor<? super Path>): Path; static walkFileTree(Path,Set<FileVisitOption>,int,FileVisitor<? super Path>): Path; static write(Path,Iterable<? extends CharSequence>,Charset,OpenOption...): Path; static write(Path,Iterable<? extends CharSequence>,OpenOption...): Path; static write(Path,byte[],OpenOption...): Path |
-| java.nio.file | `FileSystems` | final class | static getDefault(): FileSystem |
-| java.nio.file | `FileSystem` | abstract class implements Closeable | protected new(); abstract close(): void; abstract getPath(String,String...): Path; abstract getPathMatcher(String): PathMatcher; abstract getRootDirectories(): Iterable<Path>; abstract getSeparator(): String; abstract isOpen(): boolean; abstract isReadOnly(): boolean |
-| java.nio.file | `PathMatcher` | interface | matches(Path): boolean |
-| java.nio.file | `DirectoryStream` | interface extends Closeable, Iterable<T> | iterator(): Iterator<T> |
-| java.nio.file | `DirectoryStream.Filter` | interface | accept(T): boolean |
-| java.nio.file | `FileVisitor` | interface | postVisitDirectory(T,IOException): FileVisitResult; preVisitDirectory(T,BasicFileAttributes): FileVisitResult; visitFile(T,BasicFileAttributes): FileVisitResult; visitFileFailed(T,IOException): FileVisitResult |
-| java.nio.file | `SimpleFileVisitor` | class implements FileVisitor<T> | protected new(); postVisitDirectory(T,IOException): FileVisitResult; preVisitDirectory(T,BasicFileAttributes): FileVisitResult; visitFile(T,BasicFileAttributes): FileVisitResult; visitFileFailed(T,IOException): FileVisitResult |
-| java.nio.file | `FileVisitResult` | enum | constants CONTINUE TERMINATE SKIP_SUBTREE SKIP_SIBLINGS |
-| java.nio.file | `FileVisitOption` | enum | constants FOLLOW_LINKS |
-| java.nio.file | `OpenOption` | interface |  |
-| java.nio.file | `CopyOption` | interface |  |
-| java.nio.file | `StandardOpenOption` | enum implements OpenOption | constants READ WRITE APPEND TRUNCATE_EXISTING CREATE CREATE_NEW DELETE_ON_CLOSE SPARSE SYNC DSYNC |
-| java.nio.file | `StandardCopyOption` | enum implements CopyOption | constants REPLACE_EXISTING COPY_ATTRIBUTES ATOMIC_MOVE |
-| java.nio.file | `LinkOption` | enum implements OpenOption, CopyOption | constants NOFOLLOW_LINKS |
-| java.nio.file | `FileSystemException` | class extends IOException | new(String); new(String,String,String); getFile(): String; getMessage(): String; getOtherFile(): String; getReason(): String |
-| java.nio.file | `NoSuchFileException` | class extends FileSystemException | new(String); new(String,String,String) |
-| java.nio.file | `FileAlreadyExistsException` | class extends FileSystemException | new(String); new(String,String,String) |
-| java.nio.file | `DirectoryNotEmptyException` | class extends FileSystemException | new(String) |
-| java.nio.file | `NotDirectoryException` | class extends FileSystemException | new(String) |
-| java.nio.file | `AccessDeniedException` | class extends FileSystemException | new(String); new(String,String,String) |
-| java.nio.file | `AtomicMoveNotSupportedException` | class extends FileSystemException | new(String,String,String) |
-| java.nio.file | `InvalidPathException` | class extends IllegalArgumentException | new(String,String,int); new(String,String); getIndex(): int; getInput(): String; getMessage(): String; getReason(): String |
-| java.nio.file | `FileSystemLoopException` | class extends FileSystemException | new(String) |
-| java.nio.file | `DirectoryIteratorException` | final class extends ConcurrentModificationException | new(IOException); getCause(): IOException |
-| java.nio.file.attribute | `BasicFileAttributes` | interface | creationTime(): FileTime; fileKey(): Object; isDirectory(): boolean; isOther(): boolean; isRegularFile(): boolean; isSymbolicLink(): boolean; lastAccessTime(): FileTime; lastModifiedTime(): FileTime; size(): long |
-| java.nio.file.attribute | `FileTime` | final class implements Comparable<FileTime> | compareTo(FileTime): int; equals(Object): boolean; static from(java.time.Instant): FileTime; static from(long,TimeUnit): FileTime; static fromMillis(long): FileTime; hashCode(): int; to(TimeUnit): long; toInstant(): java.time.Instant; toMillis(): long; toString(): String |
-| java.nio.file.attribute | `FileAttribute` | interface | name(): String; value(): T |

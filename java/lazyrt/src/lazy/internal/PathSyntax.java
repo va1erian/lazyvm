@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * The platform's path rules, shared by java.io.File and java.nio.file: one
  * implementation per platform, chosen at run time from `file.separator`
- * (io.md F1, W1, P1, PW1, section 14). File keeps a normalized string and its
+ * (io.md F1, W1, section 14; nio-file.md P1, PW1). File keeps a normalized string and its
  * prefix; a nio path is a root and names.
  */
 public abstract class PathSyntax {
@@ -54,8 +54,14 @@ public abstract class PathSyntax {
     public abstract String precanonical(String absolute) throws java.io.IOException;
 
     /** After the native canonicalization: the platform's final touches. */
-    public String postcanonical(String canonical) {
+    String postcanonical(String absolute, String canonical) {
         return canonical;
+    }
+
+    /** The canonical form of an absolute path: checks, the native, then the platform's touches. */
+    public String canonical(String absolute) throws java.io.IOException {
+        String checked = precanonical(absolute);
+        return postcanonical(checked, FileSystem.canonicalize(checked));
     }
 
     // ---- java.nio.file ----
@@ -151,21 +157,8 @@ public abstract class PathSyntax {
         return sb.toString();
     }
 
-    /** Percent-encodes what a URI path cannot hold; other chars, non-ASCII too, stay. */
+    /** A path as a URI path: what it cannot hold escaped (UriText, the one escaping helper). */
     static String quotePath(String path) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < path.length(); i++) {
-            char c = path.charAt(i);
-            if (c <= ' ' || c == 0x7F || "\"#%<>?[\\]^`{|}".indexOf(c) >= 0) {
-                byte[] b = String.valueOf(c).getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                for (byte x : b) {
-                    sb.append('%').append(Character.toUpperCase(Character.forDigit((x >> 4) & 15, 16)))
-                            .append(Character.toUpperCase(Character.forDigit(x & 15, 16)));
-                }
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
+        return UriText.escape(path, UriText.PATH, true);
     }
 }

@@ -9,7 +9,7 @@ import java.util.Set;
 import lazy.internal.FileSystem;
 
 /**
- * How Files opens files: the open options (io.md NF2, NF3), the
+ * How Files opens files: the open options (nio-file.md NF2, NF3), the
  * FileSystemExceptions an OS failure becomes (NF1), and the streams over
  * a lazy.internal.FileSystem handle.
  */
@@ -53,6 +53,7 @@ final class FileAccess {
 
     // Spec NF3: reading allows READ (and the link and no-op options) only.
     static InputStream openInput(Path p, OpenOption... options) throws IOException {
+        checkOptions(options);
         for (OpenOption o : options) {
             if (o == StandardOpenOption.APPEND || o == StandardOpenOption.WRITE) {
                 throw new UnsupportedOperationException("'" + o + "' not allowed");
@@ -60,7 +61,7 @@ final class FileAccess {
         }
         long h;
         try {
-            h = FileSystem.open(p.toString(), FileSystem.READ);
+            h = FileSystem.open(p.toString(), FileSystem.READ | FileSystem.SHARE_DELETE);
         } catch (IOException e) {
             // Observed: a directory is AccessDeniedException, as for any existing file.
             throw failure(p, null);
@@ -70,6 +71,7 @@ final class FileAccess {
 
     // Spec NF2: CREATE, TRUNCATE_EXISTING and WRITE by default; the checks of the options.
     static OutputStream openOutput(Path p, OpenOption... options) throws IOException {
+        checkOptions(options);
         Set<OpenOption> opts = new HashSet<>(Arrays.asList(options));
         if (opts.isEmpty()) {
             opts.add(StandardOpenOption.CREATE);
@@ -95,12 +97,24 @@ final class FileAccess {
                 : opts.contains(StandardOpenOption.TRUNCATE_EXISTING) ? FileSystem.WRITE : FileSystem.READ_WRITE;
         long h;
         try {
-            h = FileSystem.open(name, mode);
+            h = FileSystem.open(name, mode | FileSystem.SHARE_DELETE);
         } catch (IOException e) {
             throw failure(p, null);
         }
         boolean sync = opts.contains(StandardOpenOption.SYNC) || opts.contains(StandardOpenOption.DSYNC);
         return new HandleOutput(h, sync, opts.contains(StandardOpenOption.DELETE_ON_CLOSE) ? name : null);
+    }
+
+    /** Javadoc: a null option is NPE, one this file system does not know UnsupportedOperationException. */
+    private static void checkOptions(OpenOption[] options) {
+        for (OpenOption o : options) {
+            if (o == null) {
+                throw new NullPointerException();
+            }
+            if (!(o instanceof StandardOpenOption) && !(o instanceof LinkOption)) {
+                throw new UnsupportedOperationException();
+            }
+        }
     }
 
     /** Atomically creates an empty file: false if something is there; a missing directory is NSFE. */
@@ -180,7 +194,11 @@ final class FileAccess {
             closed = true;
             FileSystem.close(h);
             if (deleteOnClose != null) {
-                FileSystem.delete(deleteOnClose);
+                try {
+                    FileSystem.delete(deleteOnClose);
+                } catch (IOException e) {
+                    // Spec: DELETE_ON_CLOSE is best effort.
+                }
             }
         }
     }

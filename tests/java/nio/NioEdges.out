@@ -1,0 +1,55 @@
+overlapping put forward: [0, 1, 0, 1, 2, 3, 4, 5]
+overlapping put back: [2, 3, 4, 5, 6, 7, 6, 7]
+overlapping int put: [0, 1, 0, 1, 2, 3]
+overlapping char put: ababcd
+overlapping put through a view: 0 1 0 1 0 1 0 1 
+read-only put of itself: !java.nio.ReadOnlyBufferException
+read-only char put of itself: !java.nio.ReadOnlyBufferException
+put of itself: !java.lang.IllegalArgumentException
+char read of itself, empty: -1
+char read of itself: !java.lang.IllegalArgumentException
+int hashCode: 32737
+long hashCode: 32737
+view compact table:  s2:ooo,ooo,Xoo,Xoo,XXo,XXo,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX, s4:ooo,ooo,ooo,Xoo,Xoo,Xoo,Xoo,XXo,XXo,XXo,XXo,XXX,XXX,XXX,XXX,XXX,XXX,XXX, s8:ooo,ooo,ooo,ooo,ooo,Xoo,Xoo,Xoo,Xoo,Xoo,Xoo,Xoo,Xoo,XXo,XXo,XXo,XXo,XXo,
+direct view compact: 5
+zero-capacity view compact: !java.lang.IllegalArgumentException
+read-only view compact: !java.nio.ReadOnlyBufferException
+latin1 encode, full then unmappable: UNMAPPABLE[1] in=2 out=2
+latin1 encode, full then mappable: OVERFLOW in=2 out=2
+ascii encode, full then unmappable: UNMAPPABLE[1] in=2 out=2
+direct decode with errors: 300 �a
+string encode with errors: 300 63 97
+decoder averageCharsPerByte 0: !java.lang.IllegalArgumentException: Non-positive averageCharsPerByte
+decoder maxCharsPerByte 0: !java.lang.IllegalArgumentException: Non-positive maxCharsPerByte
+encoder averageBytesPerChar -1: !java.lang.IllegalArgumentException: Non-positive averageBytesPerChar
+coder throwing IllegalStateException: !java.lang.IllegalStateException: inner
+coder throwing BufferUnderflowException: !java.nio.charset.CoderMalfunctionError: java.nio.BufferUnderflowException
+glob [!b] and the separator: axc=true abc=false a/c=false
+glob *[!~]* across names: dir/file=false file=true
+glob [/]: PSE Explicit 'name separator' in class at 1
+glob [a/b]: PSE Explicit 'name separator' in class at 3
+glob []a]: PSE Unclosed character class
+glob [!]a]: PSE Unclosed character class
+glob []: PSE Unclosed character class
+glob unclosed [: PSE Missing '] at 3
+glob unclosed {: PSE Missing '} at 3
+FileTime 100 ms: 1970-01-01T00:00:00.1Z
+FileTime 1 ms: 1970-01-01T00:00:00.001Z
+FileTime 1234567 us: 1970-01-01T00:00:01.234567Z
+dir set modified time: 1000000000000
+set access time: 2008-01-10T21:20:00Z
+getAttribute *: !java.lang.IllegalArgumentException: *
+getAttribute two names: !java.lang.IllegalArgumentException: size,isDirectory
+setAttribute unknown: !java.lang.IllegalArgumentException: 'basic:x' not recognized
+temp prefix with a separator: !java.lang.IllegalArgumentException: Invalid prefix or suffix
+temp suffix with a separator: !java.lang.IllegalArgumentException: Invalid prefix or suffix
+temp dir prefix climbing: !java.lang.IllegalArgumentException: Invalid prefix or suffix
+move into itself: java.nio.file.FileSystemException sub=false d=true
+newInputStream null option: !java.lang.NullPointerException
+newOutputStream copy option: !java.lang.UnsupportedOperationException
+copy stream atomic: !java.lang.UnsupportedOperationException: ATOMIC_MOVE not supported
+copy null option: !java.lang.NullPointerException
+toUri nbsp and line separator: /a%C2%A0b%E2%80%A8c
+toUri brackets: /u%5Bv%5D
+left []
+done

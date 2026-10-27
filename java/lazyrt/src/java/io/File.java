@@ -110,9 +110,10 @@ public class File implements Serializable, Comparable<File> {
         return path.substring(0, i);
     }
 
+    // Observed: the parent string is kept as it is (`\C:\` has the parent file `\C:`).
     public File getParentFile() {
         String p = getParent();
-        return p == null ? null : new File(p);
+        return p == null ? null : new File(p, true);
     }
 
     public String getPath() {
@@ -132,12 +133,12 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public String getCanonicalPath() throws IOException {
-        String abs = SYNTAX.precanonical(getAbsolutePath());
-        return SYNTAX.postcanonical(FileSystem.canonicalize(abs));
+        return SYNTAX.canonical(getAbsolutePath());
     }
 
+    // Observed: kept as given, so a trailing separator of the canonical form stays.
     public File getCanonicalFile() throws IOException {
-        return new File(getCanonicalPath());
+        return new File(getCanonicalPath(), true);
     }
 
     // Spec F6: a directory's URI ends with '/'; what a URI path cannot hold is escaped.
@@ -201,7 +202,8 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public long lastModified() {
-        return FileSystem.lastModified(path);
+        long us = FileSystem.fileTime(path, FileSystem.MODIFIED);
+        return us == Long.MIN_VALUE ? 0 : Math.floorDiv(us, 1000L);
     }
 
     public long length() {
@@ -213,7 +215,12 @@ public class File implements Serializable, Comparable<File> {
     }
 
     public boolean delete() {
-        return FileSystem.delete(path);
+        try {
+            FileSystem.delete(path);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     public String[] list() {
@@ -293,10 +300,19 @@ public class File implements Serializable, Comparable<File> {
         if (dest == null) {
             throw new NullPointerException();
         }
-        if (separatorChar == '\\' && dest.exists()) {
+        // A case-only rename, or one to itself, names the same file and succeeds.
+        if (separatorChar == '\\' && dest.exists() && !sameFile(dest)) {
             return false;
         }
         return FileSystem.rename(path, dest.path);
+    }
+
+    private boolean sameFile(File other) {
+        try {
+            return getCanonicalPath().equalsIgnoreCase(other.getCanonicalPath());
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     // Spec F5: a negative time is refused.
@@ -304,7 +320,16 @@ public class File implements Serializable, Comparable<File> {
         if (time < 0) {
             throw new IllegalArgumentException("Negative time");
         }
-        return FileSystem.setLastModified(path, time);
+        // A time the platform cannot hold is false (Java 8 reports true for some it then garbles).
+        if (time > Long.MAX_VALUE / 1000) {
+            return false;
+        }
+        try {
+            FileSystem.setFileTime(path, FileSystem.MODIFIED, time * 1000);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     public boolean setReadOnly() {
@@ -357,8 +382,15 @@ public class File implements Serializable, Comparable<File> {
         String s = suffix == null ? ".tmp" : suffix;
         File dir = directory != null ? directory
                 : new File(System.getProperty("java.io.tmpdir")).getCanonicalFile();
+        // Observed: the prefix is cut to its last name; a suffix that makes more than one name is
+        // "Unable to create temporary file", so the file never lands outside the directory.
+        String pre = new File(prefix).getName();
         while (true) {
-            File f = new File(dir, prefix + lazy.internal.TempNames.next() + s);
+            String name = pre + lazy.internal.TempNames.next() + s;
+            File f = new File(dir, name);
+            if (!name.equals(f.getName())) {
+                throw new IOException("Unable to create temporary file, " + f.getPath());
+            }
             if (f.createNewFile()) {
                 return f;
             }

@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import lazy.internal.PathSyntax;
 
-/** A path of the default file system: a root (or none) and names (io.md P1, P2, PW1). */
+/** A path of the default file system: a root (or none) and names (nio-file.md P1, P2, PW1). */
 final class DefaultPath implements Path {
     private static final PathSyntax SYNTAX = DefaultFileSystem.SYNTAX;
 
@@ -258,7 +258,7 @@ final class DefaultPath implements Path {
         if (lazy.internal.FileSystem.attributes(abs) == 0) {
             throw new NoSuchFileException(string);
         }
-        return parse(fs, SYNTAX.postcanonical(lazy.internal.FileSystem.canonicalize(SYNTAX.precanonical(abs))));
+        return parse(fs, SYNTAX.canonical(abs));
     }
 
     public File toFile() {

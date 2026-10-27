@@ -26,11 +26,29 @@ public class CoderResult {
         this.length = length;
     }
 
+    /** The results of length 1 to 4, which the standard charsets give, without a lookup. */
+    private static final CoderResult[] SHORT_MALFORMED = shortOnes(MALFORMED);
+    private static final CoderResult[] SHORT_UNMAPPABLE = shortOnes(UNMAPPABLE);
+
+    private static CoderResult[] shortOnes(int kind) {
+        CoderResult[] r = new CoderResult[5];
+        for (int i = 1; i < r.length; i++) {
+            r[i] = new CoderResult(kind, i);
+        }
+        return r;
+    }
+
     public static CoderResult malformedForLength(int length) {
+        if (length > 0 && length < SHORT_MALFORMED.length) {
+            return SHORT_MALFORMED[length];
+        }
         return cached(MALFORMED_CACHE, MALFORMED, length);
     }
 
     public static CoderResult unmappableForLength(int length) {
+        if (length > 0 && length < SHORT_UNMAPPABLE.length) {
+            return SHORT_UNMAPPABLE[length];
+        }
         return cached(UNMAPPABLE_CACHE, UNMAPPABLE, length);
     }
 

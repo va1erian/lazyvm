@@ -193,18 +193,18 @@ public class PrintStream extends FilterOutputStream implements Appendable, Close
         if (refused()) {
             return;
         }
-        if (held != 0) {
-            s = held + s;
-            held = 0;
+        String text = held != 0 ? held + s : s;
+        held = 0;
+        // The encoder keeps a trailing high surrogate back; observed: a byte order mark it
+        // writes with that char still goes out at once (UTF-16).
+        CharBuffer in = CharBuffer.wrap(text);
+        byte[] bytes = encode(in, false);
+        if (in.hasRemaining()) {
+            held = in.get();
         }
-        if (!s.isEmpty() && Character.isHighSurrogate(s.charAt(s.length() - 1))) {
-            held = s.charAt(s.length() - 1);
-            s = s.substring(0, s.length() - 1);
-            if (s.isEmpty()) {
-                return;
-            }
+        if (bytes.length == 0 && !text.isEmpty()) {
+            return;
         }
-        byte[] bytes = encode(CharBuffer.wrap(s), false);
         write(bytes, 0, bytes.length);
         // Spec R5: with auto-flush, text with a newline flushes again after the write's own flush.
         if (autoFlush && s.indexOf('\n') >= 0) {
