@@ -46,6 +46,8 @@ jobs:
         run: python tools/sdk.py
       - name: musl build
         run: cargo build --release --locked -p launcher --target x86_64-unknown-linux-musl
+      - name: size budget (Windows binary)
+        run: python tools/size.py
 
   linux-musl:
     # The LazyOS binary is static musl; this job runs the whole suite with it.
@@ -67,3 +69,5 @@ jobs:
         run: cargo build --release --locked -p launcher --target x86_64-unknown-linux-musl
       - name: differential suite (musl binary)
         run: python tools/test.py --exe target/x86_64-unknown-linux-musl/release/lazyvm --build-java-only
+      - name: size budget (LazyOS binary)
+        run: python tools/lazyrt.py && python tools/size.py --exe target/x86_64-unknown-linux-musl/release/lazyvm
