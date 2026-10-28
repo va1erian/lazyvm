@@ -49,7 +49,7 @@ pub enum Backend {
 /// What a backend does for one window.
 trait Host {
     /// `rgb` holds exactly `w * h` pixels of 0x00RRGGBB.
-    fn present(&mut self, rgb: &[u32], w: usize, h: usize) -> Result<(), String>;
+    fn present(&mut self, rgb: &[i32], w: usize, h: usize) -> Result<(), String>;
     fn poll(&mut self) -> Option<Event>;
     fn size(&self) -> (u32, u32);
     /// Calls `f` with the window's pixels as last presented, row by row, or
@@ -102,7 +102,7 @@ fn with<T>(handle: i32, f: impl FnOnce(&mut dyn Host) -> T) -> Result<T, String>
     })
 }
 
-pub fn present(handle: i32, rgb: &[u32], w: usize, h: usize) -> Result<(), String> {
+pub fn present(handle: i32, rgb: &[i32], w: usize, h: usize) -> Result<(), String> {
     with(handle, |host| host.present(rgb, w, h))?
 }
 

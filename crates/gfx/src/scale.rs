@@ -2,8 +2,9 @@
 //! keeps the aspect ratio, centred, with black bars.
 
 /// Fills `dst` (`dw` by `dh`) with `src` (`sw` by `sh`) scaled to fit.
-/// Pixels are 0x00RRGGBB; the alpha byte of `src` is ignored.
-pub fn fit(src: &[u32], sw: usize, sh: usize, dst: &mut [u32], dw: usize, dh: usize) {
+/// Pixels are 0x00RRGGBB; the top byte of `src` is ignored. `src` is `i32`
+/// because it is a Java `int[]`, read in place.
+pub fn fit(src: &[i32], sw: usize, sh: usize, dst: &mut [u32], dw: usize, dh: usize) {
     dst.fill(0);
     if sw == 0 || sh == 0 || dw == 0 || dh == 0 || src.len() < sw * sh || dst.len() < dw * dh {
         return;
@@ -20,7 +21,7 @@ pub fn fit(src: &[u32], sw: usize, sh: usize, dst: &mut [u32], dw: usize, dh: us
         let row = &src[(y * sh / th) * sw..][..sw];
         let out = &mut dst[(oy + y) * dw + ox..][..tw];
         for (o, &sx) in out.iter_mut().zip(&columns) {
-            *o = row[sx] & 0x00ff_ffff;
+            *o = row[sx] as u32 & 0x00ff_ffff;
         }
     }
 }

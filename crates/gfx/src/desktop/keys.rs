@@ -3,12 +3,16 @@
 use std::collections::VecDeque;
 
 use winit::event::{ElementState, KeyEvent};
-use winit::keyboard::{KeyCode, PhysicalKey};
+use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
 
 use crate::Event;
 
-/// Queues the key event and, on a press, the text it typed.
-pub fn push(events: &mut VecDeque<Event>, event: &KeyEvent) {
+/// Queues the key event and, on a press, the text it typed. winit gives text
+/// for shortcuts too (Ctrl+S is "s") and for editing keys (Enter is "\r"),
+/// so those are dropped: a chord with Ctrl or Alt alone types nothing, and
+/// control characters are never text. Ctrl and Alt together is AltGr on
+/// Windows, which does type (`@` on many European layouts).
+pub fn push(events: &mut VecDeque<Event>, event: &KeyEvent, mods: ModifiersState) {
     let code = match event.physical_key {
         PhysicalKey::Code(c) => code(c),
         PhysicalKey::Unidentified(_) => 0,
@@ -17,11 +21,22 @@ pub fn push(events: &mut VecDeque<Event>, event: &KeyEvent) {
         ElementState::Pressed => {
             events.push_back(Event::KeyDown(code));
             if let Some(text) = &event.text {
-                events.extend(text.encode_utf16().map(Event::Text));
+                events.extend(typed(text, mods).map(Event::Text));
             }
         }
         ElementState::Released => events.push_back(Event::KeyUp(code)),
     }
+}
+
+/// The UTF-16 units a key press with `text` types under `mods` (see `push`).
+fn typed(text: &str, mods: ModifiersState) -> impl Iterator<Item = u16> + '_ {
+    let chord = mods.control_key() != mods.alt_key();
+    text.chars()
+        .filter(move |c| !chord && !c.is_control())
+        .flat_map(|c| {
+            let mut units = [0; 2];
+            c.encode_utf16(&mut units).to_vec()
+        })
 }
 
 /// The `lazy.gfx.Key` constant for a physical key; 0 (UNKNOWN) when it has none.
@@ -75,5 +90,36 @@ fn code(c: KeyCode) -> i32 {
         ControlLeft | ControlRight => 271,
         AltLeft | AltRight => 272,
         _ => 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::typed;
+    use winit::keyboard::ModifiersState as M;
+
+    fn units(text: &str, mods: M) -> Vec<u16> {
+        typed(text, mods).collect()
+    }
+
+    #[test]
+    fn plain_and_shifted_keys_type() {
+        assert_eq!(units("a", M::empty()), [u16::from(b'a')]);
+        assert_eq!(units("A", M::SHIFT), [u16::from(b'A')]);
+        assert_eq!(units("\u{1F600}", M::empty()), [0xD83D, 0xDE00]);
+    }
+
+    #[test]
+    fn shortcuts_and_control_characters_do_not() {
+        assert!(units("s", M::CONTROL).is_empty());
+        assert!(units("f", M::ALT).is_empty());
+        assert!(units("\r", M::empty()).is_empty());
+        assert!(units("\u{8}", M::empty()).is_empty());
+        assert!(units("\u{1b}", M::empty()).is_empty());
+    }
+
+    #[test]
+    fn altgr_types() {
+        assert_eq!(units("@", M::CONTROL | M::ALT), [u16::from(b'@')]);
     }
 }

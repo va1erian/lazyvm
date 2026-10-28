@@ -77,7 +77,8 @@ public final class Window implements AutoCloseable {
 
     /**
      * The client area's pixels (0xRRGGBB, {@code width() * height()} of them) as last presented,
-     * scaling and black bars included. For screenshots and tests.
+     * scaling and black bars included. For screenshots and tests. After the user resizes the
+     * window, it reads as black until the next {@link #present}.
      */
     public int[] capture() {
         return capture0(live());

@@ -78,9 +78,8 @@ fn present0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
             format!("size {w}x{h} for {} pixels", rgb.len()),
         ));
     }
-    // The heap holds i32; the host wants the same bits as u32.
-    let pixels: Vec<u32> = rgb[..n as usize].iter().map(|&p| p as u32).collect();
-    gfx::present(handle, &pixels, w as usize, h as usize).map_err(state)?;
+    // Read in place: no copy of the frame outside the heap.
+    gfx::present(handle, &rgb[..n as usize], w as usize, h as usize).map_err(state)?;
     ret_void()
 }
 

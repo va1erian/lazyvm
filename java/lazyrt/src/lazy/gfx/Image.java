@@ -16,7 +16,13 @@ public final class Image {
         this.argb = argb;
     }
 
-    /** Decodes a PNG file held in {@code data}. */
+    /**
+     * Decodes a PNG file held in {@code data}.
+     *
+     * @throws IOException if the file is malformed, or larger than LazyVM decodes: over
+     *     2<sup>24</sup> pixels, or over 1 MiB per undecoded row (for example wider than 131072
+     *     pixels of 16-bit RGBA)
+     */
     public static Image decode(byte[] data) throws IOException {
         if (data == null) throw new NullPointerException("data");
         int[] size = new int[2];

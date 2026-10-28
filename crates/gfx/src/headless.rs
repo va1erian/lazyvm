@@ -43,7 +43,7 @@ impl Headless {
 }
 
 impl Host for Headless {
-    fn present(&mut self, rgb: &[u32], w: usize, h: usize) -> Result<(), String> {
+    fn present(&mut self, rgb: &[i32], w: usize, h: usize) -> Result<(), String> {
         let (dw, dh) = (self.w as usize, self.h as usize);
         fit(rgb, w, h, &mut self.pixels, dw, dh);
         Ok(())

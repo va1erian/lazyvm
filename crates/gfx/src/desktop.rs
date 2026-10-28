@@ -22,6 +22,7 @@ use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::{ElementState, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::keyboard::ModifiersState;
 use winit::platform::pump_events::EventLoopExtPumpEvents;
 use winit::platform::windows::EventLoopBuilderExtWindows;
 use winit::window::{Window, WindowId};
@@ -39,6 +40,8 @@ struct App {
     error: Option<String>,
     events: VecDeque<Event>,
     cursor: (i32, i32),
+    /// Which modifiers are down, to tell typing from shortcuts.
+    mods: ModifiersState,
     /// The last frame put on screen, for `capture`.
     last: (Vec<u32>, u32, u32),
 }
@@ -59,6 +62,7 @@ impl App {
     fn reset(&mut self) {
         self.events.clear();
         self.cursor = (0, 0);
+        self.mods = ModifiersState::empty();
         self.last = (Vec::new(), 0, 0);
     }
 
@@ -103,8 +107,12 @@ impl ApplicationHandler for App {
                 self.push_mouse(button, state);
                 return;
             }
+            WindowEvent::ModifiersChanged(m) => {
+                self.mods = m.state();
+                return;
+            }
             WindowEvent::KeyboardInput { event, .. } => {
-                keys::push(&mut self.events, &event);
+                keys::push(&mut self.events, &event, self.mods);
                 return;
             }
             _ => return,
@@ -144,6 +152,7 @@ fn with_desktop<T>(f: impl FnOnce(&mut Desktop) -> T) -> Result<T, String> {
                     error: None,
                     events: VecDeque::new(),
                     cursor: (0, 0),
+                    mods: ModifiersState::empty(),
                     last: (Vec::new(), 0, 0),
                 },
             });
@@ -179,7 +188,7 @@ impl DesktopWindow {
 }
 
 impl Host for DesktopWindow {
-    fn present(&mut self, rgb: &[u32], w: usize, h: usize) -> Result<(), String> {
+    fn present(&mut self, rgb: &[i32], w: usize, h: usize) -> Result<(), String> {
         with_desktop(|d| {
             d.pump();
             let Some((window, surface)) = d.app.window.as_mut() else {
