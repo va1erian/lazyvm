@@ -26,6 +26,7 @@ The VM reads and writes these fields by name. Keep their names and types.
 | `java.lang.Class` | `private transient int vmClassId` | The VM's class id for this mirror |
 | `java.lang.Throwable` | `private transient Object backtrace` | Frames recorded by `fillInStackTrace0` (an `int[]` the VM owns) |
 | `java.lang.Throwable` | `private String detailMessage` | Set by the VM when it throws with a message |
+| `lazy.gfx.Event` | `public int type, key, x, y, button`, `public char ch` | Filled by `Window.poll0` |
 
 ## Natives
 

@@ -35,8 +35,9 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       ([`gfx.md`](gfx.md)). Windows host on winit + softbuffer, plus a
       headless backend; the LazyOS host waits for S9-04. First user: a
       Minicraft Plus port kept outside this repo (GPL-3.0).
-      Check: `tools/test.py --filter gfx` on Windows and LazyOS (headless);
-      on Windows, a demo window screenshot showing the scaled frame.
+      Check: `tools/test.py --filter gfx` on Windows and
+      `tools/lazyos_test.py --filter gfx` on LazyOS (both headless); on
+      Windows, a demo window screenshot showing the scaled frame.
 - [ ] S9-01 Design note `docs/ui.md`: read the xui README and `xui-core` at
       LazyOS's pinned rev, then map its update model, widget set, layout and
       theming onto a Java API (a `render()` method returning a node tree,
