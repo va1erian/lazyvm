@@ -19,6 +19,7 @@ public class GlobClasses {
         "[😀]", "[!😀]x", "[😀]x", "[!😀-😁]x", "[a😀]x",
         // a '-' after a range, or after a first '-', and backward ranges are refused
         "[a-c-]x", "[x-z-]", "[a-z-a]x", "[A-Z-a&]", "[--]x", "[---]x", "[--a]x", "[!a-c-e]x", "[c-a]x", "[!9-0]x",
+        "[a-a]x", "[!a-a]x",
         // the end of a range goes to the regular expression as it is
         "[S-[]x", "[0-[]x", "[!-[]x",
         // members the regular expression reads specially
@@ -46,9 +47,17 @@ public class GlobClasses {
                     }
                 }
             } catch (PatternSyntaxException e) {
-                // The pattern of an error the regular expression finds is the platform's translation.
-                boolean own = e.getPattern().equals(g);
-                out.append(" PSE ").append(e.getDescription()).append(own ? " at " + e.getIndex() : " (regex)");
+                // The pattern of an error the regular expression finds is the platform's translation,
+                // printed too so the translation itself is pinned. Its "not the separator" class is
+                // one char longer on Windows, so the index is printed from the end of the pattern.
+                String p = e.getPattern();
+                out.append(" PSE ").append(e.getDescription());
+                if (p.equals(g)) {
+                    out.append(" at ").append(e.getIndex());
+                } else {
+                    String any = p.replace("[^\\\\]", "[^S]").replace("[^/]", "[^S]");
+                    out.append(" at end-").append(p.length() - e.getIndex()).append(" in ").append(esc(any));
+                }
             }
             System.out.println(out);
         }

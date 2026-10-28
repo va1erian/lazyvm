@@ -300,10 +300,10 @@ Goal: the everyday `java.util` and `java.io` surface from
       State (branch `s5-util`): `Optional*`, `Objects`, `Random` R3, `Base64`, `UUID`,
       `BitSet`, `StringTokenizer` and `InputMismatchException` are built; Utilities,
       Base64s, Base64Streams, Uuids, BitSets, Tokenizers and RandomSeq pass on both
-      (`StrictMath` stays on `libm`, decisions.md D13). `Scanner` and
-      `Properties` (with `java.util.Date` for its `store` line) are next, on S5-05; UtilBuffers,
-      `Base64`'s `ByteBuffer` overloads and `BitSet.valueOf` of buffers wait for S5-06. Until
-      then their tests sit in [`tests/pending`](../tests/pending/README.md).
+      (`StrictMath` stays on `libm`, decisions.md D13). Still to build, now
+      that S5-05 and S5-06 are in: `Scanner`, `Properties` (with `java.util.Date` for its `store`
+      line), `Base64`'s `ByteBuffer` overloads and `BitSet.valueOf` of buffers. Until then their
+      tests sit in [`tests/pending`](../tests/pending/README.md).
 - [x] S5-05 `java.io`: byte and char streams, `Buffered*`, `InputStreamReader`
       and `OutputStreamWriter` over the charsets, `File`, `FileInputStream`,
       `FileOutputStream`, `RandomAccessFile`, `Data*Stream`, `PrintWriter`,

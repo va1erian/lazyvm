@@ -135,8 +135,12 @@ public class CanonWin {
         String share = "\\\\localhost\\C$" + d2.substring(2);
         if (new File("\\\\localhost\\C$").exists()) {
             check("unc real of a real NUL", real(Paths.get(share, "NUL")), u(share) + "|NUL");
+            // Observed: the share's listing gives the name its case.
+            check("unc real of a real NUL as nul", real(Paths.get(share, "nul")), u(share) + "|NUL");
         }
         check("remove d2|NUL", new File(verbatim).delete(), "true");
+        check("real \\\\.\\NUL\\", real(Paths.get("\\\\.\\NUL\\")),
+            "FileSystemException ||.|NUL|: The parameter is incorrect.|r|n");
         StringBuilder lb = new StringBuilder(base);
         for (int i = 0; i < 6; i++) lb.append("\\long_name_component_of_forty_characters").append(i);
         String deep = lb.toString();

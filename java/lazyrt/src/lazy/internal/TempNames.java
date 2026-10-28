@@ -2,13 +2,9 @@ package lazy.internal;
 
 import java.util.Random;
 
-/**
- * The digits in temporary file names (io.md section 16: free). Seeded from
- * the wall clock too, since nanoTime counts from the start of the process
- * and would repeat the same names in every run.
- */
+/** The digits in temporary file names (io.md section 16: free), from a seed that differs per run (util.md R3). */
 public final class TempNames {
-    private static final Random RANDOM = new Random(System.currentTimeMillis() ^ System.nanoTime());
+    private static final Random RANDOM = new Random();
 
     private TempNames() {
     }

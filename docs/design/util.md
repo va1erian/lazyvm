@@ -119,7 +119,7 @@ Utilities ("requireNonNull", "requireNonNull pass").
 ## 4. Random
 
 `Random` is on main (S5-02) and stays. Its seeded sequences already match; R1 and R2 restate them
-so the tests have rules to cite. R3 is a known bug to fix.
+so the tests have rules to cite. R3 was a bug, fixed in S5-04.
 
 **R1.** The generator and the formulas the Javadoc gives, exactly: the 48-bit linear congruential
 generator with multiplier `0x5DEECE66D` and addend 11, the seed scrambled by XOR with the multiplier,
@@ -129,7 +129,7 @@ its rejection loop (a draw is rejected when `bits - val + (bound - 1)` overflows
 `nextBytes` taking one `nextInt()` per 4 bytes, low byte first, and dropping the unused bytes of the
 last one; `nextGaussian` by the polar method with `StrictMath.log` and `StrictMath.sqrt`, returning the
 second value of each pair on the next call, which `setSeed` forgets. LazyVM's `StrictMath.log` is
-the `libm` crate's, which is within 1 ulp of fdlibm's but not always equal (`decisions.md` D13), so a
+the `libm` crate's, whose `log` is within 1 ulp of fdlibm's but not always equal (`decisions.md` D13), so a
 gaussian can differ from Java 8's in its last digits. Everything else about `nextGaussian` is exact:
 which draws it makes, the rejected pairs, the signs, and the pairing and caching. RandomSeq
 therefore prints gaussians to 10 significant digits and their sums to 1e-6, which no ulp-level

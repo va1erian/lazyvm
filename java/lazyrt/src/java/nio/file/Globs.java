@@ -108,7 +108,7 @@ final class Globs {
             separator(glob, i, c, sep);
             if (c != '-') {
                 // Observed: a '^' first in a plain class is no range start ("[^-a]" is refused).
-                boolean caret = c == '^' && !negated && i == start + 1;
+                boolean caret = c == '^' && i == start + 1;
                 member(sb, c, i > start + 1 ? glob.charAt(i - 1) : 0, caret);
                 last = caret ? -1 : c;
                 i++;
