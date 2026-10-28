@@ -50,7 +50,7 @@ final class StringCase {
                 }
             }
             fresh |= upper && cp == DOTTED_CAPITAL_I;
-            changed |= tailored && upper && CaseLocale.changes(cp);
+            changed |= !changed && upper && mode == CaseLocale.LITHUANIAN && CaseLocale.changes(cp);
             if (sigmas) {
                 before = step(before, cp, false);
             }

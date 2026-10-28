@@ -69,7 +69,7 @@ final class CaseLocale {
 
     /**
      * Converts the code point cp at index i of s if the mode has a rule for it, appending the
-     * result (possibly nothing), and says whether it did.
+     * result (possibly nothing), and says whether it did. Never called for ROOT, which has no rules.
      */
     static boolean append(StringBuilder sb, String s, int i, int cp, boolean upper, int mode,
             boolean changed) {
