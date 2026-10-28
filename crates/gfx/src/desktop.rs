@@ -3,8 +3,14 @@
 //! without a second one).
 //!
 //! winit allows one event loop per process and never gives it back, so it
-//! lives in a thread local of the VM thread and is pumped, without waiting,
-//! whenever the program presents or polls. One window at a time for now.
+//! lives in a thread local of the VM thread and is pumped, without waiting
+//! for input, whenever the program presents or polls. While the user drags or
+//! resizes the window, Windows runs its own modal loop inside that pump, so
+//! the program stalls until the drag ends. One window at a time for now.
+//!
+//! Memory: softbuffer's surface plus a copy of the last frame for `capture`,
+//! both the window's current size, which the user may resize past the size
+//! it was opened at (up to the display).
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -187,7 +193,11 @@ impl Host for DesktopWindow {
             surface.resize(dw, dh).map_err(|e| e.to_string())?;
             let mut buffer = surface.buffer_mut().map_err(|e| e.to_string())?;
             fit(rgb, w, h, &mut buffer, dw.get() as usize, dh.get() as usize);
-            d.app.last = (buffer.to_vec(), dw.get(), dh.get());
+            // Kept for `capture`, in a buffer reused from frame to frame.
+            let (last, lw, lh) = &mut d.app.last;
+            last.clear();
+            last.extend_from_slice(&buffer);
+            (*lw, *lh) = (dw.get(), dh.get());
             buffer.present().map_err(|e| e.to_string())
         })?
     }

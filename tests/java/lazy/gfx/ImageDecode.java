@@ -16,6 +16,9 @@ public class ImageDecode {
     /** IHDR 16384x4096 1-bit gray, empty IDAT, IEND: 57 bytes declaring 64M pixels. */
     static final byte[] HUGE_GRAY = {-119, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 64, 0, 0, 0, 16, 0, 1, 0, 0, 0, 0, -94, 102, -60, -98, 0, 0, 0, 0, 73, 68, 65, 84, 53, -81, 6, 30, 0, 0, 0, 0, 73, 69, 78, 68, -82, 66, 96, -126};
 
+    /** 1x1 indexed with a 4-byte PLTE: the png crate would panic expanding it. */
+    static final byte[] SHORT_PALETTE = {-119, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 3, 0, 0, 0, 40, -53, 52, -69, 0, 0, 0, 4, 80, 76, 84, 69, 0, 1, 2, 3, 30, 94, -9, 117, 0, 0, 0, 10, 73, 68, 65, 84, 120, -100, 99, 96, 0, 0, 0, 2, 0, 1, 72, -81, -92, 113, 0, 0, 0, 0, 73, 69, 78, 68, -82, 66, 96, -126};
+
     static void show(String name, Image img) {
         StringBuilder sb = new StringBuilder(name + " " + img.width + "x" + img.height + ":");
         for (int p : img.argb) sb.append(' ').append(String.format("%08X", p));
@@ -48,6 +51,12 @@ public class ImageDecode {
             System.out.println("huge gray: decoded?");
         } catch (IOException e) {
             System.out.println("huge gray: " + e.getMessage());
+        }
+        try {
+            Image.decode(SHORT_PALETTE);
+            System.out.println("short palette: decoded?");
+        } catch (IOException e) {
+            System.out.println("short palette: " + e.getMessage());
         }
         try {
             Image.decode((byte[]) null);

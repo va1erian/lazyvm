@@ -78,8 +78,9 @@ Goal: an empty VM that every later item can test against, on both platforms.
       With `--lazyos <checkout>`, it also compares the copy in LazyOS's
       `docs/agents/lazyvm.md`.
       Check: `python tools/check_rules.py` passes; deleting a line of the block in a copy makes it fail.
-- [x] S0-05 License check. `tools/licenses.py` walks `cargo metadata` and fails
-      on any crate whose license is not in the allowed list
+- [x] S0-05 License check. `tools/licenses.py` fails on any crate built for a
+      shipped target (`cargo tree --all-features -e normal,build` for Windows
+      MSVC and Linux musl) whose license is not in the allowed list
       ([`decisions.md`](decisions.md) D2) or that is missing from `THIRD_PARTY.md`.
       Check: `python tools/licenses.py` passes.
 - [x] S0-06 CI. A GitHub workflow on Windows runs `cargo test`, `check_rules`,

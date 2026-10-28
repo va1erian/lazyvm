@@ -1,37 +1,62 @@
 //! PNG decoding for `lazy.gfx.Image`. Input is untrusted: every failure is an
-//! error string. Memory is bounded by a cap on the pixel count, checked from
-//! the header before any pixel buffer exists; the png crate's own limit only
-//! covers its internal buffers.
+//! error string. The png crate's `Limits` do not cover its row buffers or
+//! ours, so memory is bounded here from the header, before any pixel buffer
+//! exists: by the pixel count and by the raw (undecoded) row length.
 
 use std::io::Cursor;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use png::{ColorType, Decoder, Limits, Reader, Transformations};
 
 /// The largest image, as 0xAARRGGBB pixels (4 bytes each), that is decoded.
 const MAX_BYTES: usize = 64 << 20;
+/// The longest raw row: the decoder keeps a few rows of this size. 1 MiB
+/// still allows 131072 pixels of 16-bit RGBA.
+const MAX_ROW_BYTES: u64 = 1 << 20;
 
-/// Reads the header, refusing images over the cap whatever their format.
+/// Reads the header, refusing what the decoder could not handle within bounds.
 fn reader(data: &[u8]) -> Result<Reader<Cursor<&[u8]>>, String> {
     let mut decoder = Decoder::new_with_limits(Cursor::new(data), Limits { bytes: MAX_BYTES });
     decoder.set_transformations(Transformations::normalize_to_color8());
     let reader = decoder.read_info().map_err(|e| e.to_string())?;
-    let (w, h) = reader.info().size();
-    let bytes = (w as usize)
+    let info = reader.info();
+    let (w, h) = info.size();
+    let pixels_ok = (w as usize)
         .checked_mul(h as usize)
-        .and_then(|n| n.checked_mul(4));
-    match bytes {
-        Some(n) if n <= MAX_BYTES => Ok(reader),
-        _ => Err(format!("PNG too large ({w}x{h})")),
+        .and_then(|n| n.checked_mul(4))
+        .is_some_and(|n| n <= MAX_BYTES);
+    let row_bytes = (u64::from(w) * info.bits_per_pixel() as u64).div_ceil(8);
+    if !pixels_ok || row_bytes > MAX_ROW_BYTES {
+        return Err(format!("PNG too large ({w}x{h})"));
     }
+    // png 0.18 accepts a PLTE of any length and then panics expanding one
+    // that is not whole RGB triples.
+    if info.color_type == ColorType::Indexed
+        && info.palette.as_ref().is_none_or(|p| p.len() % 3 != 0)
+    {
+        return Err("PNG palette is missing or not whole RGB entries".into());
+    }
+    Ok(reader)
+}
+
+/// Runs the decoder, turning a panic in it into an error: the checks in
+/// `reader` cover the panics known in png 0.18, and this keeps an unknown one
+/// from taking the VM down with it.
+fn guarded<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    catch_unwind(AssertUnwindSafe(f)).unwrap_or_else(|_| Err("PNG decoder failed".into()))
 }
 
 /// The width and height a PNG declares, if it is one `decode_png` accepts.
 pub fn png_size(data: &[u8]) -> Result<(u32, u32), String> {
-    Ok(reader(data)?.info().size())
+    guarded(|| Ok(reader(data)?.info().size()))
 }
 
 /// Decodes the first frame of a PNG to (width, height, 0xAARRGGBB pixels).
 pub fn decode_png(data: &[u8]) -> Result<(u32, u32, Vec<u32>), String> {
+    guarded(|| decode(data))
+}
+
+fn decode(data: &[u8]) -> Result<(u32, u32, Vec<u32>), String> {
     let mut reader = reader(data)?;
     let size = reader
         .output_buffer_size()
@@ -89,6 +114,39 @@ mod tests {
         assert!(decode_png(b"not a png").is_err());
         assert!(decode_png(&[]).is_err());
         assert!(decode_png(b"\x89PNG\r\n\x1a\n\0\0\0\x0dIHDR").is_err());
+    }
+
+    /// 1x1, 8-bit indexed, a 4-byte PLTE and a valid IDAT: png 0.18 panics
+    /// expanding it unless `reader` refuses it first.
+    const SHORT_PALETTE: &[u8] = &[
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x03, 0x00, 0x00, 0x00, 0x28,
+        0xcb, 0x34, 0xbb, 0x00, 0x00, 0x00, 0x04, 0x50, 0x4c, 0x54, 0x45, 0x00, 0x01, 0x02, 0x03,
+        0x1e, 0x5e, 0xf7, 0x75, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63,
+        0x60, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x48, 0xaf, 0xa4, 0x71, 0x00, 0x00, 0x00, 0x00,
+        0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ];
+
+    /// IHDR 16777216x1 16-bit RGBA, empty IDAT, IEND: within the pixel cap,
+    /// but one raw row is 128 MiB.
+    const WIDE_RGBA16: &[u8] = &[
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+        0x52, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x10, 0x06, 0x00, 0x00, 0x00, 0x7d,
+        0xd1, 0xaa, 0x71, 0x00, 0x00, 0x00, 0x00, 0x49, 0x44, 0x41, 0x54, 0x35, 0xaf, 0x06, 0x1e,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ];
+
+    #[test]
+    fn refuses_a_palette_of_partial_entries() {
+        let err = decode_png(SHORT_PALETTE).expect_err("short palette");
+        assert!(err.contains("palette"), "{err}");
+        assert!(png_size(SHORT_PALETTE).is_err());
+    }
+
+    #[test]
+    fn caps_the_raw_row() {
+        let err = png_size(WIDE_RGBA16).expect_err("over the row cap");
+        assert!(err.contains("too large"), "{err}");
     }
 
     #[test]

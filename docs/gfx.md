@@ -33,10 +33,14 @@ written for AWT, whose loop is one thread doing tick, render and sleep.
 - **Evidence.** `Window.capture()` returns the window's pixels as last
   presented, scaling included, so tests and screenshots judge pixels
   (shared rule 3).
-- **Memory.** A host keeps one frame outside the Java heap, so a window is at
-  most 2^25 pixels (128 MiB). PNGs are capped at 2^24 pixels (64 MiB as
-  ARGB), checked from the header; the Java array is allocated before
-  decoding, so `-Xmx` is charged first.
+- **Memory.** Hosts keep frames outside the Java heap: the headless host one
+  frame, the desktop host softbuffer's surface plus a copy of the last frame
+  for `capture()`. So a window opens at most 2^25 pixels (128 MiB per
+  frame); the user may then resize a desktop window larger, up to the
+  display. PNGs are capped from the header at 2^24 pixels (64 MiB as ARGB)
+  and a raw row of 1 MiB, since the png crate's own limits do not cover its
+  row buffers; the Java array is allocated before decoding, so `-Xmx` is
+  charged first, and a panic inside the png crate becomes an `IOException`.
 
 ## Backends
 
@@ -56,9 +60,11 @@ windows are headless only. Without it, `open` fails like it does on LazyOS
 today.
 
 winit allows one event loop per process and never gives it back, so the loop
-lives in a thread-local on the VM thread and is pumped without waiting each
-time the program presents or polls. Only one desktop window can be open at a
-time.
+lives in a thread-local on the VM thread and is pumped, without waiting for
+input, each time the program presents or polls. While the user drags or
+resizes the window, Windows runs its own modal loop inside that pump, so the
+program's loop stalls until the drag ends. Only one desktop window can be
+open at a time.
 
 ## Layout
 

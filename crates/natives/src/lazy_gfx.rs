@@ -138,9 +138,8 @@ fn poll0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
 }
 
 /// The result array is allocated from the header's size before decoding, so
-/// an image the heap cannot hold is an OutOfMemoryError (after a collection)
-/// before the decoder allocates anything; the decoder's own buffers are
-/// bounded by its pixel cap.
+/// an image the heap cannot hold is an OutOfMemoryError before the decoder
+/// allocates anything; the decoder's own buffers are bounded by its caps.
 fn decode_png0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let Array::Byte(data) = vm.heap.array(obj(args, 0)?)? else {
         return Err(VmError::verify("decodePng0 needs a byte[]"));

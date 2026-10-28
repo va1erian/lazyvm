@@ -48,7 +48,8 @@ public final class Window implements AutoCloseable {
 
     /**
      * Moves the next pending input event into {@code e} and returns true, or returns false when
-     * none is pending. Never blocks.
+     * none is pending. It does not wait for input, though on Windows the window system holds it
+     * (as it holds {@link #present}) while the user drags or resizes the window.
      */
     public boolean poll(Event e) {
         if (e == null) throw new NullPointerException("event");
