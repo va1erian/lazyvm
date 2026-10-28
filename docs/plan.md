@@ -348,7 +348,9 @@ Goal: the everyday `java.util` and `java.io` surface from
       `docs/regex.md` for the measured limits.
       Check: the `Regex*` goldens unchanged, plus `tests/java/util/RegexDepth`
       (100000 iterations of `(?:(a)b)*`, `(a)\1*`, `(?:(?=a)a)*`) and a timed
-      `RegexMemo` row for `(?:a|a*)*b(?=c)` on 30 `a`.
+      `RegexMemo` row for `(?:a|a*)*b(?=c)` on 30 `a`, and a timed row for
+      `[ ]*,[ ]*` failing to `find` in 5000 spaces (42 s at S5-04, the oracle
+      25 ms).
 
 Gate: `tests/java/s5/WordCount` (reads a 5 MB file, counts with `HashMap`,
 prints the top 20 with `printf`) matches the oracle on both platforms.

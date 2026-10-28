@@ -534,15 +534,17 @@ those rules, and `countTokens` matches. Pinned by: Tokenizers ("fuzz agree 3000 
   `hasNext("[0-9]+")` remembered. LazyVM compares the pattern strings, so it does.
 - Reading long input from a source that hands out short reads stays linear (ScannerLong): the
   scanner reads on before retrying a decision until the unread text has doubled or a probe of
-  the newly read text shows the token or line may have ended (see ScannerInput.more). A delimiter
-  whose match reaches more than 128 chars back from the new text, or a run of a delimiter (or
-  of a `skip` pattern) that repeats with a period longer than 16 chars, may be noticed only at
-  the next doubling; the answer is the same, but over an interactive source it can arrive later.
-  So may a delimiter such as `[ ]*,[ ]*` after more than 4 KB of its optional prefix, since a
-  probe that fails before the end of the text cannot tell a run that has ended from one that
-  has not reached its required part. The source is never read again once it has ended or
-  failed (SC9), and apart from these cases a source that never ends is read at most a read or
-  two past the text that settles the answer (ScannerSources).
+  the newly read text shows the token or line may have ended (see ScannerInput.more). The
+  source is never read again once it has ended or failed (SC9), and a source that never ends is
+  read at most a read or two past the text that settles the answer (ScannerSources), except in
+  these cases, which may be noticed only at the next doubling (the answer is the same, but over
+  an interactive source it can arrive later):
+  - a delimiter whose match reaches more than 128 chars back from the new text;
+  - a run of a delimiter or `skip` pattern that repeats with a period longer than 16 chars;
+  - a delimiter such as `[ ]*,[ ]*` after more than 4 KB of its optional prefix, where a probe
+    that fails before the end of the text cannot tell an ended run from an unfinished one;
+  - a run pattern that, from a mid-period start, fails only at the end of the text, as
+    `(ab)+|b[^!]*!` (the probe stops at that start to stay cheap).
 - `groupCount()` and the groups other than 0 of `match()` after a numeric reader or `nextLine`
   (the oracle exposes the groups of its internal patterns, 35 for an integer).
 - The state fields of `toString` (`position`, `match valid`, `need input`, `source closed`,

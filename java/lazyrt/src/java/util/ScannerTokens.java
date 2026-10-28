@@ -53,7 +53,9 @@ final class ScannerTokens {
                 if (m.lookingAt()) {
                     return !m.hitEnd();
                 }
-                // Failing for want of text means the run is still open: no later start settles it.
+                // Failing for want of text usually means the run is still open. Stopping here keeps
+                // each probe cheap; a pattern whose other branch runs to the end from a mid-period
+                // start, as (ab)+|b[^!]*!, then waits for the next doubling (util-text.md section 4).
                 if (m.hitEnd()) {
                     return false;
                 }
