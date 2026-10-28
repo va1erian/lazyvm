@@ -1,0 +1,48 @@
+allocate: 8 pos=0 lim=8 cap=8 8 true false LITTLE_ENDIAN 0
+put/flip/toString: ello pos=1 lim=5 cap=8 len=4 charAt(0)=e
+charAt out of range: !java.lang.IndexOutOfBoundsException
+charAt -1: !java.lang.IndexOutOfBoundsException
+subSequence: cd pos=2 lim=4 cap=6 true false
+subSequence of array buffer: cd pos=2 lim=4 cap=6 0
+subSequence bounds: !java.lang.IndexOutOfBoundsException
+subSequence reversed: !java.lang.IndexOutOfBoundsException
+wrap(String): bcd pos=1 lim=4 cap=6 true false LITTLE_ENDIAN
+wrap(String) bounds: !java.lang.IndexOutOfBoundsException
+wrap(String) put: !java.nio.ReadOnlyBufferException
+wrap(String) array: !java.lang.UnsupportedOperationException
+wrap(StringBuilder) is a snapshot?: zbc
+wrap(char[],off,len): cde pos=2 lim=5 cap=6 off=0
+wrap(String) slice: cdef pos=0 lim=4 cap=4 true
+wrap(String) duplicate: cdef pos=2 lim=6 cap=6 true
+wrap(String) compact: !java.nio.ReadOnlyBufferException
+put(String): pos=2 lim=6 cap=6 [bc]
+[pos=0 lim=2 cap=2] put(String) overflow: !java.nio.BufferOverflowException
+put(String,start,end) bounds: !java.lang.IndexOutOfBoundsException
+put(String) bounds before read-only: !java.lang.IndexOutOfBoundsException
+put(String) read-only: !java.nio.ReadOnlyBufferException
+append: [abnullcxy]
+append overflow: !java.nio.BufferOverflowException
+get(char[]) underflow: !java.nio.BufferUnderflowException
+read(CharBuffer): 4 pos=4 lim=6 cap=6 pos=4 lim=4 cap=4
+read empty: -1
+read into full: 0
+read self: !java.lang.IllegalArgumentException
+asReadOnly: abc false true
+ro array: !java.nio.ReadOnlyBufferException
+ro put: !java.nio.ReadOnlyBufferException
+compact: pos=2 lim=6 cap=6 [efcdef]
+equals across kinds: true false true
+hashCode: 128065 128065 96354 1
+compareTo: -1 1 65438
+chars as CharSequence: 4 el ello 4
+String.contentEquals: true
+get/put index: 0 q pos=0 lim=3 cap=3
+put(CharBuffer) self: !java.lang.IllegalArgumentException
+toString of empty remaining: []
+toString keeps position: pos=1 lim=3 cap=3
+CharBuffer.allocate(-1): !java.lang.IllegalArgumentException
+view of bytes, order: ab LITTLE_ENDIAN false
+IntBuffer: 1 33 false 0
+Long/Short/Float/DoubleBuffer: 2 7 true true
+FloatBuffer compareTo NaN: 1 0
+done

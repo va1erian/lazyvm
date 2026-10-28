@@ -46,6 +46,20 @@ java.lang.Error: e
 Throwable(cause) msg: ok
 java.lang.IllegalStateException: m java.lang.Error
 Throwable toString: ok
+multi 1,MAX: java.lang.OutOfMemoryError | Requested array size exceeds VM limit
+0
+multi 0,MAX: ok
+multi MAX,-1: java.lang.OutOfMemoryError | Requested array size exceeds VM limit
+multi 0,-1: java.lang.NegativeArraySizeException | null
+multi -1,MAX: java.lang.NegativeArraySizeException | null
+2
+multi 2,0,MAX: ok
+search past length: -1 -1 -1 -1 1 2
+multi 0,1,-1: java.lang.NegativeArraySizeException | null
+empty needle before 0: -1 -1
+negative chars: -1 -1 -1
+replace inside a pair: 4 4 5 3 3
+replace keeps a pair: true true
 checkError: true
 checkError ok: false
 done

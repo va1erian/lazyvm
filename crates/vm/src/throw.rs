@@ -48,6 +48,13 @@ impl Vm {
     /// Creates `class` with its `(String)` constructor (`message` may be
     /// absent, meaning a null message).
     pub fn throw_new(&mut self, class: &str, message: Option<&str>) -> VmResult<Ref> {
+        let units: Option<Vec<u16>> = message.map(|m| m.encode_utf16().collect());
+        self.throw_new_utf16(class, units.as_deref())
+    }
+
+    /// `throw_new` with the message as UTF-16 units, so a message naming a
+    /// file can hold the path exactly, lone surrogates included.
+    pub fn throw_new_utf16(&mut self, class: &str, message: Option<&[u16]>) -> VmResult<Ref> {
         if self.creating_exception >= MAX_EXCEPTION_NESTING {
             return Err(VmError::Internal(format!(
                 "recursive failure creating {class}"
@@ -59,7 +66,7 @@ impl Vm {
         result
     }
 
-    fn construct_exception(&mut self, class: &str, message: Option<&str>) -> VmResult<Ref> {
+    fn construct_exception(&mut self, class: &str, message: Option<&[u16]>) -> VmResult<Ref> {
         let c = self.load_class(class)?;
         self.initialize(c)?;
         let ctor = self
@@ -67,7 +74,7 @@ impl Vm {
             .ok_or_else(|| VmError::Internal(format!("{class} has no (String) constructor")))?;
         let obj = self.new_object(c)?;
         let msg = match message {
-            Some(m) => Value::Ref(Some(self.new_string(m)?)),
+            Some(m) => Value::Ref(Some(self.new_string_utf16(m)?)),
             None => Value::NULL,
         };
         self.invoke(ctor, &[Value::Ref(Some(obj)), msg])?;

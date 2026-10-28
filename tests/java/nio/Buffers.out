@@ -1,0 +1,69 @@
+allocate: [pos=0 lim=8 cap=8] true 0 false false BIG_ENDIAN 8 true
+allocate -1: !java.lang.IllegalArgumentException
+allocate 0: [pos=0 lim=0 cap=0]
+position 9: !java.lang.IllegalArgumentException
+position -1: !java.lang.IllegalArgumentException
+limit 9: !java.lang.IllegalArgumentException
+limit -1: !java.lang.IllegalArgumentException
+limit below position: [pos=3 lim=3 cap=8]
+limit below mark: !java.nio.InvalidMarkException
+position below mark: !java.nio.InvalidMarkException
+position at mark keeps it: [pos=5 lim=8 cap=8]
+reset without mark: !java.nio.InvalidMarkException
+mark/reset: [pos=2 lim=8 cap=8]
+flip: [pos=0 lim=2 cap=8] no mark
+rewind: [pos=0 lim=6 cap=8] no mark
+clear: [pos=0 lim=8 cap=8] no mark
+compact: 0405060405060708 [pos=3 lim=8 cap=8] no mark
+compact empty: [pos=0 lim=8 cap=8]
+get underflow: !java.nio.BufferUnderflowException
+put overflow: !java.nio.BufferOverflowException
+get(i) out of range: !java.lang.IndexOutOfBoundsException
+get(i) beyond limit: !java.lang.IndexOutOfBoundsException
+get(-1): !java.lang.IndexOutOfBoundsException
+put(i) beyond limit: !java.lang.IndexOutOfBoundsException
+[pos 2] get(byte[]) too many: !java.nio.BufferUnderflowException
+get(byte[],off,len) bounds: !java.lang.IndexOutOfBoundsException
+get(byte[],off,len): [0, 1, 2, 0] [pos=2 lim=4 cap=4]
+[pos 0] put(byte[]) too many: !java.nio.BufferOverflowException
+put(ByteBuffer): 020304 [pos=0 lim=3 cap=6] src [pos=4 lim=4 cap=4]
+[pos 0 src pos 0] put(ByteBuffer) too big: !java.nio.BufferOverflowException
+put(self): !java.lang.IllegalArgumentException
+wrap: [pos=2 lim=7 cap=10] 0
+wrap bounds: !java.lang.IndexOutOfBoundsException
+wrap shares array: 9 7 true
+slice: [pos=0 lim=4 cap=4] off=2 99 63040506 [pos=0 lim=4 cap=4] BIG_ENDIAN
+slice of slice: [pos=0 lim=5 cap=5] off=3 4
+slice order reset: BIG_ENDIAN
+duplicate: [pos=2 lim=7 cap=8] [pos=3 lim=7 cap=8] BIG_ENDIAN
+duplicate order reset: BIG_ENDIAN
+asReadOnly: [pos=1 lim=8 cap=8] true false 2 false
+ro put: !java.nio.ReadOnlyBufferException
+ro put(i): !java.nio.ReadOnlyBufferException
+ro putInt: !java.nio.ReadOnlyBufferException
+ro array: !java.nio.ReadOnlyBufferException
+ro arrayOffset: !java.nio.ReadOnlyBufferException
+ro compact: !java.nio.ReadOnlyBufferException
+ro put full: !java.nio.ReadOnlyBufferException
+ro slice/duplicate: true true true
+default order: BIG_ENDIAN BIG_ENDIAN LITTLE_ENDIAN
+putInt BE: 01020304 [pos=0 lim=4 cap=4]
+putInt LE: 04030201 [pos=0 lim=4 cap=4]
+multi-byte: 123420AC01020304050607083FC00000BFD0000000000000 [pos=0 lim=24 cap=32]
+getInt/getLong mixed order: 102030405060708 807060504030201 8070605 770 2055
+[pos 5] getInt underflow: !java.nio.BufferUnderflowException
+[pos 1] putLong overflow: !java.nio.BufferOverflowException
+getInt(i) bounds: !java.lang.IndexOutOfBoundsException
+getFloat NaN bits: 7fc00001
+putFloat NaN bytes: 7FC00001 [pos=0 lim=4 cap=4]
+asIntBuffer: [pos=0 lim=2 cap=2] 2030405 BIG_ENDIAN false
+asIntBuffer LE: 8070605 LITTLE_ENDIAN
+asCharBuffer: hi 2 2
+asLongBuffer write-through: -1 0
+equals: true false true false false
+equals ignores order/cap: true 1107199 1107199
+compareTo: 0 1 -1 -2 4
+hashCode: 1045631 1 1 991
+hashCode depends on position: false 33730
+toString: [pos=1 lim=3 cap=5] | [pos=0 lim=5 cap=5] | [pos=0 lim=0 cap=0]
+done

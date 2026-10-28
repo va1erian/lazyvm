@@ -1,0 +1,83 @@
+[41] -> A
+[C3 A9] -> 00E9
+[E2 82 AC] -> 20AC
+[F0 9F 98 80] -> D83D DE00
+[EF BB BF 41] -> FEFF A
+[F4 8F BF BF] -> DBFF DFFF
+[80] -> ?
+[BF] -> ?
+[80 80 41] -> ? ? A
+[C0 80] -> ? ?
+[C1 BF] -> ? ?
+[C2 7F] -> ? 007F
+[C2 C0] -> ? ?
+[C3] -> ?
+[E0 80 80] -> ? ? ?
+[E0 9F BF] -> ? ? ?
+[E0 A0 80] -> 0800
+[E0 41] -> ? A
+[E0 80] -> ? ?
+[E0 A0] -> ?
+[E0 A0 41] -> ? A
+[E1 80] -> ?
+[E1 41 41] -> ? A A
+[E2 82] -> ?
+[E2 82 41] -> ? A
+[E2 C3 A9] -> ? 00E9
+[ED 9F BF] -> D7FF
+[ED A0 80] -> ?
+[ED BF BF] -> ?
+[ED A0 80 ED B0 80] -> ? ?
+[ED A0] -> ?
+[EE 80 80] -> E000
+[EF BF BF] -> FFFF
+[EF BF BE] -> FFFE
+[F0 80 80 80] -> ? ? ? ?
+[F0 8F BF BF] -> ? ? ? ?
+[F0 90 80 80] -> D800 DC00
+[F0 9F] -> ?
+[F0 9F 98] -> ?
+[F0 9F 98 41] -> ? A
+[F0 9F 41 41] -> ? A A
+[F0 41] -> ? A
+[F0 80] -> ? ?
+[F0 80 80] -> ? ? ?
+[F4 90 80 80] -> ? ? ? ?
+[F4 8F] -> ?
+[F4 90] -> ? ?
+[F1 80 80 C3 A9] -> ? 00E9
+[F5 80 80 80] -> ? ? ? ?
+[F7 BF BF BF] -> ? ? ? ?
+[F8 88 80 80 80] -> ? ? ? ? ?
+[FC 84 80 80 80 80] -> ? ? ? ? ? ?
+[FE] -> ?
+[FF] -> ?
+[FE FF] -> ? ?
+[41 C3 C3 A9 42] -> A ? 00E9 B
+[F0 9F 98 F0 9F 98 80] -> ? D83D DE00
+[C3 80 80] -> 00C0 ?
+[E2 82 AC AC] -> 20AC ?
+[ED 80 41] -> ? A
+edge -1 [E2 82 AC] -> a 20AC z
+edge -2 [E2 82 AC] -> a 20AC z
+edge -3 [E2 82 AC] -> a 20AC z
+edge -1 [F0 9F 98 80] -> a D83D DE00 z
+edge -2 [F0 9F 98 80] -> a D83D DE00 z
+edge -3 [F0 9F 98 80] -> a D83D DE00 z
+edge -1 [E2 82 41] -> a ? A z
+edge -2 [E2 82 41] -> a ? A z
+edge -3 [E2 82 41] -> a ? A z
+edge -1 [F0 9F 41] -> a ? A z
+edge -2 [F0 9F 41] -> a ? A z
+edge -3 [F0 9F 41] -> a ? A z
+edge -1 [ED A0 80] -> a ? z
+edge -2 [ED A0 80] -> a ? z
+edge -3 [ED A0 80] -> a ? z
+edge -1 [C3] -> a ? z
+edge -2 [C3] -> a ? z
+edge -3 [C3] -> a ? z
+window 1,2: ?
+window 1,3: 20AC
+default charset: A 20AC B
+window 2,9: java.lang.StringIndexOutOfBoundsException: String index out of range: 11
+done

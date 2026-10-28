@@ -1,0 +1,37 @@
+write 1024 reuses the array: 1024 log=w1024=first;w2=first;
+write 1025 takes a new one: 1025 log=w1025=first;w2=new;
+osw write len 0: ok
+osw write len -1: !java.lang.IndexOutOfBoundsException
+osw write off past end len 0: !java.lang.StringIndexOutOfBoundsException: String index out of range: 9
+osw closed, bad bounds: !java.io.IOException: Stream closed
+osw closed, good bounds: !java.io.IOException: Stream closed
+br readLine then lf: ab 3 xyz
+br small, readLine then lf: ab 3 xyz
+bis read of its size, empty buffer: 8 log=r@4+8;
+bis read under its size: 7 log=r@0+8;
+isr zero-byte stream: !java.io.IOException: Underlying input stream returned zero bytes
+isr closed, pending char by read(): 56832
+isr closed, pending char by read(char[]): !java.io.IOException: Stream closed
+dis readLine over many CRs: 30000
+dis read len 0 after readLine: 0 log=r@0+0;
+dis read after a pushed-back byte: a 3 bcd -1
+dis skipBytes(-2) then readByte: 0 1
+renameTo itself: true true
+renameTo other case: true true
+temp suffix with a separator: !java.io.IOException: Unable to create temporary file, <T>/abcN/x
+temp prefix with a separator: abcN.t
+temp suffix climbing out: !java.io.IOException: Unable to create temporary file, <T>/abcN/..
+dir setLastModified: true 1000000000000
+file setLastModified: true 1234567890000
+toURI of the empty path ends with /: true
+NUL char canonical: !java.io.IOException: Invalid file path
+NUL char createNewFile: !java.io.IOException: Invalid file path
+NUL char temp file: Unable to create temporary file, <T>/abc<NUL>N.tmp
+NUL char setters: false false false
+NUL char stream: !java.io.FileNotFoundException: Invalid file path
+lone surrogate in a message: true
+NUL char queries: false 0 false null
+toURI brackets: /u%5Bv%5D
+toURI nbsp and line separator: /a%C2%A0b%E2%80%A8c
+lone surrogate names: no aliasing
+cleaned true

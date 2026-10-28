@@ -67,7 +67,7 @@ pub fn register(vm: &mut Vm) {
 fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let key = vm.string_arg(arg(args, 0)?)?;
     match vm.properties.get(&key).cloned() {
-        Some(v) => ret_ref(Some(vm.new_string(&v)?)),
+        Some(v) => ret_ref(Some(vm.new_string_utf16(&v)?)),
         None => ret_ref(None),
     }
 }

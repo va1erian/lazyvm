@@ -1,0 +1,33 @@
+stream all: a f g.txt h
+stream a: a/1.txt a/2.java a/b a/e a/z.txt
+stream glob *.txt: a/1.txt a/z.txt
+stream glob {*.java,b}: a/2.java a/b
+stream glob * includes dirs: a f g.txt h
+stream glob */x does not match names: 
+stream filter dirs: a f
+stream empty dir: []
+stream entries resolve against dir: true 5.java
+stream missing: !java.nio.file.NoSuchFileException: <tmp>/nope
+stream on file: !java.nio.file.NotDirectoryException: <tmp>/h
+stream bad glob: PatternSyntaxException
+stream iterator twice: !java.lang.IllegalStateException: Iterator already obtained
+stream iterator after close: !java.lang.IllegalStateException: Directory stream is closed
+stream close during iteration: false
+stream next at end: !java.util.NoSuchElementException
+stream iterator remove: !java.lang.UnsupportedOperationException
+walk: pre:. pre:a file:a/1.txt file:a/2.java pre:a/b file:a/b/3.txt pre:a/b/c file:a/b/c/4.txt post:a/b/c post:a/b pre:a/e post:a/e file:a/z.txt post:a pre:f file:f/5.java post:f file:g.txt file:h post:.
+walk depth 0: dir:.
+walk depth 1: pre:. dir:a dir:f file:g.txt file:h post:.
+walk depth 2 from a: pre:a file:a/1.txt file:a/2.java pre:a/b file:a/b/3.txt dir:a/b/c post:a/b pre:a/e post:a/e file:a/z.txt post:a
+walk skip subtree a/b: pre:a file:a/1.txt file:a/2.java pre:a/b pre:a/e post:a/e file:a/z.txt post:a
+walk skip siblings after a/2.java: pre:a file:a/1.txt file:a/2.java post:a
+walk terminate at a/b/3.txt: pre:. pre:a file:a/1.txt file:a/2.java pre:a/b file:a/b/3.txt
+walk terminate at pre a/b: pre:. pre:a file:a/1.txt file:a/2.java pre:a/b
+walk a file: file:g.txt
+walk missing: failed:nope(NoSuchFileException)
+walk negative depth: !java.lang.IllegalArgumentException: 'maxDepth' is negative
+walk returns start: true
+SimpleFileVisitor failure rethrows: !java.nio.file.NoSuchFileException: <tmp>/nope
+FileVisitResult: [CONTINUE, TERMINATE, SKIP_SUBTREE, SKIP_SIBLINGS] [FOLLOW_LINKS]
+cleanup: true
+done

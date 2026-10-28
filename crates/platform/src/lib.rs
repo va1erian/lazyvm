@@ -4,6 +4,9 @@
 //! ABI) share this code. Windows- or LazyOS-only parts (windows, Messenger)
 //! get their own crates in S9 (docs/decisions.md D10).
 
+pub mod files;
+
+use std::ffi::OsString;
 use std::io::{self, Read, Write};
 use std::sync::OnceLock;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -81,14 +84,15 @@ pub fn available_processors() -> i32 {
         .unwrap_or(1)
 }
 
-/// The system properties LazyVM defines before `-D` overrides.
-pub fn default_properties() -> Vec<(String, String)> {
+/// The system properties LazyVM defines before `-D` overrides. Values are
+/// OS strings, so a directory name reaches Java exactly (`vm::wtf`).
+pub fn default_properties() -> Vec<(String, OsString)> {
     let windows = cfg!(windows);
     let dir = std::env::current_dir()
-        .map(|d| d.display().to_string())
+        .map(|d| d.into_os_string())
         .unwrap_or_default();
-    let home = std::env::var(if windows { "USERPROFILE" } else { "HOME" }).unwrap_or_default();
-    let tmp = std::env::temp_dir().display().to_string();
+    let home = std::env::var_os(if windows { "USERPROFILE" } else { "HOME" }).unwrap_or_default();
+    let tmp = std::env::temp_dir().into_os_string();
     let os = if windows { "Windows" } else { "Linux" };
     [
         ("java.version", "1.8.0"),
@@ -103,12 +107,14 @@ pub fn default_properties() -> Vec<(String, String)> {
         ("path.separator", if windows { ";" } else { ":" }),
         ("line.separator", if windows { "\r\n" } else { "\n" }),
         ("file.encoding", "UTF-8"),
-        ("user.dir", &dir),
-        ("user.home", &home),
-        ("java.io.tmpdir", &tmp),
     ]
     .into_iter()
-    .map(|(k, v)| (k.to_owned(), v.to_owned()))
+    .map(|(k, v)| (k.to_owned(), OsString::from(v)))
+    .chain([
+        ("user.dir".to_owned(), dir),
+        ("user.home".to_owned(), home),
+        ("java.io.tmpdir".to_owned(), tmp),
+    ])
     .collect()
 }
 

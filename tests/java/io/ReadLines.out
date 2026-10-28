@@ -1,0 +1,109 @@
+lines "" /1: null
+lines "" /2: null
+lines "" /3: null
+lines "" /4: null
+lines "" /8192: null
+lines "\n" /1: "" null
+lines "\n" /2: "" null
+lines "\n" /3: "" null
+lines "\n" /4: "" null
+lines "\n" /8192: "" null
+lines "\r" /1: "" null
+lines "\r" /2: "" null
+lines "\r" /3: "" null
+lines "\r" /4: "" null
+lines "\r" /8192: "" null
+lines "\r\n" /1: "" null
+lines "\r\n" /2: "" null
+lines "\r\n" /3: "" null
+lines "\r\n" /4: "" null
+lines "\r\n" /8192: "" null
+lines "\n\r" /1: "" "" null
+lines "\n\r" /2: "" "" null
+lines "\n\r" /3: "" "" null
+lines "\n\r" /4: "" "" null
+lines "\n\r" /8192: "" "" null
+lines "a" /1: "a" null
+lines "a" /2: "a" null
+lines "a" /3: "a" null
+lines "a" /4: "a" null
+lines "a" /8192: "a" null
+lines "a\n" /1: "a" null
+lines "a\n" /2: "a" null
+lines "a\n" /3: "a" null
+lines "a\n" /4: "a" null
+lines "a\n" /8192: "a" null
+lines "a\r" /1: "a" null
+lines "a\r" /2: "a" null
+lines "a\r" /3: "a" null
+lines "a\r" /4: "a" null
+lines "a\r" /8192: "a" null
+lines "a\r\n" /1: "a" null
+lines "a\r\n" /2: "a" null
+lines "a\r\n" /3: "a" null
+lines "a\r\n" /4: "a" null
+lines "a\r\n" /8192: "a" null
+lines "a\n\nb" /1: "a" "" "b" null
+lines "a\n\nb" /2: "a" "" "b" null
+lines "a\n\nb" /3: "a" "" "b" null
+lines "a\n\nb" /4: "a" "" "b" null
+lines "a\n\nb" /8192: "a" "" "b" null
+lines "a\r\rb" /1: "a" "" "b" null
+lines "a\r\rb" /2: "a" "" "b" null
+lines "a\r\rb" /3: "a" "" "b" null
+lines "a\r\rb" /4: "a" "" "b" null
+lines "a\r\rb" /8192: "a" "" "b" null
+lines "a\r\n\r\nb" /1: "a" "" "b" null
+lines "a\r\n\r\nb" /2: "a" "" "b" null
+lines "a\r\n\r\nb" /3: "a" "" "b" null
+lines "a\r\n\r\nb" /4: "a" "" "b" null
+lines "a\r\n\r\nb" /8192: "a" "" "b" null
+lines "a\nb\r\nc\rd\r\n\ne" /1: "a" "b" "c" "d" "" "e" null
+lines "a\nb\r\nc\rd\r\n\ne" /2: "a" "b" "c" "d" "" "e" null
+lines "a\nb\r\nc\rd\r\n\ne" /3: "a" "b" "c" "d" "" "e" null
+lines "a\nb\r\nc\rd\r\n\ne" /4: "a" "b" "c" "d" "" "e" null
+lines "a\nb\r\nc\rd\r\n\ne" /8192: "a" "b" "c" "d" "" "e" null
+lines "\r\r\n\n" /1: "" "" "" null
+lines "\r\r\n\n" /2: "" "" "" null
+lines "\r\r\n\n" /3: "" "" "" null
+lines "\r\r\n\n" /4: "" "" "" null
+lines "\r\r\n\n" /8192: "" "" "" null
+lines "ab cdefgh" /1: "ab cdefgh" null
+lines "ab cdefgh" /2: "ab cdefgh" null
+lines "ab cdefgh" /3: "ab cdefgh" null
+lines "ab cdefgh" /4: "ab cdefgh" null
+lines "ab cdefgh" /8192: "ab cdefgh" null
+mixed a\rb /2: "a" "b" "" "c" null -1 null -1 
+mixed a\rb /8192: "a" "b" "" "c" null -1 null -1 
+mixed \r\n\r /1: "" "\r" "" "x" "" -1 null -1 
+read(c) after \r line: 2 "bc"
+skip after \r line: 1 c
+ready after \r line at \n end: true -1
+read() of \r\n: 13 10 -1
+long line: 20011
+br mark -1: !java.lang.IllegalArgumentException: Read-ahead limit < 0
+br reset unmarked: !java.io.IOException: Stream not marked
+br mark 2 read 2 reset: a
+br mark 2 read 3 reset /2: !java.io.IOException: Mark invalid
+br mark 2 read 3 reset /8192: a
+br mark 5 /2 read 5 reset: a
+br mark 5 /2 read 6 reset: !java.io.IOException: Mark invalid
+br reset twice: b
+br mark across \r\n: 98 98
+br markSupported: true
+br mark 0 read 1 reset /8192: !java.io.IOException: Mark invalid
+StringReader mark -1: !java.lang.IllegalArgumentException: Read-ahead limit < 0
+StringReader reset unmarked: a
+StringReader skip -2: -2 a
+StringReader skip -9: -1 a
+StringReader skip at eof: 0 -1
+StringReader read len 0 at eof: 0 -1
+StringReader closed: !java.io.IOException: Stream closed
+StringReader ready: true
+CharArrayReader reset unmarked: b
+CharArrayReader skip -1: 0
+CharArrayReader read len 0 at eof: 0
+bais reset unmarked: 6
+StringWriter append: abnullcy
+CharArrayWriter: 4 heyB 4
+done

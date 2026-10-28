@@ -1,0 +1,80 @@
+overlapping put forward: [0, 1, 0, 1, 2, 3, 4, 5]
+overlapping put back: [2, 3, 4, 5, 6, 7, 6, 7]
+overlapping int put: [0, 1, 0, 1, 2, 3]
+overlapping char put: ababcd
+overlapping put through a view: 0 1 0 1 0 1 0 1 
+read-only put of itself: !java.nio.ReadOnlyBufferException
+read-only char put of itself: !java.nio.ReadOnlyBufferException
+put of itself: !java.lang.IllegalArgumentException
+char read of itself, empty: -1
+char read of itself: !java.lang.IllegalArgumentException
+int hashCode: 32737
+long hashCode: 32737
+view compact table:  s2:ooo,ooo,Xoo,Xoo,XXo,XXo,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX, s4:ooo,ooo,ooo,Xoo,Xoo,Xoo,Xoo,XXo,XXo,XXo,XXo,XXX,XXX,XXX,XXX,XXX,XXX,XXX, s8:ooo,ooo,ooo,ooo,ooo,Xoo,Xoo,Xoo,Xoo,Xoo,Xoo,Xoo,Xoo,XXo,XXo,XXo,XXo,XXo,
+direct view compact: 5
+zero-capacity view compact: !java.lang.IllegalArgumentException
+read-only view compact: !java.nio.ReadOnlyBufferException
+view overlap table:  hc0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,5e78d4a,a82bd28d,a57b3850,4bf1b20d,20118112,ea3e614d, hc1:facfa985,b0169215,371e4685,8f067515,b1dbe385,30af5815,f9911ea1,fb8b97c9,46d38311,1ec3a6c9,554bfbd3,7ee51627, hs0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,5e78d4a,a82bd28d,a57b3850,4bf1b20d,20118112,ea3e614d, hs1:facfa985,b0169215,371e4685,8f067515,b1dbe385,30af5815,f9911ea1,fb8b97c9,46d38311,1ec3a6c9,554bfbd3,7ee51627, hi0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,88af02cc,9f20b3cd,2b47512a,4bf1b20d,20118112,ea3e614d, hi1:6a118985,6118b215,4d582685,da109515,cd0dc385,f7c17815,4ef6a799,426d6b67,c4449299,46d496c9,6bf52c11,5147b5e7, dc0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,1d93b58d,b03c740d,be6ad68d,c61b130d,28e2778d,ea41320d, dc1:facfa985,b0169215,371e4685,8f067515,b1dbe385,30af5815,f9911ea1,fb8b97c9,46d38311,1ec3a6c9,554bfbd3,7ee51627, ds0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,1d93b58d,b03c740d,be6ad68d,c61b130d,28e2778d,ea41320d, ds1:facfa985,b0169215,371e4685,8f067515,b1dbe385,30af5815,f9911ea1,fb8b97c9,46d38311,1ec3a6c9,554bfbd3,7ee51627, di0:6b4cf80d,9af1528d,2e2d970d,b806f38d,5015b60d,c22d148d,1d93b58d,b03c740d,be6ad68d,c61b130d,28e2778d,ea41320d, di1:6a118985,6118b215,4d582685,da109515,cd0dc385,f7c17815,4ef6a799,426d6b67,c4449299,46d496c9,6bf52c11,5147b5e7,
+heap view, read-only, put of itself: !java.lang.IllegalArgumentException
+direct view, read-only, put of itself: !java.nio.ReadOnlyBufferException
+text buffer put of itself: !java.lang.IllegalArgumentException
+heap view, read-only, put of no ints: 0
+heap view, read-only, bad bounds: !java.lang.IndexOutOfBoundsException
+heap view, read-only, too many: !java.nio.BufferOverflowException
+array, read-only, put of no ints: !java.nio.ReadOnlyBufferException
+direct view, read-only, read of itself: !java.nio.ReadOnlyBufferException
+array, read-only, read of itself: !java.nio.ReadOnlyBufferException
+read into a read-only buffer: ROBE, source at 0
+text buffer toString: cXef Xe
+text buffer bulk get: wxyz
+latin1 encode, full then unmappable: UNMAPPABLE[1] in=2 out=2
+latin1 encode, full then mappable: OVERFLOW in=2 out=2
+latin1 encode on arrays, full then unmappable: OVERFLOW in=2 out=2
+latin1 encode on arrays, room then unmappable: UNMAPPABLE[1] in=2 out=2
+canEncode after a failed encode: !java.lang.IllegalStateException: Current state = CODING_END, new state = CODING
+canEncode after an encode: true UNDERFLOW
+canEncode(char) while coding: true false UNDERFLOW
+canEncode(char) after flush: true false UNDERFLOW Current state = FLUSHED, new state = CODING_END
+replace in place, heap: -574769440
+replace until the output is full: OVERFLOW in=2 ?a
+ascii encode, full then unmappable: UNMAPPABLE[1] in=2 out=2
+direct decode with errors: 300 �a
+string encode with errors: 300 63 97
+decoder averageCharsPerByte 0: !java.lang.IllegalArgumentException: Non-positive averageCharsPerByte
+decoder maxCharsPerByte 0: !java.lang.IllegalArgumentException: Non-positive maxCharsPerByte
+encoder averageBytesPerChar -1: !java.lang.IllegalArgumentException: Non-positive averageBytesPerChar
+coder throwing IllegalStateException: !java.lang.IllegalStateException: inner
+coder throwing BufferUnderflowException: !java.nio.charset.CoderMalfunctionError: java.nio.BufferUnderflowException
+glob [!b] and the separator: axc=true abc=false a/c=false
+glob *[!~]* across names: dir/file=false file=true
+glob [/]: PSE Explicit 'name separator' in class at 1
+glob [a/b]: PSE Explicit 'name separator' in class at 3
+glob []a]: PSE Unclosed character class
+glob [!]a]: PSE Unclosed character class
+glob []: PSE Unclosed character class
+glob unclosed [: PSE Missing '] at 3
+glob unclosed {: PSE Missing '} at 3
+FileTime 100 ms: 1970-01-01T00:00:00.1Z
+FileTime 1 ms: 1970-01-01T00:00:00.001Z
+FileTime 1234567 us: 1970-01-01T00:00:01.234567Z
+dir set modified time: 1000000000000
+small negative time: -1000
+set access time: 2008-01-10T21:20:00Z
+getAttribute *: !java.lang.IllegalArgumentException: *
+getAttribute two names: !java.lang.IllegalArgumentException: size,isDirectory
+setAttribute unknown: !java.lang.IllegalArgumentException: 'basic:x' not recognized
+temp prefix with a separator: !java.lang.IllegalArgumentException: Invalid prefix or suffix
+temp suffix with a separator: !java.lang.IllegalArgumentException: Invalid prefix or suffix
+temp dir prefix climbing: !java.lang.IllegalArgumentException: Invalid prefix or suffix
+move into itself: java.nio.file.FileSystemException sub=false d=true
+move into a missing directory: !java.nio.file.NoSuchFileException: <T>/f -> <T>/missing/x
+newInputStream null option: !java.lang.NullPointerException
+newOutputStream copy option: !java.lang.UnsupportedOperationException
+copy stream atomic: !java.lang.UnsupportedOperationException: ATOMIC_MOVE not supported
+copy null option: !java.lang.NullPointerException
+copy below a file: !java.nio.file.NoSuchFileException: <T>/f -> <T>/f/x
+toRealPath of a missing path: true
+toUri nbsp and line separator: /a%C2%A0b%E2%80%A8c
+toUri brackets: /u%5Bv%5D
+left []
+done

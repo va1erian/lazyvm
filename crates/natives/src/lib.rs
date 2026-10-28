@@ -5,7 +5,10 @@
 //! Java side is not trusted to be correct.
 
 mod boxing;
+mod canonical;
 mod char_props;
+mod file_attrs;
+mod files;
 mod floats;
 mod hexfloat;
 mod internal;
@@ -16,6 +19,7 @@ mod lang_string_case;
 mod lang_system;
 mod lang_throwable;
 mod math;
+mod real_path;
 mod reflect;
 mod reflect_access;
 mod unicode;
@@ -34,6 +38,8 @@ pub fn register_all(vm: &mut Vm) {
     lang_char::register(vm);
     lang_string_case::register(vm);
     internal::register(vm);
+    files::register(vm);
+    file_attrs::register(vm);
     reflect::register(vm);
     reflect_access::register(vm);
 }

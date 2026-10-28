@@ -1,0 +1,201 @@
+utf8 [C3] end: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [C3] more: UNDERFLOW chars=0 left=1
+utf8 [C0 80] end: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [C0 80] more: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [C1 BF] end: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [C1 BF] more: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [C2 C0] end: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [C2 C0] more: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [C2 41] end: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [C2 41] more: 0:MALFORMED[1] UNDERFLOW chars=1 left=0
+utf8 [E0 80 80] end: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [E0 80 80] more: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [E0 9F BF] end: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [E0 9F BF] more: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [E0 A0] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [E0 A0] more: UNDERFLOW chars=0 left=2
+utf8 [E0 A0 41] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [E0 A0 41] more: 0:MALFORMED[2] UNDERFLOW chars=1 left=0
+utf8 [E0 41] end: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [E0 41] more: 0:MALFORMED[1] UNDERFLOW chars=1 left=0
+utf8 [E2 82] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [E2 82] more: UNDERFLOW chars=0 left=2
+utf8 [E2 82 41] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [E2 82 41] more: 0:MALFORMED[2] UNDERFLOW chars=1 left=0
+utf8 [ED A0 80] end: 0:MALFORMED[3] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [ED A0 80] more: 0:MALFORMED[3] UNDERFLOW chars=0 left=0
+utf8 [ED BF BF] end: 0:MALFORMED[3] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [ED BF BF] more: 0:MALFORMED[3] UNDERFLOW chars=0 left=0
+utf8 [ED A0] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [ED A0] more: UNDERFLOW chars=0 left=2
+utf8 [ED 80 41] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [ED 80 41] more: 0:MALFORMED[2] UNDERFLOW chars=1 left=0
+utf8 [EF BF] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [EF BF] more: UNDERFLOW chars=0 left=2
+utf8 [F0 80 80 80] end: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F0 80 80 80] more: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [F0 8F BF BF] end: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F0 8F BF BF] more: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [F0 90] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F0 90] more: UNDERFLOW chars=0 left=2
+utf8 [F0 9F 98] end: 0:MALFORMED[3] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F0 9F 98] more: UNDERFLOW chars=0 left=3
+utf8 [F0 9F 98 41] end: 0:MALFORMED[3] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [F0 9F 98 41] more: 0:MALFORMED[3] UNDERFLOW chars=1 left=0
+utf8 [F0 9F 41] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [F0 9F 41] more: 0:MALFORMED[2] UNDERFLOW chars=1 left=0
+utf8 [F4 90 80 80] end: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F4 90 80 80] more: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [F4 8F BF] end: 0:MALFORMED[3] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F4 8F BF] more: UNDERFLOW chars=0 left=3
+utf8 [F5 80] end: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F5 80] more: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [F8 88 80 80 80] end: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F8 88 80 80 80] more: 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [FF] end: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [FF] more: 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [80] end: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [80] more: 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [C3 A9 80] end: 1:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [C3 A9 80] more: 1:MALFORMED[1] UNDERFLOW chars=1 left=0
+utf8 [E2] end: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [E2] more: UNDERFLOW chars=0 left=1
+utf8 [F0] end: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F0] more: UNDERFLOW chars=0 left=1
+utf8 [E0 80] end: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [E0 80] more: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [F0 80] end: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F0 80] more: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [F4 90] end: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F4 90] more: 0:MALFORMED[1] 0:MALFORMED[1] UNDERFLOW chars=0 left=0
+utf8 [ED A0 41] end: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [ED A0 41] more: 0:MALFORMED[2] UNDERFLOW chars=1 left=0
+utf8 [EF BF BF] end: UNDERFLOW flush=UNDERFLOW chars=1 left=0
+utf8 [EF BF BF] more: UNDERFLOW chars=1 left=0
+utf8 [F0 90 80] end: 0:MALFORMED[3] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+utf8 [F0 90 80] more: UNDERFLOW chars=0 left=3
+ascii [41 80 FF 42]: 1:MALFORMED[1] 1:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=2 left=0
+latin1 [00 80 FF]: UNDERFLOW flush=UNDERFLOW chars=3 left=0
+UTF-16 [FE FF 00 41]: UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16BE [FE FF 00 41]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16LE [FE FF 00 41]: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16 [FF FE 41 00]: UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16BE [FF FE 41 00]: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16LE [FF FE 41 00]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16 [00 41]: UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16BE [00 41]: UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16LE [00 41]: UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16 [00]: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16BE [00]: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16LE [00]: 0:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16 [00 41 00]: 1:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16BE [00 41 00]: 1:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16LE [00 41 00]: 1:MALFORMED[1] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16 [D8 00 00 41]: 0:MALFORMED[4] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16BE [D8 00 00 41]: 0:MALFORMED[4] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16LE [D8 00 00 41]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16 [DC 00]: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16BE [DC 00]: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16LE [DC 00]: UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16 [D8 3D DE 00]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16BE [D8 3D DE 00]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16LE [D8 3D DE 00]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16 [D8 3D]: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16BE [D8 3D]: 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=0 left=0
+UTF-16LE [D8 3D]: UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16 [FE FF FE FF 00 41]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16BE [FE FF FE FF 00 41]: UNDERFLOW flush=UNDERFLOW chars=3 left=0
+UTF-16LE [FE FF FE FF 00 41]: 0:MALFORMED[2] 0:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+UTF-16 [00 41 FE FF]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16BE [00 41 FE FF]: UNDERFLOW flush=UNDERFLOW chars=2 left=0
+UTF-16LE [00 41 FE FF]: 1:MALFORMED[2] UNDERFLOW flush=UNDERFLOW chars=1 left=0
+IGNORE: ABC
+REPLACE x: AxBx
+REPORT decode(): !java.nio.charset.MalformedInputException: Input length = 1
+REPORT decode() truncated: !java.nio.charset.MalformedInputException: Input length = 2
+Charset.decode: A�B
+default actions: REPORT REPORT [�]
+decoder averages: 1.0 1.0
+utf16 decoder averages: 0.5 1.0
+utf16be/le decoder averages: 0.5 0.5
+utf8 no room [C2 41]: OVERFLOW 0
+utf8 no room [E2 82 41]: OVERFLOW 0
+utf8 no room [ED A0 80]: OVERFLOW 0
+utf8 no room [E0 A0 41]: OVERFLOW 0
+utf8 no room [F0 9F 98 41]: OVERFLOW 0
+utf8 no room [F0 9F 41 41]: MALFORMED[2] 0
+utf8 no room [80]: MALFORMED[1] 0
+utf8 no room [E2 41]: MALFORMED[1] 0
+utf8 no room [E0 80 80]: MALFORMED[1] 0
+utf8 no room [F0 80 80 80]: MALFORMED[1] 0
+utf8 no room [C3]: MALFORMED[1] 0
+replaceWith empty: !java.lang.IllegalArgumentException: Empty replacement
+replaceWith null: !java.lang.IllegalArgumentException: Null replacement
+onMalformedInput null: !java.lang.IllegalArgumentException: Null action
+decode after end without reset: !java.lang.IllegalStateException: Current state = CODING_END, new state = CODING
+flush before end: !java.lang.IllegalStateException: Current state = RESET, new state = FLUSHED
+decode after flush, reset: UNDERFLOW
+decode overflow: OVERFLOW 2
+decode pair into 1 char: OVERFLOW 0
+US-ASCII encode 0041 00E9: UNMAPPABLE[1] UNDERFLOW flush=UNDERFLOW bytes=1
+US-ASCII encode 20AC: UNMAPPABLE[1] UNDERFLOW flush=UNDERFLOW bytes=0
+US-ASCII encode D83D DE00: UNMAPPABLE[2] UNDERFLOW flush=UNDERFLOW bytes=0
+US-ASCII encode D800 0041: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=1
+US-ASCII encode 0041 DC00: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=1
+US-ASCII encode D800: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=0
+US-ASCII encoder: 1.0 1.0 repl=[63] canEncode(e9)=false canEncode(d800)=false canEncode(pair)=false
+ISO-8859-1 encode 0041 00E9: UNDERFLOW flush=UNDERFLOW bytes=2
+ISO-8859-1 encode 20AC: UNMAPPABLE[1] UNDERFLOW flush=UNDERFLOW bytes=0
+ISO-8859-1 encode D83D DE00: UNMAPPABLE[2] UNDERFLOW flush=UNDERFLOW bytes=0
+ISO-8859-1 encode D800 0041: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=1
+ISO-8859-1 encode 0041 DC00: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=1
+ISO-8859-1 encode D800: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=0
+ISO-8859-1 encoder: 1.0 1.0 repl=[63] canEncode(e9)=true canEncode(d800)=false canEncode(pair)=false
+UTF-8 encode 0041 00E9: UNDERFLOW flush=UNDERFLOW bytes=3
+UTF-8 encode 20AC: UNDERFLOW flush=UNDERFLOW bytes=3
+UTF-8 encode D83D DE00: UNDERFLOW flush=UNDERFLOW bytes=4
+UTF-8 encode D800 0041: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=1
+UTF-8 encode 0041 DC00: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=1
+UTF-8 encode D800: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=0
+UTF-8 encoder: 1.1 3.0 repl=[63] canEncode(e9)=true canEncode(d800)=false canEncode(pair)=true
+UTF-16 encode 0041 00E9: UNDERFLOW flush=UNDERFLOW bytes=6
+UTF-16 encode 20AC: UNDERFLOW flush=UNDERFLOW bytes=4
+UTF-16 encode D83D DE00: UNDERFLOW flush=UNDERFLOW bytes=6
+UTF-16 encode D800 0041: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=4
+UTF-16 encode 0041 DC00: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=4
+UTF-16 encode D800: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=2
+UTF-16 encoder: 2.0 4.0 repl=[-1, -3] canEncode(e9)=true canEncode(d800)=false canEncode(pair)=true
+UTF-16BE encode 0041 00E9: UNDERFLOW flush=UNDERFLOW bytes=4
+UTF-16BE encode 20AC: UNDERFLOW flush=UNDERFLOW bytes=2
+UTF-16BE encode D83D DE00: UNDERFLOW flush=UNDERFLOW bytes=4
+UTF-16BE encode D800 0041: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=2
+UTF-16BE encode 0041 DC00: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=2
+UTF-16BE encode D800: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=0
+UTF-16BE encoder: 2.0 2.0 repl=[-1, -3] canEncode(e9)=true canEncode(d800)=false canEncode(pair)=true
+UTF-16LE encode 0041 00E9: UNDERFLOW flush=UNDERFLOW bytes=4
+UTF-16LE encode 20AC: UNDERFLOW flush=UNDERFLOW bytes=2
+UTF-16LE encode D83D DE00: UNDERFLOW flush=UNDERFLOW bytes=4
+UTF-16LE encode D800 0041: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=2
+UTF-16LE encode 0041 DC00: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=2
+UTF-16LE encode D800: MALFORMED[1] UNDERFLOW flush=UNDERFLOW bytes=0
+UTF-16LE encoder: 2.0 2.0 repl=[-3, -1] canEncode(e9)=true canEncode(d800)=false canEncode(pair)=true
+encode lone high, not at end: UNDERFLOW 1
+encoder REPORT encode(): !java.nio.charset.MalformedInputException: Input length = 1
+ascii REPORT encode(): !java.nio.charset.UnmappableCharacterException: Input length = 1
+replaceWith bad bytes: !java.lang.IllegalArgumentException: Illegal replacement
+replaceWith too long: !java.lang.IllegalArgumentException: Replacement too long
+utf8 replaceWith 3 bytes: [60, 45, 62]
+encode with REPLACE: a**b
+CoderResult: UNDERFLOW OVERFLOW MALFORMED[3] UNMAPPABLE[2]
+CoderResult flags: true true false false false 2 true
+CoderResult length of UNDERFLOW: !java.lang.UnsupportedOperationException
+CoderResult malformed 0: !java.lang.IllegalArgumentException: Non-positive length
+throwException malformed: !java.nio.charset.MalformedInputException: Input length = 2
+throwException unmappable: !java.nio.charset.UnmappableCharacterException: Input length = 1
+throwException underflow: !java.nio.BufferUnderflowException
+throwException overflow: !java.nio.BufferOverflowException
+MalformedInputException: Input length = 4 4
+UnmappableCharacterException: Input length = 2
+CharacterCodingException: null
+CodingErrorAction: IGNORE REPLACE REPORT
+done

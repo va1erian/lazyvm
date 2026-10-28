@@ -216,9 +216,12 @@ impl Vm {
 
     fn alloc_array(&mut self, class: ClassId, len: usize) -> VmResult<()> {
         let count = self.top()?.peek(0)?.int()?;
-        let bytes = usize::try_from(count)
-            .unwrap_or(0)
-            .saturating_mul(self.element_bytes(class));
+        // A length past the VM limit is new_array's error, not a lack of room.
+        let elements = usize::try_from(count)
+            .ok()
+            .filter(|&n| n <= crate::objects::MAX_ARRAY)
+            .unwrap_or(0);
+        let bytes = elements.saturating_mul(self.element_bytes(class));
         self.ensure_room(bytes)?;
         let count = self.top()?.pop_int()?;
         let r = self.new_array(class, count)?;
@@ -240,25 +243,34 @@ impl Vm {
 
     /// Bytes a `multianewarray` will allocate: each level's arrays (header
     /// plus elements), stopping at the first zero count, which allocates
-    /// nothing below it.
-    fn multi_array_bytes(&self, class: ClassId, counts: &[i32]) -> usize {
+    /// nothing below it. Observed: the counts are checked left to right, a
+    /// negative one (allocated or not) first, then a level that is allocated
+    /// and past the VM limit (`new int[M][-1]` is the limit, `new int[0][-1]`
+    /// and `new int[-1][M]` negative). Room is judged only after: when an
+    /// earlier level does not fit, the oracle's heap may say OutOfMemory first.
+    fn multi_array_bytes(&self, class: ClassId, counts: &[i32]) -> VmResult<usize> {
         let mut bytes = 0usize;
         let mut arrays = 1usize;
         let mut level = class;
         for &n in counts {
-            let n = n as usize;
+            let Ok(n) = usize::try_from(n) else {
+                return Err(VmError::bare("java/lang/NegativeArraySizeException"));
+            };
+            if arrays == 0 {
+                continue;
+            }
+            if n > crate::objects::MAX_ARRAY {
+                return Err(crate::objects::array_limit());
+            }
             bytes = bytes.saturating_add(
                 arrays.saturating_mul(16 + n.saturating_mul(self.element_bytes(level))),
             );
             arrays = arrays.saturating_mul(n);
-            if arrays == 0 {
-                break;
-            }
             if let ClassKind::Array { component, .. } = self.class(level).kind {
                 level = component;
             }
         }
-        bytes
+        Ok(bytes)
     }
 
     fn op_multianewarray(&mut self) -> VmResult<()> {
@@ -281,10 +293,7 @@ impl Vm {
         for d in 0..dims {
             counts.push(self.top()?.peek(dims - 1 - d)?.int()?);
         }
-        if counts.iter().any(|&n| n < 0) {
-            return Err(VmError::bare("java/lang/NegativeArraySizeException"));
-        }
-        let bytes = self.multi_array_bytes(class, &counts);
+        let bytes = self.multi_array_bytes(class, &counts)?;
         self.ensure_room(bytes)?;
         let r = self.multi_array(class, &counts)?;
         let f = self.top()?;

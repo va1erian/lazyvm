@@ -5,8 +5,17 @@ use crate::heap::{Array, Body, Object, array::ElemKind};
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
-/// Arrays may not exceed `Integer.MAX_VALUE - 8` elements, like HotSpot.
-const MAX_ARRAY: usize = i32::MAX as usize - 8;
+/// Observed on Java 8: from `Integer.MAX_VALUE - 1` elements an array is
+/// "Requested array size exceeds VM limit", whatever the heap.
+pub(crate) const MAX_ARRAY: usize = i32::MAX as usize - 2;
+
+/// The error for an array longer than `MAX_ARRAY`.
+pub(crate) fn array_limit() -> VmError {
+    VmError::exception(
+        "java/lang/OutOfMemoryError",
+        "Requested array size exceeds VM limit",
+    )
+}
 
 impl Vm {
     /// A new instance with default field values. The class must be an
@@ -29,10 +38,7 @@ impl Vm {
         }
         let len = len as usize;
         if len > MAX_ARRAY {
-            return Err(VmError::exception(
-                "java/lang/OutOfMemoryError",
-                "Requested array size exceeds VM limit",
-            ));
+            return Err(array_limit());
         }
         let kind = ElemKind::from_descriptor(element);
         // The interpreter collects before allocating (`Vm::ensure_room`); here

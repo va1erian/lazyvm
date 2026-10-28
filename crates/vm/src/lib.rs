@@ -16,6 +16,7 @@ mod objects;
 mod strings;
 mod throw;
 pub mod value;
+pub mod wtf;
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -87,7 +88,8 @@ pub struct Vm {
     pub(crate) lambda_sites: HashMap<(ClassId, u16, usize), MethodRef>,
     /// Numbers generated lambda class names.
     pub(crate) lambda_count: u64,
-    pub properties: BTreeMap<String, String>,
+    /// System properties: values as UTF-16, so a path holds any Java string.
+    pub properties: BTreeMap<String, Vec<u16>>,
     pub options: Options,
     pub wk: WellKnown,
     /// Depth of nested `throw_new` calls, to stop runaway exception creation.

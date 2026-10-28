@@ -83,7 +83,7 @@ final class StringSearch {
 
     /** The code point `ch` as a char (or a high/low pair) for searching; null if invalid. */
     private static char[] unit(int ch) {
-        if (ch < Character.MIN_SUPPLEMENTARY_CODE_POINT) {
+        if (ch >= 0 && ch < Character.MIN_SUPPLEMENTARY_CODE_POINT) {
             return new char[] {(char) ch};
         }
         if (!Character.isValidCodePoint(ch)) {
@@ -103,14 +103,21 @@ final class StringSearch {
     }
 
     static int indexOf(char[] v, char[] s, int from) {
+        return indexOf(v, v.length, s, from);
+    }
+
+    /** The first match of `s` in `v[0, len)` from `from`: a builder searches its used part in place. */
+    static int indexOf(char[] v, int len, char[] s, int from) {
         if (from < 0) {
             from = 0;
         }
         if (s.length == 0) {
-            return Math.min(from, v.length);
+            return Math.min(from, len);
         }
-        for (int i = from; i <= v.length - s.length; i++) {
-            if (matchesAt(v, s, i)) {
+        // The first char is scanned for inline; only a hit is compared in full.
+        char first = s[0];
+        for (int i = from, last = len - s.length; i <= last; i++) {
+            if (v[i] == first && matchesAt(v, len, s, i)) {
                 return i;
             }
         }
@@ -118,8 +125,16 @@ final class StringSearch {
     }
 
     static int lastIndexOf(char[] v, char[] s, int from) {
-        for (int i = Math.min(from, v.length - s.length); i >= 0; i--) {
-            if (matchesAt(v, s, i)) {
+        return lastIndexOf(v, v.length, s, from);
+    }
+
+    static int lastIndexOf(char[] v, int len, char[] s, int from) {
+        int i = Math.min(from, len - s.length);
+        if (s.length == 0) {
+            return i < 0 ? -1 : i;
+        }
+        for (char first = s[0]; i >= 0; i--) {
+            if (v[i] == first && matchesAt(v, len, s, i)) {
                 return i;
             }
         }
@@ -127,7 +142,11 @@ final class StringSearch {
     }
 
     static boolean matchesAt(char[] v, char[] s, int at) {
-        if (at < 0 || at > v.length - s.length) {
+        return matchesAt(v, v.length, s, at);
+    }
+
+    private static boolean matchesAt(char[] v, int len, char[] s, int at) {
+        if (at < 0 || at > len - s.length) {
             return false;
         }
         for (int i = 0; i < s.length; i++) {
@@ -136,5 +155,55 @@ final class StringSearch {
             }
         }
         return true;
+    }
+
+    /** String.replace(CharSequence, CharSequence): every occurrence, left to right. */
+    static String replace(String s, String target, String replacement) {
+        StringBuilder sb = new StringBuilder();
+        if (target.isEmpty()) {
+            for (int i = 0; i < s.length(); i++) {
+                sb.append(replacement).append(s.charAt(i));
+            }
+            return sb.append(replacement).toString();
+        }
+        // Observed: a match that starts or ends between the chars of a surrogate pair does not
+        // count (an empty target still goes between every two chars, as above).
+        int from = 0;
+        int at = s.indexOf(target);
+        while (at >= 0) {
+            int end = at + target.length();
+            if (splitsPair(s, at) || splitsPair(s, end)) {
+                at = s.indexOf(target, at + 1);
+                continue;
+            }
+            sb.append(s, from, at).append(replacement);
+            from = end;
+            at = s.indexOf(target, end);
+        }
+        return sb.append(s, from, s.length()).toString();
+    }
+
+    /** Whether index `i` of `s` falls between a high and a low surrogate. */
+    private static boolean splitsPair(String s, int i) {
+        return i > 0 && i < s.length() && Character.isHighSurrogate(s.charAt(i - 1))
+                && Character.isLowSurrogate(s.charAt(i));
+    }
+
+    /** The chars of code points codePoints[offset, offset + count). */
+    static char[] fromCodePoints(int[] codePoints, int offset, int count) {
+        int n = 0;
+        for (int i = offset; i < offset + count; i++) {
+            int cp = codePoints[i];
+            if (!Character.isValidCodePoint(cp)) {
+                throw new IllegalArgumentException(Integer.toString(cp));
+            }
+            n += Character.charCount(cp);
+        }
+        char[] value = new char[n];
+        int pos = 0;
+        for (int i = offset; i < offset + count; i++) {
+            pos += Character.toChars(codePoints[i], value, pos);
+        }
+        return value;
     }
 }

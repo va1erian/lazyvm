@@ -96,6 +96,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 python tools/check_rules.py            # shared blocks, 500 lines, SAFETY comments
 python tools/licenses.py               # permissive dependency tree
+python tools/buffers.py --check        # generated java.nio buffers are up to date
 python tools/lazyrt.py                 # the class library builds
 python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar

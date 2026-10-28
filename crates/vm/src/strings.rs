@@ -51,6 +51,19 @@ impl Vm {
         self.string_to_rust(r)
     }
 
+    /// A path argument that must not be null, exactly as Java holds it: a
+    /// lone surrogate stays itself (see `wtf`), so distinct strings never
+    /// name the same file.
+    pub fn path_arg(&self, v: Value) -> VmResult<std::path::PathBuf> {
+        let r = v.reference()?.ok_or_else(VmError::npe)?;
+        Ok(crate::wtf::from_units(&self.string_utf16(r)?).into())
+    }
+
+    /// A string for a name the OS gave, the inverse of `path_arg`.
+    pub fn new_string_os(&mut self, s: &std::ffi::OsStr) -> VmResult<Ref> {
+        self.new_string_utf16(&crate::wtf::to_units(s))
+    }
+
     /// The canonical string with these contents (`String.intern`).
     pub fn intern(&mut self, s: Ref) -> VmResult<Ref> {
         let units = self.string_utf16(s)?;

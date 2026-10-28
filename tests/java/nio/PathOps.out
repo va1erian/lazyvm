@@ -1,0 +1,63 @@
+[] str= n=1 names=<> file= parent=null root=null abs=false norm=[]
+[a] str=a n=1 names=<a> file=a parent=null root=null abs=false norm=[a]
+[a/] str=a n=1 names=<a> file=a parent=null root=null abs=false norm=[a]
+[a//b] str=a/b n=2 names=<a><b> file=b parent=a root=null abs=false norm=[a/b]
+[a/b/] str=a/b n=2 names=<a><b> file=b parent=a root=null abs=false norm=[a/b]
+[a/./b] str=a/./b n=3 names=<a><.><b> file=b parent=a/. root=null abs=false norm=[a/b]
+[./a] str=./a n=2 names=<.><a> file=a parent=. root=null abs=false norm=[a]
+[../a] str=../a n=2 names=<..><a> file=a parent=.. root=null abs=false norm=[../a]
+[a/..] str=a/.. n=2 names=<a><..> file=.. parent=a root=null abs=false norm=[]
+[.] str=. n=1 names=<.> file=. parent=null root=null abs=false norm=[]
+[..] str=.. n=1 names=<..> file=.. parent=null root=null abs=false norm=[..]
+[a/b/c.txt] str=a/b/c.txt n=3 names=<a><b><c.txt> file=c.txt parent=a/b root=null abs=false norm=[a/b/c.txt]
+[.x] str=.x n=1 names=<.x> file=.x parent=null root=null abs=false norm=[.x]
+normalize a/./b/../c: [a/c] n=2
+normalize a/../..: [..] n=1
+normalize ../../a: [../../a] n=3
+normalize a/b/../../..: [..] n=1
+normalize ./.: [] n=1
+normalize a/./.: [a] n=1
+normalize ../a/../b: [../b] n=2
+normalize a/b/c/../../d: [a/d] n=2
+getName(1): b
+getName(3): !java.lang.IllegalArgumentException
+getName(-1): !java.lang.IllegalArgumentException
+getName(0) of empty: []
+subpath(1,3): b/c
+subpath(1,1): !java.lang.IllegalArgumentException
+subpath(0,4): !java.lang.IllegalArgumentException
+Paths.get(a,b,c): a/b/c
+Paths.get(a,'',b): a/b
+Paths.get('',a): a
+Paths.get('',''): []
+Paths.get(a/,/b): a/b
+Paths.get(null): !java.lang.NullPointerException
+resolve: a/b a/b/c/d [a] a []
+resolve absolute: true
+resolveSibling: a/c c [a]
+relativize: ../c [] b/c .. ../../c/d
+relativize empty: [../a] [../]
+relativize dots: ../../c | ../../../c
+relativize rel to abs: !java.lang.IllegalArgumentException
+startsWith: true true false true false false true
+endsWith: true true false false false
+startsWith absolute: false
+equals: true false false true
+compareTo: -1 0 -1
+hashCode equal paths: true
+toAbsolutePath: true true true
+toFile/toPath: true true []
+separator: true true
+iterator remove: !java.lang.UnsupportedOperationException
+glob *.txt: true false true false
+glob **/*.java: true false true
+glob {a,bc}?[0-9x]: true true false false false
+glob [!a-c]*: true false false
+glob a* spans no separator: true false
+regex: true false
+glob bad syntax: !java.util.regex.PatternSyntaxException
+glob nested braces: !java.util.regex.PatternSyntaxException
+unknown syntax: !java.lang.UnsupportedOperationException
+no syntax: !java.lang.IllegalArgumentException
+syntax case: !java.lang.UnsupportedOperationException
+done

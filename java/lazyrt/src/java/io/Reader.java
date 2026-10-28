@@ -1,6 +1,6 @@
 package java.io;
 
-public abstract class Reader implements Closeable {
+public abstract class Reader implements Readable, Closeable {
     protected Object lock;
 
     protected Reader() {
@@ -12,6 +12,16 @@ public abstract class Reader implements Closeable {
             throw new NullPointerException();
         }
         this.lock = lock;
+    }
+
+    // Spec S4: one read of t.remaining() chars into a new array.
+    public int read(java.nio.CharBuffer target) throws IOException {
+        char[] tmp = new char[target.remaining()];
+        int n = read(tmp, 0, tmp.length);
+        if (n > 0) {
+            target.put(tmp, 0, n);
+        }
+        return n;
     }
 
     public int read() throws IOException {
@@ -29,7 +39,8 @@ public abstract class Reader implements Closeable {
         if (n < 0L) {
             throw new IllegalArgumentException("skip value is negative");
         }
-        int chunk = (int) Math.min(n, 2048);
+        // Spec S4: a buffer of min(n, 8192), reads of min(left, 8192).
+        int chunk = (int) Math.min(n, 8192);
         char[] skipBuffer = new char[chunk];
         long remaining = n;
         while (remaining > 0) {

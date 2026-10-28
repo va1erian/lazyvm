@@ -1,0 +1,61 @@
+int: 01020304 size=4
+negative int: FFFFFFFE size=4
+long: 0102030405060708 size=8
+short: 2345 size=2
+char: FFFF size=2
+byte: 7F size=1
+boolean: 0100 size=2
+float: 3F8000007FC000007FC00000 size=12
+double: 80000000000000007FF8000000000000 size=16
+writeBytes: 41E9AC size=3
+writeChars: 004120AC size=4
+writeUTF: 001641C080C3A9DFBFE0A080E282ACEDA0BDEDB880EDA080 size=24
+writeUTF empty: 0000 size=2
+writeUTF 65535: FFFF6161
+writeUTF 65536: !java.io.UTFDataFormatException: encoded string too long: 65536 bytes
+writeUTF 21845 euros: FFFFE282
+writeUTF 21846 euros: !java.io.UTFDataFormatException: encoded string too long: 65538 bytes
+writeUTF 40000 nuls: !java.io.UTFDataFormatException: encoded string too long: 80000 bytes
+writeUTF null: !java.lang.NullPointerException
+size after failed writeUTF: 1
+write(b,off,len) size: 0203 size=2
+static readUTF: AB
+readUTF: 4
+readUTF nul forms: 2 0 0
+readUTF overlong ok: 65
+readUTF 6-byte pair: d83dde00
+readUTF 4-byte form: !java.io.UTFDataFormatException: malformed input around byte 0
+readUTF lone continuation: !java.io.UTFDataFormatException: malformed input around byte 1
+readUTF bad second byte: !java.io.UTFDataFormatException: malformed input around byte 3
+readUTF bad third byte: !java.io.UTFDataFormatException: malformed input around byte 3
+readUTF partial at end 2: !java.io.UTFDataFormatException: malformed input: partial character at end
+readUTF partial at end 3: !java.io.UTFDataFormatException: malformed input: partial character at end
+readUTF F8: !java.io.UTFDataFormatException: malformed input around byte 1
+readUTF C3 41 at 0: !java.io.UTFDataFormatException: malformed input around byte 2
+readUTF E2 41 41 at 0: !java.io.UTFDataFormatException: malformed input around byte 2
+readUTF E2 41 41 at 1: !java.io.UTFDataFormatException: malformed input around byte 3
+readUTF E2 41 at end: !java.io.UTFDataFormatException: malformed input: partial character at end
+readUTF C3 C3 A9: !java.io.UTFDataFormatException: malformed input around byte 2
+readUTF short data: !java.io.EOFException
+readUTF no length: !java.io.EOFException
+readUTF empty: !java.io.EOFException
+readInt: 80000001
+readInt short: !java.io.EOFException
+readLong short: !java.io.EOFException
+readShort: -2 65534 65534
+readByte: -1 255 true false
+readByte eof: !java.io.EOFException
+readBoolean eof: !java.io.EOFException
+readChar eof: !java.io.EOFException
+readFloat/Double: 1.5 -1.0
+readFully: 3
+readFully short: !java.io.EOFException
+readFully len 0 at eof: ok
+readFully bounds: !java.lang.IndexOutOfBoundsException
+skipBytes: 2 1 0
+read(b) at eof: -1
+readLine: a|b|c|E|null
+DataInput over chunked stream: 1020304
+UTFDataFormatException: x true
+EOFException: null m
+done
