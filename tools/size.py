@@ -21,7 +21,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import DIST, EXE, ROOT, die  # noqa: E402
+from common import DIST, die, lazyvm_exe  # noqa: E402
 
 BUDGET = 4_000_000
 WARN_AT = 0.8
@@ -37,13 +37,14 @@ def shipped_binary(exe: Path) -> bytes:
         die("an ELF binary needs strip or llvm-strip on PATH to be measured")
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / exe.name
-        subprocess.run([tool, "-o", str(out), str(exe)], check=True)
+        if subprocess.run([tool, "-o", str(out), str(exe)]).returncode != 0:
+            die(f"{tool} failed on {exe}")
         return out.read_bytes()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--exe", type=Path, default=ROOT / "target" / "release" / f"lazyvm{EXE}")
+    parser.add_argument("--exe", type=Path, default=lazyvm_exe())
     parser.add_argument("--jar", type=Path, default=DIST / "lazyrt.jar")
     args = parser.parse_args()
     for path in (args.exe, args.jar):
@@ -54,7 +55,7 @@ def main() -> None:
     total = binary + jar
     print(f"size: binary {binary:,} B gzipped + lazyrt.jar {jar:,} B = {total:,} B "
           f"of {BUDGET:,} B ({total / BUDGET:.0%})")
-    if total > BUDGET:
+    if total >= BUDGET:
         die("over the size budget (decisions.md D14): shrink something before adding more")
     if total > BUDGET * WARN_AT:
         print(f"size: warning: above {WARN_AT:.0%} of the budget")

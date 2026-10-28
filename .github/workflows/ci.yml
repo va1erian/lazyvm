@@ -70,4 +70,4 @@ jobs:
       - name: differential suite (musl binary)
         run: python tools/test.py --exe target/x86_64-unknown-linux-musl/release/lazyvm --build-java-only
       - name: size budget (LazyOS binary)
-        run: python tools/lazyrt.py && python tools/size.py --exe target/x86_64-unknown-linux-musl/release/lazyvm
+        run: python tools/size.py --exe target/x86_64-unknown-linux-musl/release/lazyvm
