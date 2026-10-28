@@ -1,0 +1,8 @@
+rgba 3x2: FFFF0000 8000FF00 000000FF FF010203 FFFAFBFC 09090909
+palette 2x2: 00000000 FFFFFFFF 4D0A141E FFFFFFFF
+gray16 1x1: FF121212
+empty: IOException
+text: IOException
+truncated: IOException
+bad crc: IOException
+null: NullPointerException

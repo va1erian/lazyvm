@@ -30,6 +30,13 @@ Gate: `tools/test.py` with `-Xverify:all` (the default from now on) passes on bo
 
 Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or Swing.
 
+- [ ] S9-00 (prototype, ahead of the stage) `lazy.gfx`: pixel windows for
+      games, with a program-owned loop, polled input and PNG decoding
+      ([`gfx.md`](gfx.md)). Windows host on winit + softbuffer, plus a
+      headless backend; the LazyOS host waits for S9-04. First user: a
+      Minicraft Plus port kept outside this repo (GPL-3.0).
+      Check: `tools/test.py --filter gfx` on Windows and LazyOS (headless);
+      on Windows, a demo window screenshot showing the scaled frame.
 - [ ] S9-01 Design note `docs/ui.md`: read the xui README and `xui-core` at
       LazyOS's pinned rev, then map its update model, widget set, layout and
       theming onto a Java API (a `render()` method returning a node tree,

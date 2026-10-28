@@ -15,6 +15,12 @@ path = "src/main.rs"
 
 [dependencies]
 vm = { path = "../vm" }
-natives = { path = "../natives" }
+natives = { path = "../natives", default-features = false }
 platform = { path = "../platform" }
 classfile = { path = "../classfile" }
+
+[features]
+default = ["desktop"]
+# `lazy.gfx` desktop windows (docs/gfx.md); `--no-default-features` builds a
+# smaller VM whose windows are headless only.
+desktop = ["natives/desktop"]

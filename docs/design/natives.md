@@ -155,6 +155,25 @@ read after the end, and is "Stream closed" after `close()`.
 Bounds are checked in Java before the native is called; the VM checks them
 again and throws `IndexOutOfBoundsException` rather than trusting them.
 
+### `lazy.gfx.Window` and `lazy.gfx.Image` (docs/gfx.md)
+- `private static native int open0(String title, int width, int height)`: a
+  handle (never 0) for a window of that client size in pixels; `-Dlazy.gfx`
+  picks the backend. `IllegalStateException` when there is no window system.
+- `private static native void present0(int handle, int[] rgb, int width, int height)`
+- `private static native boolean poll0(int handle, Event e)`: fills `e`'s
+  `type`, `key`, `ch`, `x`, `y` and `button`, or returns false.
+- `private static native boolean isOpen0(int handle)`
+- `private static native int size0(int handle, int axis)` (0 width, 1 height)
+- `private static native int[] capture0(int handle)`
+- `private static native void setTitle0(int handle, String title)`
+- `private static native void close0(int handle)`: an unknown handle is ignored.
+- `private static native int[] decodePng0(byte[] data, int[] size)`: ARGB
+  pixels, with width and height written to `size[0]` and `size[1]`;
+  `IOException` for a malformed file.
+
+Handles name entries in a table owned by the VM thread; an unknown handle is
+`IllegalStateException`. Sizes are checked in Java and again in Rust.
+
 ## Known differences from Java 8
 
 - `StrictMath` (and `Math`, which delegates to it) gives `libm`'s results, not

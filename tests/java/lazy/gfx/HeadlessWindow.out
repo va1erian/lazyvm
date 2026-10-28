@@ -1,0 +1,39 @@
+open true
+12x6 (72 pixels)
+  12*000000
+  12*000000
+  12*000000
+  12*000000
+  12*000000
+  12*000000
+12x6 (72 pixels)
+  3*FF0000 3*00FF00 3*0000FF 3*FFFFFF
+  3*FF0000 3*00FF00 3*0000FF 3*FFFFFF
+  3*FF0000 3*00FF00 3*0000FF 3*FFFFFF
+  3*123456 3*654321 3*000000 3*808080
+  3*123456 3*654321 3*000000 3*808080
+  3*123456 3*654321 3*000000 3*808080
+12x6 (72 pixels)
+  3*000000 3*111111 3*222222 3*000000
+  3*000000 3*111111 3*222222 3*000000
+  3*000000 3*111111 3*222222 3*000000
+  3*000000 3*333333 3*444444 3*000000
+  3*000000 3*333333 3*444444 3*000000
+  3*000000 3*333333 3*444444 3*000000
+12x6 (72 pixels)
+  6*ABCDEF 6*000001
+  6*ABCDEF 6*000001
+  6*ABCDEF 6*000001
+  6*ABCDEF 6*000001
+  6*ABCDEF 6*000001
+  6*ABCDEF 6*000001
+poll false
+short array: IllegalArgumentException
+zero width: IllegalArgumentException
+null pixels: NullPointerException
+bad scale: IllegalArgumentException
+too large: IllegalArgumentException
+open after close false, poll false
+present after close: IllegalStateException
+capture after close: IllegalStateException
+keys: A Z 0 SPACE COMMA ESCAPE UP ALT F1 F12 UNKNOWN UNKNOWN UNKNOWN

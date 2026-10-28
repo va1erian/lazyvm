@@ -1,0 +1,25 @@
+[package]
+name = "gfx"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+png = { version = "0.18", default-features = false }
+
+[features]
+default = ["desktop"]
+# Real windows on Windows. Without it, only the headless backend exists
+# (docs/gfx.md, "Backends"), which saves the window stack's size.
+desktop = ["dep:winit", "dep:softbuffer"]
+
+# LazyOS gets its own host through xuid (docs/gfx.md), so the musl build
+# carries only the headless backend whatever the features.
+[target.'cfg(windows)'.dependencies]
+winit = { version = "0.30", default-features = false, features = ["rwh_06"], optional = true }
+softbuffer = { version = "0.4", default-features = false, optional = true }
