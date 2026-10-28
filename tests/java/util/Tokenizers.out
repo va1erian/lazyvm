@@ -1,0 +1,26 @@
+default 6:[a][b][c][d][e][f<a0>g<2003>h<b>i<1c>j]
+delims 3:[a][b][c] 7:[a][,][b][;][;][c][,] 2:[a][b] 2:[,][a]
+empty 0: 0: 0: 3:[,][,][,] 1:[abc] 1:[abc] 0:
+switch a| b|c d|java.util.NoSuchElementException: null|0
+switch returned a|,b| |c|java.util.NoSuchElementException: null
+switch to none a b|false
+switch back x|:y| z|false
+count 3 a 2 true 2
+count returned 5 2 1
+enumeration true ab false java.util.NoSuchElementException: null java.util.NoSuchElementException: null java.util.NoSuchElementException: null
+failed next moves java.util.NoSuchElementException: null then java.util.NoSuchElementException: null | a java.util.NoSuchElementException: null then java.util.NoSuchElementException: null | hasMore false then ,, | count 0 then ,,
+long tokens 6: 254aa 3bd 215e, 244,i 253<d83d><de00> 3mn
+long returned 135: 254aa 1   3bd 1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   214ef 1,, 1   1,, 1ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 3ii 1   1   1   1   1   1   1   1   1   1   1   1   253<d83d><de00> 1   3mn
+long fullwidth 8: 254aa 3bd 215e, 244,i 2<d83d><de00> 250j<de00> 1mm 1nn
+long pair delim 139: 254aa 1   3bd 1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   211ee 2<d83d><de00> 1ff 1,, 1   1,, 1ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 6ii 1,, 3ii 1   1   1   1   1   1   1   1   1   1   1   1   2<d83d><de00> 249<ff0c>l 2<d83d><de00> 1   3mn
+long interleaved 254/40 3 214 1/37 6 6 6/34 6 6 6/31 6 6 6/28 6 6 6/25 6 6 6/22 6 6 6/19 6 6 6/16 6 6 6/13 6 6 6/10 6 6 6/7 6 6 6/4 6 3 253/1 3
+long switch <d83d><de00> 254 then 257 e | 3: 259f  249<ff0c>l 4 n
+long switch <d83d> 254 then 775 n | 0:
+long switch  <d83d><de00> 254 then 3bd | 5: 211ee 2f, 244,i 249<ff0c>l 3mn
+null string java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null
+null delims true | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | 0 | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null
+pair 2:[a][b<d83d>c<de00>d] 3:[a][<d83d><de00>][b<d83d>c<de00>d]
+halves 2:[a<d83d><de00>b][c] 2:[a<d83d><de00>b][c] 5:[a][<d83d><de00>][b][,][c] 2:[<d83d><de00>][<d83d><de00>]
+switch to pair a|<d83d><de00>b|c|false
+fuzz agree 3000 of 3000, hash -8825439839001690658
+done

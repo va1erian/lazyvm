@@ -40,6 +40,9 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(VM_CLASS, "availableProcessors", "()I", |_, _| {
         ret_int(platform::available_processors())
     });
+    vm.register_native(VM_CLASS, "entropy", "()J", |_, _| {
+        Ok(Some(Value::Long(platform::entropy())))
+    });
     vm.register_native(
         VM_CLASS,
         "getResource",

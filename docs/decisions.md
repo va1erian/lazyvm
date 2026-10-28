@@ -121,7 +121,7 @@ decision marked **(proposed)** is not in force until the owner confirms it.
 
 | Area | Stage | Contents |
 |---|---|---|
-| `java.lang` core | S2-S5 | `Object`, `String`, `StringBuilder`, boxing with caches, `Math`/`StrictMath` (fdlibm results via Rust `libm`), `Character` (tables generated from UnicodeData, Unicode 6.2 as in Java 8), `System`, `Runtime`, `Throwable` with suppressed exceptions and causes, `Enum`, `Iterable`, `AutoCloseable` |
+| `java.lang` core | S2-S5 | `Object`, `String`, `StringBuilder`, boxing with caches, `Math`/`StrictMath` (through Rust `libm`, within a few ulps of fdlibm: D13), `Character` (tables generated from UnicodeData, Unicode 6.2 as in Java 8), `System`, `Runtime`, `Throwable` with suppressed exceptions and causes, `Enum`, `Iterable`, `AutoCloseable` |
 | Reflection and annotations | S4 | `Class` (name, super, interfaces, `isInstance`, `forName`, `newInstance`, `getEnumConstants`), `java.lang.annotation`, `getAnnotation(s)` on classes, methods, fields and parameters, `Method.invoke`, `Field.get/set`, `Constructor.newInstance` |
 | `java.util` | S5 | Collections (`ArrayList`, `LinkedList`, `ArrayDeque`, `HashMap`, `LinkedHashMap`, `TreeMap`, `HashSet`, `TreeSet`, `PriorityQueue`, `Collections`, `Arrays`), `Optional*`, `Objects`, `Random`, `Scanner`, `StringJoiner`, `Formatter`/`String.format`, `Properties`, `UUID`, `Base64`, `BitSet`, `Iterator` and friends |
 | `java.util.function` | S4 | All 43 interfaces |
@@ -249,3 +249,38 @@ become issues on the LazyOS repo.
 - **Tests** name their charsets wherever output depends on it, so goldens
   blessed on Windows hold on LazyOS too. `design/io.md` (N3) and `design/nio-file.md` (section 3)
   lists the difference.
+
+## D13. `StrictMath` is not bit-identical to fdlibm
+
+`StrictMath` uses the `libm` crate (`crates/natives/src/math.rs`, MIT, a
+port of musl's libm) and accepts its results. The `StrictMath` Javadoc asks
+for fdlibm's exact results, but `libm` follows newer algorithms for some
+functions, so their results can be a few ulps from Java 8's. Porting fdlibm
+or adding another crate was considered and rejected (owner's decision,
+S5-04). Tests must not print exact bits of the affected functions; round
+them well above the error below.
+
+Measured during S5-04: `libm` 0.2.16 against the oracle (Temurin 1.8.0_504),
+10^6 inputs per function (edge values, random bit patterns, a typical range
+and log-uniform magnitudes); 0.2.7 gives the same counts.
+
+| Function | Inputs that differ | Max difference |
+|---|---|---|
+| `atan2` | 9.6 % (mostly results near ±π/2) | 1 ulp |
+| `cbrt` | 8.3 % | 1 ulp |
+| `log10` | 2.9 % | 2 ulps |
+| `hypot` | 1.6 % | 1 ulp |
+| `tanh` | 0.95 % | 3 ulps |
+| `cos` | 0.62 % | 1 ulp |
+| `sin` | 0.61 % | 1 ulp |
+| `log` | 0.16 % | 1 ulp |
+| `cosh` | 0.10 % | 1 ulp |
+| `sinh` | 0.09 % | 1 ulp |
+| `log1p` | 0.02 % | 1 ulp |
+
+The other 12 are bit-identical on every input measured: `tan`, `asin`,
+`acos`, `atan`, `exp`, `sqrt`, `ceil`, `floor`, `rint`, `expm1`, `pow`
+(with Java's `NaN` special cases) and `IEEEremainder`. `Math` delegates to
+the same natives. `Random.nextGaussian` uses `StrictMath.log`, so its values
+can differ from Java 8's in the last digits while its draws, rejections and
+pairing stay exact (`design/util.md` R1).

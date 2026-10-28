@@ -117,3 +117,35 @@ pub fn default_properties() -> Vec<(String, OsString)> {
     ])
     .collect()
 }
+
+/// 64 bits that differ on every call and in every run, for `new Random()`
+/// and `UUID.randomUUID()` (docs/design/util.md R3, util-data.md U8).
+///
+/// `RandomState` carries keys the standard library draws from the operating
+/// system's random source once per process; hashing the wall clock at full
+/// resolution, the monotonic clock and a call counter with them gives a fresh
+/// value per call. Callers must not rely on it for cryptographic strength.
+pub fn entropy() -> i64 {
+    use std::collections::hash_map::RandomState;
+    use std::hash::{BuildHasher, Hasher};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static KEYS: OnceLock<RandomState> = OnceLock::new();
+    static CALLS: AtomicU64 = AtomicU64::new(0);
+    let mut hasher = KEYS.get_or_init(RandomState::new).build_hasher();
+    let wall = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
+    hasher.write_u128(wall);
+    hasher.write_i64(nano_time());
+    hasher.write_u64(CALLS.fetch_add(1, Ordering::Relaxed));
+    hasher.finish() as i64
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn entropy_differs_per_call() {
+        let values: std::collections::HashSet<i64> = (0..1000).map(|_| super::entropy()).collect();
+        assert_eq!(values.len(), 1000);
+    }
+}

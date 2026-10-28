@@ -1,0 +1,53 @@
+empty same: true true true true true
+of fresh: false false false false false
+empty results: true true true true true
+identity: true true false true
+toString: Optional.empty Optional[s] Optional[[1, 2]] true Optional[]
+toString int: OptionalInt.empty OptionalInt[0] OptionalInt[-2147483648]
+toString long: OptionalLong.empty OptionalLong[-1] OptionalLong[9223372036854775807]
+toString double: OptionalDouble.empty OptionalDouble[1.0E10] OptionalDouble[-0.0] OptionalDouble[NaN] OptionalDouble[-Infinity] OptionalDouble[0.1] OptionalDouble[1.0E-5] OptionalDouble[4.9E-324]
+toString null text: Optional[null]
+hash: 0 1 3105 -9 994
+hash int: 0 -7 0
+hash long: 0 256 0 -2004318072
+hash double: 0 2146959360 -2147483648 0 1073217536 2146959360
+equals: true false false false true false false false false
+equals int: true false true false false true
+equals double: true false false true
+equals calls: true 1
+equals same value: true true 0
+equals empty: false 1 false 1
+of null: java.lang.NullPointerException
+ifPresent null: ok java.lang.NullPointerException
+filter null: java.lang.NullPointerException java.lang.NullPointerException
+map null: java.lang.NullPointerException java.lang.NullPointerException
+flatMap null: java.lang.NullPointerException java.lang.NullPointerException java.lang.NullPointerException
+orElseGet null: java.lang.NullPointerException ok
+orElseThrow null: java.lang.NullPointerException ok java.lang.NullPointerException
+orElse null: null x
+prim nulls: ok java.lang.NullPointerException ok java.lang.NullPointerException ok java.lang.NullPointerException
+prim nulls long: ok java.lang.NullPointerException ok java.lang.NullPointerException ok java.lang.NullPointerException
+prim nulls double: ok java.lang.NullPointerException ok java.lang.NullPointerException ok java.lang.NullPointerException java.lang.NullPointerException
+get empty: java.util.NoSuchElementException: No value present | java.util.NoSuchElementException: No value present | java.util.NoSuchElementException: No value present | java.util.NoSuchElementException: No value present
+orElseGet: x z
+call log: Gixfml
+orElseThrow same: true
+orElseThrow: java.lang.IllegalArgumentException: ia | java.lang.UnsupportedOperationException
+orElse: d x 4 9 0.5 2.0
+isPresent: false true true false true
+map flatMap: Optional[x!] Optional[1] Optional[xx] Optional[10]
+prim log: i4l5d6.0
+prim get: -1 -9223372036854775808 -0.0 -Infinity
+equals: true false false true false true true false
+deepEquals: true false true true false false true true false true true false
+equals calls: 1 2
+hashCode: 0 3105 -5
+hash: 1 0 31 33759 1186 true 28762450
+toString: null null d 1 [1]
+compare: 0 0 0 0 1 1 java.lang.NullPointerException 7
+requireNonNull: java.lang.NullPointerException | java.lang.NullPointerException: msg | java.lang.NullPointerException | java.lang.NullPointerException: sup | java.lang.NullPointerException | java.lang.NullPointerException
+requireNonNull pass: true true true []
+isNull: true false false true
+fuzz: -1889107728 -1115323205 532016749 313246297 4000
+fuzz sample: OptionalDouble[-4.9911105725155504E135] OptionalLong[-2586341971585708627] OptionalDouble[1.3196140928683333E12] OptionalLong[8302294002261653088] OptionalDouble[5.95597628853E11] OptionalLong[6869823171994466867] OptionalDouble[1.5299975176258794E-295] OptionalLong[196192377396069449] OptionalDouble[-1.7397599692388E12] OptionalLong[-9121352747522181097]
+done

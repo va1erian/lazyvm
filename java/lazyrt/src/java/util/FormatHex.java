@@ -65,7 +65,8 @@ final class FormatHex {
         return pad(Long.toHexString(m), HEX_DIGITS);
     }
 
-    private static String pad(String hex, int width) {
+    /** Left-pads digits with zeros to width; shared with UUID.toString. */
+    static String pad(String hex, int width) {
         return zeros(width - hex.length()) + hex;
     }
 

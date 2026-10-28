@@ -1,0 +1,116 @@
+load [a=1] {a=1}
+load [a:1] {a=1}
+load [a 1] {a=1}
+load [a<9>1] {a=1}
+load [a<c>1] {a=1}
+load [a = 1] {a=1}
+load [a  :  1] {a=1}
+load [a=:1] {a=:1}
+load [a :=1] {a==1}
+load [a = =1] {a==1}
+load [ <9> a=1] {a=1}
+load [a=1 <9>] {a=1 <9>}
+load [a] {a=}
+load [a=] {a=}
+load [=1] {=1}
+load [:1] {=1}
+load [ ] 
+load [#c=1<a>a=1] {a=1}
+load [!c=1<a> a=2] {a=2}
+load [  # x=1] 
+load [<9>!x] 
+load [a=1\<a>   2] {a=12}
+load [a=1\<a>] {a=1}
+load [a=1\] {a=1}
+load [a=1\\<a>b=2] {a=1\}{b=2}
+load [a=1\<d><a> 2\<d>  3] {a=123}
+load [a\ b=1] {a b=1}
+load [a\=b=1] {a=b=1}
+load [a\:b:1] {a:b=1}
+load [a\#b=1] {a#b=1}
+load [a=\t\n\r\f\\\x\'\"\ ] {a=<9><a><d><c>\x'" }
+load [a=\u0041\u00e9\uD83D\uDE00\u00Ff] {a=A<e9><d83d><de00><ff>}
+load [a=\u004] java.lang.IllegalArgumentException: Malformed \uxxxx encoding.
+load [a=\u00G1] java.lang.IllegalArgumentException: Malformed \uxxxx encoding.
+load [a=\uzzzz] java.lang.IllegalArgumentException: Malformed \uxxxx encoding.
+load [a=\u] java.lang.IllegalArgumentException: Malformed \uxxxx encoding.
+load [\u0061=1] {a=1}
+load [\u003d=1] {==1}
+load [a=1<d>b=2<d><a>c=3<a><a>d=4] {a=1}{b=2}{c=3}{d=4}
+load [a=1<a>b] {a=1}{b=}
+load [#a\<a>b=1] {b=1}
+load [a=1\<a># not comment<a>c=3] {a=1# not comment}{c=3}
+load [a\<a> b=1] {ab=1}
+load [<e9>=<20ac>] {<e9>=<20ac>}
+load [a=1<a>a=2] {a=2}
+load [a=\] {a=}
+load [a\] {a=}
+load [a=1\<a>\<a> x] {a=1x}
+load [k=v\ \ ] {k=v  }
+load [\ k=1] { k=1}
+load [\\=1] {\=1}
+load [x\<d><a>y=1] {xy=1}
+load [a=1<0>b] {a=1<0>b}
+load [a<2028>b=1] {a<2028>b=1}
+load [a<b>b=1] {a<b>b=1}
+load [<a><a><a>] 
+load [\<a>] {=}
+load [a=b\<a><a> c=d] {a=b}{c=d}
+load [#\u12] 
+load [a\u0020b=c] {a b=c}
+load [a\<a>\<a>=1] {a=1}
+load [<d><a><d>a=1<d>] {a=1}
+load stream {a=<e9><20ac>}{b=<c3><a9>}{<ff>=x}
+load merges {keep=k}{new=3}{pre=2}
+store writer #DATE / tab\tnl\ncr\rff\f=tab\tnl\ncr\rff\f / back\\slash=back\\slash / in\#side=in\!side / \#h=\#v / k=\  two lead / sp\ ace=sp ace   / a\=b\:c=x\=y\:z / k2=\ttab / uni<e9><20ac><1><7f>=uni<e9><20ac><1><7f><d83d><de00><0> / ab<ff>= / \ lead=\ v lead / = / \!h=\!v / 
+store stream #c<e9>\u20AC / #DATE / tab\tnl\ncr\rff\f=tab\tnl\ncr\rff\f / back\\slash=back\\slash / in\#side=in\!side / \#h=\#v / k=\  two lead / sp\ ace=sp ace   / a\=b\:c=x\=y\:z / k2=\ttab / uni\u00E9\u20AC\u0001\u007F=uni\u00E9\u20AC\u0001\u007F\uD83D\uDE00\u0000 / ab\u00FF= / \ lead=\ v lead / = / \!h=\!v / 
+comment writer #line1 / #line2 / #line3 / #line4 #! <e9>\u20AC<1> \ end / #DATE / 
+comment stream #line1 / #l<e9>\u20AC<1>\uD83D\uDE00 / #DATE / 
+comment breaks # / #x / !y / # / #z / # / #DATE / 
+comment empty # / #DATE /  | lead ##already / #DATE /  | #!bang / #DATE /  | # / # / # / #DATE / 
+store order #DATE / key19=v19 / key18=v18 / key17=v17 / key16=v16 / key15=v15 / key14=v14 / key13=v13 / key12=v12 / key11=v11 / key10=v10 / key9=v9 / key29=v29 / key8=v8 / key28=v28 / key7=v7 / key27=v27 / key6=v6 / key26=v26 / key5=v5 / key25=v25 / key4=v4 / key24=v24 / key3=v3 / key23=v23 / key2=v2 / key22=v22 / key1=v1 / key21=v21 / key0=v0 / key20=v20 / 
+store keys() override #DATE / key0=v0 / key1=v1 / key10=v10 / key11=v11 / key12=v12 / key13=v13 / key14=v14 / key15=v15 / key16=v16 / key17=v17 / key18=v18 / key19=v19 / key2=v2 / key20=v20 / key21=v21 / key22=v22 / key23=v23 / key24=v24 / key25=v25 / key26=v26 / key27=v27 / key28=v28 / key29=v29 / key3=v3 / key4=v4 / key5=v5 / key6=v6 / key7=v7 / key8=v8 / key9=v9 / 
+store non-string java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String | java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String
+get pa db d1c dz null def null d null 2 pa null
+names [b, a, new, z, c] [b, a, new, obj, z, c] java.lang.UnsupportedOperationException: null
+names non-string [b, a, new, z, c] | java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String
+names default non-string [b, a, new, z, c] | java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String
+list writer -- listing properties --|short=v|fortyone=0123456789012345678901234567890123456...|k0123456789012345678901234567890123456789=long key|z=own z|forty=0123456789012345678901234567890123456789|c=dc|
+list stream -- listing properties --|short=v|fortyone=0123456789012345678901234567890123456...|k0123456789012345678901234567890123456789=long key|z=own z|forty=0123456789012345678901234567890123456789|c=dc|
+list non-string java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String | java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String
+nulls java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.lang.NullPointerException: null | null | java.lang.NullPointerException: null | java.lang.NullPointerException: null
+spy setProperty [put x, put y]
+spy store [keys, get x, get y]
+spy list [keys, get x, get y]
+spy stringPropertyNames [keys, get x, get y]
+spy propertyNames [keys, get x, get y]
+spy getProperty [getProperty z, getProperty zz]
+spy load [put m, put n, put m]
+spy defaults chain [getProperty y, getProperty y, getProperty nope, getProperty nope]
+spy defaults list [keys, get m, get x, get n, get y, keys, get w]
+spy defaults names [keys, get m, get x, get n, get y, keys, get w]
+non-string own value from defaults null dflt [o]
+store BufferedWriter newLine calls 5
+names fuzz [k10, k7, k56, k5, k25, k2, k24, k49, k48, k17, k46, k42, k13] [k10, k7, k56, k5, k25, k2, k24, k49, k48, k17, k46, k42, k13] -- listing properties --|k10=v1|k7=v10|k56=v2|k5=v4|k25=v9|k2=v6|k24=v11|k49=v0|k48=v5|k17=v7|k46=v2|k42=v0|k13=v1|
+names fuzz [k26, k57, k56, k24, k23, k54, k22, k53, k21, k20, k9, k8, k7, k5, k4, k39, k37, k36, k0, k35, k34, k33, k31, k19, k48, k17, k47, k46, k45, k44, k12, k43, k41, k10, k40] [k26, k57, k56, k24, k23, k54, k22, k53, k21, k20, k9, k8, k7, k5, k4, k39, k37, k36, k0, k35, k34, k33, k31, k19, k48, k17, k47, k46, k45, k44, k12, k43, k41, k10, k40] -- listing properties --|k26=v16|k57=v13|k56=v8|k24=v1|k23=v6|k54=v1|k22=v7|k53=v17|k21=v22|k20=v10|k9=v19|k8=v20|k7=v5|k5=v7|k4=v6|k39=v11|k37=v8|k36=v1|k0=v0|k35=v9|k34=v5|k33=v12|k31=v0|k19=v4|k48=v3|k17=v15|k47=v11|k46=v5|k45=v18|k44=v12|k12=v2|k43=v14|k41=v2|k10=v3|k40=v21|
+names fuzz [k59, k27, k26, k25, k54, k53, k21, k20, k51, k6, k4, k39, k37, k36, k0, k35, k33, k32, k30, k49, k17, k47, k14, k45, k44, k12, k42, k10, k29] [k59, k27, k26, k25, k54, k53, k21, k20, k51, k6, k4, k39, k37, k36, k0, k35, k33, k32, k30, k49, k17, k47, k14, k45, k44, k12, k42, k10, k29] -- listing properties --|k59=v0|k27=v5|k26=v0|k25=v20|k54=v2|k53=v3|k21=v3|k20=v16|k51=v13|k6=v9|k4=v18|k39=v1|k37=v10|k36=v2|k0=v9|k35=v8|k33=v5|k32=v4|k30=v19|k49=v6|k17=v12|k47=v10|k14=v2|k45=v6|k44=v1|k12=v7|k42=v11|k10=v0|k29=v17|
+names fuzz hash 4747886965768773004
+load fuzz [b<d><e9>=\<a><9>0 b \] {b=}{<e9>=0 b }
+load fuzz [#<e9>0!a:<d><9>0 <e9>b#b=] {0=<e9>b#b=}
+load fuzz [a<d>\u<9>b b#] java.lang.IllegalArgumentException: Malformed \uxxxx encoding.
+load fuzz [  0!<e9><e9><a>!<e9><d>=<a>] {=}{0!<e9><e9>=}
+load fuzz [aa#<a><d><a>b<9><9>=  ] {aa#=}{b=}
+load fuzz [u=a# <a><9> <d>=!<9>00= <d>] {=!<9>00= }{u=a# }
+load fuzz [:!a\\\b#] {=!a\b#}
+load fuzz [<9>] 
+load fuzz [<9>u!<e9> #=<e9>a <9><d>!] {u!<e9>=#=<e9>a <9>}
+load fuzz [0b:] {0b=}
+load fuzz hash -9171216533518165561 chunked same 3000
+store fuzz <e9><20ac>\t=|
+store fuzz 
+store fuzz \#a=<d83d>\=<1>|
+store fuzz \:\#a<20ac><d83d>=\f\\\r\=|\t\n=|<d83d><1>=<d83d>\\<20ac>|
+store fuzz \:a\r<d83d>\ =|
+store fuzz \!\!\f<20ac>\n=|<d83d>\t<20ac>=\:|
+store fuzz hash -5995935076524029597 round trips 600 600
+done

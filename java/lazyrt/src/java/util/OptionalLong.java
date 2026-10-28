@@ -1,0 +1,74 @@
+package java.util;
+
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
+
+/** A long or nothing (docs/design/util.md section 2, rules O1-O8). */
+public final class OptionalLong {
+    /** O1: the one empty object. */
+    private static final OptionalLong EMPTY = new OptionalLong(false, 0);
+
+    private final boolean present;
+    private final long value;
+
+    private OptionalLong(boolean present, long value) {
+        this.present = present;
+        this.value = value;
+    }
+
+    public static OptionalLong empty() { return EMPTY; }
+
+    /** O1: a fresh object per call. */
+    public static OptionalLong of(long value) { return new OptionalLong(true, value); }
+
+    /** O6: asking an empty object for its value is an error with a fixed message. */
+    public long getAsLong() {
+        if (!present) {
+            throw new NoSuchElementException("No value present");
+        }
+        return value;
+    }
+
+    public boolean isPresent() { return present; }
+
+    /** O5: a null consumer only fails when there is a value to give it. */
+    public void ifPresent(LongConsumer consumer) {
+        if (present) {
+            consumer.accept(value);
+        }
+    }
+
+    public long orElse(long other) { return present ? value : other; }
+
+    public long orElseGet(LongSupplier other) { return present ? value : other.getAsLong(); }
+
+    /** O8: the supplier's own exception object is thrown. */
+    public <X extends Throwable> long orElseThrow(Supplier<X> exceptionSupplier) throws X {
+        if (!present) {
+            throw exceptionSupplier.get();
+        }
+        return value;
+    }
+
+    /** O4: only the same class, both empty or both present; present values compare with ==. */
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof OptionalLong)) {
+            return false;
+        }
+        OptionalLong other = (OptionalLong) obj;
+        return present && other.present ? value == other.value : present == other.present;
+    }
+
+    /** O3: 0 when empty, which an of(0) shares. */
+    @Override
+    public int hashCode() { return present ? Long.hashCode(value) : 0; }
+
+    /** O2: string concatenation formats the value as the wrapper's toString does, which is the oracle's form. */
+    @Override
+    public String toString() { return present ? "OptionalLong[" + value + "]" : "OptionalLong.empty"; }
+}
