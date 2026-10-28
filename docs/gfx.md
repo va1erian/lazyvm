@@ -25,13 +25,18 @@ written for AWT, whose loop is one thread doing tick, render and sleep.
   frame allocates nothing. Key codes (`Key`) name physical keys on a US
   layout, so WASD stays under the same fingers on other layouts; typed text
   arrives separately as `TEXT` events, one UTF-16 unit each. A close request
-  is an event (`CLOSE`), and the window stays open until `close()`.
+  is an event (`CLOSE`), and the window stays open, `isOpen()` true, until
+  the program calls `close()`.
 - **Images.** `Image.decode` reads a PNG into 0xAARRGGBB. That is the one
   format a game's sprite sheets need; others can come with `javax.imageio`
   (S13-03).
 - **Evidence.** `Window.capture()` returns the window's pixels as last
   presented, scaling included, so tests and screenshots judge pixels
   (shared rule 3).
+- **Memory.** A host keeps one frame outside the Java heap, so a window is at
+  most 2^25 pixels (128 MiB). PNGs are capped at 2^24 pixels (64 MiB as
+  ARGB), checked from the header; the Java array is allocated before
+  decoding, so `-Xmx` is charged first.
 
 ## Backends
 

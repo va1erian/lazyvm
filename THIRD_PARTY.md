@@ -7,15 +7,15 @@ license outside the allowed list (`docs/decisions.md` D2).
 | Crate | License | Used by | Why |
 |---|---|---|---|
 | `libm` | MIT | natives | `StrictMath`: a port of musl libm (fdlibm lineage), identical results on Windows and LazyOS |
-| `miniz_oxide` | MIT OR Zlib OR Apache-2.0 | classfile | Inflating deflated jar entries |
-| `adler2` | 0BSD OR MIT OR Apache-2.0 | classfile (through miniz_oxide) | Adler-32, used by miniz_oxide |
+| `miniz_oxide` | MIT OR Zlib OR Apache-2.0 | classfile; gfx (through png, and flate2, which pins a second version) | Inflating deflated jar entries and PNG data |
+| `adler2` | 0BSD OR MIT OR Apache-2.0 | classfile, gfx (through miniz_oxide) | Adler-32, used by miniz_oxide |
 | `png` | MIT OR Apache-2.0 | gfx | Decoding PNGs for `lazy.gfx.Image` |
 | `fdeflate` | MIT OR Apache-2.0 | gfx (through png) | Fast inflate for PNG data |
 | `flate2` | MIT OR Apache-2.0 | gfx (through png) | Inflate fallback for PNG data, on miniz_oxide |
 | `crc32fast` | MIT OR Apache-2.0 | gfx (through png) | PNG chunk checksums |
-| `simd-adler32` | MIT | gfx (through png) | Adler-32 for PNG data |
+| `simd-adler32` | MIT | gfx (through fdeflate, miniz_oxide) | Adler-32 for PNG data |
 | `bitflags` | MIT/Apache-2.0 | gfx (through png, winit) | Flag types |
-| `cfg-if` | MIT OR Apache-2.0 | gfx (through crc32fast, winit) | Conditional compilation |
+| `cfg-if` | MIT OR Apache-2.0 | gfx (through crc32fast) | Conditional compilation |
 | `winit` | Apache-2.0 | gfx, Windows only | The desktop window and its input events (docs/gfx.md) |
 | `softbuffer` | MIT OR Apache-2.0 | gfx, Windows only | Putting a frame of pixels in the window |
 | `raw-window-handle` | MIT OR Apache-2.0 OR Zlib | gfx, Windows only (through winit, softbuffer) | Window handles shared between winit and softbuffer |

@@ -157,22 +157,29 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
 
 ### `lazy.gfx.Window` and `lazy.gfx.Image` (docs/gfx.md)
 - `private static native int open0(String title, int width, int height)`: a
-  handle (never 0) for a window of that client size in pixels; `-Dlazy.gfx`
-  picks the backend. `IllegalStateException` when there is no window system.
+  handle (never 0) for a window of that client size in pixels, at most 2^25
+  pixels in all (`IllegalArgumentException` above); `-Dlazy.gfx` picks the
+  backend. `IllegalStateException` when there is no window system or the
+  window cannot be created.
 - `private static native void present0(int handle, int[] rgb, int width, int height)`
 - `private static native boolean poll0(int handle, Event e)`: fills `e`'s
   `type`, `key`, `ch`, `x`, `y` and `button`, or returns false.
-- `private static native boolean isOpen0(int handle)`
+- `private static native boolean isOpen0(int handle)`: false for a handle that
+  names no window (closed, or never opened).
 - `private static native int size0(int handle, int axis)` (0 width, 1 height)
-- `private static native int[] capture0(int handle)`
+- `private static native int[] capture0(int handle)`: allocated from the heap
+  (so `-Xmx` applies) before the pixels are copied; black where nothing of the
+  current size was presented.
 - `private static native void setTitle0(int handle, String title)`
 - `private static native void close0(int handle)`: an unknown handle is ignored.
 - `private static native int[] decodePng0(byte[] data, int[] size)`: ARGB
   pixels, with width and height written to `size[0]` and `size[1]`;
-  `IOException` for a malformed file.
+  `IOException` for a malformed file or one over 2^24 pixels (64 MiB as ARGB).
+  The result array is allocated from the header's size before decoding.
 
-Handles name entries in a table owned by the VM thread; an unknown handle is
-`IllegalStateException`. Sizes are checked in Java and again in Rust.
+Handles name entries in a table owned by the VM thread. Except where noted
+above, an unknown handle is `IllegalStateException`. Sizes are checked in Java
+and again in Rust.
 
 ## Known differences from Java 8
 

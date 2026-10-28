@@ -32,7 +32,8 @@ short array: IllegalArgumentException
 zero width: IllegalArgumentException
 null pixels: NullPointerException
 bad scale: IllegalArgumentException
-too large: IllegalArgumentException
+over 2^25 pixels: IllegalArgumentException
+side over int: IllegalArgumentException
 open after close false, poll false
 present after close: IllegalStateException
 capture after close: IllegalStateException

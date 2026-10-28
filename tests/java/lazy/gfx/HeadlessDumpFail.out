@@ -1,0 +1,8 @@
+close first: IllegalStateException
+first open false
+first open false, second open true
+present on first: IllegalStateException
+close first again: no exception
+second 3x1 010203 040506 070809
+close second: IllegalStateException
+second open false

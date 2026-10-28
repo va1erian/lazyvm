@@ -13,24 +13,32 @@ pub struct Headless {
 }
 
 impl Headless {
-    pub fn new(w: u32, h: u32, dump: Option<PathBuf>) -> Headless {
-        Headless {
+    /// Fails, rather than aborting, when the frame cannot be allocated.
+    pub fn new(w: u32, h: u32, dump: Option<PathBuf>) -> Result<Headless, String> {
+        let n = w as usize * h as usize;
+        let mut pixels = Vec::new();
+        pixels
+            .try_reserve_exact(n)
+            .map_err(|_| format!("out of memory for a {w}x{h} window"))?;
+        pixels.resize(n, 0);
+        Ok(Headless {
             w,
             h,
-            pixels: vec![0; w as usize * h as usize],
+            pixels,
             title: String::new(),
             dump,
-        }
+        })
     }
 
     /// The window as a binary PPM (P6), the simplest format image tools read.
-    fn ppm(&self) -> Vec<u8> {
+    fn ppm(&self) -> Result<Vec<u8>, String> {
         let mut out = format!("P6\n{} {}\n255\n", self.w, self.h).into_bytes();
-        out.reserve(self.pixels.len() * 3);
+        out.try_reserve_exact(self.pixels.len() * 3)
+            .map_err(|_| "out of memory for the PPM dump".to_string())?;
         for p in &self.pixels {
             out.extend_from_slice(&[(p >> 16) as u8, (p >> 8) as u8, *p as u8]);
         }
-        out
+        Ok(out)
     }
 }
 
@@ -45,16 +53,12 @@ impl Host for Headless {
         None
     }
 
-    fn is_open(&self) -> bool {
-        true
-    }
-
     fn size(&self) -> (u32, u32) {
         (self.w, self.h)
     }
 
-    fn capture(&self) -> Vec<u32> {
-        self.pixels.clone()
+    fn capture(&self, f: &mut dyn FnMut(&[u32])) {
+        f(&self.pixels);
     }
 
     fn set_title(&mut self, title: &str) {
@@ -63,7 +67,7 @@ impl Host for Headless {
 
     fn close(self: Box<Self>) -> Result<(), String> {
         match &self.dump {
-            Some(path) => std::fs::write(path, self.ppm())
+            Some(path) => std::fs::write(path, self.ppm()?)
                 .map_err(|e| format!("cannot write {}: {e}", path.display())),
             None => Ok(()),
         }

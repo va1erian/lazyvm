@@ -54,7 +54,8 @@ fn backend(vm: &Vm) -> Backend {
 fn open0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let title = vm.string_arg(arg(args, 0)?)?;
     let (w, h) = (int(args, 1)?, int(args, 2)?);
-    if !(1..=16384).contains(&w) || !(1..=16384).contains(&h) {
+    let area = i64::from(w) * i64::from(h);
+    if w <= 0 || h <= 0 || area as u64 > gfx::MAX_PIXELS {
         return Err(VmError::exception(
             "java/lang/IllegalArgumentException",
             format!("window size {w}x{h}"),
@@ -83,15 +84,22 @@ fn present0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     ret_void()
 }
 
+/// The array comes from the heap first, so its size is charged to `-Xmx`
+/// before anything is copied; frames not yet presented read as black.
 fn capture0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let pixels = gfx::capture(int(args, 0)?).map_err(state)?;
-    let len = i32::try_from(pixels.len()).map_err(|_| VmError::OutOfMemory)?;
+    let handle = int(args, 0)?;
+    let (w, h) = gfx::size(handle).map_err(state)?;
+    let len = i32::try_from(u64::from(w) * u64::from(h)).map_err(|_| VmError::OutOfMemory)?;
     let out = vm.new_array_of("I", len)?;
-    if let Array::Int(dst) = vm.heap.array_mut(out)? {
-        for (d, p) in dst.iter_mut().zip(pixels) {
+    let Array::Int(dst) = vm.heap.array_mut(out)? else {
+        return Err(VmError::Internal("int[] is not an int array".into()));
+    };
+    gfx::capture(handle, |pixels| {
+        for (d, &p) in dst.iter_mut().zip(pixels) {
             *d = p as i32;
         }
-    }
+    })
+    .map_err(state)?;
     ret_ref(Some(out))
 }
 
@@ -129,16 +137,25 @@ fn poll0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     ret_bool(true)
 }
 
+/// The result array is allocated from the header's size before decoding, so
+/// an image the heap cannot hold is an OutOfMemoryError (after a collection)
+/// before the decoder allocates anything; the decoder's own buffers are
+/// bounded by its pixel cap.
 fn decode_png0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let Array::Byte(data) = vm.heap.array(obj(args, 0)?)? else {
         return Err(VmError::verify("decodePng0 needs a byte[]"));
     };
     let bytes: Vec<u8> = data.iter().map(|&b| b as u8).collect();
     let size = obj(args, 1)?;
-    let (w, h, pixels) = gfx::decode_png(&bytes)
-        .map_err(|e| VmError::exception("java/io/IOException", format!("bad PNG: {e}")))?;
-    let len = i32::try_from(pixels.len()).map_err(|_| VmError::OutOfMemory)?;
+    let bad = |e: String| VmError::exception("java/io/IOException", format!("bad PNG: {e}"));
+    let (w, h) = gfx::png_size(&bytes).map_err(bad)?;
+    let len = i32::try_from(u64::from(w) * u64::from(h)).map_err(|_| VmError::OutOfMemory)?;
     let out = vm.with_root(size, |vm| vm.new_array_of("I", len))?;
+    // No allocation from here on, so neither `out` nor `size` can move or die.
+    let (dw, dh, pixels) = gfx::decode_png(&bytes).map_err(bad)?;
+    if (dw, dh) != (w, h) {
+        return Err(bad(format!("frame is {dw}x{dh}, header said {w}x{h}")));
+    }
     if let Array::Int(dst) = vm.heap.array_mut(out)? {
         for (d, p) in dst.iter_mut().zip(pixels) {
             *d = p as i32;

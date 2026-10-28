@@ -49,6 +49,13 @@ impl App {
         Ok(())
     }
 
+    /// Forgets the previous window's events, cursor and last frame.
+    fn reset(&mut self) {
+        self.events.clear();
+        self.cursor = (0, 0);
+        self.last = (Vec::new(), 0, 0);
+    }
+
     fn push_mouse(&mut self, button: MouseButton, state: ElementState) {
         let b = match button {
             MouseButton::Left => 1,
@@ -139,10 +146,8 @@ fn with_desktop<T>(f: impl FnOnce(&mut Desktop) -> T) -> Result<T, String> {
     })
 }
 
-/// The handle-table entry for the one desktop window.
-pub struct DesktopWindow {
-    open: bool,
-}
+/// The handle-table entry for the one desktop window, whose state is in `DESKTOP`.
+pub struct DesktopWindow;
 
 impl DesktopWindow {
     pub fn open(title: &str, w: u32, h: u32) -> Result<DesktopWindow, String> {
@@ -151,7 +156,7 @@ impl DesktopWindow {
                 return Err("only one window at a time for now".to_string());
             }
             d.app.request = Some((title.to_owned(), w, h));
-            d.app.events.clear();
+            d.app.reset();
             // The window is created from inside the loop; a few pumps get there.
             for _ in 0..100 {
                 d.pump();
@@ -159,7 +164,7 @@ impl DesktopWindow {
                     return Err(e);
                 }
                 if d.app.window.is_some() {
-                    return Ok(DesktopWindow { open: true });
+                    return Ok(DesktopWindow);
                 }
             }
             Err("the window system did not create the window".to_string())
@@ -198,10 +203,6 @@ impl Host for DesktopWindow {
         .flatten()
     }
 
-    fn is_open(&self) -> bool {
-        self.open
-    }
-
     fn size(&self) -> (u32, u32) {
         with_desktop(|d| match &d.app.window {
             Some((w, _)) => (w.inner_size().width, w.inner_size().height),
@@ -210,18 +211,13 @@ impl Host for DesktopWindow {
         .unwrap_or((0, 0))
     }
 
-    fn capture(&self) -> Vec<u32> {
-        // A resize since the last frame leaves the old size; callers get what was shown.
+    fn capture(&self, f: &mut dyn FnMut(&[u32])) {
+        // After a resize the last frame no longer matches the window: report none.
         let size = self.size();
-        with_desktop(|d| {
+        let _ = with_desktop(|d| {
             let (pixels, w, h) = &d.app.last;
-            if (*w, *h) == size {
-                pixels.clone()
-            } else {
-                vec![0; size.0 as usize * size.1 as usize]
-            }
-        })
-        .unwrap_or_default()
+            f(if (*w, *h) == size { pixels } else { &[] });
+        });
     }
 
     fn set_title(&mut self, title: &str) {
@@ -235,7 +231,7 @@ impl Host for DesktopWindow {
     fn close(self: Box<Self>) -> Result<(), String> {
         with_desktop(|d| {
             d.app.window = None;
-            d.app.events.clear();
+            d.app.reset();
             d.pump();
         })
     }

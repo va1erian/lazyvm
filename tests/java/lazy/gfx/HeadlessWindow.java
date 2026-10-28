@@ -53,7 +53,8 @@ public class HeadlessWindow {
         expect("zero width", () -> w.present(new int[3], 0, 2));
         expect("null pixels", () -> w.present(null, 1, 1));
         expect("bad scale", () -> Window.open("x", 4, 4, 0));
-        expect("too large", () -> Window.open("x", 4000, 4, 5));
+        expect("over 2^25 pixels", () -> Window.open("x", 8193, 4096, 1));
+        expect("side over int", () -> Window.open("x", 1 << 20, 1, 1 << 12));
         w.setTitle("renamed");
         w.close();
         w.close();

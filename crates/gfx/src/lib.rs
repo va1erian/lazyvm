@@ -15,8 +15,12 @@ mod desktop;
 use std::cell::RefCell;
 use std::path::PathBuf;
 
-pub use image::decode_png;
+pub use image::{decode_png, png_size};
 pub use scale::fit;
+
+/// The largest client area, in pixels, a window may have: 128 MiB of 0x00RRGGBB.
+/// Hosts keep a frame of this size outside the Java heap.
+pub const MAX_PIXELS: u64 = 1 << 25;
 
 /// One input event, mirroring `lazy.gfx.Event`'s types.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,10 +51,10 @@ trait Host {
     /// `rgb` holds exactly `w * h` pixels of 0x00RRGGBB.
     fn present(&mut self, rgb: &[u32], w: usize, h: usize) -> Result<(), String>;
     fn poll(&mut self) -> Option<Event>;
-    fn is_open(&self) -> bool;
     fn size(&self) -> (u32, u32);
-    /// The window's pixels as last presented, row by row, `size()` of them.
-    fn capture(&self) -> Vec<u32>;
+    /// Calls `f` with the window's pixels as last presented, row by row, or
+    /// with an empty slice when nothing of the current size was presented.
+    fn capture(&self, f: &mut dyn FnMut(&[u32]));
     fn set_title(&mut self, title: &str);
     fn close(self: Box<Self>) -> Result<(), String>;
 }
@@ -61,8 +65,11 @@ thread_local! {
 
 /// Opens a window with a client area of `w` by `h` pixels and returns its handle (never 0).
 pub fn open(backend: &Backend, title: &str, w: u32, h: u32) -> Result<i32, String> {
+    if w == 0 || h == 0 || u64::from(w) * u64::from(h) > MAX_PIXELS {
+        return Err(format!("window size {w}x{h}"));
+    }
     let host: Box<dyn Host> = match backend {
-        Backend::Headless(dump) => Box::new(headless::Headless::new(w, h, dump.clone())),
+        Backend::Headless(dump) => Box::new(headless::Headless::new(w, h, dump.clone())?),
         #[cfg(all(windows, feature = "desktop"))]
         Backend::Desktop => Box::new(desktop::DesktopWindow::open(title, w, h)?),
         #[cfg(not(all(windows, feature = "desktop")))]
@@ -103,16 +110,18 @@ pub fn poll(handle: i32) -> Result<Option<Event>, String> {
     with(handle, |host| host.poll())
 }
 
+/// Whether `handle` names a window that has not been closed.
 pub fn is_open(handle: i32) -> bool {
-    with(handle, |host| host.is_open()).unwrap_or(false)
+    with(handle, |_| ()).is_ok()
 }
 
 pub fn size(handle: i32) -> Result<(u32, u32), String> {
     with(handle, |host| host.size())
 }
 
-pub fn capture(handle: i32) -> Result<Vec<u32>, String> {
-    with(handle, |host| host.capture())
+/// Calls `f` with the window's last presented pixels (see `Host::capture`).
+pub fn capture(handle: i32, mut f: impl FnMut(&[u32])) -> Result<(), String> {
+    with(handle, |host| host.capture(&mut f))
 }
 
 pub fn set_title(handle: i32, title: &str) -> Result<(), String> {

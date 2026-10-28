@@ -5,4 +5,5 @@ empty: IOException
 text: IOException
 truncated: IOException
 bad crc: IOException
+huge gray: bad PNG: PNG too large (16384x4096)
 null: NullPointerException

@@ -14,17 +14,25 @@ public final class Window implements AutoCloseable {
         this.handle = handle;
     }
 
+    /** The largest client area, in pixels (the host keeps one frame of it outside the heap). */
+    private static final long MAX_PIXELS = 1L << 25;
+
     /**
      * Opens a window whose client area is {@code width * scale} by {@code height * scale}
-     * pixels. Under {@code -Dlazy.gfx=headless} no window is shown, and frames go to memory.
+     * pixels, at most 2<sup>25</sup> pixels in all. Under {@code -Dlazy.gfx=headless} no window
+     * is shown, and frames go to memory.
+     *
+     * @throws IllegalStateException if there is no window system (LazyOS for now) or the window
+     *     cannot be created
      */
     public static Window open(String title, int width, int height, int scale) {
         if (title == null) throw new NullPointerException("title");
         if (width <= 0 || height <= 0 || scale <= 0)
             throw new IllegalArgumentException("size " + width + "x" + height + " scale " + scale);
-        if ((long) width * scale > 16384 || (long) height * scale > 16384)
+        long w = (long) width * scale, h = (long) height * scale;
+        if (w > Integer.MAX_VALUE || h > Integer.MAX_VALUE || w * h > MAX_PIXELS)
             throw new IllegalArgumentException("window too large");
-        return new Window(open0(title, width * scale, height * scale));
+        return new Window(open0(title, (int) w, (int) h));
     }
 
     /**
@@ -48,7 +56,10 @@ public final class Window implements AutoCloseable {
         return poll0(handle, e);
     }
 
-    /** Whether the window is still open: false after {@link #close} or once the user closed it. */
+    /**
+     * Whether {@link #close} has not been called yet. The user closing the window only queues an
+     * {@link Event#CLOSE}; the program decides, and calls {@link #close}.
+     */
     public boolean isOpen() {
         return handle != 0 && isOpen0(handle);
     }
@@ -76,12 +87,16 @@ public final class Window implements AutoCloseable {
         setTitle0(live(), title);
     }
 
-    /** Destroys the window. Closing twice does nothing. */
+    /**
+     * Destroys the window. Closing twice does nothing. The window is gone even when this throws
+     * (a headless dump that cannot be written), so the handle is dropped first.
+     */
     @Override
     public void close() {
-        if (handle != 0) {
-            close0(handle);
+        int h = handle;
+        if (h != 0) {
             handle = 0;
+            close0(h);
         }
     }
 
