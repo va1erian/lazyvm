@@ -1,5 +1,6 @@
 package lang;
 
+import java.io.File;
 import java.net.URI;
 import java.util.Locale;
 
@@ -57,9 +58,46 @@ public class StringCaseLocale {
         show("title and dz", "\u01c4 \u01c5 \u01c6 \u1f88 \u2126 \u212a \u212b");
         show("no change cases", "123 .,; \u4e00\u4e8c \u00e9\u00c9");
         System.out.println(LOCALES[2].equals(new Locale("TR")) + " " + new Locale("TR", "tr", "Var"));
+        softDotted();
+        languages();
         identity();
         defaultLocale();
         nullLocale();
+    }
+
+    // The dot above survives until an earlier character has changed case; U+1D62 and U+2071 are
+    // soft-dotted but have no upper case, which hides them from a probe without a cased prefix.
+    static void softDotted() {
+        String[] rows = {
+            "ᵢ̇", "Aᵢ̇", "1ᵢ̇", "𐐀ᵢ̇",
+            "\ud800ᵢ̇", "Ǆᵢ̇", "ᵢ̇ͅ",
+            "ᵢ̇aᵢ̇", "aᵢ̇", "aⁱ̇", "iᵢ̇",
+            "ßᵢ̇", "İᵢ̇", "ᵢ̇ͅ",
+            "aⁱ̖̇", "aⁱ́̇", "ai̇̇",
+        };
+        Locale lt = new Locale("lt");
+        for (String r : rows) {
+            String up = r.toUpperCase(lt);
+            System.out.println("soft " + cps(r) + " -> " + cps(up) + (up == r ? " same" : ""));
+        }
+        Locale tr = new Locale("tr");
+        String[] lower = {"̖̇A", "̇A", "Ȧ", "İ̖", "̖̇I"};
+        for (String r : lower) {
+            System.out.println("tr lower " + cps(r) + " -> " + cps(r.toLowerCase(tr)));
+        }
+    }
+
+    // Only the exact languages tr, az and lt have rules.
+    static void languages() {
+        String text = "Iiİı";
+        for (String lang : new String[] {"th", "tk", "t", "tru", "a", "az", "l", "ltu", "AZ", "Lt", "xx"}) {
+            Locale l = new Locale(lang);
+            System.out.println("lang " + lang + " " + cps(text.toLowerCase(l)) + " | "
+                + cps(text.toUpperCase(l)) + " | " + cps("ÍÌ".toLowerCase(l)));
+        }
+        System.out.println("fold " + cps(new Locale("İT").getLanguage()) + " | "
+            + cps(new Locale("", "ßa").getCountry()) + " | "
+            + cps(new Locale("Àb", "àc", "Àd").toString()));
     }
 
     static void identity() {
@@ -83,6 +121,16 @@ public class StringCaseLocale {
             URI a = URI.create("HTTP://WWW.ISIK.com/A");
             URI b = URI.create("http://www.isik.com/A");
             System.out.println("uri " + a.equals(b) + " " + (a.hashCode() == b.hashCode()));
+            URI c = URI.create("FILE:/ISIK/A#I");
+            URI d = URI.create("file:/ISIK/A#I");
+            URI e = URI.create("file://ISIK.COM/ISIK");
+            URI f = URI.create("FILE://isik.com/ISIK");
+            System.out.println("uri scheme " + (c.hashCode() == d.hashCode()) + " " + (e.hashCode() == f.hashCode()));
+            char bs = (char) 92;
+            boolean windows = File.separatorChar == bs;
+            // Only Windows ignores case in paths; elsewhere the same line is printed.
+            System.out.println("file " + (!windows || new File("C:" + bs + "ISIK").hashCode()
+                == new File("c:" + bs + "isik").hashCode()));
         } finally {
             Locale.setDefault(saved);
         }

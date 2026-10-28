@@ -71,14 +71,12 @@ final class CaseLocale {
      * Converts the code point cp at index i of s if the mode has a rule for it, appending the
      * result (possibly nothing), and says whether it did.
      */
-    static boolean append(StringBuilder sb, String s, int i, int cp, boolean upper, int mode) {
-        if (mode == ROOT) {
-            return false;
-        }
+    static boolean append(StringBuilder sb, String s, int i, int cp, boolean upper, int mode,
+            boolean changed) {
         if (mode == TURKIC) {
             return upper ? turkicUpper(sb, cp) : turkicLower(sb, s, i, cp);
         }
-        return upper ? lithuanianUpper(s, i, cp) : lithuanianLower(sb, s, i, cp);
+        return upper ? lithuanianUpper(s, i, cp, changed) : lithuanianLower(sb, s, i, cp);
     }
 
     private static boolean turkicUpper(StringBuilder sb, int cp) {
@@ -101,8 +99,8 @@ final class CaseLocale {
     }
 
     // The dot above after a soft-dotted letter is dropped; the letter itself converts as usual.
-    private static boolean lithuanianUpper(String s, int i, int cp) {
-        return cp == DOT_ABOVE && precededBy(s, i, true);
+    private static boolean lithuanianUpper(String s, int i, int cp, boolean changed) {
+        return changed && cp == DOT_ABOVE && precededBy(s, i, true);
     }
 
     private static boolean lithuanianLower(StringBuilder sb, String s, int i, int cp) {
@@ -119,6 +117,11 @@ final class CaseLocale {
         }
         sb.append('i').append((char) DOT_ABOVE).append((char) accent);
         return true;
+    }
+
+    /** Whether upper-casing cp alters it; U+0130 counts although it maps to itself. */
+    static boolean changes(int cp) {
+        return Character.toUpperCase(cp) != cp || cp == DOTTED_CAPITAL_I || StringCase.special(cp, true, 0) >= 0;
     }
 
     private static int kind(int cp) {

@@ -29,5 +29,5 @@ final class CaseMarks {
             + "4,aaf6,abed,fb1e,101fd,10a0d,10a39-10a3a,10a3f,11046,110b9-110ba,11133-11134,111c0,116b6-116b7,1d165"
             + "-1d169,1d16d-1d172,1d17b-1d182,1d18a-1d18b";
 
-    static final String SOFT_DOTTED = "69-6a,12f,268,456,458,1e2d,1ecb";
+    static final String SOFT_DOTTED = "69-6a,12f,268,456,458,1d62,1e2d,1ecb,2071";
 }

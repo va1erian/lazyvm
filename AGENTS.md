@@ -99,7 +99,7 @@ cargo test --workspace
 python tools/check_rules.py            # shared blocks, 500 lines, SAFETY comments
 python tools/licenses.py               # permissive dependency tree
 python tools/buffers.py --check        # generated java.nio buffers are up to date
-python tools/case_marks.py --check     # CaseMarks.java (locale case rules) matches the oracle
+python tools/case_marks.py --check     # CaseMarks.java matches the oracle (local gate: needs the Java 8 oracle, CI has none)
 python tools/lazyrt.py                 # the class library builds
 python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar

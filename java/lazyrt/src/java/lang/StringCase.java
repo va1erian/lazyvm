@@ -33,11 +33,15 @@ final class StringCase {
         int before = 0;
         // The oracle returns a new string for U+0130 in upper case even though it maps to itself.
         boolean fresh = false;
+        boolean tailored = mode != CaseLocale.ROOT;
+        // Whether an earlier character changed case; Lithuanian keeps a dot above until one has.
+        boolean changed = false;
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; ) {
             int cp = s.codePointAt(i);
             int next = i + Character.charCount(cp);
-            if (!CaseLocale.append(sb, s, i, cp, upper, mode) && !appendSpecial(sb, cp, upper)) {
+            if (!(tailored && CaseLocale.append(sb, s, i, cp, upper, mode, changed))
+                    && !appendSpecial(sb, cp, upper)) {
                 if (sigmas && cp == SIGMA) {
                     boolean last = (accepting >> before & 1) != 0 && !blockedAfter(s, next);
                     sb.append(last ? FINAL_SIGMA : SMALL_SIGMA);
@@ -46,6 +50,7 @@ final class StringCase {
                 }
             }
             fresh |= upper && cp == DOTTED_CAPITAL_I;
+            changed |= tailored && upper && CaseLocale.changes(cp);
             if (sigmas) {
                 before = step(before, cp, false);
             }

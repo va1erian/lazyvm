@@ -5,7 +5,7 @@ import java.util.Locale;
  * String.toLowerCase(Locale) and toUpperCase(Locale) depend on, found by asking
  * the Java 8 oracle: A (marks that stop a dot search and carry the above
  * position), O (other marks, which a dot search skips) and S (the letters whose
- * dot above is dropped in upper case). tools/case_marks.py turns the output
+ * dot above is dropped in upper case, probed after a letter that changes case). tools/case_marks.py turns the output
  * into java/lazyrt/src/java/lang/CaseMarks.java.
  *
  * Line format: "A|O|S TAB lo-hi,lo-hi".
@@ -53,8 +53,9 @@ public class Dump {
             String c = new String(Character.toChars(cp));
             above[cp] = dotted("I" + c);
             marks[cp] = dotted("I" + c + "\u0301");
-            String dotless = (c + DOT).toUpperCase(LT);
-            soft[cp] = !dotless.equals((c + DOT).toUpperCase(Locale.ROOT));
+            // A cased prefix is needed: the dot is only dropped once something has changed case.
+            String probe = "a" + c + DOT;
+            soft[cp] = !probe.toUpperCase(LT).equals(probe.toUpperCase(Locale.ROOT));
         }
         boolean[] rest = new boolean[0x110000];
         for (int cp = 0; cp < rest.length; cp++) {
