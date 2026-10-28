@@ -5,6 +5,11 @@ read as SPDX (`OR` picks one side, `AND` needs both), it can be satisfied with
 allowed licenses only. `lazyvm-lazyos` alone may pull GPL crates (it is GPL
 itself); those are listed in GPL_ONLY_FOR.
 
+Only crates built for a shipped target count (SHIPPED_TARGETS), as
+`cargo tree -e normal,build --all-features` resolves them: winit, for one,
+names wasm, X11 and Wayland crates that never build for Windows or musl. Any
+cargo failure, or a tree without the launcher, fails the check.
+
     python tools/licenses.py
 """
 
@@ -17,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import ROOT  # noqa: E402
+from common import ROOT, die  # noqa: E402
 
 ALLOWED = {
     "MIT", "MIT-0", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause",
@@ -63,15 +68,48 @@ def split_top(expr: str, op: str) -> list[str]:
     return parts
 
 
+SHIPPED_TARGETS = ("x86_64-pc-windows-msvc", "x86_64-unknown-linux-musl")
+
+
+def cargo(*args: str) -> str:
+    """Runs cargo in the repo; any failure stops the check rather than shrinking it."""
+    done = subprocess.run(["cargo", *args], cwd=ROOT, capture_output=True, text=True)
+    if done.returncode != 0:
+        die(f"cargo {' '.join(args)} failed:\n{done.stderr}")
+    return done.stdout
+
+
+def built(target: str) -> set[tuple[str, str]]:
+    """(name, version) of every crate built for `target`: normal and build
+    dependencies, proc-macros and their own dependencies, with every feature on
+    so whatever the shipped binary enables (`desktop`) is covered."""
+    out = cargo("tree", "--workspace", "--locked", "--all-features", "-e", "normal,build",
+                "--target", target, "--prefix", "none", "--format", "{p}")
+    crates = {tuple(line.split()[:2]) for line in out.splitlines() if line.strip()}
+    if not any(name == "launcher" for name, _ in crates):
+        die(f"cargo tree for {target} does not list the launcher; cannot trust it")
+    return crates
+
+
+def packages() -> tuple[list[dict], set[str]]:
+    """Every package some shipped target builds, and the workspace members' ids."""
+    meta = json.loads(cargo("metadata", "--format-version", "1", "--locked"))
+    wanted: set[tuple[str, str]] = set()
+    for target in SHIPPED_TARGETS:
+        wanted |= built(target)
+    pkgs = [p for p in meta["packages"] if (p["name"], "v" + p["version"]) in wanted]
+    unmatched = wanted - {(p["name"], "v" + p["version"]) for p in pkgs}
+    if unmatched:
+        die(f"crates cargo tree builds but cargo metadata does not name: {sorted(unmatched)}")
+    return pkgs, set(meta["workspace_members"])
+
+
 def main() -> None:
-    meta = json.loads(subprocess.run(
-        ["cargo", "metadata", "--format-version", "1", "--locked"],
-        cwd=ROOT, capture_output=True, check=True).stdout)
-    members = set(meta["workspace_members"])
+    pkgs, members = packages()
     listed = set(re.findall(r"^\| *`?([A-Za-z0-9_-]+)`? *\|",
                             (ROOT / "THIRD_PARTY.md").read_text(encoding="utf-8"), re.M))
     errors = []
-    for pkg in meta["packages"]:
+    for pkg in pkgs:
         if pkg["id"] in members:
             continue
         name, lic = pkg["name"], pkg.get("license") or ""
@@ -81,7 +119,7 @@ def main() -> None:
             errors.append(f"{name}: missing from THIRD_PARTY.md")
     for error in errors:
         print(error)
-    deps = len(meta["packages"]) - len(members)
+    deps = len(pkgs) - len(members)
     print(f"licenses: {'FAIL' if errors else 'PASS'} ({deps} third-party crates)")
     sys.exit(1 if errors else 0)
 
