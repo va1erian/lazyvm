@@ -284,3 +284,20 @@ The other 12 are bit-identical on every input measured: `tan`, `asin`,
 the same natives. `Random.nextGaussian` uses `StrictMath.log`, so its values
 can differ from Java 8's in the last digits while its draws, rejections and
 pairing stay exact (`design/util.md` R1).
+
+## D14. Size budget
+
+The VM stays small: on every platform, the release binary with its debug info
+stripped and gzipped (-9), plus `lazyrt.jar` as built (already deflated), is
+under 4,000,000 bytes. `tools/size.py` measures it and fails above the budget,
+and CI runs it for the Windows binary and for the static musl binary LazyOS
+runs. The budget is the owner's choice (October 2026, with the sum near 1.4 MB
+at the end of S5).
+
+- **Over budget** is a failing gate like any other: shrink something (dead
+  code, tables, a dependency) rather than raise the number. Raising it is the
+  owner's decision and changes this entry.
+- **Above 80 %** the tool warns. A plan item expected to add a lot (TLS in
+  S7-05, fonts and imaging for AWT and Swing) says in its PR what it costs.
+- **Data the VM needs** (Unicode tables, and later time zones or fonts)
+  counts, whether it is embedded in the binary or shipped in the jar.

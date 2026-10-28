@@ -54,6 +54,8 @@ context even if `AGENTS.md` is not opened; `AGENTS.md` is the master copy.
 - New dependencies must have a permissive license (MIT, Apache-2.0, BSD, Zlib,
   ISC), be recorded in `THIRD_PARTY.md`, and pass `python tools/licenses.py`.
   Never add `ring`, `aws-lc` or a GPL crate outside `crates/lazyvm-lazyos`.
+- The release VM binary (stripped, gzipped) plus `lazyrt.jar` stays under
+  4,000,000 bytes on every platform (`python tools/size.py`, decisions.md D14).
 
 **5. Review and merge.**
 - Before every push, run the CI basics (`AGENTS.md`, "Before you push"). A
