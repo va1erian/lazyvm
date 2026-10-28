@@ -60,8 +60,8 @@ with `javap`. The probe sources live outside the repo.
 
 | Probe | Class files | Result on LazyVM |
 |---|---|---|
-| Kotlin language | 52; only `LambdaMetafactory.metafactory` | 35 of 36 checks run; 34 match the oracle exactly, 1 differs by locale |
-| Kotlin stdlib | 52; only `LambdaMetafactory.metafactory` | 36 of 41 checks run; 35 match exactly, 1 prints a different class name |
+| Kotlin language | 52; only `LambdaMetafactory.metafactory` | 35 of 36 complete (1 throws on a missing API); 34 match the oracle exactly, 1 differs by locale |
+| Kotlin stdlib | 52; only `LambdaMetafactory.metafactory` | 36 of 41 complete (5 throw); 35 match exactly, 1 prints a different class name |
 | Kotlin coroutines | 52 | fails at start: `NoClassDefFoundError: java/lang/ThreadLocal` |
 | Groovy, dynamic or `@CompileStatic` | 52; every call site through Groovy's own bootstrap method | fails at start: `NoClassDefFoundError: java/util/EventListener` |
 | Lombok | 52; nothing at run time | identical to the oracle |
@@ -71,7 +71,6 @@ bug. The coroutines row lists `ThreadLocal`, the class the run stopped on,
 and the other classes that `kotlinx-coroutines` loads on the oracle
 (`-verbose:class`) and `lazyrt` lacks; the list may not be complete, since
 no LazyVM run got further.
-
 
 | Missing | Reached from | Planned in |
 |---|---|---|
@@ -107,9 +106,9 @@ language probe 77 to 95 ms, the stdlib probe 95 to 98 ms, a Java hello 49 to
 68 ms. Loading Kotlin's stdlib classes costs tens of milliseconds, not
 seconds.
 
-**Footprint on the oracle** (`-verbose:class`, classes loaded beyond those a
-hello world loads from a jar): the Kotlin language probe 331 JDK classes, 140 of them
-`java.lang.invoke` (HotSpot's own lambda plumbing, which LazyVM replaces
+**Footprint on the oracle** (`-verbose:class`, classes loaded beyond those
+a hello world loads from a jar): the Kotlin language probe 331 JDK classes,
+140 of them `java.lang.invoke` (HotSpot's own lambda plumbing, which LazyVM replaces
 with its native metafactory); Groovy `@CompileStatic` 703 JDK classes, 276
 of them `java.lang.invoke`, plus 511 Groovy classes.
 
@@ -193,7 +192,8 @@ Two routes, neither probed:
    its own differential suite: `tests/kotlin/<area>/*.kt`, compiled by a
    pinned Kotlin through a `tools/kotlinc.py`, blessed on the oracle JVM
    with the stdlib on its class path (`tools/golden.py --bless`), and run by
-   `tools/test.py` on Windows and `tools/lazyos_test.py` on LazyOS. The two probe programs are a ready start for it.
+   `tools/test.py` on Windows and `tools/lazyos_test.py` on LazyOS. The two
+   probe programs are a ready start for it.
 2. **Fix the `toUpperCase(Locale)`/`toLowerCase(Locale)` gap now**, as S5
    work: it is in the Java SE 8 API, and plain Java apps hit it too.
 3. **Lombok allowed but not promoted**: it already works, and nothing in
