@@ -322,7 +322,8 @@ public class PropertiesIO {
             r.store(w, null);
             String text = w.toString();
             String body = text.substring(text.indexOf(NL) + NL.length());
-            storeHash = storeHash * 31 + body.hashCode();
+            // Line breaks are System.lineSeparator(); hash them as \n so the golden holds on every platform.
+            storeHash = storeHash * 31 + body.replace(NL, "\n").hashCode();
             Properties back = new Properties();
             back.load(new StringReader(text));
             if (back.equals(r)) roundW++;
@@ -330,7 +331,7 @@ public class PropertiesIO {
             r.store(o, null);
             byte[] bytes = o.toByteArray();
             String sbody = new String(bytes, "ISO-8859-1");
-            storeHash = storeHash * 31 + sbody.substring(sbody.indexOf(NL) + NL.length()).hashCode();
+            storeHash = storeHash * 31 + sbody.substring(sbody.indexOf(NL) + NL.length()).replace(NL, "\n").hashCode();
             Properties backS = new Properties();
             backS.load(new ByteArrayInputStream(bytes));
             if (backS.equals(r)) roundS++;

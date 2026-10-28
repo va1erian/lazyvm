@@ -169,7 +169,8 @@ public class Scanners {
         System.out.println("nulls " + ex(() -> new Scanner((String) null)) + " | " + ex(() -> new Scanner((Readable) null)) + " | " + ex(() -> new Scanner((InputStream) null)) + " | " + ex(() -> s("x").useDelimiter((String) null)) + " | " + ex(() -> s("x").useDelimiter((Pattern) null)) + " | " + ex(() -> s("x").next((String) null)) + " | " + ex(() -> s("x").hasNext((Pattern) null)) + " | " + ex(() -> s("x").useLocale(null)) + " | " + ex(() -> s("x").findInLine((String) null)) + " | " + ex(() -> s("x").skip((String) null)) + " | " + ex(() -> s("x").findWithinHorizon((Pattern) null, 0)));
         System.out.println("charset " + ex(() -> new Scanner(new ByteArrayInputStream(new byte[0]), "bogus")) + " | " + ex(() -> new Scanner(new ByteArrayInputStream(new byte[0]), (String) null)));
         System.out.println("remove " + ex(() -> { s("x").remove(); return "ok"; }) + " iterator " + (s("x") instanceof Iterator));
-        System.out.println("bad delimiter " + ex(() -> s("x").useDelimiter("(")).replaceAll("\\s+", " "));
+        // The message holds System.lineSeparator(), shown as <d><a> or <a>; print it as one space.
+        System.out.println("bad delimiter " + ex(() -> s("x").useDelimiter("(")).replace("<d><a>", " ").replace("<a>", " "));
         // SC22: reset restores the delimiter and radix (and the default locale, not printed: it varies).
         System.out.println("reset " + s("x").useDelimiter(",").useRadix(7).reset().delimiter() + " " + s("x").useRadix(7).reset().radix() + " " + (s("x").reset() != null));
         // SC23: toString of a fresh scanner under ROOT and US.

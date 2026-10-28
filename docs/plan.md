@@ -291,19 +291,16 @@ Goal: the everyday `java.util` and `java.io` surface from
       `Matcher` backtracking engine, Java syntax subset documented in
       `docs/regex.md`).
       Check: `tests/java/util/FormatAll`, `DoubleToString` (100k random values against the oracle), `Regex`.
-- [ ] S5-04 Utilities: `Optional*`, `Objects`, `Random` (the exact LCG, done with S5-02),
+- [x] S5-04 Utilities: `Optional*`, `Objects`, `Random` (the exact LCG, done with S5-02),
       `Scanner`, `Properties`, `UUID`, `Base64`, `BitSet`, `StringTokenizer`, to
       [`design/util.md`](design/util.md) and the files it indexes.
       Check: `tests/java/util/Utilities`, `RandomSeq`, `Base64s`, `Base64Streams`,
       `Uuids`, `BitSets`, `UtilBuffers`, `Scanners`, `ScannerNumbers`, `PropertiesIO`,
       `Tokenizers` (both).
-      State (branch `s5-util`): `Optional*`, `Objects`, `Random` R3, `Base64`, `UUID`,
-      `BitSet`, `StringTokenizer` and `InputMismatchException` are built; Utilities,
-      Base64s, Base64Streams, Uuids, BitSets, Tokenizers and RandomSeq pass on both
-      (`StrictMath` stays on `libm`, decisions.md D13). Still to build, now
-      that S5-05 and S5-06 are in: `Scanner`, `Properties` (with `java.util.Date` for its `store`
-      line), `Base64`'s `ByteBuffer` overloads and `BitSet.valueOf` of buffers. Until then their
-      tests sit in [`tests/pending`](../tests/pending/README.md).
+      Done: all of the above, plus `Base64`'s `ByteBuffer` overloads, `BitSet.valueOf` of
+      buffers and a minimal `java.util.Date` for `Properties.store`; every Check test passes on
+      both (`StrictMath` stays on `libm`, decisions.md D13). `Scanner`'s `BigInteger`/`BigDecimal`
+      readers wait for `java.math`.
 - [x] S5-05 `java.io`: byte and char streams, `Buffered*`, `InputStreamReader`
       and `OutputStreamWriter` over the charsets, `File`, `FileInputStream`,
       `FileOutputStream`, `RandomAccessFile`, `Data*Stream`, `PrintWriter`,
