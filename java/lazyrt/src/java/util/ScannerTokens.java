@@ -38,20 +38,37 @@ final class ScannerTokens {
         return delimiterMatcher.region(from, to);
     }
 
-    /** A probe: a match of `p` at `from` that stops before `to`, so a run has ended there. */
+    /** How many starts a run probe tries: a periodic run such as (ab)+ is in phase at one of them. */
+    private static final int PHASES = 16;
+
+    /**
+     * A probe: a match of `p` near `from` that stops before `to`, so a run has ended there. The
+     * window may start mid-period of a run like `(ab)+`; the first start where `p` matches at all
+     * decides, which costs little when the first one already does.
+     */
     private ScannerInput.Probe runEnds(Pattern p) {
         return (from, to) -> {
-            Matcher m = in.matcher(p, from, to);
-            return m.lookingAt() && !m.hitEnd();
+            for (int k = from; k < Math.min(to, from + PHASES); k++) {
+                Matcher m = in.matcher(p, k, to);
+                if (m.lookingAt()) {
+                    return !m.hitEnd();
+                }
+            }
+            return false;
         };
     }
 
-    /** A probe: a match of `p` in the new text that more text cannot undo. */
+    /**
+     * A probe: a match of `p` in the new text, ending after buffer index `after`, that more text
+     * cannot undo. `after` is kept as an input position, as the buffer may be compacted between
+     * reads.
+     */
     private ScannerInput.Probe occurs(Pattern p, int after) {
+        long afterAt = after < 0 ? Long.MIN_VALUE : in.at(after);
         return (from, to) -> {
             Matcher m = in.matcher(p, from, to);
             while (m.find()) {
-                if (m.end() > after) {
+                if (in.at(m.end()) > afterAt) {
                     return !m.requireEnd();
                 }
             }

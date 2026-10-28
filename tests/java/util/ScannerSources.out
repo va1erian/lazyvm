@@ -1,0 +1,16 @@
+token 5000: 5000 chars, ends [aaaaaa], reads after end 0, ioException null
+line 5000: 5000 chars, ends [aaaaaa], reads after end 0, ioException null
+skip 5000: 5 chars, ends [false], reads after end 0, ioException null
+horizon 5000: 5000 chars, ends [aaaaaa], reads after end 0, ioException null
+failure 5000: 5000 chars, ends [aaaaaa], reads after end 0, ioException java.io.IOException: boom
+token 12000: 12000 chars, ends [aaaaaa], reads after end 0, ioException null
+line 12000: 12000 chars, ends [aaaaaa], reads after end 0, ioException null
+skip 12000: 5 chars, ends [false], reads after end 0, ioException null
+horizon 12000: 12000 chars, ends [aaaaaa], reads after end 0, ioException null
+failure 12000: 12000 chars, ends [aaaaaa], reads after end 0, ioException java.io.IOException: boom
+delimiter across reads: 10047 chars, ends [aaaaaa], read past the text by under 1000 chars true
+skip: read past the text by under 1000 chars true
+blanks: 1 chars, ends [x], read past the text by under 1000 chars true
+periodic run: y z, read past the text by under 1000 chars true
+after dropping text: 40000 chars, ends [aaaaaa] 30000 chars, ends [bbbbbb], read past the text by under 1000 chars true
+done

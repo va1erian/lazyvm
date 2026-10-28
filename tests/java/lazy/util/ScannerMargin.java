@@ -53,6 +53,13 @@ public class ScannerMargin {
         List<String> abs = new ArrayList<>(Arrays.asList(c.toString().split("(?<=b)c")));
         abs.removeIf(String::isEmpty);
         check("lookbehind (?<=b)c", abs, new Scanner(c.toString()).useDelimiter("(?<=b)c"), new Scanner(seven(c.toString())).useDelimiter("(?<=b)c"));
+        // A lookbehind longer than 16 chars that reaches back past the position into the token
+        // already passed: a comma splits only 21 chars after a '#'.
+        StringBuilder w = new StringBuilder();
+        for (int i = 0; i < 1000; i++) w.append("#abcdefghijklmnopqrst,x,y,");
+        String wide = w.toString();
+        List<String> wides = Arrays.asList(wide.split("(?<=#.{20}),"));
+        check("lookbehind (?<=#.{20}),", wides, new Scanner(wide).useDelimiter("(?<=#.{20}),"), new Scanner(seven(wide)).useDelimiter("(?<=#.{20}),"));
         // ^ without MULTILINE matches only at the start of the input, however far the scanner is.
         StringBuilder lines = new StringBuilder();
         for (int i = 0; i < 6000; i++) lines.append("ab\n");

@@ -152,6 +152,9 @@ final class ScannerInput {
                 return appended; // after text was added, the caller must look once more
             }
             appended |= n > 0;
+            if (ended) {
+                return appended; // SC9: never read again once the source has ended or failed
+            }
             int unread = buf.length() - pos;
             if (probe == null || unread < SMALL || unread >= 2 * unreadBefore) {
                 return true;

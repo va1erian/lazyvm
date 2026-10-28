@@ -535,8 +535,12 @@ those rules, and `countTokens` matches. Pinned by: Tokenizers ("fuzz agree 3000 
 - Reading long input from a source that hands out short reads stays linear (ScannerLong): the
   scanner reads on before retrying a decision until the unread text has doubled or a probe of
   the newly read text shows the token or line may have ended (see ScannerInput.more). A delimiter
-  whose match reaches more than 128 chars back from the new text may be noticed only at the next
-  doubling; the answer is the same, but over an interactive source it can arrive later.
+  whose match reaches more than 128 chars back from the new text, or a run of a delimiter (or
+  of a `skip` pattern) that repeats with a period longer than 16 chars, may be noticed only at
+  the next doubling; the answer is the same, but over an interactive source it can arrive later.
+  The source is never read again once it has ended or failed (SC9), and on a source that never
+  ends the scanner stops within a read or two of the text that settles the answer
+  (ScannerSources).
 - `groupCount()` and the groups other than 0 of `match()` after a numeric reader or `nextLine`
   (the oracle exposes the groups of its internal patterns, 35 for an integer).
 - The state fields of `toString` (`position`, `match valid`, `need input`, `source closed`,

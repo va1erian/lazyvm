@@ -296,7 +296,7 @@ Goal: the everyday `java.util` and `java.io` surface from
       [`design/util.md`](design/util.md) and the files it indexes.
       Check: `tests/java/util/Utilities`, `RandomSeq`, `Base64s`, `Base64Streams`,
       `Uuids`, `BitSets`, `UtilBuffers`, `Scanners`, `ScannerNumbers`, `ScannerEdges`,
-      `ScannerLong`, `Dates`, `PropertiesIO`, `Tokenizers`, and `tests/java/lazy/util/ScannerPositions`,
+      `ScannerLong`, `ScannerSources`, `Dates`, `PropertiesIO`, `Tokenizers`, and `tests/java/lazy/util/ScannerPositions`,
       `ScannerMargin`
       (both).
       Done: all of the above, plus `Base64`'s `ByteBuffer` overloads, `BitSet.valueOf` of
