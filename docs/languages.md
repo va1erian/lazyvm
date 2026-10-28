@@ -60,13 +60,18 @@ with `javap`. The probe sources live outside the repo.
 
 | Probe | Class files | Result on LazyVM |
 |---|---|---|
-| Kotlin language | 52; only `LambdaMetafactory.metafactory` | 35 of 36 checks match the oracle |
-| Kotlin stdlib | 52; only `LambdaMetafactory.metafactory` | 36 of 41 match |
+| Kotlin language | 52; only `LambdaMetafactory.metafactory` | 35 of 36 checks run; 34 match the oracle exactly, 1 differs by locale |
+| Kotlin stdlib | 52; only `LambdaMetafactory.metafactory` | 36 of 41 checks run; 35 match exactly, 1 prints a different class name |
 | Kotlin coroutines | 52 | fails at start: `NoClassDefFoundError: java/lang/ThreadLocal` |
 | Groovy, dynamic or `@CompileStatic` | 52; every call site through Groovy's own bootstrap method | fails at start: `NoClassDefFoundError: java/util/EventListener` |
 | Lombok | 52; nothing at run time | identical to the oracle |
 
-Every Kotlin failure is a missing `lazyrt` API, not a VM bug:
+Each of the 6 checks that failed did so on a missing `lazyrt` API, not a VM
+bug. The coroutines row lists `ThreadLocal`, the class the run stopped on,
+and the other classes that `kotlinx-coroutines` loads on the oracle
+(`-verbose:class`) and `lazyrt` lacks; the list may not be complete, since
+no LazyVM run got further.
+
 
 | Missing | Reached from | Planned in |
 |---|---|---|
@@ -74,7 +79,7 @@ Every Kotlin failure is a missing `lazyrt` API, not a VM bug:
 | `AtomicReference` | `asSequence()` on iterators, `useLines`, `readLines` | S6-03 |
 | `ThreadLocal`, `LockSupport`, `Atomic{Integer,Long,Reference}FieldUpdater`, `AtomicReferenceArray`, `Executor`, `CancellationException`, `RejectedExecutionException` | `kotlinx-coroutines` start-up | S6-01, S6-03, S6-04 |
 
-Two smaller differences, neither a Kotlin problem:
+The two checks that ran but differ, neither a Kotlin problem:
 
 - `listOf(1)::class.qualifiedName` names `lazyrt`'s private implementation
   class (`java.util.FixedCollections.OneList`, not the oracle's
@@ -94,15 +99,16 @@ are never checked. Only running differential tests finds these gaps.
 about twice `lazyrt.jar` (871,887 bytes). The probes loaded 260 stdlib
 classes, 726,088 bytes as a jar of just those classes. A method-level
 shrinker (ProGuard, R8) should do much better, but none was run, so that is
-unmeasured. `kotlinx-coroutines-core` adds 1,463,587 bytes.
+unmeasured. `kotlinx-coroutines-core` adds 1,463,587 bytes. For comparison,
+`groovy-4.0.29.jar` alone is 7,714,202 bytes.
 
 **Speed** (Windows, release build, wall clock, three runs): the Kotlin
 language probe 77 to 95 ms, the stdlib probe 95 to 98 ms, a Java hello 49 to
 68 ms. Loading Kotlin's stdlib classes costs tens of milliseconds, not
 seconds.
 
-**Footprint on the oracle** (`-verbose:class`, classes beyond a hello
-loaded from a jar): the Kotlin language probe 331 JDK classes, 140 of them
+**Footprint on the oracle** (`-verbose:class`, classes loaded beyond those a
+hello world loads from a jar): the Kotlin language probe 331 JDK classes, 140 of them
 `java.lang.invoke` (HotSpot's own lambda plumbing, which LazyVM replaces
 with its native metafactory); Groovy `@CompileStatic` 703 JDK classes, 276
 of them `java.lang.invoke`, plus 511 Groovy classes.
@@ -118,10 +124,10 @@ of them `java.lang.invoke`, plus 511 Groovy classes.
   `when` on strings compile to plain bytecode at that target.
 - Its stdlib uses a small part of the JDK, mostly what S5 and S6 already
   plan. Suspending functions are compiled into ordinary state machines, so
-  `sequence {}` and `iterator {}` already work. `kotlinx-coroutines` needs
-  only the S6 work.
+  `sequence {}` already works. `kotlinx-coroutines` needs at least the S6
+  work; whether it needs more is unknown until S6 lands and it is run again.
 - Apache-2.0 compiler and stdlib, so apps may ship the stdlib under any
-  license.
+  license, keeping Kotlin's Apache-2.0 license and notice with it.
 - IntelliJ is Kotlin's home, and the `lazyvm-sdk` fake JDK (D3) works as its
   JDK: the probes were compiled against it.
 - **Costs:** the stdlib in every app (section 2's size figures), and a
@@ -134,7 +140,8 @@ of them `java.lang.invoke`, plus 511 Groovy classes.
 Every call site, `@CompileStatic` included, goes through Groovy's own
 `invokedynamic` bootstrap, which needs general `MethodHandle` support (out in
 D1). Its runtime builds a metaclass registry at start-up that pulls in
-`java.beans` and twice Kotlin's JDK footprint, and the jar is 7.7 MB.
+`java.beans` and twice Kotlin's JDK footprint, and the jar is 7.7 MB
+(section 2).
 Supporting it would mean implementing `java.lang.invoke` in full.
 
 ### Scala: does not fit
@@ -144,16 +151,16 @@ the Scala 3.3 LTS line still emits Java 8 bytecode
 ([Scala news](https://scala-lang.org/news/next-scala-lts-jdk.html),
 [3.8 release notes](https://scala-lang.org/news/3.8/)). Choosing Scala would
 pin the project to an LTS that new Scala work has left behind, and Scala's
-standard library is several MB. Scala's JDK 8 lazy values relied on
-`sun.misc.Unsafe` according to that announcement, which LazyVM cannot provide
-(shared rule 2: no spec describes it).
+standard library is several MB. According to the Scala news post, Scala's
+JDK 8 lazy values relied on `sun.misc.Unsafe`, which LazyVM cannot provide:
+no spec describes it (shared rule 1), and it is not in D6.
 
 ### Clojure: does not fit
 
 Not run here. Clojure compiles its code at run time and defines the classes
 through its own class loader, so it needs `ClassLoader.defineClass`,
 reflection-driven calls and its whole core library loaded at start-up. On an
-interpreter that start-up is the problem, before any app code runs.
+interpreter that start-up is likely the problem, before any app code runs.
 
 ### Java with Lombok: fits today, small gain
 
@@ -185,14 +192,16 @@ Two routes, neither probed:
    S6-03 and S6-04 for the stdlib to be complete and for coroutines), with
    its own differential suite: `tests/kotlin/<area>/*.kt`, compiled by a
    pinned Kotlin through a `tools/kotlinc.py`, blessed on the oracle JVM
-   with the stdlib on its class path, and run by `tools/test.py` on Windows
-   and LazyOS. The two probe programs are a ready start for it.
+   with the stdlib on its class path (`tools/golden.py --bless`), and run by
+   `tools/test.py` on Windows and `tools/lazyos_test.py` on LazyOS. The two probe programs are a ready start for it.
 2. **Fix the `toUpperCase(Locale)`/`toLowerCase(Locale)` gap now**, as S5
    work: it is in the Java SE 8 API, and plain Java apps hit it too.
 3. **Lombok allowed but not promoted**: it already works, and nothing in
    LazyVM has to change for it.
-4. **Not Groovy, Scala or Clojure.** Each needs general `java.lang.invoke`,
-   a newer JDK, or run-time class generation.
+4. **Not Groovy, Scala or Clojure.** Groovy needs general
+   `java.lang.invoke`; current Scala needs JDK 17, and its Java 8 line needs
+   `sun.misc.Unsafe` and is left behind by new Scala work; Clojure generates
+   classes at run time.
 5. **Newer Java** only as a separate decision that moves the spec baseline;
    it is not a language add-on.
 
