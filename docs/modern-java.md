@@ -52,8 +52,8 @@ unsupported javac option (section 3).
 
 | Feature (Java version) | What javac emits | On LazyVM |
 |---|---|---|
-| `var` (10), text blocks (15), switch expressions with `->` and `yield` (14), pattern `instanceof` (16), private interface methods (9) | ordinary bytecode | runs, output identical to the oracle |
-| Nest mates (11): inner classes reach each other's private members directly | `NestHost`/`NestMembers`; `invokevirtual` and `invokeinterface` on private methods | runs, identical, because access checks do not exist yet (they come with the S8 verifier). A private method called through a subclass that declares the same name still selects the private one, as on the oracle |
+| `var` (10), text blocks (15), switch expressions with `->` and `yield` (14), pattern `instanceof` (16) | ordinary bytecode | runs, output identical to the oracle |
+| Nest mates (11): inner classes reach each other's private members directly; private interface methods (9) | `NestHost`/`NestMembers`; `invokevirtual` and `invokeinterface` on private methods, which the Java 8 rules reject | runs, identical, because access checks do not exist yet (they come with the S8 verifier). A private method called through a subclass that declares the same name still selects the private one, as on the oracle |
 | String `+` (9) | `invokedynamic` to `StringConcatFactory` | avoided with `-XDstringConcat=inline`, which makes javac emit `StringBuilder` calls as in Java 8. Without the flag javac needs `StringConcatFactory` to compile at all |
 | Records (16) | superclass `java.lang.Record`; `equals`, `hashCode` and `toString` are `invokedynamic` to `java.lang.runtime.ObjectMethods.bootstrap`, whose static arguments are the record class, the component names joined with `;`, and one `REF_getField` handle per component field; javac also needs `java.lang.invoke.TypeDescriptor` to compile | with stub classes, compiles and runs up to the first `toString`, then `BootstrapMethodError: unsupported bootstrap method java/lang/runtime/ObjectMethods.bootstrap`. That is the only gap |
 | Sealed classes (17) | `PermittedSubclasses` attribute | runs; nothing checks it at load time (section 3) |
@@ -63,10 +63,10 @@ unsupported javac option (section 3).
 
 - **Free once the cap moves:** the syntax-only row, and nest mates until S8.
   No VM, library or verifier change for programs javac compiled together.
-- **Load-time checks:** at the new versions a class may only extend or
-  implement a sealed type that permits it, and nest membership is validated
-  before private access is granted (`IncompatibleClassChangeError`
-  otherwise). Without them LazyVM accepts separately compiled, inconsistent
+- **Load-time checks:** at the new versions a subclass of a sealed type
+  that does not permit it fails to load (`IncompatibleClassChangeError`),
+  and private access across a nest whose host does not list the member
+  fails (`IllegalAccessError`). Without them LazyVM accepts separately compiled, inconsistent
   class files that the oracle rejects. Small VM work, done with the version
   change or recorded as a known difference.
 - **Nest mates in S8:** the verifier's access checks follow the Java 11
@@ -116,7 +116,10 @@ The VM work is small; the rule changes are not.
 4. **D6** (class library): the table gains those types.
 5. **D9** (testing): the oracle is Java 8. Tests at the new level reuse the
    existing `// ORACLE: modern` marker of `tools/golden.py`, which already
-   blesses on JDK 19 or newer, rather than adding a second oracle.
+   blesses on JDK 19 or newer, rather than adding a second oracle. That
+   blesses the whole test on the newer JDK, library output included, so
+   such tests avoid output where Java 8 and later JDKs differ.
+   `tools/golden.py` and `tools/test.py` pick the javac flag set per test.
 6. **D3** (toolchain): `tools/javac.py` builds the compile-only module and
    gains the second flag set. Which level an app uses is its choice.
 7. **IntelliJ** (not checked): the fake SDK declares `JAVA_VERSION="1.8.0"`,
@@ -146,16 +149,16 @@ The VM work is small; the rule changes are not.
 |---|---|---|
 | Class files | 61; needs D1 changed | 52; fits D1 today |
 | VM work | `ObjectMethods` linker, load-time checks, later the S8 nest-mate rule and a `StringConcatFactory` linker | none |
-| Library work | three types outside Java SE 8 | `toUpperCase(Locale)`, then at least S6 for the stdlib and coroutines |
+| Library work | three types outside Java SE 8 | `toUpperCase(Locale)`, then S6 for the full stdlib and coroutines |
 | Rule changes | references, namespace, naming, D6, D9 | none; open questions on reading Kotlin's source and on whether a shared stdlib counts toward D14 |
 | Runtime shipped with apps | none | Kotlin stdlib: 1.85 MB, 726 KB for the classes #15's probes used, unshrunk |
 | Toolchain | javac already in use, a compile-only module, tests under the existing modern oracle | a pinned `kotlinc` and its own suite |
-| Gain | `var`, records, sealed classes, switch expressions, `instanceof` patterns, text blocks | all of that and more (null safety, coroutines, extensions) |
+| Gain | `var`, records, sealed classes, switch expressions, `instanceof` patterns, text blocks | equivalents of all of that, and more (null safety, coroutines, extensions) |
 
 The two do not exclude each other. Kotlin is the larger gain with no rule
-change, but needs at least S6 and makes every app carry its stdlib. Java 17
-is the smaller gain with no runtime cost per app, but moves the spec
-baseline the project was built on. If only one is taken, the choice is
+change, but needs S6 for the full stdlib and coroutines, and makes every
+app carry its stdlib. Java 17 is the smaller gain with no runtime cost per
+app, but moves the spec baseline the project was built on. If only one is taken, the choice is
 mostly about which cost the owner prefers: a second language and its
 stdlib, or a later spec.
 
