@@ -24,11 +24,20 @@ colon → IAE. Glob: `*`, `?` within a name, `**` across names, `[…]`, `[!…]
 `PatternSyntaxException`; `*.txt` matches `.txt`; the whole path must match. Both syntaxes compile through
 `java.util.regex` (`docs/regex.md`), a glob after its translation. [PathOps: glob…, regex, … syntax]
 
-**P4.** Glob classes (found by review): `[!…]` never matches the separator; `/` (or the separator) inside a class →
-`PatternSyntaxException("Explicit 'name separator' in class")` at its index; `]` right after `[` or `[!` closes an
-empty class, which no name matches and which the oracle rejects as `"Unclosed character class"` from its own regex
-(index and pattern are that regex's: not copied, section 3); an unclosed `[` or `{` → `"Missing ']"` or `"Missing '}"`
-(no closing quote) at the end. `toUri` escapes, through the one helper `lazy.internal.UriText`, what a URI path
+**P4.** Glob classes (found by review; the sixth review's probes, 9,362 exhaustive class bodies and 50,000 random
+globs, give the rules). A glob becomes a regular expression of the oracle's shape (`^…$`, a class as "not the
+separator" intersected with its set), so what the expression refuses fails as on the oracle, with the same index and
+pattern. Classes are read by UTF-16 unit: a `-` first (after `[` or `[!`) is a member; elsewhere it makes a range from
+the unit before it, unless `]` follows (then it is a member); a `-` with no unit before it to start a range (after a
+range, after that first `-`, or after a `^` first in a plain class) is `"Invalid range"` at the `-`, a backward range
+`"Invalid range"` at the unit before the `-` (`[c-a]`, `[a-c-]`, `[--]`, `[^-a]`); the end of a range goes to the
+expression as it is (`[S-[]` is its `"Unclosed character class"`); a supplementary char is one char of a name (`[😀]`).
+`[!…]` never matches the separator; `/` (or the separator) as a member → `"Explicit 'name separator' in class"` at
+its index; `]` right after `[` or `[!` closes an empty class, which the expression refuses (`"Unclosed character
+class"`); an unclosed `[` → `"Missing ']"` at the last index (one further when a range lacks its end), an unclosed `{`
+→ `"Missing '}"` (no closing quote) at the end. [GlobClasses; NioEdges: glob…; PathsWin: glob…]
+
+**P5.** `toUri` escapes, through the one helper `lazy.internal.UriText`, what a URI path
 cannot hold (`[`, `]`, space) and the non-ASCII space and control chars (U+00A0, U+2028), as UTF-8 `%XX`; other
 non-ASCII chars stay. [NioEdges: glob…, toUri…]
 
@@ -174,10 +183,8 @@ Where LazyVM knowingly differs from the oracle; the reviewer's probes show each 
   time.
 - `Files.exists(Paths.get("NUL"))` is false (the oracle says true; `new File("NUL").exists()` is false on both).
 - The `dos` attribute view is not provided (`UnsupportedOperationException("View 'dos' not available")`).
-- A glob's `PatternSyntaxException` for a malformed class: for an empty class its index and pattern (P4), and for
-  an unclosed class that ends in `-` or holds a reversed range the description too (the oracle reports `"Invalid
-  range"` or `"Illegal character range"` from its translated regex, or `"Missing ']"` one index later; LazyVM
-  `"Missing ']"` or the separator error). Which paths a valid glob matches is the oracle's.
+- NUL on a share and past MAX_PATH (no oracle rule found yet): a real directory named `NUL` on a share, and
+  `FileInputStream` of `<dir>\NUL` in a path of 248 units or more, which opens the device where the oracle may not.
 - An array too large for LazyVM's heap is `"Java heap space"` where the oracle's larger default heap allocates it
   (from `Integer.MAX_VALUE - 1` elements, in any dimension of `multianewarray` too, both say `"Requested array size
   exceeds VM limit"`).

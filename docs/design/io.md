@@ -274,7 +274,7 @@ false. `getParentFile` keeps the parent string as it is (`\C:\` → `\C:`). `set
 microseconds; a time that does not fit → false; on Windows the first instant of 1601 leaves the time as it is and an
 earlier one is "The parameter is incorrect.". On Windows a directory's write access cannot change (`setReadOnly`,
 `setWritable` either way → false), and read and execute access can be granted (true, even for a missing file) but not
-taken. `toURI` escapes as nio-file.md P4 (`u[v]` → `u%5Bv%5D`). `toURI` of `""` ends with `/`. A lone surrogate
+taken. `toURI` escapes as nio-file.md P5 (`u[v]` → `u%5Bv%5D`). `toURI` of `""` ends with `/`. A lone surrogate
 never names the file of U+FFFD (on Windows it names its own). [IoEdges: temp…, renameTo…, … setLastModified, toURI…,
 lone surrogate names; FilePathsWin: NUL…, dir…, unc…] Canonical and real paths: nio-file.md PW2.
 
@@ -387,7 +387,7 @@ direct views never fail. [NioEdges: overlapping…, view overlap table, … of i
 
 ## 12. Paths and 13. Files
 
-Moved to [`nio-file.md`](nio-file.md) (rules P1–P4, PW1, U1–U3, NF1–NF10), with the `java.nio.file` rows of §18.
+Moved to [`nio-file.md`](nio-file.md) (rules P1–P5, PW1, PW2, U1–U3, NF1–NF10), with the `java.nio.file` rows of §18.
 
 ## 14. LazyOS
 

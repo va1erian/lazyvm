@@ -54,10 +54,10 @@ pub(crate) fn real_path(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> 
             ret_ref(Some(vm.new_string_utf16(&real)?))
         }
         Err(e) if device && unc(&opened) && e.raw_os_error() == Some(ERROR_ACCESS_DENIED) => {
-            if listed(&opened) {
-                return ret_ref(Some(vm.new_string_utf16(&opened)?));
+            match listed(&opened) {
+                Some(real) => ret_ref(Some(vm.new_string_utf16(&real)?)),
+                None => Err(VmError::bare("java/nio/file/NoSuchFileException")),
             }
-            Err(VmError::bare("java/nio/file/NoSuchFileException"))
         }
         Err(e) if missing(&e) && !below_file(&opened) => {
             Err(VmError::bare("java/nio/file/NoSuchFileException"))
@@ -80,19 +80,18 @@ pub(crate) fn real_path(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> 
 
 const ERROR_ACCESS_DENIED: i32 = 5;
 
-/// Whether the directory of `path` lists its last name (ignoring case, as
-/// Windows names do).
-fn listed(path: &[u16]) -> bool {
-    let Some(cut) = path.iter().rposition(|&c| c == SEP) else {
-        return false;
-    };
+/// `path` with its last name as the directory lists it (ignoring case, as
+/// Windows names do), or None when it does not list it.
+fn listed(path: &[u16]) -> Option<Vec<u16>> {
+    let cut = path.iter().rposition(|&c| c == SEP)?;
     let name = String::from_utf16_lossy(&path[cut + 1..]);
-    let Ok(entries) = std::fs::read_dir(vm::wtf::from_units(&path[..cut])) else {
-        return false;
-    };
-    entries.filter_map(Result::ok).any(|e| {
+    let entries = std::fs::read_dir(vm::wtf::from_units(&path[..cut])).ok()?;
+    let found = entries.filter_map(Result::ok).find(|e| {
         String::from_utf16_lossy(&vm::wtf::to_units(&e.file_name())).eq_ignore_ascii_case(&name)
-    })
+    })?;
+    let mut real = path[..=cut].to_vec();
+    real.extend(vm::wtf::to_units(&found.file_name()));
+    Some(real)
 }
 
 /// Whether the longest existing part of a missing path is a file (Windows).
@@ -105,6 +104,10 @@ fn below_file(path: &[u16]) -> bool {
 
 /// The `\\?\` form of an absolute path, which the OS takes name by name.
 fn verbatim(path: &[u16]) -> Vec<u16> {
+    // A `\\.\` or `\\?\` path already names the object directly.
+    if path.starts_with(&units(r"\\.\")) || path.starts_with(&units(r"\\?\")) {
+        return path.to_vec();
+    }
     let mut out = if unc(path) {
         units(r"\\?\UNC")
     } else {

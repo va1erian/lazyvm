@@ -91,6 +91,8 @@ public class ErrorsMisc {
         System.out.println("replace inside a pair: " + pair.replace("\ude00", "R").length() + " " + pair.replace("\ud83d", "R").length()
                 + " " + "😀\u0000aa".replace("\ude00\u0000", "R").length() + " " + "\ud83d😀".replace("\ud83d", "R").length()
                 + " " + "😀\ude00".replace("\ude00", "R").length());
+        System.out.println("replace keeps a pair: " + "x😀y".replace("\ud83d", "R").equals("x😀y")
+                + " " + "😀x\ude00x\ude00".replace("\ude00x\ude00", "R").equals("😀xR"));
         PrintStream ps = new PrintStream(new OutputStream() {
             public void write(int b) throws IOException { throw new IOException("bad"); }
         });

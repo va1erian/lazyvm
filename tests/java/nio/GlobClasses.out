@@ -1,0 +1,54 @@
+[!-a]x -> _x ]x 9x 0x !x ^x &x U+d83dU+de00x U+d83dU+de01x U+d801U+dc00x [x
+[!-9]x -> _x ]x ax 0x !x ^x &x U+d83dU+de00x U+d83dU+de01x U+d801U+dc00x [x
+[-a]x -> -x ax
+[-]x -> -x
+[!-]x -> _x ]x ax 9x 0x !x ^x &x U+d83dU+de00x U+d83dU+de01x U+d801U+dc00x [x
+[a-]x -> -x ax
+[-a-]x -> -x ax
+[0-9-]x -> PSE Invalid range at 4
+[U+d83dU+de00] -> U+d83dU+de00
+[!U+d83dU+de00]x -> -x _x ]x ax 9x 0x !x ^x &x U+d83dU+de01x U+d801U+dc00x [x
+[U+d83dU+de00]x -> U+d83dU+de00x
+[!U+d83dU+de00-U+d83dU+de01]x -> PSE Invalid range at 3
+[aU+d83dU+de00]x -> ax U+d83dU+de00x
+[a-c-]x -> PSE Invalid range at 4
+[x-z-] -> PSE Invalid range at 4
+[a-z-a]x -> PSE Invalid range at 4
+[A-Z-a&] -> PSE Invalid range at 4
+[--]x -> PSE Invalid range at 2
+[---]x -> PSE Invalid range at 2
+[--a]x -> PSE Invalid range at 2
+[!a-c-e]x -> PSE Invalid range at 5
+[c-a]x -> PSE Invalid range at 1
+[!9-0]x -> PSE Invalid range at 2
+[S-[]x -> PSE Unclosed character class (regex)
+[0-[]x -> PSE Unclosed character class (regex)
+[!-[]x -> _x ]x ax 9x 0x !x ^x &x U+d83dU+de00x U+d83dU+de01x U+d801U+dc00x
+[&&]x -> &x
+[&]x -> &x
+[^]x -> ^x
+[^-a]x -> PSE Invalid range at 2
+[!^-a]x -> -x ]x 9x 0x !x &x U+d83dU+de00x U+d83dU+de01x U+d801U+dc00x [x
+[a^-c]x -> _x ax ^x
+[[]x -> [x
+[[-a]x -> _x ]x ax ^x [x
+[!!]x -> -x _x ]x ax 9x 0x ^x &x U+d83dU+de00x U+d83dU+de01x U+d801U+dc00x [x
+[a!]x -> ax !x
+[] -> PSE Unclosed character class (regex)
+[]x -> PSE Unclosed character class (regex)
+[!]x -> PSE Unclosed character class (regex)
+[]]x -> PSE Unclosed character class (regex)
+[]-]x -> PSE Unclosed character class (regex)
+[ -> PSE Missing '] at 0
+[a -> PSE Missing '] at 1
+[a- -> PSE Missing '] at 3
+[a-c -> PSE Missing '] at 3
+[! -> PSE Missing '] at 1
+[- -> PSE Missing '] at 1
+[-- -> PSE Invalid range at 2
+[c- -> PSE Missing '] at 3
+x[a-c- -> PSE Invalid range at 5
+[a/b]x -> PSE Explicit 'name separator' in class at 2
+[!/]x -> PSE Explicit 'name separator' in class at 2
+[a-/]x -> PSE Invalid range at 1
+done

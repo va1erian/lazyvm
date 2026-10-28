@@ -110,6 +110,14 @@ public class PathsWin {
             check("File other-case drive x", new File(other + ":x").getAbsolutePath(), other + userDir.substring(1) + "|x");
             check("File.toPath of a*b", tryToPath("a*b"), "Illegal char <*> at index 1: a*b");
             check("separator", FileSystems.getDefault().getSeparator(), "|");
+            // Matching ignores case beyond ASCII too, for supplementary chars as well.
+            PathMatcher e = FileSystems.getDefault().getPathMatcher("glob:é");
+            check("glob e-acute vs E-acute", e.matches(Paths.get("É")), "true");
+            PathMatcher deseret = FileSystems.getDefault().getPathMatcher("glob:[!𐐀]x");
+            check("glob [!Deseret] vs its lower case", deseret.matches(Paths.get("𐐨x")), "false");
+            PathMatcher upper = FileSystems.getDefault().getPathMatcher("glob:[𐐀]");
+            check("glob [Deseret] vs its lower case", upper.matches(Paths.get("𐐨")), "true");
+            check("regex ignores case", FileSystems.getDefault().getPathMatcher("regex:éX").matches(Paths.get("Éx")), "true");
         }
         System.out.println("windows path rules: " + (mismatches == 0 ? "no mismatch" : mismatches + " mismatches"));
         System.out.println("done");

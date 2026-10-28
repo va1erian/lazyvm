@@ -167,7 +167,7 @@ public class NioEdges {
             for (String p : paths) sb.append(p).append('=').append(m.matches(Paths.get(p))).append(' ');
             return sb.toString().trim();
         } catch (java.util.regex.PatternSyntaxException e) {
-            // The index of an empty class is in the oracle's own regex: not compared (nio-file.md section 3).
+            // The index of an empty class is in the platform's translated regex (nio-file.md P4): not printed.
             return "PSE " + e.getDescription() + (pattern.contains("[]") || pattern.contains("[!]") ? "" : " at " + e.getIndex());
         }
     }
