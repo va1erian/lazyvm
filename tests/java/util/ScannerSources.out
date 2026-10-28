@@ -12,5 +12,6 @@ delimiter across reads: 10047 chars, ends [aaaaaa], read past the text by under 
 skip: read past the text by under 1000 chars true
 blanks: 1 chars, ends [x], read past the text by under 1000 chars true
 periodic run: y z, read past the text by under 1000 chars true
+period 7 run: y z, read past the text by under 1000 chars true
 after dropping text: 40000 chars, ends [aaaaaa] 30000 chars, ends [bbbbbb], read past the text by under 1000 chars true
 done

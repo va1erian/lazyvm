@@ -53,6 +53,10 @@ final class ScannerTokens {
                 if (m.lookingAt()) {
                     return !m.hitEnd();
                 }
+                // Failing for want of text means the run is still open: no later start settles it.
+                if (m.hitEnd()) {
+                    return false;
+                }
             }
             return false;
         };

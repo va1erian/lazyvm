@@ -116,6 +116,10 @@ public class ScannerSources {
         Endless pr = new Endless("y" + String.join("", Collections.nCopies(5000, ",;")) + "z,;", 'c', 64, 0);
         Scanner ps = new Scanner(pr).useDelimiter("(,;)+");
         System.out.println("periodic run: " + ps.next() + " " + ps.next() + ", " + pr.stopped());
+        // A period of 7, so a read can start the window in any of 7 phases.
+        Endless p7 = new Endless("y" + String.join("", Collections.nCopies(1500, ",;:.!?-")) + "z,;:.!?-", 'c', 70, 0);
+        Scanner s7 = new Scanner(p7).useDelimiter("(,;:\\.!\\?-)+");
+        System.out.println("period 7 run: " + s7.next() + " " + s7.next() + ", " + p7.stopped());
         // A token that ends after the buffer has dropped passed text (40,000 + 30,000 chars).
         Endless st = new Endless(rep('a', 40000) + " " + rep('b', 30000) + " ", 'c', 1000, 60000);
         Scanner ss = new Scanner(st);

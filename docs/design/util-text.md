@@ -538,9 +538,11 @@ those rules, and `countTokens` matches. Pinned by: Tokenizers ("fuzz agree 3000 
   whose match reaches more than 128 chars back from the new text, or a run of a delimiter (or
   of a `skip` pattern) that repeats with a period longer than 16 chars, may be noticed only at
   the next doubling; the answer is the same, but over an interactive source it can arrive later.
-  The source is never read again once it has ended or failed (SC9), and on a source that never
-  ends the scanner stops within a read or two of the text that settles the answer
-  (ScannerSources).
+  So may a delimiter such as `[ ]*,[ ]*` after more than 4 KB of its optional prefix, since a
+  probe that fails before the end of the text cannot tell a run that has ended from one that
+  has not reached its required part. The source is never read again once it has ended or
+  failed (SC9), and apart from these cases a source that never ends is read at most a read or
+  two past the text that settles the answer (ScannerSources).
 - `groupCount()` and the groups other than 0 of `match()` after a numeric reader or `nextLine`
   (the oracle exposes the groups of its internal patterns, 35 for an integer).
 - The state fields of `toString` (`position`, `match valid`, `need input`, `source closed`,
