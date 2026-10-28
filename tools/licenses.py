@@ -94,7 +94,7 @@ def built(target: str) -> set[tuple[str, str]]:
 
 def packages() -> tuple[list[dict], set[str]]:
     """Every package some shipped target builds, and the workspace members' ids."""
-    meta = json.loads(cargo("metadata", "--format-version", "1", "--locked"))
+    meta = json.loads(cargo("metadata", "--format-version", "1", "--locked", "--all-features"))
     wanted: set[tuple[str, str]] = set()
     for target in SHIPPED_TARGETS:
         wanted |= built(target)

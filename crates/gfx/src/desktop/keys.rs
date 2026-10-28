@@ -1,10 +1,9 @@
 //! winit keys to `lazy.gfx.Key` codes, and typed text to TEXT events.
 
-use std::collections::VecDeque;
-
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
 
+use super::EventQueue;
 use crate::Event;
 
 /// Queues the key event and, on a press, the text it typed. winit gives text
@@ -12,19 +11,21 @@ use crate::Event;
 /// so those are dropped: a chord with Ctrl or Alt alone types nothing, and
 /// control characters are never text. Ctrl and Alt together is AltGr on
 /// Windows, which does type (`@` on many European layouts).
-pub fn push(events: &mut VecDeque<Event>, event: &KeyEvent, mods: ModifiersState) {
+pub fn push(events: &mut EventQueue, event: &KeyEvent, mods: ModifiersState) {
     let code = match event.physical_key {
         PhysicalKey::Code(c) => code(c),
         PhysicalKey::Unidentified(_) => 0,
     };
     match event.state {
         ElementState::Pressed => {
-            events.push_back(Event::KeyDown(code));
+            events.push(Event::KeyDown(code));
             if let Some(text) = &event.text {
-                events.extend(typed(text, mods).map(Event::Text));
+                for unit in typed(text, mods) {
+                    events.push(Event::Text(unit));
+                }
             }
         }
-        ElementState::Released => events.push_back(Event::KeyUp(code)),
+        ElementState::Released => events.push(Event::KeyUp(code)),
     }
 }
 

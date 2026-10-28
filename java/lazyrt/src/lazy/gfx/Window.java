@@ -14,7 +14,7 @@ public final class Window implements AutoCloseable {
         this.handle = handle;
     }
 
-    /** The largest client area, in pixels (the host keeps one frame of it outside the heap). */
+    /** The largest client area to open with, in pixels; hosts keep frames this size off the heap. */
     private static final long MAX_PIXELS = 1L << 25;
 
     /**

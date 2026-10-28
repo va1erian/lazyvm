@@ -102,11 +102,17 @@ fn capture0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     ret_ref(Some(out))
 }
 
+/// The target is checked before an event is taken, so a rejected call loses none.
 fn poll0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let Some(event) = gfx::poll(int(args, 0)?).map_err(state)? else {
+    let handle = int(args, 0)?;
+    let target = obj(args, 1)?;
+    let class = vm.load_class(EVENT)?;
+    if vm.heap.class_of(target)? != class {
+        return Err(VmError::verify("poll0 needs a lazy.gfx.Event"));
+    }
+    let Some(event) = gfx::poll(handle).map_err(state)? else {
         return ret_bool(false);
     };
-    let target = obj(args, 1)?;
     // (type, key, ch, x, y, button), as in lazy.gfx.Event.
     let (ty, key, ch, x, y, button) = match event {
         Event::KeyDown(k) => (1, k, 0, 0, 0, 0),
@@ -119,20 +125,18 @@ fn poll0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         Event::Resize(w, h) => (8, 0, 0, w, h, 0),
         Event::Close => (9, 0, 0, 0, 0, 0),
     };
-    let class = vm.load_class(EVENT)?;
-    let ints = [
-        ("type", ty),
-        ("key", key),
-        ("x", x),
-        ("y", y),
-        ("button", button),
+    let fields = [
+        ("type", "I", ty),
+        ("key", "I", key),
+        ("ch", "C", i32::from(ch)),
+        ("x", "I", x),
+        ("y", "I", y),
+        ("button", "I", button),
     ];
-    for (name, v) in ints {
-        let slot = vm.field_slot(class, name, "I")? as usize;
-        vm.heap.fields_mut(target)?[slot] = Value::Int(v);
+    for (name, desc, v) in fields {
+        let slot = vm.field_slot(class, name, desc)?;
+        vm.set_field(target, slot, Value::Int(v))?;
     }
-    let slot = vm.field_slot(class, "ch", "C")? as usize;
-    vm.heap.fields_mut(target)?[slot] = Value::Int(i32::from(ch));
     ret_bool(true)
 }
 

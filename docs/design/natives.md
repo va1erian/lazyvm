@@ -172,6 +172,9 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
   current size was presented.
 - `private static native void setTitle0(int handle, String title)`
 - `private static native void close0(int handle)`: an unknown handle is ignored.
+  The window is destroyed in every case; `IllegalStateException` if the
+  headless dump (`-Dlazy.gfx.dump`) cannot be written, which is why
+  `Window.close` drops its handle before calling it.
 - `private static native int[] decodePng0(byte[] data, int[] size)`: ARGB
   pixels, with width and height written to `size[0]` and `size[1]`;
   `IOException` for a malformed file, one over 2^24 pixels (64 MiB as ARGB),

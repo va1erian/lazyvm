@@ -13,7 +13,6 @@
 //! it was opened at (up to the display).
 
 use std::cell::RefCell;
-use std::collections::VecDeque;
 use std::num::NonZeroU32;
 use std::rc::Rc;
 use std::time::Duration;
@@ -30,6 +29,9 @@ use winit::window::{Window, WindowId};
 use crate::{Event, Host, fit};
 
 mod keys;
+mod queue;
+
+use queue::EventQueue;
 
 type Surface = softbuffer::Surface<Rc<Window>, Rc<Window>>;
 
@@ -38,7 +40,7 @@ struct App {
     request: Option<(String, u32, u32)>,
     window: Option<(Rc<Window>, Surface)>,
     error: Option<String>,
-    events: VecDeque<Event>,
+    events: EventQueue,
     cursor: (i32, i32),
     /// Which modifiers are down, to tell typing from shortcuts.
     mods: ModifiersState,
@@ -74,7 +76,7 @@ impl App {
             _ => return,
         };
         let (x, y) = self.cursor;
-        self.events.push_back(match state {
+        self.events.push(match state {
             ElementState::Pressed => Event::MouseDown(x, y, b),
             ElementState::Released => Event::MouseUp(x, y, b),
         });
@@ -95,29 +97,25 @@ impl ApplicationHandler for App {
     }
 
     fn window_event(&mut self, _: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
-        let pushed = match event {
-            WindowEvent::CloseRequested => Event::Close,
-            WindowEvent::Focused(f) => Event::Focus(f),
-            WindowEvent::Resized(s) => Event::Resize(s.width as i32, s.height as i32),
+        match event {
+            WindowEvent::CloseRequested => self.events.push(Event::Close),
+            WindowEvent::Focused(f) => self.events.push(Event::Focus(f)),
+            WindowEvent::Resized(s) => {
+                self.events
+                    .push(Event::Resize(s.width as i32, s.height as i32));
+            }
             WindowEvent::CursorMoved { position, .. } => {
                 self.cursor = (position.x as i32, position.y as i32);
-                Event::MouseMove(self.cursor.0, self.cursor.1)
+                self.events
+                    .push(Event::MouseMove(self.cursor.0, self.cursor.1));
             }
-            WindowEvent::MouseInput { state, button, .. } => {
-                self.push_mouse(button, state);
-                return;
-            }
-            WindowEvent::ModifiersChanged(m) => {
-                self.mods = m.state();
-                return;
-            }
+            WindowEvent::MouseInput { state, button, .. } => self.push_mouse(button, state),
+            WindowEvent::ModifiersChanged(m) => self.mods = m.state(),
             WindowEvent::KeyboardInput { event, .. } => {
                 keys::push(&mut self.events, &event, self.mods);
-                return;
             }
-            _ => return,
-        };
-        self.events.push_back(pushed);
+            _ => {}
+        }
     }
 }
 
@@ -150,7 +148,7 @@ fn with_desktop<T>(f: impl FnOnce(&mut Desktop) -> T) -> Result<T, String> {
                     request: None,
                     window: None,
                     error: None,
-                    events: VecDeque::new(),
+                    events: EventQueue::default(),
                     cursor: (0, 0),
                     mods: ModifiersState::empty(),
                     last: (Vec::new(), 0, 0),
@@ -216,7 +214,7 @@ impl Host for DesktopWindow {
             if d.app.events.is_empty() {
                 d.pump();
             }
-            d.app.events.pop_front()
+            d.app.events.pop()
         })
         .ok()
         .flatten()

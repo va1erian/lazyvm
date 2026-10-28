@@ -18,8 +18,9 @@ use std::path::PathBuf;
 pub use image::{decode_png, png_size};
 pub use scale::fit;
 
-/// The largest client area, in pixels, a window may have: 128 MiB of 0x00RRGGBB.
-/// Hosts keep a frame of this size outside the Java heap.
+/// The largest client area, in pixels, a window may open with: 128 MiB of
+/// 0x00RRGGBB. Hosts keep frames this size outside the Java heap: one for the
+/// headless host, two for the desktop (the surface and a copy for `capture`).
 pub const MAX_PIXELS: u64 = 1 << 25;
 
 /// One input event, mirroring `lazy.gfx.Event`'s types.

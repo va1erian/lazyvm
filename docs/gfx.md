@@ -26,7 +26,10 @@ written for AWT, whose loop is one thread doing tick, render and sleep.
   layout, so WASD stays under the same fingers on other layouts; typed text
   arrives separately as `TEXT` events, one UTF-16 unit each. A close request
   is an event (`CLOSE`), and the window stays open, `isOpen()` true, until
-  the program calls `close()`.
+  the program calls `close()`. On the desktop, a run of mouse moves keeps
+  only the latest, and at most 4096 events wait: a program that never polls
+  loses the oldest. Text leaves out control characters and Ctrl or Alt
+  shortcuts; AltGr (Ctrl+Alt on Windows) still types.
 - **Images.** `Image.decode` reads a PNG into 0xAARRGGBB. That is the one
   format a game's sprite sheets need; others can come with `javax.imageio`
   (S13-03).

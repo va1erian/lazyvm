@@ -16,7 +16,12 @@ pub fn fit(src: &[i32], sw: usize, sh: usize, dst: &mut [u32], dw: usize, dh: us
         ((sw * dh / sh).max(1), dh)
     };
     let (ox, oy) = ((dw - tw) / 2, (dh - th) / 2);
-    let columns: Vec<usize> = (0..tw).map(|x| x * sw / tw).collect();
+    // One source column per window column; out of memory leaves the frame black.
+    let mut columns = Vec::new();
+    if columns.try_reserve_exact(tw).is_err() {
+        return;
+    }
+    columns.extend((0..tw).map(|x| x * sw / tw));
     for y in 0..th {
         let row = &src[(y * sh / th) * sw..][..sw];
         let out = &mut dst[(oy + y) * dw + ox..][..tw];
