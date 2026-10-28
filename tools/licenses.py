@@ -3,7 +3,7 @@
 The allowed list is docs/decisions.md D2. A license expression passes when,
 read as SPDX (`OR` picks one side, `AND` needs both), it can be satisfied with
 allowed licenses only. `lazyvm-lazyos` alone may pull GPL crates (it is GPL
-itself); those are listed in GPL_ONLY_FOR.
+itself); that crate does not exist yet, so no exemption is implemented.
 
 Only crates built for a shipped target count (SHIPPED_TARGETS), as
 `cargo tree -e normal,build --all-features` resolves them: winit, for one,
@@ -73,7 +73,8 @@ SHIPPED_TARGETS = ("x86_64-pc-windows-msvc", "x86_64-unknown-linux-musl")
 
 def cargo(*args: str) -> str:
     """Runs cargo in the repo; any failure stops the check rather than shrinking it."""
-    done = subprocess.run(["cargo", *args], cwd=ROOT, capture_output=True, text=True)
+    done = subprocess.run(["cargo", *args], cwd=ROOT, capture_output=True,
+                          encoding="utf-8", errors="replace")
     if done.returncode != 0:
         die(f"cargo {' '.join(args)} failed:\n{done.stderr}")
     return done.stdout
