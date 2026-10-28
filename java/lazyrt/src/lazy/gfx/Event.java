@@ -9,7 +9,10 @@ public final class Event {
     public static final int KEY_DOWN = 1;
     /** A key went up; {@link #key} says which. */
     public static final int KEY_UP = 2;
-    /** Text was typed; {@link #ch} holds one UTF-16 unit of it. */
+    /**
+     * Text was typed; {@link #ch} holds one UTF-16 unit of it. Printable text only: Enter,
+     * Backspace, Tab and Escape, and shortcuts with Ctrl or Alt, arrive as KEY_DOWN alone.
+     */
     public static final int TEXT = 3;
     /** The pointer moved to ({@link #x}, {@link #y}), in window pixels. */
     public static final int MOUSE_MOVE = 4;
