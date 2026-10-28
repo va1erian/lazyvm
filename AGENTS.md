@@ -61,6 +61,8 @@ it everywhere.
 - New dependencies must have a permissive license (MIT, Apache-2.0, BSD, Zlib,
   ISC), be recorded in `THIRD_PARTY.md`, and pass `python tools/licenses.py`.
   Never add `ring`, `aws-lc` or a GPL crate outside `crates/lazyvm-lazyos`.
+- The release VM binary (stripped, gzipped) plus `lazyrt.jar` stays under
+  4,000,000 bytes on every platform (`python tools/size.py`, decisions.md D14).
 
 **5. Review and merge.**
 - Before every push, run the CI basics (`AGENTS.md`, "Before you push"). A
@@ -101,6 +103,7 @@ python tools/lazyrt.py                 # the class library builds
 python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
 python tools/launcher_test.py          # -jar, manifests and jar errors
+python tools/size.py                   # binary + lazyrt.jar under the 4 MB budget (D14)
 python tools/lazyos_test.py --lazyos <LazyOS checkout>   # the suite inside LazyOS; slow, before each PR
 cargo build -p launcher --target x86_64-unknown-linux-musl
 ```
