@@ -1,0 +1,168 @@
+== separators (P3)
+a=1  ->  {a=1}
+a:1  ->  {a=1}
+a 1  ->  {a=1}
+a<9>1  ->  {a=1}
+a<c>1  ->  {a=1}
+a = 1  ->  {a=1}
+a :=1  ->  {a==1}
+a=:1  ->  {a=:1}
+a  <9>  b c   ->  {a=b c }
+a  ->  {a=}
+a=  ->  {a=}
+=1  ->  {=1}
+:1  ->  {=1}
+  <9><c> a=1  ->  {a=1}
+a==1  ->  {a==1}
+a    ->  {a=}
+a=1    ->  {a=1  }
+== escapes (P4)
+a\ b=1  ->  {a b=1}
+a\=b=1  ->  {a=b=1}
+a\:b=1  ->  {a:b=1}
+\#a=1  ->  {#a=1}
+\!a=1  ->  {!a=1}
+\\=1  ->  {\=1}
+a=\t\n\r\f  ->  {a=<9><a><d><c>}
+a=\x\y\ \=\:  ->  {a=xy =:}
+\u0041\u00e9=\u20AC\u20ac  ->  {A<e9>=<20ac><20ac>}
+a=\uD83D\uDE00  ->  {a=<d83d><de00>}
+a=\ud800  ->  {a=<d800>}
+\t\n=1  ->  {<9><a>=1}
+a=\\u0041  ->  {a=\u0041}
+a=\\\u0041  ->  {a=\A}
+== malformed \u (P5)
+a=\u004  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+a=\u00G1  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+a=\uzzzz  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+a=\u  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+\u12=1  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+a=\U0041  ->  {a=U0041}
+a=\u+041  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+a=\u 041  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+#\u12<a>a=1  ->  {a=1}
+x=1<a>a=\u00G1<a>y=2  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. {x=1}
+a=\u<ff10>041  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+== line breaks (P1)
+a=1<a>b=2  ->  {a=1}{b=2}
+a=1<d>b=2  ->  {a=1}{b=2}
+a=1<d><a>b=2  ->  {a=1}{b=2}
+a=1<a><d>b=2  ->  {a=1}{b=2}
+a=1<a><a>b=2  ->  {a=1}{b=2}
+a=1<d><d>b=2  ->  {a=1}{b=2}
+a=1<a>  <a>b=2  ->  {a=1}{b=2}
+a=1<2028>b=2  ->  reader {a=1<2028>b=2} | one-char {a=1<2028>b=2} | bytes {a=1?b=2}
+a=1<b>b=2  ->  {a=1<b>b=2}
+#c<a>a=1  ->  {a=1}
+!c<d>a=1  ->  {a=1}
+  #c<d><a>a=1  ->  {a=1}
+<9>!c<a>a=1  ->  {a=1}
+a=1#c  ->  {a=1#c}
+a=1<a>#c<a>b=2  ->  {a=1}{b=2}
+a=<0>  ->  {a=<0>}
+== continuations (P2)
+a=1\<a>   2  ->  {a=12}
+a=1\<d>  2  ->  {a=12}
+a=1\<d><a><9>2  ->  {a=12}
+a=1\<a># not comment  ->  {a=1# not comment}
+#a\<a>b=1  ->  {b=1}
+a=1\  ->  {a=1}
+a=1\<a>\<a> x  ->  {a=1x}
+a=b\<a><a>c=d  ->  {a=b}{c=d}
+a=b\<a>  <a>c=d  ->  {a=b}{c=d}
+a\<a>=b  ->  {a=b}
+a\<a>\<a>\<a>b=c  ->  {ab=c}
+a=1\\<a>b=2  ->  {a=1\}{b=2}
+a=1\\\<a>2  ->  {a=1\2}
+a=\<a>\<a>  ->  {a=}
+k\<a>e\<a>y=v\<a>al  ->  {key=val}
+a=1\<d> <a>2  ->  {2=}{a=1}
+a=1\<d><9><a>2  ->  {2=}{a=1}
+a=1\<d><d>b=2  ->  {a=1}{b=2}
+\<a>  ->  {=}
+a\ \<a>b  ->  {a b=}
+== empty logical lines (P7a)
+\<a>  ->  {=}
+\<d>  ->  {=}
+\<d><a>  ->  
+\<a>   ->  
+\<a><9>  ->  
+\<a><a>x  ->  {x=}
+\<d><d>x  ->  {x=}
+\<d><a><d><a>x  ->  {x=}
+\<a>\  ->  {=}
+\<a>\<a>  ->  {=}
+\<a>\<d>  ->  {=}
+\<a>\<d><a>  ->  
+\<d>\<d>  ->  {=}
+a\<a>  ->  {a=}
+a\<a>   ->  {a=}
+a\<d><a>  ->  {a=}
+\  ->  {=}
+\\  ->  {\=}
+\\\  ->  {\=}
+\<a>  <a>#x=1  ->  
+\<a><a>#x=1  ->  
+== parity carried by comments (P20)
+#x\<a>\<a>b=1  ->  {\=}{b=1}
+#x\<a>\  ->  {\=}
+#x\\<a>\<a>b=1  ->  {b=1}
+#x\\\<a>\<a>b=1  ->  {\=}{b=1}
+#x\<a>\\<a>b=1  ->  {b=1}
+#x\<a>\\\<a>b=1  ->  {\<0>=}{b=1}
+#x\<a>#<a>\<a>b=1  ->  {\=}{b=1}
+#x\<a>!<a>\<a>b=1  ->  {\=}{b=1}
+#x\<a>#\<a>\<a>b=1  ->  {b=1}
+#x\<a>#y<a>\<a>b=1  ->  {b=1}
+#x\<a><a>\<a>b=1  ->  {\=}{b=1}
+#x\<a>   <a>\<a>b=1  ->  {\=}{b=1}
+#x\<a>  \<a>b=1  ->  {\=}{b=1}
+#x\<d><a>\<a>b=1  ->  {\=}{b=1}
+#x\<d>\<d>b=1  ->  {\=}{b=1}
+#x\<a>a\<a>b  ->  {ab=}
+#x\<a>a=\<a>b  ->  {a=b}
+!x\<a>\\\\\<a>b=1  ->  {\\<0>=}{b=1}
+#\<a>\<a>b=1  ->  {<0>=}{b=1}
+== leftovers (P20)
+#abcdefgh<a>a=\u0  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+aaaaaaaaa<a>a=\u0  ->  {a=<aaa>}{aaaaaaaaa=}
+aaaaaaaaa<a>a=\u00  ->  {a=<aa>}{aaaaaaaaa=}
+a=1234567<a>b=\u  ->  {a=1234567}{b=<3456>}
+#Xu0041\<a>\  ->  {A=}
+#Xt\<a>\  ->  {<9>=}
+#X=\<a>\  ->  {==}
+#X \<a>\  ->  { =}
+#Xn\<a>\  ->  {<a>=}
+#Xu00\<a>\  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+#abcd\<a>\\\  ->  {\d=}
+#ab\<a>\\\  ->  {\<0>=}
+#  ab\<a>\\\  ->  {\b=}
+#\<a>\  ->  {<0>=}
+x=\u0041<a>\u12  ->  {x=A}{<1200>=}
+abcdef<a>\u12=1  ->  java.lang.IllegalArgumentException: Malformed \uxxxx encoding. {abcdef=}
+abcdefgh<a>#<a>\u12  ->  {abcdefgh=}{<12ef>=}
+abc123456<a>#\<a>\  ->  {abc123456=}{b=}
+leftover \u after a pair, lengths 3-700: 0 differ
+leftover \u after a comment, lengths 3-700: 0 differ
+lone backslash after #p..pZ~: 1:{Z=} 3:{\Z=} 5:{\\Z=} 7:{\\\Z=} 9:{\\\\Z=} 11:{\\\\\Z=} 13:{\\\\\\Z=} 15:{\\\\\\\Z=} 17:{\\\\\\\\Z=} 19:{\\\\\\\\\Z=} 21:{\\\\\\\\\\Z=} 23:{\\\\\\\\\\\Z=} 25:{\\\\\\\\\\\\Z=} 27:{\\\\\\\\\\\\\Z=} 29:{\\\\\\\\\\\\\\Z=} 31:{\\\\\\\\\\\\\\\Z=} 33:{\\\\\\\\\\\\\\\\Z=} 35:{\\\\\\\\\\\\\\\\\Z=} 37:{\\\\\\\\\\\\\\\\\\Z=} 39:{\\\\\\\\\\\\\\\\\\\Z=} 41:{\\\\\\\\\\\\\\\\\\\\Z=} 
+lone backslash past anything written: 1:nul 31:nul 61:nul 91:nul 121:nul 151:nul 181:nul 211:nul 241:nul 271:nul 301:nul 
+fresh buffer per load:  then java.lang.IllegalArgumentException: Malformed \uxxxx encoding. 
+put calls (P6): [a=1, b=2, a=3, c=] {a=3}{b=2}{c=}
+== reads and puts (P8): each part is one read; - is -1, 0 is 0
+[a=1<a>b=2<a>c=3] : read(8192,0,8192) 11 put[a=1] put[b=2] end put[c=3] end 
+[a<a>] : read(8192,0,8192) 2 end put[a=] end 
+[a<d><a>b] : read(8192,0,8192) 4 put[a=] end put[b=] end 
+[a<d>, <a>b] : read(8192,0,8192) 2 2 put[a=] end put[b=] end 
+[a\<a><a>, -, b] : read(8192,0,8192) 4 -1 put[a=] 1 end put[b=] end 
+[#c<a>] : read(8192,0,8192) 3 end 
+[a=1<a>x, 0, y<a>z, 0] : read(8192,0,8192) 5 put[a=1] 0 put[x=] 3 put[y=] 0 put[z=] end 
+[a, -, b] : read(8192,0,8192) 1 -1 put[a=] 1 end put[b=] end 
+[#c, -, b] : read(8192,0,8192) 2 -1 
+[a\, -, \] : read(8192,0,8192) 2 -1 put[a=] 1 end put[=] end 
+[\, -, \\] : read(8192,0,8192) 1 -1 put[=] 2 end put[\=] end 
+[qqqqqqq\, -, =\u] : read(8192,0,8192) 8 -1 put[qqqqqqq=] 3 end Malformed \uxxxx encoding.
+[\<a>, -, b] : read(8192,0,8192) 2 -1 put[=] 1 end put[b=] end 
+[\<a> , -, b] : read(8192,0,8192) 3 -1 
+[0] : read(8192,0,8192) 0 
+bytes as ISO 8859-1 (P7): {a=<e9><ff><e9>} utf-8 {k=<c3><a9><e2><82><ac>} high {<80>=<ff>}
+fuzz 1500: modes agree 1500, threw 981, hash acf534

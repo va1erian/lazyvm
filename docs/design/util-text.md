@@ -299,10 +299,40 @@ too. An escape that runs past the end of the logical line reads that buffer's le
 trailing backslash (possible only after the first effect) takes the leftover char at that place,
 U+0000 where nothing was ever written; a `\u` within four chars of the end reads leftovers as its
 digits (`aaaaaaaaa` LF `a=\u0` gives `a` the char U+0AAA), and is malformed if any is not a hex
-digit. Each `load` call starts with an empty buffer. Checked by the S5-04 differential fuzz.
+digit. Each `load` call starts with an empty buffer. Pinned by: PropertiesParse ("parity
+carried by comments", "leftovers", "leftover \u after", "lone backslash"), and checked by a
+differential fuzz of 120,000 texts.
+
+Boundaries, from probes on Temurin 8:
+- Parity is flipped by every stored backslash and cleared by every other stored char. Blanks
+  skipped at a line start, the `#` or `!` marker, and line breaks leave it alone, so it survives
+  blank lines, empty lines, CR, LF and CRLF, and an empty comment (`#x\` LF `#` LF `\` still
+  gives a key from the lone backslash). A comment's own chars count: `#x\` LF `#\` LF `\` LF
+  `b=1` continues into `b=1`. A continuation clears it, and so does the backslash dropped at
+  the end of the input. Since any other char clears it, the carry shows only on a line made of
+  nothing but backslashes (after its blanks): an odd count after an odd carry is a key ending in
+  a lone backslash, and an even count after an odd carry continues (`#x\` LF `\\` LF `b=1`
+  gives `b=1`, the kept backslash escaping the `b`).
+- Comment chars are stored from index 0 without the marker (`#xyz\` LF `\` gives the key `y`:
+  the lone backslash at index 0 takes index 1). Blanks after the marker are stored too
+  (`#  ab\` LF `\\\` gives `\b`).
+- Leftovers survive every growth of the buffer: a line of n+4 chars ending in `abcd`, then a
+  line of n+1 chars ending in `\u`, gives U+ABCD for every n from 3 to 1200, after a pair line
+  and after a comment alike. A read past every char ever written is never an index error; it
+  acts as U+0000 (a `\u` there is malformed, a lone backslash there gives U+0000), at every
+  length tried up to 2100.
+- A key's escape could read past the key, but only a key at the end of the line can show a
+  leftover: a lone backslash just before an unescaped separator is impossible, and a `\u` there
+  reads the separator, which is not a hex digit.
+- Only ASCII hex digits count: U+FF10 or U+0660 in a `\u` is malformed.
 
 **P8.** A reader handing out one char per `read` gives the same table as a `StringReader`.
-Pinned by: PropertiesIO ("load fuzz hash … chunked same 3000", which runs 3000 random texts over
+(Added from oracle probes.) `load` calls only `read(char[8192], 0, 8192)`, never `close`. A
+read of 0 or -1 ends the line in progress but is not remembered: if that line gave a pair, the
+reader is asked again, and the load stops only when such a read comes at the start of a line.
+Before the pair of a line ended by a break is stored, the char after the break is fetched (one
+read if none is buffered), and an LF after a CR is consumed then. A load that throws keeps the
+pairs put before the bad line. Pinned by: PropertiesParse ("reads and puts") and PropertiesIO ("load fuzz hash … chunked same 3000", which runs 3000 random texts over
 `ab=: \`, the line ends, `#!`, tab, `u0` and U+00E9, and pins the tables through the hash).
 
 ### store

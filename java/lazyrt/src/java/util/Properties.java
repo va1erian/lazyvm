@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * A string table with a chain of defaults, read and written in the line format of
- * docs/design/util-text.md section 2 (rules P1-P19). The format is PropertiesLoader and PropertiesText.
+ * docs/design/util-text.md section 2 (rules P1-P20). The format is PropertiesLoader and PropertiesText.
  */
 public class Properties extends Hashtable<Object, Object> {
     private static final long serialVersionUID = 4112578634029874840L;
