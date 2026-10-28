@@ -119,12 +119,19 @@ final class Base64Codec {
 
     /** B8-B12 on arrays: decodes src into dst and returns the number of bytes written. */
     static int decode(byte[] src, byte[] dst, boolean url, boolean mime) {
+        return decode(src, 0, src.length, dst, url, mime);
+    }
+
+    /**
+     * B8-B12 on src[from, n). Error indexes count from the start of src (B20: a buffer's backing
+     * array, not its position).
+     */
+    static int decode(byte[] src, int from, int n, byte[] dst, boolean url, boolean mime) {
         int[] t = table(url);
-        int n = src.length;
         int bits = 0;
         int p = 0;
         int d = 0;
-        int i = 0;
+        int i = from;
         while (i < n) {
             if (p == 0 && i + 4 <= n) {
                 // A whole unit of alphabet bytes, the usual case, in one step.
@@ -146,8 +153,8 @@ final class Base64Codec {
             int v = t[b & 0xff];
             if (v < 0) {
                 if (b == '=') {
-                    d = padded(src, i, p, bits, dst, d);
-                    return afterPadding(src, i + (p == 2 ? 2 : 1), mime, d);
+                    d = padded(src, i, n, p, bits, dst, d);
+                    return afterPadding(src, i + (p == 2 ? 2 : 1), n, mime, d);
                 }
                 if (!mime) {
                     throw new IllegalArgumentException("Illegal base64 character " + Integer.toString(b, 16));
@@ -170,8 +177,8 @@ final class Base64Codec {
     }
 
     /** B10: the unit that a '=' at index i ends, with p characters in it. */
-    private static int padded(byte[] src, int i, int p, int bits, byte[] dst, int d) {
-        if (p == 0 || p == 2 && (i + 1 >= src.length || src[i + 1] != '=')) {
+    private static int padded(byte[] src, int i, int n, int p, int bits, byte[] dst, int d) {
+        if (p == 0 || p == 2 && (i + 1 >= n || src[i + 1] != '=')) {
             throw new IllegalArgumentException("Input byte array has wrong 4-byte ending unit");
         }
         if (p == 1) {
@@ -184,9 +191,9 @@ final class Base64Codec {
      * B11: what may follow the padding, from index i. The basic and URL decoders refuse any byte;
      * MIME skips everything but an alphabet byte, and reports that byte's index plus one.
      */
-    private static int afterPadding(byte[] src, int i, boolean mime, int d) {
+    private static int afterPadding(byte[] src, int i, int n, boolean mime, int d) {
         int[] t = BASIC_VALUES;
-        for (int j = i; j < src.length; j++) {
+        for (int j = i; j < n; j++) {
             if (!mime) {
                 throw new IllegalArgumentException("Input byte array has incorrect ending byte at " + j);
             }

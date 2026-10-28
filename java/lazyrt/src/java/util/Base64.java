@@ -2,6 +2,7 @@ package java.util;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
 /** RFC 4648 and MIME base64 coders (docs/design/util-data.md sections 1-3, rules B1-B19). */
 public class Base64 {
@@ -73,6 +74,13 @@ public class Base64 {
             return encodeTo(src, dst);
         }
 
+        /** B20: the remaining bytes, consumed; the result is a new heap buffer of exactly the text. */
+        public ByteBuffer encode(ByteBuffer buffer) {
+            byte[] src = new byte[buffer.remaining()];
+            buffer.get(src);
+            return ByteBuffer.wrap(encode(src));
+        }
+
         public String encodeToString(byte[] src) {
             byte[] out = encode(src);
             char[] chars = new char[out.length];
@@ -121,7 +129,7 @@ public class Base64 {
 
         /** B8-B12: decoded into an array of the expected size, then trimmed. */
         public byte[] decode(byte[] src) {
-            byte[] dst = new byte[expectedLength(src)];
+            byte[] dst = new byte[expectedLength(src, 0, src.length)];
             int n = Base64Codec.decode(src, dst, url, mime);
             return n == dst.length ? dst : Arrays.copyOf(dst, n);
         }
@@ -136,9 +144,35 @@ public class Base64 {
             return decode(bytes);
         }
 
+        /**
+         * B20: the remaining bytes, consumed only on success. A buffer with an accessible array is
+         * decoded in place, so error indexes count from the array's start.
+         */
+        public ByteBuffer decode(ByteBuffer buffer) {
+            byte[] src;
+            int from;
+            int end;
+            if (buffer.hasArray()) {
+                src = buffer.array();
+                from = buffer.arrayOffset() + buffer.position();
+                end = buffer.arrayOffset() + buffer.limit();
+            } else {
+                int pos = buffer.position();
+                src = new byte[buffer.remaining()];
+                buffer.get(src);
+                buffer.position(pos);
+                from = 0;
+                end = src.length;
+            }
+            byte[] dst = new byte[expectedLength(src, from, end)];
+            int n = Base64Codec.decode(src, from, end, dst, url, mime);
+            buffer.position(buffer.limit());
+            return ByteBuffer.wrap(n == dst.length ? dst : Arrays.copyOf(dst, n));
+        }
+
         /** B13: the expected size must fit before any byte is written. */
         public int decode(byte[] src, byte[] dst) {
-            if (expectedLength(src) > dst.length) {
+            if (expectedLength(src, 0, src.length) > dst.length) {
                 throw new IllegalArgumentException("Output byte array is too small for decoding all input bytes");
             }
             return Base64Codec.decode(src, dst, url, mime);
@@ -150,13 +184,13 @@ public class Base64 {
             return new Base64In(is, url, mime);
         }
 
-        /** B12 (the length-1 refusal) then B13's size E. */
-        private int expectedLength(byte[] src) {
-            int n = src.length;
+        /** B12 (the length-1 refusal) then B13's size E, for src[from, end). */
+        private int expectedLength(byte[] src, int from, int end) {
+            int n = end - from;
             if (mime) {
                 int[] t = Base64Codec.table(false);
                 int c = 0;
-                for (int i = 0; i < n && src[i] != '='; i++) {
+                for (int i = from; i < end && src[i] != '='; i++) {
                     if (t[src[i] & 0xff] >= 0) {
                         c++;
                     }
@@ -167,8 +201,8 @@ public class Base64 {
                 throw new IllegalArgumentException("Input byte[] should at least have 2 bytes for base64 bytes");
             }
             int pad = 0;
-            if (n > 0 && src[n - 1] == '=') {
-                pad = n > 1 && src[n - 2] == '=' ? 2 : 1;
+            if (n > 0 && src[end - 1] == '=') {
+                pad = n > 1 && src[end - 2] == '=' ? 2 : 1;
             }
             if (pad == 0 && n % 4 != 0) {
                 pad = 4 - n % 4;
