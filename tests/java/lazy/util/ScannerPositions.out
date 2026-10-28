@@ -1,0 +1,16 @@
+string next b b@20000-20001
+string hasNextInt true 12@20002-20004
+string remembered nextInt 12 12@20002-20004
+string hasNextLine true  c\n@20004-20007
+string hasNext true no match
+string nextLine [ c] no match
+string findInLine d d@20007-20008
+reader next b b@20000-20001
+reader hasNextInt true 12@20002-20004
+reader remembered nextInt 12 12@20002-20004
+reader hasNextLine true  c\n@20004-20007
+reader hasNext true no match
+reader nextLine [ c] no match
+reader findInLine d d@20007-20008
+chunked ints 3000 sum 13500 last 9@5998-5999
+done

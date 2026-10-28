@@ -1,0 +1,16 @@
+token: len 200003 ends c (reader same)
+line: len 200002 ends b (reader same)
+skip: len 1 ends b (reader same)
+line crlf: len 50002 ends b
+blanks: len 1 ends x
+horizon miss: len 9 ends e
+horizon hit: len 9 ends e
+findInLine miss: len 10 ends e
+hasNextInt digits: false
+short reads stream: len 40002 ends b
+short reads reader: len 40002 ends b line len 200000 ends a
+short reads readable: len 40002 ends b
+endless source: token len 10000 ends a, read past it by under 1000 chars true
+endless source, long lookahead: token len 10000 ends a, stopped true
+lines: 10000 (reader same)
+done

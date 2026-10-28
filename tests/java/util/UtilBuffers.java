@@ -61,6 +61,30 @@ public class UtilBuffers {
         LongBuffer lb = LongBuffer.wrap(new long[] {7, 0, 1, 0, 0}, 1, 4);
         BitSet b2 = BitSet.valueOf(lb);
         System.out.println("valueOf longs " + b2 + " size " + b2.size() + " buffer pos " + lb.position() + " lim " + lb.limit());
+        // B20: without an accessible array (direct, read-only) the index counts from the position;
+        // a slice counts from the start of its backing array, so its arrayOffset is included.
+        byte[] text = "xxxQQ==QQ==".getBytes();
+        ByteBuffer dir = ByteBuffer.allocateDirect(text.length);
+        dir.put(text).position(3);
+        ByteBuffer ro = ByteBuffer.wrap(text).asReadOnlyBuffer();
+        ro.position(3);
+        ByteBuffer slice = ByteBuffer.wrap(text, 1, 10).slice();
+        slice.position(2);
+        ByteBuffer heap = ByteBuffer.wrap(text);
+        heap.position(3);
+        for (ByteBuffer b : new ByteBuffer[] {dir, ro, slice, heap}) {
+            String kind = b.isDirect() ? "direct" : b.isReadOnly() ? "read-only" : b.arrayOffset() > 0 ? "slice offset " + b.arrayOffset() : "heap";
+            int at = b.position();
+            String basic;
+            String mime;
+            try { Base64.getDecoder().decode(b); basic = "ok"; } catch (IllegalArgumentException e) { basic = e.getMessage(); }
+            b.position(at);
+            try { Base64.getMimeDecoder().decode(b); mime = "ok"; } catch (IllegalArgumentException e) { mime = e.getMessage(); }
+            System.out.println("decode index " + kind + ": " + basic + " | MIME " + mime + " | pos " + b.position());
+        }
+        ByteBuffer rin = ByteBuffer.wrap("aGVsbG8=".getBytes()).asReadOnlyBuffer();
+        ByteBuffer rout = Base64.getDecoder().decode(rin);
+        System.out.println("decode read-only " + buf(rout) + " array " + rout.hasArray() + " in pos " + rin.position());
         System.out.println("done");
     }
 }

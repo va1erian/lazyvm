@@ -7,28 +7,21 @@ reads *input → observable result* and ends with the test (in `tests/java/util`
 pin it. All goldens were blessed on the Temurin 1.8.0_504 oracle. How the classes are built is the
 implementer's choice; only what a program can observe is fixed here.
 
-**Dependencies.** `Scanner` waits for `java.util.regex` (branch `s5-regex`, not merged; its
-supported syntax is `docs/regex.md` on that branch) and for `java.lang.Readable`,
-`java.nio.CharBuffer` and the charset decoders of `java.io`/`java.nio` (branch `s5-io`, not merged;
-`docs/design/io.md` there). `Properties` waits for `s5-io` too: `BufferedWriter` (rule P12),
-`BufferedReader`/`InputStreamReader` if the implementer wants them, and the ISO 8859-1 byte
-handling. Main's lazyrt already has `Reader`, `Writer`, `StringReader`, `StringWriter`,
-`InputStream`, `OutputStream`, `ByteArrayInputStream`, `ByteArrayOutputStream`, `PrintStream`,
-`PrintWriter` and `Hashtable`. Also missing on every branch: `java.util.InputMismatchException`
-(Scanner), `java.util.Date` (the date line of `Properties.store`, P11) and `java.math` (so
-`Scanner`'s `BigInteger`/`BigDecimal` methods are left out until `java.math` exists; they are
-listed in section 5 as deferred). Until those branches merge, the tests below do not compile
-against lazyrt; their goldens were blessed through a JDK-compiled wrapper and are identical to
-what `tools/golden.py` writes.
+**Dependencies.** `Scanner` is built on `java.util.regex` (`docs/regex.md`) and on
+`java.lang.Readable`, `java.nio.CharBuffer` and the charset decoders of `java.io`/`java.nio`
+(`docs/design/io.md`); `Properties` on `BufferedWriter` (rule P12), `InputStreamReader` and
+`OutputStreamWriter` with ISO 8859-1; `Properties.store` on `java.util.Date` (P11). `java.math`
+is still missing, so `Scanner`'s `BigInteger`/`BigDecimal` methods are left out (section 5). All
+the tests below are blessed with `tools/golden.py`.
 
 **Regex features Scanner needs.** Its default delimiter is `\p{javaWhitespace}+`; its number,
 boolean, line and NaN/infinity recognisers need character classes with `&&` intersection (for
 "digit but not 0"), `\p{javaDigit}`, `\Q…\E` quoting, alternation, greedy and possessive or
 atomic repeats, capturing groups, `$` and the `hitEnd`/`requireEnd` and region and
 `useTransparentBounds`/`useAnchoringBounds` parts of `Matcher` (a scanner over a stream must know
-when more input could change a match). `docs/regex.md` on `s5-regex` lists all of these as
-supported. Whether Scanner uses regexes internally for numbers is the implementer's choice; only
-the accepted language (SC10–SC17) is fixed.
+when more input could change a match). `docs/regex.md` lists all of these as supported. Whether
+Scanner uses regexes internally for numbers is the implementer's choice; only the accepted
+language (SC10–SC17) is fixed.
 
 Notation: `<e9>` in a test line is the char U+00E9 (tests print every char outside 0x20–0x7E
 that way). "ROOT" is `Locale.ROOT`.
@@ -55,6 +48,21 @@ pattern makes each char a token; a zero-width lookahead splits before each match
 `next()` and every `nextX()` throw `NoSuchElementException` with no message, and `hasNext()` is
 false. Pinned by: Scanners ("comma", "empty delimiter", "no token").
 
+**SC2a.** (Added from oracle probes.) A `hasNext…` call moves nothing. A `next…` call that fails,
+with `NoSuchElementException` or `InputMismatchException`, has still passed the delimiter before
+the token (or the trailing delimiters when there is no token): `"  x"` then a failing `nextInt()`
+leaves `nextLine()` with `x`, and `"a  "` after `next()` and a failing `next()` has no further
+line. Only the radix errors of SC19 are thrown before anything moves. Pinned by: ScannerEdges
+("SC2a …" lines), and Scanners ("fuzz chunked …") through its hash.
+
+**SC2b.** (Added from oracle probes.) Every match the scanner makes (delimiters, token patterns,
+lines, `findInLine`, `findWithinHorizon`, `skip`) uses transparent bounds and non-anchoring bounds:
+lookaround sees the text around the region (a delimiter `(?<=b) ` splits `ab cd` after `ab`; a
+token pattern `(?<=a)b` matches the token `b` of `ab` split by `(?<=a)`), while `^`, `$`, `\A`,
+`\z` and `\Z` match only at the true start and end of the input, never at a region edge
+(`hasNext("b$")` is false for the token `b` of `bc` split by `(?=c)`; a delimiter `\s|^b` never
+matches after position 0). Checked by the S5-04 differential fuzz.
+
 **SC3.** `useDelimiter(String)` compiles its argument with no flags; `useDelimiter(Pattern)` keeps
 the given pattern, and `delimiter()` returns the pattern in use (its `toString` is the source). An
 invalid pattern string throws the regex `PatternSyntaxException`. `useDelimiter((Pattern) null)`
@@ -78,7 +86,7 @@ after a terminator, has no further line. `\r\r\n` is two lines, `\n\r` two empty
 line, `nextLine()` throws `NoSuchElementException: No line found` and `hasNextLine()` is false.
 `nextLine()` after a token returns what follows the token on its line (often the empty string).
 After `nextLine()`, `match().group()` is the line *with* its terminator, `start()`/`end()` its
-place in the input. Pinned by: Scanners ("lines", "nextLine none", "int then line", "int then
+place in the input (for input under about 1 KB; beyond, see section 4). Pinned by: Scanners ("lines", "nextLine none", "int then line", "int then
 line2", "line match").
 
 ### Searching and skipping
@@ -87,7 +95,9 @@ line2", "line match").
 - `findInLine(p)` looks for `p` from the current position up to (not including) the next line
   terminator, ignoring delimiters. On success it returns the match and moves past it; otherwise
   it returns null and does not move. A match never includes the terminator: `findInLine("x\\s")`
-  on `x\ny` is null, while an empty match (`\s*`) succeeds.
+  on `x\ny` is null, while an empty match (`\s*`) succeeds. When the current line is empty (a
+  terminator right at the position, or the end of input) it returns null even for a pattern that
+  matches the empty string. (Added from oracle probes.)
 - `findWithinHorizon(p, h)` looks for `p` in the next `h` chars (0: the rest of the input),
   ignoring delimiters; success and failure move as for `findInLine`. A negative `h`
   throws `IllegalArgumentException: horizon < 0`.
@@ -99,16 +109,33 @@ Pinned by: Scanners ("findInLine", "findInLine none", "findInLine newline", "hor
 errors", "skip", "skip keeps position", "horizon chunked").
 
 **SC7.** `match()` returns the result of the last successful `next…`, `nextLine`, `findInLine`,
-`findWithinHorizon` or `skip`. Before any, after `hasNext…` (successful or not), and after a failed
-`find…`, it throws `IllegalStateException: No match result available`. For `nextInt()` and the
-other numeric readers, `group()` is the whole token and `start()`/`end()` its place in the input
-(`groupCount()` and the other groups are free, section 4). Closing does not clear the last match.
-Pinned by: Scanners ("match int", "match none", "closed still fine").
+`findWithinHorizon` or `skip`, with exceptions below. (Corrected twice from oracle probes; the
+first version said every `hasNext…` leaves no match.) It throws `IllegalStateException: No match
+result available` before any call; after `hasNext()`; after any typed or pattern `hasNext…` that
+says false, unless SC7a applies; and after any failed `next…`, `nextLine`, `find…` or `skip`,
+unless SC7a applies. A typed or pattern `hasNext…` that says true (`hasNextInt`, `hasNextDouble`,
+`hasNextBoolean`, `hasNext(pattern)` and the rest) leaves the token as the match, and a
+`hasNextLine` that says true leaves the line with its terminator. Two calls leave `match()` as the
+calls before them left it: a `nextLine` at the position where `hasNextLine` last said true, when
+only plain `hasNext()` calls came in between (so `hasNextLine`, `hasNext()`, `nextLine` ends with
+no match; any other call in between, `reset()` included, makes that `nextLine` set its own match),
+and a `next…` that
+uses a token remembered under SC24. For `nextInt()` and the other numeric readers, `group()` is
+the whole token and `start()`/`end()` its place in the input (`groupCount()` and the other groups
+are free, section 4). Closing does not clear the last match. Pinned by: Scanners ("match int",
+"match none", "closed still fine"), ScannerEdges ("SC7 …").
+
+**SC7a.** (Added after review.) A token that has the right shape for a typed reader but fails to
+parse stays the match: `99999999999` after a failing `nextInt()` or a false `hasNextInt()`
+gives `match().group()` `99999999999` at 0-11; so do `200` for `nextByte` and the locale's NaN and
+infinity symbols (`\ufffd`, `∞`, `-∞`) for the floating readers. A token of the wrong shape (`abc`)
+leaves no match. Pinned by: ScannerEdges ("SC7a …").
 
 ### Sources
 
 **SC8.** A scanner over a `Readable` or an `InputStream` gives exactly the results of a scanner
-over the same text as a `String`, however the source splits its reads: one char per read, a
+over the same text as a `String`, however the source splits its reads (except the cases section 4
+lists): one char per read, a
 `\r\n` split across reads, a token longer than any buffer (5000 chars), `findWithinHorizon` across
 a split. An `InputStream` source is decoded with the named charset; malformed and truncated
 sequences become U+FFFD (one per bad sequence, as the io decoders do). A wrong charset name throws
@@ -211,15 +238,59 @@ or negative, all three throw `StringIndexOutOfBoundsException: String index out 
 closing, `next`, `hasNext`, `nextLine`, `hasNextLine`, every `nextX`/`hasNextX`, `hasNext(pattern)`,
 `findInLine`, `findWithinHorizon` and `skip` throw `IllegalStateException: Scanner closed`, while
 `delimiter`, `locale`, `radix`, `useDelimiter`, `useRadix`, `reset`, `ioException` and `match`
-still work. Pinned by: Scanners ("closed source", "closed", "closed still fine").
+still work. The closed check comes before the arguments are looked at: `findWithinHorizon(p, -1)`,
+`next((Pattern) null)`, `hasNext((Pattern) null)`, `findInLine((Pattern) null)` and
+`skip((Pattern) null)` all throw `Scanner closed`. Only the String forms, which compile their
+argument first (`hasNext((String) null)` is a `NullPointerException`), and the radix errors of
+SC19 come earlier. After `close()`, `toString()` shows `source closed=true` even when nothing was
+read. Pinned by: Scanners ("closed source", "closed", "closed still fine"), ScannerEdges ("closed
+order", "closed toString").
 
 **SC21.** Arguments. `new Scanner((Readable) null)` throws `NullPointerException: source`; null
 `String` or `InputStream` sources, null patterns, a null locale: `NullPointerException` with no
 message. `remove()` throws `UnsupportedOperationException`; Scanner is an `Iterator<String>`.
 Pinned by: Scanners ("nulls", "remove").
 
+**SC21a.** (Added after review.) The constructors check in this order. `(InputStream, String)`:
+a null stream is `NullPointerException: source` whatever the name; then a null name is
+`NullPointerException: charsetName`, and an unknown or illegal name `IllegalArgumentException`
+wrapping the charset exception (its message is that exception's `toString()`). `(File, String)`:
+a null file is a `NullPointerException` with no message; then the name as above, except that a
+bad name throws `IllegalArgumentException` whose message is the name alone (`bogus`, `b@d`); only
+then is the file opened, so a bad name never opens it (`FileNotFoundException` for a missing file
+comes last). `(Path, String)`: a null path first, then the name with the wrapped message, then the
+opening (`NoSuchFileException`). Pinned by: ScannerEdges ("ctor …").
+
 **SC22.** `reset()` restores the default delimiter, radix 10 and the default locale, and returns
 the scanner. Pinned by: Scanners ("reset").
+
+**SC24.** (Added after review; the radix rule corrected after the second review.) A typed or
+pattern `hasNext…` that says true remembers its token, and a later `next…` of the same kind uses
+it if the scanner is still at the same position, even when the delimiter has changed since:
+`12 34`, `hasNextInt()`, `useDelimiter("")`, `nextInt()` gives 12 and leaves ` 34`.
+
+- *Patterns.* `next(pattern)` uses the token remembered for the same `Pattern` object. The String
+  forms compile their argument; the oracle takes the compiled `Pattern` from a small cache that
+  `useDelimiter(String)` fills too, while LazyVM compares the strings (section 4).
+- *Typed readers.* Each kind is separate (`nextInt` does not use what `hasNextLong` found, nor
+  `nextDouble` what `hasNextFloat` found). The floating readers always use what they remembered.
+  An integer reader uses it only when its radix is the radix of the previous typed call (the
+  floating ones count as radix 10), whatever came between: `z 1`, `hasNextInt(36)`, a false
+  `hasNextInt(16)`, then `nextInt(16)` gives 35, as does `nextInt()` after a false
+  `hasNextLong()`; but `nextInt(36)` after that false `hasNextInt(16)` reads afresh.
+- *What forgets.* `hasNextLine`, every `find…` and `skip`, `reset`, and every `next…` call,
+  whether it succeeds or fails, forget both memories. A pattern `hasNext…` or `hasNextBoolean`
+  replaces (or, saying false, forgets) only the pattern memory. A typed `hasNext…` replaces the
+  pattern memory with its reader's shape when its token has that shape (one shape per radix for
+  the integer readers, one for both floating ones) and forgets it otherwise, so after `hasNext("a.?")`
+  on `ab cd` a false `hasNextInt()` makes a later `next("a.?")` read afresh; it replaces the typed
+  memory only when its parse succeeds. So a typed `hasNext…` that says false leaves the typed
+  memory: `hasNextInt()`, `useDelimiter(",")`, a false `hasNextInt()`, then `nextInt()` still
+  gives 12, and `hasNextInt()` then a failing `hasNextByte()` on `1234` keeps 1234 for
+  `nextInt()`. Plain `hasNext()`, `useDelimiter`, `useRadix` and `useLocale` keep both.
+- A `next…` that uses the remembered token leaves `match()` unchanged (SC7).
+
+Pinned by: ScannerEdges ("SC24 …").
 
 **SC23.** `toString()` of a scanner that has not read anything, under ROOT or US, is exactly
 `java.util.Scanner[delimiters=\p{javaWhitespace}+][position=0][match valid=false][need input=false][source closed=false][skipped=false][group separator=\x{2c}][decimal separator=\x{2e}][positive prefix=][negative prefix=\Q-\E][positive suffix=][negative suffix=][NaN string=\Q`U+FFFD`\E][infinity string=\Q`U+221E`\E]`,
@@ -267,8 +338,55 @@ existing entries stay. Pinned by: PropertiesIO ("load merges", "a=1<a>a=2", "spy
 **P7.** `load(InputStream)` reads bytes as ISO 8859-1 (each byte one char), so UTF-8 bytes give
 two chars; escapes then apply. Pinned by: PropertiesIO ("load stream").
 
+**P7a.** (Added from oracle probes.) When the input ends right after a continuation's line
+terminator, the logical line is kept even when it is empty: `\` + LF gives the pair `=`. If any
+char was read after that terminator (a blank, or the LF of a CRLF), an empty logical line is
+dropped: `\` + CRLF and `\` + LF + space give nothing. An empty continuation line ends an empty
+logical line without a pair (`\` LF LF `x` gives only `x`).
+
+**P20.** (Added from oracle probes.) Two pieces of state outlive a line within one `load` call.
+First, the parity of the trailing backslashes is updated by comment lines too and is not reset at
+their end, nor by blank or empty lines: after the comment `#x\`, a next line made only of
+backslashes counts them one off, so `\` alone ends normally instead of continuing. Second, the
+line buffer is reused and never cleared, and comment chars (after the `#` or `!`) are stored in it
+too. An escape that runs past the end of the logical line reads that buffer's leftovers: a lone
+trailing backslash (possible only after the first effect) takes the leftover char at that place,
+U+0000 where nothing was ever written; a `\u` within four chars of the end reads leftovers as its
+digits (`aaaaaaaaa` LF `a=\u0` gives `a` the char U+0AAA), and is malformed if any is not a hex
+digit. Each `load` call starts with an empty buffer. Pinned by: PropertiesParse ("parity
+carried by comments", "leftovers", "leftover \u after", "lone backslash"), and checked by a
+differential fuzz of 120,000 texts.
+
+Boundaries, from probes on Temurin 8:
+- Parity is flipped by every stored backslash and cleared by every other stored char. Blanks
+  skipped at a line start, the `#` or `!` marker, and line breaks leave it alone, so it survives
+  blank lines, empty lines, CR, LF and CRLF, and an empty comment (`#x\` LF `#` LF `\` still
+  gives a key from the lone backslash). A comment's own chars count: `#x\` LF `#\` LF `\` LF
+  `b=1` continues into `b=1`. A continuation clears it, and so does the backslash dropped at
+  the end of the input. Since any other char clears it, the carry shows only on a line made of
+  nothing but backslashes (after its blanks): an odd count after an odd carry is a key ending in
+  a lone backslash, and an even count after an odd carry continues (`#x\` LF `\\` LF `b=1`
+  gives `b=1`, the kept backslash escaping the `b`).
+- Comment chars are stored from index 0 without the marker (`#xyz\` LF `\` gives the key `y`:
+  the lone backslash at index 0 takes index 1). Blanks after the marker are stored too
+  (`#  ab\` LF `\\\` gives `\b`).
+- Leftovers survive every growth of the buffer: a line of n+4 chars ending in `abcd`, then a
+  line of n+1 chars ending in `\u`, gives U+ABCD for every n from 3 to 1200, after a pair line
+  and after a comment alike. A read past every char ever written is never an index error; it
+  acts as U+0000 (a `\u` there is malformed, a lone backslash there gives U+0000), at every
+  length tried up to 2100.
+- A key's escape could read past the key, but only a key at the end of the line can show a
+  leftover: a lone backslash just before an unescaped separator is impossible, and a `\u` there
+  reads the separator, which is not a hex digit.
+- Only ASCII hex digits count: U+FF10 or U+0660 in a `\u` is malformed.
+
 **P8.** A reader handing out one char per `read` gives the same table as a `StringReader`.
-Pinned by: PropertiesIO ("load fuzz hash … chunked same 3000", which runs 3000 random texts over
+(Added from oracle probes.) `load` calls only `read(char[8192], 0, 8192)`, never `close`. A
+read of 0 or -1 ends the line in progress but is not remembered: if that line gave a pair, the
+reader is asked again, and the load stops only when such a read comes at the start of a line.
+Before the pair of a line ended by a break is stored, the char after the break is fetched (one
+read if none is buffered), and an LF after a CR is consumed then. A load that throws keeps the
+pairs put before the bad line. Pinned by: PropertiesParse ("reads and puts") and PropertiesIO ("load fuzz hash … chunked same 3000", which runs 3000 random texts over
 `ab=: \`, the line ends, `#!`, tab, `u0` and U+00E9, and pins the tables through the hash).
 
 ### store
@@ -391,8 +509,42 @@ those rules, and `countTokens` matches. Pinned by: Tokenizers ("fuzz agree 3000 
 
 ## 4. Not observable, or left free
 
-- Scanner's buffer size, how much it reads ahead, and how many `read` calls it makes (only that
-  it makes none after an `IOException`, SC9).
+- How much a Scanner reads ahead and how many `read` calls it makes (only that it makes none after
+  an `IOException`, SC9). The oracle's buffer is observable in two ways that LazyVM does not copy:
+  `match().start()` and `end()` and `findWithinHorizon` with `\z`.
+- Known difference: the oracle's `match().start()` and `end()` count from its internal buffer,
+  not from the start of the input, once more than about 1 KB has been read and passed (a token at
+  input offset 1023 can report start 0). LazyVM always reports input offsets (pinned by the
+  hand-written `lazy.util.ScannerPositions`). Tests that print positions keep their input under
+  1 KB.
+- Known difference on both VMs: `findWithinHorizon("\\z", h)` and other searches whose horizon
+  ends exactly where the text read so far ends depend on how the source splits its reads, and so
+  does a delimiter containing `\z` over a Reader: both VMs can split a token at a read boundary.
+- Known difference (SC2b): to stay linear on long input, LazyVM drops passed text from its
+  buffer but keeps the last 8 KB of it before the position. Lookbehind, or `^` and `\A` inside a
+  lookbehind, that reach further back than that margin can give a different answer than on the
+  whole string; within the margin the answers are the String ones (`lazy.util.ScannerMargin`
+  pins a lookbehind delimiter and `^` past 8 KB). The oracle has the same class of artifact at
+  its own 1 KB buffer edges (there `(?<=\d),` splits wrongly and `^a` matches mid-input), so no
+  differential test covers this.
+- Known difference (SC24): the oracle finds the `Pattern` for `hasNext(String)` and
+  `next(String)` in a small cache of recently compiled patterns that `useDelimiter(String)` also
+  fills, and remembers tokens by that `Pattern` object; after six or more other
+  `useDelimiter(String)` calls between them, its `next("[0-9]+")` no longer uses the token that
+  `hasNext("[0-9]+")` remembered. LazyVM compares the pattern strings, so it does.
+- Reading long input from a source that hands out short reads stays linear (ScannerLong): the
+  scanner reads on before retrying a decision until the unread text has doubled or a probe of
+  the newly read text shows the token or line may have ended (see ScannerInput.more). The
+  source is never read again once it has ended or failed (SC9), and a source that never ends is
+  read at most a read or two past the text that settles the answer (ScannerSources), except in
+  these cases, which may be noticed only at the next doubling (the answer is the same, but over
+  an interactive source it can arrive later):
+  - a delimiter whose match reaches more than 128 chars back from the new text;
+  - a run of a delimiter or `skip` pattern that repeats with a period longer than 16 chars;
+  - a delimiter such as `[ ]*,[ ]*` after more than 4 KB of its optional prefix, where a probe
+    that fails before the end of the text cannot tell an ended run from an unfinished one;
+  - a run pattern that, from a mid-period start, fails only at the end of the text, as
+    `(ab)+|b[^!]*!` (the probe stops at that start to stay cheap).
 - `groupCount()` and the groups other than 0 of `match()` after a numeric reader or `nextLine`
   (the oracle exposes the groups of its internal patterns, 35 for an integer).
 - The state fields of `toString` (`position`, `match valid`, `need input`, `source closed`,
@@ -400,13 +552,28 @@ those rules, and `countTokens` matches. Pinned by: Tokenizers ("fuzz agree 3000 
 - What a scanner does after `useDelimiter((Pattern) null)` when it next looks for a token.
 - One oracle defect: over a `Readable` or `InputStream` source, when the input ends in two or more
   delimiters, `hasNext()` can be false for the last empty token that a `String` source reports
-  (and `next()` then still returns it). LazyVM should give the `String` source's answer; the
+  (and `next()` then still returns it). LazyVM gives the `String` source's answer; the
   chunked fuzz avoids such inputs.
-- The time zone and the exact date of the `store` date line (P11 fixes its shape only).
+- Over a stream source, `hasNext(pattern)` and `next(pattern)` decide on the text read so far,
+  as the oracle does: `ab \n` + `c` read one char at a time with delimiter ` ` says true for
+  `ab(?= $)`, where a `String` source says false (ScannerEdges "requireEnd pattern"). For
+  delimiters, `findInLine` and `findWithinHorizon`, LazyVM reads on when a match succeeds only
+  because an anchor or a negative lookahead met the end of that text (`requireEnd`), which gives
+  the `String` answer there (ScannerEdges "requireEnd token", "requireEnd find"); it does not read
+  on when a lookahead that runs past a bound fails at the end of the text read.
+- LazyVM's `Scanner` reads with the ROOT symbols under every locale (it has no locale data), and
+  its `toString` after reading reports `need input=false` and `skipped=false` always.
+- The time zone and the exact date of the `store` date line (P11 fixes its shape only). LazyVM has
+  no time-zone data yet, so its `Date.toString()` always shows UTC (`Thu Jan 01 00:00:00 UTC
+  1970`); it matches the oracle run with `-Duser.timezone=UTC` for every instant, Julian calendar
+  before 1582-10-15 and era years (1 BC prints as 1) included (tests/java/util/Dates runs both VMs
+  with that flag). `equals` and `hashCode` go through `getTime()`; `compareTo`, `before`, `after`
+  and `toString` use the stored instant, as the oracle does with an overridden `getTime()`.
 - Scanner and Properties under locales other than ROOT and US; the default locale.
 - `Properties.storeToXML`, `loadFromXML` (they need an XML parser and writer): out of scope for
-  S5-04. Provide them throwing `UnsupportedOperationException` or leave them out until an XML
-  stage; no test uses them.
+  S5-04. LazyVM declares them with their SE 8 throws clauses (`loadFromXML` names
+  `InvalidPropertiesFormatException`, which exists) and they throw `UnsupportedOperationException`
+  until an XML stage; no test uses them.
 
 ## 5. API to provide
 
@@ -415,7 +582,9 @@ return types and exceptions from the Javadoc. `new(…)` is a constructor.
 
 | Class | Kind | Members |
 |---|---|---|
-| `Scanner` | final class implements Iterator, Closeable | new(Readable); new(InputStream); new(InputStream, String); new(File); new(File, String); new(Path); new(Path, String); new(String); new(ReadableByteChannel); new(ReadableByteChannel, String); close(); delimiter(); findInLine(String); findInLine(Pattern); findWithinHorizon(String, int); findWithinHorizon(Pattern, int); hasNext(); hasNext(String); hasNext(Pattern); hasNextBoolean(); hasNextByte(); hasNextByte(int); hasNextDouble(); hasNextFloat(); hasNextInt(); hasNextInt(int); hasNextLine(); hasNextLong(); hasNextLong(int); hasNextShort(); hasNextShort(int); ioException(); locale(); match(); next(); next(String); next(Pattern); nextBoolean(); nextByte(); nextByte(int); nextDouble(); nextFloat(); nextInt(); nextInt(int); nextLine(); nextLong(); nextLong(int); nextShort(); nextShort(int); radix(); remove(); reset(); skip(String); skip(Pattern); toString(); useDelimiter(String); useDelimiter(Pattern); useLocale(Locale); useRadix(int). Deferred until `java.math`: hasNextBigDecimal(); hasNextBigInteger(); hasNextBigInteger(int); nextBigDecimal(); nextBigInteger(); nextBigInteger(int). The `File`, `Path` and channel constructors come with `java.io.File`, `java.nio.file` and `java.nio.channels` (S5-05/S5-06); no test here uses them. |
+| `Scanner` | final class implements Iterator, Closeable | new(Readable); new(InputStream); new(InputStream, String); new(File); new(File, String); new(Path); new(Path, String); new(String); new(ReadableByteChannel); new(ReadableByteChannel, String); close(); delimiter(); findInLine(String); findInLine(Pattern); findWithinHorizon(String, int); findWithinHorizon(Pattern, int); hasNext(); hasNext(String); hasNext(Pattern); hasNextBoolean(); hasNextByte(); hasNextByte(int); hasNextDouble(); hasNextFloat(); hasNextInt(); hasNextInt(int); hasNextLine(); hasNextLong(); hasNextLong(int); hasNextShort(); hasNextShort(int); ioException(); locale(); match(); next(); next(String); next(Pattern); nextBoolean(); nextByte(); nextByte(int); nextDouble(); nextFloat(); nextInt(); nextInt(int); nextLine(); nextLong(); nextLong(int); nextShort(); nextShort(int); radix(); remove(); reset(); skip(String); skip(Pattern); toString(); useDelimiter(String); useDelimiter(Pattern); useLocale(Locale); useRadix(int). Deferred until `java.math`: hasNextBigDecimal(); hasNextBigInteger(); hasNextBigInteger(int); nextBigDecimal(); nextBigInteger(); nextBigInteger(int). The `File` and `Path` constructors exist; the channel ones wait for `java.nio.channels`. No test here uses them. |
+| `Date` | class implements Serializable, Cloneable, Comparable | new(); new(long); after(Date); before(Date); clone(); compareTo(Date); equals(Object); getTime(); hashCode(); setTime(long); toString(). The deprecated calendar-field members wait for time zones and `java.text`, `from(Instant)` and `toInstant()` for `java.time`. |
 | `InputMismatchException` | class extends NoSuchElementException | new(); new(String) |
+| `InvalidPropertiesFormatException` | class extends IOException | new(Throwable); new(String) |
 | `Properties` | class extends Hashtable | protected field defaults; new(); new(Properties); getProperty(String); getProperty(String, String); list(PrintStream); list(PrintWriter); load(Reader); load(InputStream); loadFromXML(InputStream); propertyNames(); save(OutputStream, String) (deprecated: store that swallows IOException); setProperty(String, String); store(Writer, String); store(OutputStream, String); storeToXML(OutputStream, String); storeToXML(OutputStream, String, String); stringPropertyNames() |
 | `StringTokenizer` | class implements Enumeration | new(String, String, boolean); new(String, String); new(String); countTokens(); hasMoreElements(); hasMoreTokens(); nextElement(); nextToken(); nextToken(String) |

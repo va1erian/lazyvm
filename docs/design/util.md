@@ -10,20 +10,15 @@ experiments on the oracle, never from any JDK's source.
 
 ## 1. Where each class is specified
 
-| Classes | Spec | Tests | Waits for |
+| Classes | Spec | Tests | Built on |
 |---|---|---|---|
 | `Optional`, `OptionalInt`, `OptionalLong`, `OptionalDouble`, `Objects` | this file, sections 2 and 3 | Utilities | nothing |
 | `Random` | this file, section 4; also [`collections.md`](collections.md) X1 | RandomSeq, RandomSeeding | nothing (the fix is to `new Random()` and to `StrictMath.log`) |
-| `Base64`, `UUID`, `BitSet` | [`util-data.md`](util-data.md) | Base64s, Base64Streams, Uuids, BitSets, UtilBuffers | an MD5 (UUID); `java.nio` for UtilBuffers (S5-06, branch `s5-io`) |
-| `Scanner`, `Properties`, `StringTokenizer` | [`util-text.md`](util-text.md) | Scanners, ScannerNumbers, PropertiesIO, Tokenizers | `java.util.regex` (branch `s5-regex`) for Scanner; `java.io` (branch `s5-io`) for both; `java.util.Date` for `Properties.store` |
+| `Base64`, `UUID`, `BitSet` | [`util-data.md`](util-data.md) | Base64s, Base64Streams, Uuids, BitSets, UtilBuffers | `lazy.internal.Md5` (UUID); `java.nio` buffers (UtilBuffers) |
+| `Scanner`, `Properties`, `StringTokenizer` | [`util-text.md`](util-text.md) | Scanners, ScannerNumbers, PropertiesIO, Tokenizers | `java.util.regex` for Scanner; `java.io` and `java.nio` for both; `java.util.Date` for `Properties.store` |
 | `WeakHashMap` (S5-02a) | [`weakhashmap.md`](weakhashmap.md) | WeakMaps, WeakMapOrder | nothing (S5-07 references are on main) |
 
-The implementation of `Scanner` and `Properties` waits for the `s5-regex` and `s5-io` merges. Their
-tests and goldens are already here; they were blessed through a wrapper that compiles the tests
-with the oracle's own `javac` (lazyrt lacks the classes) and records the same transcript as
-`tools/golden.py`. Re-bless with `tools/golden.py` once the classes exist; the goldens must not
-change. Until a class exists, its tests do not compile against lazyrt, so run the suite with
-`--filter` while the work is in progress.
+Every test here is blessed with `tools/golden.py` on the oracle.
 
 ## 2. Optional, OptionalInt, OptionalLong, OptionalDouble
 
@@ -178,11 +173,10 @@ RandomSeq ("two instances differ", "seeds are not clock readings"), RandomSeedin
 - `Objects`: complete and matches every J rule; the private constructor's text is reworded.
 - `Random`: matches R1, R2 and R3 (seeded from `lazy.internal.VM.entropy()`, natives.md); its
   gaussians may differ from Java 8's in the last digits, as R1 and `decisions.md` D13 accept.
-- Built on branch `s5-util`: `Optional*`, `Base64` (not the `ByteBuffer` overloads), `UUID` (MD5 in
-  `lazy.internal.Md5`), `BitSet` (not the buffer `valueOf`s), `StringTokenizer`,
-  `InputMismatchException`, `WeakHashMap`.
-- Still absent, waiting for the merges: `Scanner` (S5-03 regex and S5-05), `Properties` (S5-05),
-  the `java.nio` overloads (S5-06), `java.util.Date`; and `java.math`, `java.security`.
+- `Optional*`, `Base64` with its `ByteBuffer` overloads, `UUID` (MD5 in `lazy.internal.Md5`),
+  `BitSet` with the buffer `valueOf`s, `StringTokenizer`, `InputMismatchException`, `WeakHashMap`,
+  `Scanner`, `Properties` and a minimal `Date` (util-text.md section 5).
+- Still absent: `java.math` (Scanner's `BigInteger`/`BigDecimal` readers) and `java.security`.
 
 ## 7. API to provide
 

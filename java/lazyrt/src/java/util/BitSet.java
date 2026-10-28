@@ -34,6 +34,24 @@ public class BitSet implements Cloneable, java.io.Serializable {
         return valueOf(w);
     }
 
+    /** BS10: the remaining bytes, read without moving the buffer; its byte order plays no part. */
+    public static BitSet valueOf(java.nio.ByteBuffer bb) {
+        byte[] bytes = new byte[bb.remaining()];
+        for (int i = 0, p = bb.position(); i < bytes.length; i++) {
+            bytes[i] = bb.get(p + i);
+        }
+        return valueOf(bytes);
+    }
+
+    /** BS10: the remaining longs, read without moving the buffer. */
+    public static BitSet valueOf(java.nio.LongBuffer lb) {
+        long[] longs = new long[lb.remaining()];
+        for (int i = 0, p = lb.position(); i < longs.length; i++) {
+            longs[i] = lb.get(p + i);
+        }
+        return new BitSet(Arrays.copyOf(longs, BitWords.inUse(longs, longs.length)));
+    }
+
     public byte[] toByteArray() {
         int n = inUse();
         if (n == 0) {

@@ -170,14 +170,16 @@ off, len)` and `available()` throw `IOException: Stream is closed`, finished or 
 "zero-length reads", "after error", "close closes underlying", "read after close", "read(b) after
 close", "available after close", "close twice").
 
-## 4. Base64 with java.nio buffers (waits for S5-06)
+## 4. Base64 with java.nio buffers
 
 **B20.** `encode(ByteBuffer)` encodes the remaining bytes, moves the input's position to its limit and
 returns a new heap buffer at position 0 whose limit and capacity are the output length. Direct
 buffers work too. `decode(ByteBuffer)` on success moves the input to its limit and returns a new
 buffer at position 0 holding the bytes; on an error it throws as for arrays and leaves the input's
 position where it was. In the B11 message the index counts from the start of the backing array, not
-from the buffer's position (input at position 3, `QQ==QQ==`: `at 7`; MIME `at 8`).
+from the buffer's position (input at position 3, `QQ==QQ==`: `at 7`; MIME `at 8`). A buffer with
+no accessible array (direct or read-only) counts from its position instead (`at 4`, MIME `at 5`;
+added from oracle probes), and a read-only input still gives a heap result.
 Pinned by: UtilBuffers ("encode buffer", "encode direct", "encode empty", "decode").
 
 ## 5. UUID
@@ -283,7 +285,7 @@ Pinned by: BitSets ("err set", "err ranges", "err searches", "err null").
 follows the formula in its Javadoc over the words in use (1234 for the empty set).
 `intersects(s)` is true when some bit is set in both. Pinned by: BitSets ("equals", "intersects").
 
-**BS10.** (Waits for S5-06.) `valueOf(ByteBuffer)` and `valueOf(LongBuffer)` read the remaining elements
+**BS10.** `valueOf(ByteBuffer)` and `valueOf(LongBuffer)` read the remaining elements
 from position to limit with the layout of BS5, ignore the buffer's byte order, leave the buffer
 unchanged, and keep only the words in use. Pinned by: UtilBuffers ("valueOf bytes", "valueOf longs").
 
@@ -316,9 +318,7 @@ unchanged, and keep only the words in use. Pinned by: UtilBuffers ("valueOf byte
 - **MD5.** lazyrt has no MD5 and no `java.security`. `nameUUIDFromBytes` needs one: write it from
   RFC 1321 as a package-private or `lazy.internal` helper (adding `java.security.MessageDigest` is a
   separate decision). Uuids pins 21 lengths plus 2000 fuzz inputs.
-- **java.nio.** lazyrt on main has no `java.nio`. The `ByteBuffer` and `LongBuffer` overloads (B20,
-  BS10) and the UtilBuffers test wait for S5-06 (branch `s5-io`); the other tests use only arrays and
-  `java.io` streams, which exist.
+- **java.nio.** The `ByteBuffer` and `LongBuffer` overloads (B20, BS10) use the S5-06 buffers.
 - **Random bits** for `randomUUID` (U8).
 - UUID parsing relies on `String.split` with a literal and on `Long.decode`'s errors (U2), both in
   lazyrt already.
@@ -329,7 +329,7 @@ from the Javadoc. `new(…)` is a constructor.
 | Class | Kind | Members |
 |---|---|---|
 | `Base64` | class | static getDecoder(); static getEncoder(); static getMimeDecoder(); static getMimeEncoder(); static getMimeEncoder(int, byte[]); static getUrlDecoder(); static getUrlEncoder() |
-| `Base64.Encoder` | static class | encode(byte[]); encode(byte[], byte[]); encode(ByteBuffer) (S5-06); encodeToString(byte[]); withoutPadding(); wrap(OutputStream) |
-| `Base64.Decoder` | static class | decode(byte[]); decode(byte[], byte[]); decode(ByteBuffer) (S5-06); decode(String); wrap(InputStream) |
+| `Base64.Encoder` | static class | encode(byte[]); encode(byte[], byte[]); encode(ByteBuffer); encodeToString(byte[]); withoutPadding(); wrap(OutputStream) |
+| `Base64.Decoder` | static class | decode(byte[]); decode(byte[], byte[]); decode(ByteBuffer); decode(String); wrap(InputStream) |
 | `UUID` | final class implements Serializable, Comparable | new(long, long); clockSequence(); compareTo(UUID); equals(Object); static fromString(String); getLeastSignificantBits(); getMostSignificantBits(); hashCode(); static nameUUIDFromBytes(byte[]); node(); static randomUUID(); timestamp(); toString(); variant(); version() |
-| `BitSet` | class implements Cloneable, Serializable | new(); new(int); and(BitSet); andNot(BitSet); cardinality(); clear(); clear(int); clear(int, int); clone(); equals(Object); flip(int); flip(int, int); get(int); get(int, int); hashCode(); intersects(BitSet); isEmpty(); length(); nextClearBit(int); nextSetBit(int); or(BitSet); previousClearBit(int); previousSetBit(int); set(int); set(int, boolean); set(int, int); set(int, int, boolean); size(); stream() (S11); toByteArray(); toLongArray(); toString(); static valueOf(byte[]); static valueOf(long[]); static valueOf(ByteBuffer) (S5-06); static valueOf(LongBuffer) (S5-06); xor(BitSet) |
+| `BitSet` | class implements Cloneable, Serializable | new(); new(int); and(BitSet); andNot(BitSet); cardinality(); clear(); clear(int); clear(int, int); clone(); equals(Object); flip(int); flip(int, int); get(int); get(int, int); hashCode(); intersects(BitSet); isEmpty(); length(); nextClearBit(int); nextSetBit(int); or(BitSet); previousClearBit(int); previousSetBit(int); set(int); set(int, boolean); set(int, int); set(int, int, boolean); size(); stream() (S11); toByteArray(); toLongArray(); toString(); static valueOf(byte[]); static valueOf(long[]); static valueOf(ByteBuffer); static valueOf(LongBuffer); xor(BitSet) |
