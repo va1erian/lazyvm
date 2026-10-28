@@ -1,0 +1,16 @@
+encode buffer pos 0 lim 16 cap 16 [aGVsbG8gd29ybGQ=] in pos 13 lim 13 cap 15 [] array true
+encode direct pos 0 lim 9 cap 9 [AQID|BA==] in pos 4
+encode empty pos 0 lim 0 cap 0 []
+decode 'aGVsbG8=' B out pos 0 lim 5 [104 101 108 108 111] in pos 11 | M out pos 0 lim 5 [104 101 108 108 111] in pos 11
+decode 'aGVsbG8' B out pos 0 lim 5 [104 101 108 108 111] in pos 10 | M out pos 0 lim 5 [104 101 108 108 111] in pos 10
+decode '' B out pos 0 lim 0 [] in pos 3 | M out pos 0 lim 0 [] in pos 3
+decode 'QQ==QQ==' B IllegalArgumentException: Input byte array has incorrect ending byte at 7 in pos 3 | M IllegalArgumentException: Input byte array has incorrect ending byte at 8 in pos 3
+decode 'QU!D' B IllegalArgumentException: Illegal base64 character 21 in pos 3 | M out pos 0 lim 2 [65 64] in pos 7
+decode 'QUJD\r\nQUJD' B IllegalArgumentException: Illegal base64 character d in pos 3 | M out pos 0 lim 6 [65 66 67 65 66 67] in pos 13
+decode 'A' B IllegalArgumentException: Input byte[] should at least have 2 bytes for base64 bytes in pos 3 | M IllegalArgumentException: Last unit does not have enough valid bits in pos 3
+decode 'AA=' B IllegalArgumentException: Input byte array has wrong 4-byte ending unit in pos 3 | M IllegalArgumentException: Input byte array has wrong 4-byte ending unit in pos 3
+decode 'QQ==\n' B IllegalArgumentException: Input byte array has incorrect ending byte at 7 in pos 3 | M out pos 0 lim 1 [65] in pos 8
+valueOf bytes {0, 71} size 128 buffer pos 1 lim 12
+valueOf bytes order ignored {0} 0
+valueOf longs {64} size 128 buffer pos 1 lim 5
+done

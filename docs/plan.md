@@ -278,11 +278,11 @@ Goal: the everyday `java.util` and `java.io` surface from
       specification.
       Check: `tests/java/util/HashOrder`, `TreeMaps`, `MapDefaults` (and the
       rest of `tests/java/util`) on both.
-- [ ] S5-02a `WeakHashMap` (needs S5-07): the `java.util` map whose keys are
+- [x] S5-02a `WeakHashMap` (needs S5-07): the `java.util` map whose keys are
       held through `WeakReference`, with entries expunged through a
       `ReferenceQueue`, behaviour specified in `design/collections.md` like
-      the other maps.
-      Check: `tests/java/util/WeakMaps` (both).
+      the other maps ([`design/weakhashmap.md`](design/weakhashmap.md)).
+      Check: `tests/java/util/WeakMaps`, `WeakMapOrder`, `WeakMapViews` (both).
 - [x] S5-03 Text: `Formatter`/`String.format`/`printf` (all conversions in the
       Javadoc except `%t` dates, which come with S11), `Double.toString`
       (the shortest form its Javadoc asks for, D9), `Integer.parseInt` and friends,
@@ -292,8 +292,18 @@ Goal: the everyday `java.util` and `java.io` surface from
       `docs/regex.md`).
       Check: `tests/java/util/FormatAll`, `DoubleToString` (100k random values against the oracle), `Regex`.
 - [ ] S5-04 Utilities: `Optional*`, `Objects`, `Random` (the exact LCG, done with S5-02),
-      `Scanner`, `Properties`, `UUID`, `Base64`, `BitSet`, `StringTokenizer`.
-      Check: `tests/java/util/Utilities`, `RandomSeq`.
+      `Scanner`, `Properties`, `UUID`, `Base64`, `BitSet`, `StringTokenizer`, to
+      [`design/util.md`](design/util.md) and the files it indexes.
+      Check: `tests/java/util/Utilities`, `RandomSeq`, `Base64s`, `Base64Streams`,
+      `Uuids`, `BitSets`, `UtilBuffers`, `Scanners`, `ScannerNumbers`, `PropertiesIO`,
+      `Tokenizers` (both).
+      State (branch `s5-util`): `Optional*`, `Objects`, `Random` R3, `Base64`, `UUID`,
+      `BitSet`, `StringTokenizer` and `InputMismatchException` are built; Utilities,
+      Base64s, Base64Streams, Uuids, BitSets, Tokenizers and RandomSeq pass on both
+      (`StrictMath` stays on `libm`, decisions.md D13). `Scanner` waits for S5-05;
+      `Properties` waits for S5-05 (and `java.util.Date` for its `store` line); UtilBuffers,
+      `Base64`'s `ByteBuffer` overloads and `BitSet.valueOf` of buffers wait for S5-06. Until
+      then their tests sit in [`tests/pending`](../tests/pending/README.md).
 - [ ] S5-05 `java.io`: byte and char streams, `Buffered*`, `InputStreamReader`
       and `OutputStreamWriter` over the charsets, `File`, `FileInputStream`,
       `FileOutputStream`, `RandomAccessFile`, `Data*Stream`, `PrintWriter`,

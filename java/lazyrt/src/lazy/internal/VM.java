@@ -19,6 +19,9 @@ public final class VM {
 
     public static native int availableProcessors();
 
+    /** 64 fresh bits per call, different in every run (util.md R3): seeds, not cryptography. */
+    public static native long entropy();
+
     /** The bytes of a class path resource (no leading slash), or null. */
     public static native byte[] getResource(String name);
 

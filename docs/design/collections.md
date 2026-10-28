@@ -571,7 +571,7 @@ The common misuse cases throw these; "–" is a null message. Pinned by the test
 LinkedHashMap/LinkedHashSet table sizes; the maximum table and array sizes;
 the primitive sort algorithms (only the sorted result shows); the merge sort's temporary storage and
 run-stack size; IdentityHashMap's order (IdentityMaps sorts its output); the seed of `new Random()`
-and the hidden Random of `Collections.shuffle(l)`; and identity hash codes themselves (only H6's
+(within [`util.md`](util.md) R3: distinct per instance and per run) and the hidden Random of `Collections.shuffle(l)`; and identity hash codes themselves (only H6's
 use of them is fixed).
 
 Which `compareTo` calls a HashMap makes to find a key in a tree bin. Every search of a tree bin
