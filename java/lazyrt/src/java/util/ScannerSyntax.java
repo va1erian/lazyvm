@@ -18,27 +18,39 @@ final class ScannerSyntax {
     static final int SHORT = 1;
     static final int INT = 2;
     static final int LONG = 3;
+    static final int FLOAT = 4;
+    static final int DOUBLE = 5;
 
     /** SC19: the radixes the integer readers can describe at all; others fail as Java 8's do. */
-    static void checkDigits(int radix) {
-        if (radix < 0 || radix > Character.MAX_RADIX) {
+    static void checkDigits(int kind, int radix) {
+        if (kind < FLOAT && (radix < 0 || radix > Character.MAX_RADIX)) {
             throw new StringIndexOutOfBoundsException(radix);
         }
     }
 
-    /** SC13: the value, or the parser's NumberFormatException. */
-    static long parse(String t, int radix, int kind) {
+    /**
+     * SC24: the pattern a typed reader matches, as a key: one per radix for the integer kinds,
+     * one shared by the floating kinds. Boxed integers, so never equal to a user's pattern key.
+     */
+    static Object shapeKey(int kind, int radix) {
+        return Integer.valueOf(kind < FLOAT ? radix : -1);
+    }
+
+    /** SC10-SC17: the text to parse for a reader of this kind, or null for a wrong shape. */
+    static String shape(String token, int kind, int radix) {
+        return kind < FLOAT ? integer(token, radix) : decimal(token);
+    }
+
+    /** SC13, SC15: the value, or the parser's NumberFormatException; a float rounds as one. */
+    static Number parse(String t, int kind, int radix) {
         switch (kind) {
             case BYTE: return Byte.parseByte(t, radix);
             case SHORT: return Short.parseShort(t, radix);
             case INT: return Integer.parseInt(t, radix);
-            default: return Long.parseLong(t, radix);
+            case LONG: return Long.parseLong(t, radix);
+            case FLOAT: return Float.parseFloat(t);
+            default: return Double.parseDouble(t);
         }
-    }
-
-    /** SC15: a float is parsed as one, so its rounding is single precision. */
-    static double parseFloating(String t, boolean single) {
-        return single ? Float.parseFloat(t) : Double.parseDouble(t);
     }
 
     /** SC18: true or false in any ASCII case, as the whole token. */

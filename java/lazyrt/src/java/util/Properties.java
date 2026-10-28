@@ -89,7 +89,7 @@ public class Properties extends Hashtable<Object, Object> {
     }
 
     /** XML needs a parser LazyVM does not have yet (util-text.md section 4). */
-    public synchronized void loadFromXML(InputStream in) throws IOException {
+    public synchronized void loadFromXML(InputStream in) throws IOException, InvalidPropertiesFormatException {
         throw new UnsupportedOperationException("Properties XML is not supported by LazyVM");
     }
 

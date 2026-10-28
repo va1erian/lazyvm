@@ -1,0 +1,11 @@
+token: len 200003 ends c (reader same)
+line: len 200002 ends b (reader same)
+skip: len 1 ends b (reader same)
+line crlf: len 50002 ends b
+blanks: len 1 ends x
+horizon miss: len 9 ends e
+horizon hit: len 9 ends e
+findInLine miss: len 10 ends e
+hasNextInt digits: false
+lines: 10000 (reader same)
+done

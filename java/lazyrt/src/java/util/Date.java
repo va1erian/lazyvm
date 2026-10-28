@@ -1,57 +1,61 @@
 package java.util;
 
+import lazy.internal.Calendars;
+
 /**
  * An instant, in milliseconds since 1970-01-01T00:00:00Z. LazyVM has no time-zone data yet, so
  * toString always shows UTC (docs/design/util-text.md, P11). Only the non-deprecated members
  * exist; the calendar-field ones wait for java.text and time zones, and the java.time
- * conversions for java.time.
+ * conversions for java.time. Serialization comes with java.io object streams; until then the
+ * class only declares that it is Serializable.
  */
 public class Date implements java.io.Serializable, Cloneable, Comparable<Date> {
     private static final long serialVersionUID = 7523967970034938905L;
     private static final long DAY = 86400000L;
     /** The first instant of the Gregorian calendar, 1582-10-15T00:00Z; earlier ones are Julian. */
     private static final long GREGORIAN_START = -12219292800000L;
-    /** The Julian day number of 1970-01-01. */
-    private static final long EPOCH_JDN = 2440588L;
     private static final String DAYS = "SunMonTueWedThuFriSat";
     private static final String MONTHS = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
-    private transient long fastTime;
+    private long millis;
 
     public Date() {
         this(System.currentTimeMillis());
     }
 
     public Date(long date) {
-        fastTime = date;
+        millis = date;
     }
 
     public long getTime() {
-        return fastTime;
+        return millis;
     }
 
     public void setTime(long time) {
-        fastTime = time;
+        millis = time;
     }
 
+    /** Ordering and toString use the instants themselves, not an overridden getTime(). */
     public boolean before(Date when) {
-        return fastTime < when.fastTime;
+        return millis < when.millis;
     }
 
     public boolean after(Date when) {
-        return fastTime > when.fastTime;
+        return millis > when.millis;
     }
 
+    /** Equality and the hash ask getTime(), as the Javadoc defines them. */
     public boolean equals(Object obj) {
-        return obj instanceof Date && ((Date) obj).fastTime == fastTime;
+        return obj instanceof Date && getTime() == ((Date) obj).getTime();
     }
 
     public int compareTo(Date anotherDate) {
-        return Long.compare(fastTime, anotherDate.fastTime);
+        return Long.compare(millis, anotherDate.millis);
     }
 
     public int hashCode() {
-        return (int) (fastTime ^ (fastTime >>> 32));
+        long t = getTime();
+        return (int) (t ^ (t >>> 32));
     }
 
     public Object clone() {
@@ -64,9 +68,10 @@ public class Date implements java.io.Serializable, Cloneable, Comparable<Date> {
 
     /** "EEE MMM dd HH:mm:ss zzz yyyy", with the year of its era (1 BC is 1). */
     public String toString() {
-        long days = Math.floorDiv(fastTime, DAY);
-        int ms = (int) Math.floorMod(fastTime, DAY);
-        long[] ymd = civil(days + EPOCH_JDN, fastTime < GREGORIAN_START);
+        long t = millis;
+        long days = Math.floorDiv(t, DAY);
+        int ms = (int) Math.floorMod(t, DAY);
+        long[] ymd = t < GREGORIAN_START ? Calendars.julian(days) : Calendars.gregorian(days);
         int dow = (int) Math.floorMod(days + 4, 7L); // 1970-01-01 was a Thursday
         StringBuilder b = new StringBuilder(28);
         b.append(DAYS, 3 * dow, 3 * dow + 3).append(' ');
@@ -82,28 +87,5 @@ public class Date implements java.io.Serializable, Cloneable, Comparable<Date> {
 
     private static StringBuilder two(StringBuilder b, int v) {
         return b.append((char) ('0' + v / 10)).append((char) ('0' + v % 10));
-    }
-
-    /**
-     * Year (astronomical: 0 is 1 BC), month and day of a Julian day number, in the Julian or the
-     * proleptic Gregorian calendar (the usual integer conversion, with floor division).
-     */
-    private static long[] civil(long jdn, boolean julian) {
-        long c;
-        long century = 0;
-        if (julian) {
-            c = jdn + 32082;
-        } else {
-            long a = jdn + 32044;
-            century = Math.floorDiv(4 * a + 3, 146097L);
-            c = a - Math.floorDiv(146097 * century, 4L);
-        }
-        long d = Math.floorDiv(4 * c + 3, 1461L);
-        long e = c - Math.floorDiv(1461 * d, 4L);
-        long m = Math.floorDiv(5 * e + 2, 153L);
-        long day = e - Math.floorDiv(153 * m + 2, 5L) + 1;
-        long month = m + 3 - 12 * (m / 10);
-        long year = 100 * century + d - 4800 + m / 10;
-        return new long[] {year, month, day};
     }
 }

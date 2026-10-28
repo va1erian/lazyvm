@@ -67,7 +67,7 @@ public final class FileTime implements Comparable<FileTime> {
     public String toString() {
         long days = Math.floorDiv(seconds, 86400L);
         int secondOfDay = (int) Math.floorMod(seconds, 86400L);
-        long[] ymd = civil(days);
+        long[] ymd = lazy.internal.Calendars.gregorian(days);
         StringBuilder sb = new StringBuilder();
         long year = ymd[0];
         // Observed: year 0 and before are shown as years before the common era (0 is -0001).
@@ -103,20 +103,5 @@ public final class FileTime implements Comparable<FileTime> {
             sb.append('0');
         }
         sb.append(s);
-    }
-
-    /** Year, month, day of a day count from 1970-01-01 in the proleptic Gregorian calendar. */
-    private static long[] civil(long days) {
-        // Shift to 0000-03-01 so a leap day ends each 4/100/400-year cycle (400 years = 146097 days).
-        long z = days + 719468;
-        long era = Math.floorDiv(z, 146097);
-        long doe = z - era * 146097;
-        long yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-        long doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-        long mp = (5 * doy + 2) / 153;
-        long day = doy - (153 * mp + 2) / 5 + 1;
-        long month = mp < 10 ? mp + 3 : mp - 9;
-        long year = yoe + era * 400 + (month <= 2 ? 1 : 0);
-        return new long[] {year, month, day};
     }
 }

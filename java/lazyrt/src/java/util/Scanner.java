@@ -2,13 +2,12 @@ package java.util;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
-import java.nio.file.Files;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
@@ -16,15 +15,17 @@ import java.util.regex.Pattern;
 
 /**
  * Splits text into tokens and lines and reads numbers from them (docs/design/util-text.md
- * section 1, SC1-SC23). All matching is done on ScannerInput's buffer; the number languages are
- * ScannerSyntax. LazyVM has no locale data, so every locale reads with the ROOT symbols.
+ * section 1, SC1-SC24). All matching is done on ScannerInput's buffer; the number languages are
+ * ScannerSyntax, and what hasNext calls remember is ScannerCache. LazyVM has no locale data, so
+ * every locale reads with the ROOT symbols.
  */
 public final class Scanner implements Iterator<String>, Closeable {
     private static final Pattern WHITESPACE = Pattern.compile("\\p{javaWhitespace}+");
     /** SC5: a line with its terminator, or a last line without one. */
-    private static final Pattern LINE = Pattern.compile(".*(\r\n|[\n\r\u2028\u2029\u0085])|.+$");
+    private static final Pattern LINE = Pattern.compile(".*(\r\n|[\n\r  \u0085])|.+$");
 
     private final ScannerInput in;
+    private final ScannerCache cache = new ScannerCache();
     private Pattern delimiter = WHITESPACE;
     private Matcher delimiterMatcher;
     private Locale locale = Locale.getDefault();
@@ -45,39 +46,34 @@ public final class Scanner implements Iterator<String>, Closeable {
         this(new InputStreamReader(Objects.requireNonNull(source)));
     }
 
+    /** SC21a: a null stream is refused before the charset name is looked at. */
     public Scanner(InputStream source, String charsetName) {
-        this(new InputStreamReader(Objects.requireNonNull(source), ScannerInput.charset(charsetName)));
+        this(new InputStreamReader(Objects.requireNonNull(source, "source"), ScannerInput.charset(charsetName)));
     }
 
     public Scanner(File source) throws FileNotFoundException {
-        this(new FileInputStream(source));
+        this(ScannerInput.open(source, Charset.defaultCharset()));
     }
 
     public Scanner(File source, String charsetName) throws FileNotFoundException {
-        this(new InputStreamReader(new FileInputStream(source), ScannerInput.charset(charsetName)));
+        this(ScannerInput.open(Objects.requireNonNull(source), ScannerInput.charsetNamed(charsetName)));
     }
 
     public Scanner(Path source) throws IOException {
-        this(Files.newInputStream(source));
+        this(ScannerInput.open(source, Charset.defaultCharset()));
     }
 
     public Scanner(Path source, String charsetName) throws IOException {
-        this(new InputStreamReader(Files.newInputStream(source), ScannerInput.charset(charsetName)));
+        this(ScannerInput.open(Objects.requireNonNull(source), ScannerInput.charset(charsetName)));
     }
 
     public Scanner(String source) {
         this(new StringReader(Objects.requireNonNull(source)));
     }
 
-    // Settings.
-
     public Pattern delimiter() { return delimiter; }
 
-    public Scanner useDelimiter(Pattern pattern) {
-        delimiter = pattern;
-        delimiterMatcher = null;
-        return this;
-    }
+    public Scanner useDelimiter(Pattern pattern) { delimiter = pattern; delimiterMatcher = null; return this; }
 
     public Scanner useDelimiter(String pattern) { return useDelimiter(Pattern.compile(pattern)); }
 
@@ -95,11 +91,12 @@ public final class Scanner implements Iterator<String>, Closeable {
         return this;
     }
 
-    /** SC22. */
+    /** SC22; SC24: it also forgets what hasNext calls remembered. */
     public Scanner reset() {
         useDelimiter(WHITESPACE);
         locale = Locale.getDefault();
         radix = 10;
+        cache.forget();
         return this;
     }
 
@@ -114,11 +111,10 @@ public final class Scanner implements Iterator<String>, Closeable {
 
     /** SC20. */
     public void close() {
-        if (closed) {
-            return;
+        if (!closed) {
+            in.close();
         }
         closed = true;
-        in.close();
     }
 
     private void ensureOpen() {
@@ -169,21 +165,16 @@ public final class Scanner implements Iterator<String>, Closeable {
         }
     }
 
-    /** The token for a hasNext call, which consumes nothing; match() is invalid until it agrees. */
-    private int[] peek() {
-        lineSeen = -1;
-        return any();
-    }
-
-    /** SC7: hasNext() alone keeps what hasNextLine saw. */
-    private int[] any() {
+    /** The token for a hasNext call, which consumes nothing and keeps no older match (SC7). */
+    private int[] peek(boolean keepLine) {
         ensureOpen();
         last = null;
+        lineSeen = keepLine ? lineSeen : -1; // SC7: hasNext() alone keeps what hasNextLine saw
         return token();
     }
 
-    /** SC7: a hasNext call that says yes leaves the token as the match. */
-    private boolean agree(int[] token) {
+    /** SC7: the token as the match, for a hasNext that says yes or a parse that fails (SC7a). */
+    private boolean show(int[] token) {
         last = ScannerMatch.token(text(token), in.at(token[0]));
         return true;
     }
@@ -191,6 +182,7 @@ public final class Scanner implements Iterator<String>, Closeable {
     /** The token for a next call; with none, the delimiter is passed and the call fails. */
     private int[] require() {
         lineSeen = -1;
+        cache.forget();
         int[] t = token();
         if (t == null) {
             in.pos = skipTo;
@@ -200,11 +192,17 @@ public final class Scanner implements Iterator<String>, Closeable {
         return t;
     }
 
-    /** A token that a next call refuses stays, but the delimiter before it is passed. */
-    private InputMismatchException mismatch(String message) {
+    /**
+     * A token that a next call refuses stays, but the delimiter before it is passed. A token of
+     * the right shape that fails to parse stays the match (SC7a); any other refusal clears it.
+     */
+    private InputMismatchException mismatch(int[] token, String parseError) {
         in.pos = skipTo;
         last = null;
-        return new InputMismatchException(message);
+        if (parseError != null) {
+            show(token);
+        }
+        return new InputMismatchException(parseError);
     }
 
     private String text(int[] token) {
@@ -219,47 +217,64 @@ public final class Scanner implements Iterator<String>, Closeable {
         return t;
     }
 
-    /** SC7: unlike the other hasNext calls, this one never leaves a match. */
-    public boolean hasNext() { return any() != null; }
+    private int[] remembered(long[] span) { // SC24: a remembered token as buffer indexes
+        return span == null ? null : new int[] {(int) (span[0] - in.base), (int) (span[1] - in.base)};
+    }
+
+    public boolean hasNext() { return peek(true) != null; }
 
     public String next() { return take(require()); }
 
     /** SC21. */
     public void remove() { throw new UnsupportedOperationException(); }
 
-    public boolean hasNext(String pattern) { return hasNext(Pattern.compile(pattern)); }
+    public boolean hasNext(String pattern) { return whole(Pattern.compile(pattern), pattern, false) != null; }
 
-    public String next(String pattern) { return next(Pattern.compile(pattern)); }
+    public String next(String pattern) { return next(Pattern.compile(pattern), pattern); }
 
-    /** SC4: the whole token must match; the match is null when it does not. */
-    private Matcher whole(Pattern pattern, boolean next) {
-        Objects.requireNonNull(pattern);
+    public boolean hasNext(Pattern pattern) { return whole(pattern, pattern, false) != null; }
+
+    public String next(Pattern pattern) { return next(pattern, pattern); }
+
+    /**
+     * SC4: the whole token must match; the matcher, or null when it does not. SC24: `key` names
+     * the pattern for what hasNext remembers.
+     */
+    private Matcher whole(Pattern pattern, Object key, boolean next) {
         ensureOpen();
-        last = null;
+        Objects.requireNonNull(pattern);
         lineSeen = -1;
-        while (true) {
-            int[] t = next ? require() : token();
-            if (t == null) {
-                return null;
-            }
+        int[] t = next ? remembered(cache.pattern(key, in.at(in.pos))) : null;
+        if (t != null) {
+            cache.forget(); // SC24: the remembered token, and match() stays as it was
             Matcher m = in.matcher(pattern, t[0], t[1]);
-            boolean ok = m.matches();
-            if (ok && m.requireEnd() && in.more()) {
-                continue; // an anchor matched at the end of what has been read so far
-            }
-            if (ok) {
-                last = ScannerMatch.of(m, in.base);
-            }
-            return ok ? m : null;
+            return m.matches() ? m : null;
         }
+        last = null;
+        t = next ? require() : token();
+        if (t == null) {
+            cache.forgetPattern();
+            return null;
+        }
+        // Decided on the text read so far, as the oracle does: a lookahead past the token that
+        // meets the end of the buffer is not retried (util-text.md section 4).
+        Matcher m = in.matcher(pattern, t[0], t[1]);
+        boolean ok = m.matches();
+        if (next) {
+            cache.forget();
+        } else if (ok) {
+            cache.putPattern(key, in.at(in.pos), in.at(t[0]), in.at(t[1]));
+        } else {
+            cache.forgetPattern(); // a typed hasNext's memory survives a pattern's
+        }
+        last = ok ? ScannerMatch.of(m, in.base) : null;
+        return ok ? m : null;
     }
 
-    public boolean hasNext(Pattern pattern) { return whole(pattern, false) != null; }
-
-    public String next(Pattern pattern) {
-        Matcher m = whole(pattern, true);
+    private String next(Pattern pattern, Object key) {
+        Matcher m = whole(pattern, key, true);
         if (m == null) {
-            throw mismatch(null);
+            throw mismatch(null, null);
         }
         in.pos = m.regionEnd();
         return m.group();
@@ -270,7 +285,12 @@ public final class Scanner implements Iterator<String>, Closeable {
     /** SC5: the next line's matcher, or null when there is no further line. */
     private Matcher line() {
         ensureOpen();
+        cache.forget();
         while (true) {
+            int stop = in.lineEnd(); // a plain scan first, so the regex runs once per line
+            if ((stop < 0 || stop == in.buf.length() - 1 && in.buf.charAt(stop) == '\r') && in.more()) {
+                continue;
+            }
             Matcher m = in.matcher(LINE, in.pos, in.buf.length());
             boolean ok = m.lookingAt();
             if (m.hitEnd() && in.more()) {
@@ -304,14 +324,14 @@ public final class Scanner implements Iterator<String>, Closeable {
         return end == null ? all : all.substring(0, all.length() - end.length());
     }
 
-    // Searching and skipping (SC6).
+    // Searching and skipping (SC6). A closed scanner says so before any argument is checked.
 
     public String findInLine(String pattern) { return findInLine(Pattern.compile(pattern)); }
 
     /** Searches up to the next line terminator, which the match never includes. */
     public String findInLine(Pattern pattern) {
-        Objects.requireNonNull(pattern);
         ensureOpen();
+        Objects.requireNonNull(pattern);
         while (true) {
             int stop = in.lineEnd();
             if (stop < 0 && in.more()) {
@@ -333,6 +353,7 @@ public final class Scanner implements Iterator<String>, Closeable {
     /** A search's outcome: on success match() gives it and the scanner passes it. */
     private String found(Matcher m, boolean ok) {
         lineSeen = -1;
+        cache.forget();
         if (!ok) {
             last = null;
             return null;
@@ -348,11 +369,11 @@ public final class Scanner implements Iterator<String>, Closeable {
 
     /** Searches the next `horizon` chars, or the rest of the input for 0. */
     public String findWithinHorizon(Pattern pattern, int horizon) {
+        ensureOpen();
         Objects.requireNonNull(pattern);
         if (horizon < 0) {
             throw new IllegalArgumentException("horizon < 0");
         }
-        ensureOpen();
         while (true) {
             int len = in.buf.length();
             boolean bounded = horizon > 0 && (long) in.pos + horizon <= len;
@@ -370,130 +391,108 @@ public final class Scanner implements Iterator<String>, Closeable {
 
     /** Matches at the current position, ignoring delimiters. */
     public Scanner skip(Pattern pattern) {
-        Objects.requireNonNull(pattern);
         ensureOpen();
+        Objects.requireNonNull(pattern);
         while (true) {
             Matcher m = in.matcher(pattern, in.pos, in.buf.length());
             boolean ok = m.lookingAt();
             if (m.hitEnd() && in.more()) {
                 continue;
             }
-            lineSeen = -1;
-            if (!ok) {
-                last = null;
+            if (found(m, ok) == null && !ok) {
                 throw new NoSuchElementException();
             }
-            last = ScannerMatch.of(m, in.base);
-            in.pos = m.end();
             return this;
         }
     }
 
-    // Numbers and booleans (SC10-SC19).
+    // Numbers and booleans (SC10-SC19). A typed reader's SC24 key is its kind and radix.
 
-    private boolean hasInteger(int radix, int kind) {
-        ScannerSyntax.checkDigits(radix);
-        int[] t = peek();
-        String text = t == null ? null : ScannerSyntax.integer(text(t), radix);
+    private boolean hasNumber(int kind, int radix) {
+        cache.reader(kind, radix);
+        int[] t = peek(false);
+        String text = t == null ? null : ScannerSyntax.shape(text(t), kind, radix);
         if (text == null) {
+            cache.forgetPattern(); // SC24: only a parse that succeeds replaces the typed memory
             return false;
         }
+        cache.putPattern(ScannerSyntax.shapeKey(kind, radix), in.at(in.pos), in.at(t[0]), in.at(t[1]));
         try {
-            ScannerSyntax.parse(text, radix, kind);
-            return agree(t);
+            Number v = ScannerSyntax.parse(text, kind, radix);
+            cache.putType(kind, in.at(in.pos), in.at(t[0]), in.at(t[1]), v);
+            return show(t);
         } catch (NumberFormatException e) {
+            show(t); // SC7a
             return false;
         }
     }
 
     /** SC10, SC13: a wrong shape has no message; a parse failure carries the parser's. */
-    private long nextInteger(int radix, int kind) {
-        ScannerSyntax.checkDigits(radix);
-        int[] t = require();
-        String text = ScannerSyntax.integer(text(t), radix);
-        if (text == null) {
-            throw mismatch(null);
+    private Number nextNumber(int kind, int radix) {
+        cache.reader(kind, radix);
+        ensureOpen();
+        int[] kept = remembered(cache.type(kind, in.at(in.pos)));
+        if (kept != null) {
+            lineSeen = -1;
+            cache.forget();
+            in.pos = kept[1]; // SC24: match() stays as the calls before left it
+            return cache.value();
         }
-        long v;
+        int[] t = require();
+        String text = ScannerSyntax.shape(text(t), kind, radix);
+        if (text == null) {
+            throw mismatch(t, null);
+        }
+        Number v;
         try {
-            v = ScannerSyntax.parse(text, radix, kind);
+            v = ScannerSyntax.parse(text, kind, radix);
         } catch (NumberFormatException e) {
-            throw mismatch(e.getMessage());
+            throw mismatch(t, e.getMessage());
         }
         take(t);
         return v;
     }
 
-    public boolean hasNextByte() { return hasInteger(radix, ScannerSyntax.BYTE); }
-    public boolean hasNextByte(int radix) { return hasInteger(radix, ScannerSyntax.BYTE); }
-    public byte nextByte() { return (byte) nextInteger(radix, ScannerSyntax.BYTE); }
-    public byte nextByte(int radix) { return (byte) nextInteger(radix, ScannerSyntax.BYTE); }
-    public boolean hasNextShort() { return hasInteger(radix, ScannerSyntax.SHORT); }
-    public boolean hasNextShort(int radix) { return hasInteger(radix, ScannerSyntax.SHORT); }
-    public short nextShort() { return (short) nextInteger(radix, ScannerSyntax.SHORT); }
-    public short nextShort(int radix) { return (short) nextInteger(radix, ScannerSyntax.SHORT); }
-    public boolean hasNextInt() { return hasInteger(radix, ScannerSyntax.INT); }
-    public boolean hasNextInt(int radix) { return hasInteger(radix, ScannerSyntax.INT); }
-    public int nextInt() { return (int) nextInteger(radix, ScannerSyntax.INT); }
-    public int nextInt(int radix) { return (int) nextInteger(radix, ScannerSyntax.INT); }
-    public boolean hasNextLong() { return hasInteger(radix, ScannerSyntax.LONG); }
-    public boolean hasNextLong(int radix) { return hasInteger(radix, ScannerSyntax.LONG); }
-    public long nextLong() { return nextInteger(radix, ScannerSyntax.LONG); }
-    public long nextLong(int radix) { return nextInteger(radix, ScannerSyntax.LONG); }
+    public boolean hasNextByte() { return hasNumber(ScannerSyntax.BYTE, radix); }
+    public boolean hasNextByte(int radix) { return hasNumber(ScannerSyntax.BYTE, radix); }
+    public byte nextByte() { return nextNumber(ScannerSyntax.BYTE, radix).byteValue(); }
+    public byte nextByte(int radix) { return nextNumber(ScannerSyntax.BYTE, radix).byteValue(); }
+    public boolean hasNextShort() { return hasNumber(ScannerSyntax.SHORT, radix); }
+    public boolean hasNextShort(int radix) { return hasNumber(ScannerSyntax.SHORT, radix); }
+    public short nextShort() { return nextNumber(ScannerSyntax.SHORT, radix).shortValue(); }
+    public short nextShort(int radix) { return nextNumber(ScannerSyntax.SHORT, radix).shortValue(); }
+    public boolean hasNextInt() { return hasNumber(ScannerSyntax.INT, radix); }
+    public boolean hasNextInt(int radix) { return hasNumber(ScannerSyntax.INT, radix); }
+    public int nextInt() { return nextNumber(ScannerSyntax.INT, radix).intValue(); }
+    public int nextInt(int radix) { return nextNumber(ScannerSyntax.INT, radix).intValue(); }
+    public boolean hasNextLong() { return hasNumber(ScannerSyntax.LONG, radix); }
+    public boolean hasNextLong(int radix) { return hasNumber(ScannerSyntax.LONG, radix); }
+    public long nextLong() { return nextNumber(ScannerSyntax.LONG, radix).longValue(); }
+    public long nextLong(int radix) { return nextNumber(ScannerSyntax.LONG, radix).longValue(); }
+    public boolean hasNextFloat() { return hasNumber(ScannerSyntax.FLOAT, 10); }
+    public float nextFloat() { return nextNumber(ScannerSyntax.FLOAT, 10).floatValue(); }
+    public boolean hasNextDouble() { return hasNumber(ScannerSyntax.DOUBLE, 10); }
+    public double nextDouble() { return nextNumber(ScannerSyntax.DOUBLE, 10).doubleValue(); }
 
-    /** SC15-SC17: whether the token is a floating number that parses, as a double or a float. */
-    private boolean hasFloating(boolean single) {
-        int[] t = peek();
-        String text = t == null ? null : ScannerSyntax.decimal(text(t));
-        if (text == null) {
-            return false;
-        }
-        try {
-            ScannerSyntax.parseFloating(text, single);
-            return agree(t);
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
-
-    private double nextFloating(boolean single) {
-        int[] t = require();
-        String text = ScannerSyntax.decimal(text(t));
-        if (text == null) {
-            throw mismatch(null);
-        }
-        double v;
-        try {
-            v = ScannerSyntax.parseFloating(text, single);
-        } catch (NumberFormatException e) {
-            throw mismatch(e.getMessage());
-        }
-        take(t);
-        return v;
-    }
-
-    public boolean hasNextDouble() { return hasFloating(false); }
-    public double nextDouble() { return nextFloating(false); }
-    public boolean hasNextFloat() { return hasFloating(true); }
-    public float nextFloat() { return (float) nextFloating(true); }
-
+    /** SC24: booleans are never remembered, but asking forgets a remembered pattern. */
     public boolean hasNextBoolean() {
-        int[] t = peek();
-        return t != null && ScannerSyntax.isBoolean(text(t)) && agree(t);
+        int[] t = peek(false);
+        cache.forgetPattern();
+        return t != null && ScannerSyntax.isBoolean(text(t)) && show(t);
     }
 
     /** SC18. */
     public boolean nextBoolean() {
         int[] t = require();
         if (!ScannerSyntax.isBoolean(text(t))) {
-            throw mismatch(null);
+            throw mismatch(t, null);
         }
         return Boolean.parseBoolean(take(t));
     }
 
-    /** SC23: the fields once the scanner has read nothing are fixed; later ones are free. */
+    /** SC23: the fields while nothing has been read are fixed (a closed source shows true). */
     public String toString() {
-        return "java.util.Scanner[delimiters=" + delimiter + "][position=" + in.at(in.pos)
-            + "][match valid=" + (last != null) + ScannerSyntax.ROOT_FIELDS.replace("?", "" + in.ended);
+        return "java.util.Scanner[delimiters=" + delimiter + "][position=" + in.at(in.pos) + "][match valid="
+            + (last != null) + ScannerSyntax.ROOT_FIELDS.replace("?", "" + (closed || in.ended));
     }
 }

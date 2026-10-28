@@ -1,16 +1,25 @@
 package java.util;
 
 import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStreamReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * The text a Scanner has read but not yet passed (docs/design/util-text.md SC8, SC9). Every
  * decision is made on this buffer; when a match might change with more text, the scanner reads
- * more and decides again, so the answers never depend on how the source splits its reads.
+ * more and decides again. That makes the answers independent of how the source splits its reads,
+ * except for the bounded searches util-text.md section 4 lists (a horizon that ends where the
+ * text read so far ends, as with `\z`).
  */
 final class ScannerInput {
     private static final int CHUNK = 1024;
@@ -27,7 +36,7 @@ final class ScannerInput {
     IOException failure;
 
     private final Readable source;
-    private final CharBuffer chunk = CharBuffer.allocate(CHUNK);
+    private char[] chunk = new char[CHUNK];
 
     ScannerInput(Readable source) {
         this.source = source;
@@ -41,6 +50,25 @@ final class ScannerInput {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    /** SC21a: the File constructors refuse a bad name with the name alone, before opening. */
+    static Charset charsetNamed(String name) {
+        Objects.requireNonNull(name, "charsetName");
+        try {
+            return Charset.forName(name);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(name);
+        }
+    }
+
+    /** SC21a: the charset is known good before the file is opened, so a bad name leaks no stream. */
+    static InputStreamReader open(File source, Charset cs) throws FileNotFoundException {
+        return new InputStreamReader(new FileInputStream(source), cs);
+    }
+
+    static InputStreamReader open(Path source, Charset cs) throws IOException {
+        return new InputStreamReader(Files.newInputStream(source), cs);
     }
 
     /** SC20: a source that can be closed is; a failure to close becomes ioException(). */
@@ -66,7 +94,7 @@ final class ScannerInput {
     int lineEnd() {
         for (int i = pos; i < buf.length(); i++) {
             char c = buf.charAt(i);
-            if (c == '\n' || c == '\r' || c == '\u2028' || c == '\u2029' || c == '\u0085') {
+            if (c == '\n' || c == '\r' || c == ' ' || c == ' ' || c == '\u0085') {
                 return i;
             }
         }
@@ -79,34 +107,60 @@ final class ScannerInput {
     }
 
     /**
-     * Reads once more from the source; false when the input has ended (SC9: a failure ends it).
-     * After true, buffer indexes taken before the call are stale.
+     * Reads more from the source; false when the input has ended (SC9: a failure ends it). After
+     * true, buffer indexes taken before the call are stale. Each call asks for at least as much
+     * as is still unread, and keeps reading while a Reader says it will not block, so a decision
+     * retried after every read costs linear time overall rather than quadratic.
      */
     boolean more() {
         if (ended) {
             return false;
         }
-        chunk.clear();
-        int n;
-        try {
-            n = source.read(chunk);
-        } catch (IOException e) {
-            failure = e;
-            ended = true;
-            return false;
+        int want = Math.max(CHUNK, buf.length() - pos);
+        if (chunk.length < want) {
+            chunk = new char[want];
         }
-        if (n < 0) {
-            ended = true;
-            return false;
+        int got = 0;
+        while (got < want) {
+            int n = readInto(got, want - got);
+            if (n <= 0 || !ready()) {
+                got += Math.max(n, 0);
+                break;
+            }
+            got += n;
         }
-        // Only after a successful read: a caller that sees false keeps using its buffer indexes.
+        if (got == 0) {
+            return !ended;
+        }
         if (pos > COMPACT && pos > buf.length() / 2) {
             buf.delete(0, pos);
             base += pos;
             pos = 0;
         }
-        chunk.flip();
-        buf.append(chunk.array(), chunk.arrayOffset() + chunk.position(), chunk.remaining());
+        buf.append(chunk, 0, got);
         return true;
+    }
+
+    /** One read into chunk[off, off + len); -1 marks the end of input. */
+    private int readInto(int off, int len) {
+        try {
+            int n = source.read(CharBuffer.wrap(chunk, off, len));
+            if (n < 0) {
+                ended = true;
+            }
+            return n;
+        } catch (IOException e) {
+            failure = e;
+            ended = true;
+            return -1;
+        }
+    }
+
+    private boolean ready() {
+        try {
+            return source instanceof Reader && ((Reader) source).ready();
+        } catch (IOException e) {
+            return false;
+        }
     }
 }
