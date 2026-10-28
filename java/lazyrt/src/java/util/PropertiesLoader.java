@@ -4,196 +4,249 @@ import java.io.IOException;
 import java.io.Reader;
 
 /**
- * Properties.load (docs/design/util-text.md P1-P8, P20): logical lines, then keys and values with
- * their escapes. The line buffer is reused for every line of one load and never cleared, and the
- * backslash parity is not reset by a comment line, because both are observable (P20).
+ * The parser behind Properties.load (docs/design/util-text.md P1-P8, P7a, P20). One instance
+ * serves one load call: it splits the input into logical lines in a reused buffer, then cuts
+ * each line into a key and a value and decodes their escapes.
  */
 final class PropertiesLoader {
+    /** What one physical line is doing so far. */
+    private static final int FRESH = 0;    // start of a logical line, blanks skipped
+    private static final int JOINED = 1;   // start of a continuation line, blanks skipped
+    private static final int CONTENT = 2;  // storing key and value chars
+    private static final int COMMENT = 3;  // inside a # or ! line
+
+    private static final String MALFORMED = "Malformed \\uxxxx encoding.";
+
     private final Reader in;
+    /** P8: every read asks for 8192 chars at offset 0, which a spying reader can see. */
     private final char[] chunk = new char[8192];
-    private int pos;
-    private int limit;
-    /** The current logical line, raw; chars past `len` are left from earlier lines (P20). */
+    private int chunkPos;
+    private int chunkEnd;
+
+    /**
+     * P20: never cleared between lines, and comment text lands here too, because an escape at
+     * the end of a line reads whatever an earlier, longer line left behind.
+     */
     private char[] line = new char[80];
-    private int len;
-    /** Whether the last stored char ends an odd run of backslashes (P2, P20). */
-    private boolean backslash;
+    /** P20: whether the run of backslashes just stored is odd; it outlives comment lines. */
+    private boolean oddRun;
+    /** A CR was the last char; an LF right after it belongs to the same break. */
+    private boolean afterCR;
 
     private PropertiesLoader(Reader in) {
         this.in = in;
     }
 
-    /** P6: every pair goes through the table's own put. */
-    static void load(Reader reader, Properties into) throws IOException {
-        PropertiesLoader l = new PropertiesLoader(reader);
-        while (l.logicalLine()) {
-            l.pair(into);
+    static void load(Reader in, Properties into) throws IOException {
+        PropertiesLoader loader = new PropertiesLoader(in);
+        int len;
+        while ((len = loader.nextLine()) >= 0) {
+            loader.split(len, into);
         }
-    }
-
-    /** The next char, or -1 at the end of input. */
-    private int next() throws IOException {
-        while (pos == limit) {
-            int n = in.read(chunk, 0, chunk.length);
-            if (n < 0) {
-                return -1;
-            }
-            pos = 0;
-            limit = n;
-        }
-        return chunk[pos++];
-    }
-
-    private static boolean blank(int c) {
-        return c == ' ' || c == '\t' || c == '\f';
-    }
-
-    private static boolean eol(int c) {
-        return c == '\n' || c == '\r';
-    }
-
-    private void store(char c) {
-        if (len == line.length - 1) {
-            line = Arrays.copyOf(line, 2 * line.length);
-        }
-        line[len++] = c;
-        backslash = c == '\\' && !backslash;
     }
 
     /**
-     * P1, P2: reads the next logical line into `line`; false at the end of input. Comment chars are
-     * stored too (and later overwritten), as P20 requires.
+     * The next char, or -1 at the end. A read of zero chars also ends the input, and the end is
+     * not remembered: the next line asks the reader again, as observed (P8).
      */
-    private boolean logicalLine() throws IOException {
-        len = 0;
-        boolean skipBlanks = true;
-        boolean newLine = true;
-        boolean comment = false;
-        boolean appended = false; // in a continuation line
-        boolean justContinued = false;
-        boolean skipLF = false;
-        while (true) {
-            int c = next();
-            if (c < 0) {
-                return endOfInput(justContinued, comment);
-            }
-            justContinued = false;
-            if (skipLF) {
-                skipLF = false;
-                if (c == '\n') {
-                    continue;
-                }
-            }
-            if (skipBlanks) {
-                if (blank(c) || !appended && eol(c)) {
-                    continue;
-                }
-                skipBlanks = false;
-                appended = false;
-            }
-            if (newLine) {
-                newLine = false;
-                if (c == '#' || c == '!') {
-                    comment = true;
-                    continue;
-                }
-            }
-            if (!eol(c)) {
-                store((char) c);
-            } else if (comment || len == 0) {
-                // A comment, or an empty continuation line that ends an empty logical line: no pair.
-                comment = false;
-                newLine = true;
-                skipBlanks = true;
-                len = 0;
-            } else if (backslash) {
-                len--;
-                backslash = false;
-                skipBlanks = true;
-                appended = true;
-                justContinued = true;
-                skipLF = c == '\r';
-            } else {
-                return true;
-            }
+    private int next() throws IOException {
+        if (chunkPos == chunkEnd && !refill()) {
+            return -1;
         }
+        return chunk[chunkPos++];
     }
 
-    /** P2, P20: a line cut by the end of input; one that a continuation just ended counts even when empty. */
-    private boolean endOfInput(boolean justContinued, boolean comment) {
-        if (justContinued) {
-            return true;
-        }
-        if (len == 0 || comment) {
+    private boolean refill() throws IOException {
+        int n = in.read(chunk, 0, chunk.length);
+        if (n <= 0) {
             return false;
         }
-        if (backslash) {
-            len--;
-        }
+        chunkPos = 0;
+        chunkEnd = n;
         return true;
     }
 
-    /** P3: splits the line at its first unescaped separator; P4: unescapes both parts. */
-    private void pair(Properties into) {
-        int k = 0;
+    /**
+     * Before a line ended by a break is handed out, the char after the break is fetched, and an
+     * LF that completes a CRLF is taken with it; observable as the order of reads and puts.
+     */
+    private void lookPastBreak() throws IOException {
+        if (chunkPos == chunkEnd && !refill()) {
+            return;
+        }
+        if (afterCR && chunk[chunkPos] == '\n') {
+            chunkPos++;
+        }
+        afterCR = false;
+    }
+
+    /** Reads one logical line into `line` and returns its length, or -1 when none is left. */
+    private int nextLine() throws IOException {
+        int len = 0;
+        int mode = FRESH;
+        boolean quiet = false; // nothing read since a continuation's break (P7a)
+        for (;;) {
+            int c = next();
+            if (c < 0) {
+                return atEnd(mode, len, quiet);
+            }
+            quiet = false;
+            boolean lfOfCrlf = afterCR && c == '\n';
+            afterCR = false;
+            if (lfOfCrlf) {
+                continue;
+            }
+            if (c == '\n' || c == '\r') {
+                afterCR = c == '\r';
+                if (mode == CONTENT && oddRun) {
+                    // P2: drop the backslash, keep the length, skip the next line's blanks.
+                    len--;
+                    oddRun = false;
+                    mode = JOINED;
+                    quiet = true;
+                } else if (mode == CONTENT || (mode == JOINED && len > 0)) {
+                    lookPastBreak();
+                    return len;
+                } else {
+                    // An empty or blank line, a comment's end, or an empty logical line ended by
+                    // an empty continuation (P7a). Parity is left alone (P20).
+                    mode = FRESH;
+                    len = 0;
+                }
+                continue;
+            }
+            if (mode <= JOINED && isBlank(c)) {
+                continue;
+            }
+            if (mode == FRESH && (c == '#' || c == '!')) {
+                mode = COMMENT; // P1; the marker itself is not stored (P20)
+                continue;
+            }
+            if (mode != COMMENT) {
+                mode = CONTENT;
+            }
+            len = store(len, (char) c);
+        }
+    }
+
+    /** P2, P7a: what the input's end makes of the line in progress. */
+    private int atEnd(int mode, int len, boolean quiet) {
+        switch (mode) {
+            case CONTENT:
+                // P2: a backslash at the end is dropped, and like a continuation's it leaves
+                // even parity behind for a reader that has more after its end.
+                if (oddRun) {
+                    oddRun = false;
+                    return len - 1;
+                }
+                return len;
+            case JOINED:
+                return len > 0 || quiet ? len : -1;
+            default:
+                return -1;
+        }
+    }
+
+    private int store(int len, char c) {
+        if (len == line.length) {
+            line = Arrays.copyOf(line, len * 2);
+        }
+        line[len] = c;
+        oddRun = c == '\\' && !oddRun;
+        return len + 1;
+    }
+
+    /** P3: the key ends at the first unescaped separator or blank; P6: one put per pair. */
+    private void split(int len, Properties into) {
+        int i = 0;
         boolean escaped = false;
-        while (k < len) {
-            char c = line[k];
-            if (!escaped && (c == '=' || c == ':' || blank(c))) {
+        while (i < len) {
+            char c = line[i];
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == '=' || c == ':' || isBlank(c)) {
                 break;
             }
-            escaped = c == '\\' && !escaped;
-            k++;
+            i++;
         }
-        int v = k;
-        while (v < len && blank(line[v])) {
-            v++;
+        int keyEnd = i;
+        i = skipBlanks(i, len);
+        if (i < len && (line[i] == '=' || line[i] == ':')) {
+            i++;
         }
-        if (v < len && (line[v] == '=' || line[v] == ':')) {
-            v++;
-        }
-        while (v < len && blank(line[v])) {
-            v++;
-        }
-        into.put(unescape(0, k), unescape(v, len));
+        i = skipBlanks(i, len);
+        String key = decode(0, keyEnd);
+        String value = decode(i, len);
+        into.put(key, value);
     }
 
-    /** A char of the line buffer; past its end, 0. */
-    private char at(int i) {
-        return i < line.length ? line[i] : 0;
+    private int skipBlanks(int i, int len) {
+        while (i < len && isBlank(line[i])) {
+            i++;
+        }
+        return i;
     }
 
-    /** P4, P5; an escape at the end reads on into the buffer's leftover chars (P20). */
-    private String unescape(int from, int to) {
+    /** P4, P5; an escape at the end reads on into the buffer's leftovers (P20). */
+    private String decode(int from, int to) {
         StringBuilder out = new StringBuilder(to - from);
         int i = from;
         while (i < to) {
-            char c = at(i++);
-            if (c == '\\') {
-                c = at(i++);
-                if (c == 'u') {
-                    c = hex4(i);
-                    i += 4;
-                } else {
-                    c = c == 't' ? '\t' : c == 'n' ? '\n' : c == 'r' ? '\r' : c == 'f' ? '\f' : c;
-                }
+            char c = line[i++];
+            if (c != '\\') {
+                out.append(c);
+                continue;
             }
-            out.append(c);
+            c = leftover(i++);
+            if (c == 'u') {
+                int v = 0;
+                for (int k = 0; k < 4; k++) {
+                    int d = hexDigit(leftover(i++));
+                    if (d < 0) {
+                        throw new IllegalArgumentException(MALFORMED);
+                    }
+                    v = (v << 4) | d;
+                }
+                out.append((char) v);
+            } else {
+                out.append(control(c));
+            }
         }
         return out.toString();
     }
 
-    private char hex4(int at) {
-        int v = 0;
-        for (int i = at; i < at + 4; i++) {
-            char c = at(i);
-            int lower = c | 0x20;
-            int d = c >= '0' && c <= '9' ? c - '0' : lower >= 'a' && lower <= 'f' ? lower - 'a' + 10 : -1;
-            if (d < 0) {
-                throw new IllegalArgumentException("Malformed \\uxxxx encoding.");
-            }
-            v = v << 4 | d;
+    /** A buffer char past any length: U+0000 where nothing was ever written (P20). */
+    private char leftover(int i) {
+        return i < line.length ? line[i] : '\0';
+    }
+
+    private static char control(char c) {
+        switch (c) {
+            case 't': return '\t';
+            case 'n': return '\n';
+            case 'r': return '\r';
+            case 'f': return '\f';
+            default: return c;
         }
-        return (char) v;
+    }
+
+    /** ASCII hex only: other scripts' digits are malformed, as observed. */
+    private static int hexDigit(char c) {
+        if (c >= '0' && c <= '9') {
+            return c - '0';
+        }
+        if (c >= 'a' && c <= 'f') {
+            return c - 'a' + 10;
+        }
+        if (c >= 'A' && c <= 'F') {
+            return c - 'A' + 10;
+        }
+        return -1;
+    }
+
+    private static boolean isBlank(int c) {
+        return c == ' ' || c == '\t' || c == '\f';
     }
 }
