@@ -20,14 +20,10 @@ import java.util.regex.Pattern;
  * every locale reads with the ROOT symbols.
  */
 public final class Scanner implements Iterator<String>, Closeable {
-    private static final Pattern WHITESPACE = Pattern.compile("\\p{javaWhitespace}+");
-    /** SC5: a line with its terminator, or a last line without one. */
-    private static final Pattern LINE = Pattern.compile(".*(\r\n|[\n\r  \u0085])|.+$");
 
     private final ScannerInput in;
+    private final ScannerTokens tokens;
     private final ScannerCache cache = new ScannerCache();
-    private Pattern delimiter = WHITESPACE;
-    private Matcher delimiterMatcher;
     private Locale locale = Locale.getDefault();
     private int radix = 10;
     private boolean closed;
@@ -35,11 +31,10 @@ public final class Scanner implements Iterator<String>, Closeable {
     private MatchResult last;
     /** Where hasNextLine last said yes, or -1; a nextLine there keeps match() as it is (SC7). */
     private long lineSeen = -1;
-    /** Where the delimiter before the token that token() last looked at ends. */
-    private int skipTo;
 
     public Scanner(Readable source) {
         in = new ScannerInput(Objects.requireNonNull(source, "source"));
+        tokens = new ScannerTokens(in);
     }
 
     public Scanner(InputStream source) {
@@ -71,9 +66,9 @@ public final class Scanner implements Iterator<String>, Closeable {
         this(new StringReader(Objects.requireNonNull(source)));
     }
 
-    public Pattern delimiter() { return delimiter; }
+    public Pattern delimiter() { return tokens.delimiter; }
 
-    public Scanner useDelimiter(Pattern pattern) { delimiter = pattern; delimiterMatcher = null; return this; }
+    public Scanner useDelimiter(Pattern pattern) { tokens.useDelimiter(pattern); return this; }
 
     public Scanner useDelimiter(String pattern) { return useDelimiter(Pattern.compile(pattern)); }
 
@@ -91,12 +86,13 @@ public final class Scanner implements Iterator<String>, Closeable {
         return this;
     }
 
-    /** SC22; SC24: it also forgets what hasNext calls remembered. */
+    /** SC22; SC7, SC24: it also forgets what hasNextLine saw and what hasNext calls remembered. */
     public Scanner reset() {
-        useDelimiter(WHITESPACE);
+        useDelimiter(ScannerTokens.WHITESPACE);
         locale = Locale.getDefault();
         radix = 10;
         cache.forget();
+        lineSeen = -1;
         return this;
     }
 
@@ -125,44 +121,9 @@ public final class Scanner implements Iterator<String>, Closeable {
 
     // Tokens.
 
-    /**
-     * SC2: the next token's [start, end) in the buffer, or null when there is none. Either way
-     * `skipTo` is where the delimiter before it ends, which a failing next call passes.
-     */
     private int[] token() {
         ensureOpen();
-        while (true) {
-            StringBuilder buf = in.buf;
-            int len = buf.length();
-            if (delimiterMatcher == null) {
-                delimiterMatcher = in.matcher(delimiter, 0, len);
-            }
-            Matcher d = delimiterMatcher.region(in.pos, len);
-            boolean skipped = d.lookingAt();
-            if (d.hitEnd() && in.more()) {
-                continue;
-            }
-            int start = skipped ? d.end() : in.pos;
-            if (start == len && in.more()) {
-                continue;
-            }
-            skipTo = start;
-            if (start == len) {
-                return null;
-            }
-            d.region(start, len);
-            boolean found = false;
-            while (d.find()) {
-                if (d.end() > start) {
-                    found = true;
-                    break;
-                }
-            }
-            if ((!found || d.requireEnd()) && in.more()) {
-                continue;
-            }
-            return new int[] {start, found ? d.start() : len};
-        }
+        return tokens.token();
     }
 
     /** The token for a hasNext call, which consumes nothing and keeps no older match (SC7). */
@@ -185,7 +146,7 @@ public final class Scanner implements Iterator<String>, Closeable {
         cache.forget();
         int[] t = token();
         if (t == null) {
-            in.pos = skipTo;
+            in.pos = tokens.skipTo;
             last = null;
             throw new NoSuchElementException();
         }
@@ -197,7 +158,7 @@ public final class Scanner implements Iterator<String>, Closeable {
      * the right shape that fails to parse stays the match (SC7a); any other refusal clears it.
      */
     private InputMismatchException mismatch(int[] token, String parseError) {
-        in.pos = skipTo;
+        in.pos = tokens.skipTo;
         last = null;
         if (parseError != null) {
             show(token);
@@ -286,18 +247,7 @@ public final class Scanner implements Iterator<String>, Closeable {
     private Matcher line() {
         ensureOpen();
         cache.forget();
-        while (true) {
-            int stop = in.lineEnd(); // a plain scan first, so the regex runs once per line
-            if ((stop < 0 || stop == in.buf.length() - 1 && in.buf.charAt(stop) == '\r') && in.more()) {
-                continue;
-            }
-            Matcher m = in.matcher(LINE, in.pos, in.buf.length());
-            boolean ok = m.lookingAt();
-            if (m.hitEnd() && in.more()) {
-                continue;
-            }
-            return ok ? m : null;
-        }
+        return tokens.line();
     }
 
     /** SC7: a next line leaves itself as the match. */
@@ -331,30 +281,14 @@ public final class Scanner implements Iterator<String>, Closeable {
     /** Searches up to the next line terminator, which the match never includes. */
     public String findInLine(Pattern pattern) {
         ensureOpen();
-        Objects.requireNonNull(pattern);
-        while (true) {
-            int stop = in.lineEnd();
-            if (stop < 0 && in.more()) {
-                continue;
-            }
-            stop = stop < 0 ? in.buf.length() : stop;
-            if (stop == in.pos) {
-                return found(null, false); // an empty line has nothing to find, not even ""
-            }
-            Matcher m = in.matcher(pattern, in.pos, stop);
-            boolean ok = m.find();
-            if (ok && m.requireEnd() && in.more()) {
-                continue;
-            }
-            return found(m, ok);
-        }
+        return found(tokens.findInLine(Objects.requireNonNull(pattern)));
     }
 
     /** A search's outcome: on success match() gives it and the scanner passes it. */
-    private String found(Matcher m, boolean ok) {
+    private String found(Matcher m) {
         lineSeen = -1;
         cache.forget();
-        if (!ok) {
+        if (m == null) {
             last = null;
             return null;
         }
@@ -374,17 +308,7 @@ public final class Scanner implements Iterator<String>, Closeable {
         if (horizon < 0) {
             throw new IllegalArgumentException("horizon < 0");
         }
-        while (true) {
-            int len = in.buf.length();
-            boolean bounded = horizon > 0 && (long) in.pos + horizon <= len;
-            int stop = bounded ? in.pos + horizon : len;
-            Matcher m = in.matcher(pattern, in.pos, stop);
-            boolean ok = m.find();
-            if ((!bounded && m.hitEnd() || ok && m.requireEnd()) && in.more()) {
-                continue;
-            }
-            return found(m, ok);
-        }
+        return found(tokens.findWithinHorizon(pattern, horizon));
     }
 
     public Scanner skip(String pattern) { return skip(Pattern.compile(pattern)); }
@@ -392,18 +316,10 @@ public final class Scanner implements Iterator<String>, Closeable {
     /** Matches at the current position, ignoring delimiters. */
     public Scanner skip(Pattern pattern) {
         ensureOpen();
-        Objects.requireNonNull(pattern);
-        while (true) {
-            Matcher m = in.matcher(pattern, in.pos, in.buf.length());
-            boolean ok = m.lookingAt();
-            if (m.hitEnd() && in.more()) {
-                continue;
-            }
-            if (found(m, ok) == null && !ok) {
-                throw new NoSuchElementException();
-            }
-            return this;
+        if (found(tokens.skip(Objects.requireNonNull(pattern))) == null) {
+            throw new NoSuchElementException();
         }
+        return this;
     }
 
     // Numbers and booleans (SC10-SC19). A typed reader's SC24 key is its kind and radix.
@@ -429,9 +345,9 @@ public final class Scanner implements Iterator<String>, Closeable {
 
     /** SC10, SC13: a wrong shape has no message; a parse failure carries the parser's. */
     private Number nextNumber(int kind, int radix) {
-        cache.reader(kind, radix);
+        boolean usable = cache.reader(kind, radix);
         ensureOpen();
-        int[] kept = remembered(cache.type(kind, in.at(in.pos)));
+        int[] kept = usable ? remembered(cache.type(kind, in.at(in.pos))) : null;
         if (kept != null) {
             lineSeen = -1;
             cache.forget();
@@ -492,7 +408,7 @@ public final class Scanner implements Iterator<String>, Closeable {
 
     /** SC23: the fields while nothing has been read are fixed (a closed source shows true). */
     public String toString() {
-        return "java.util.Scanner[delimiters=" + delimiter + "][position=" + in.at(in.pos) + "][match valid="
+        return "java.util.Scanner[delimiters=" + tokens.delimiter + "][position=" + in.at(in.pos) + "][match valid="
             + (last != null) + ScannerSyntax.ROOT_FIELDS.replace("?", "" + (closed || in.ended));
     }
 }

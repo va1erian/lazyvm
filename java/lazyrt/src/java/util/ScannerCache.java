@@ -3,8 +3,8 @@ package java.util;
 /**
  * What a Scanner's hasNext calls remember for the next call (docs/design/util-text.md SC24). A
  * pattern hasNext that says yes keeps its token for a next of the same pattern, and a typed one
- * keeps its token and value for a next of the same type and radix; either is used only at the
- * position it was found at, whatever the delimiter has become since. Positions are input
+ * keeps its token and value for a next of the same type (SC24 has the radix rule); either is
+ * used only at the position it was found at, whatever the delimiter has become since. Positions are input
  * positions, so dropping read text from the buffer does not disturb them.
  */
 final class ScannerCache {
@@ -18,20 +18,19 @@ final class ScannerCache {
     private long typeStart;
     private long typeEnd;
     private Number value;
-    /** The radix the last typed reader read in (10 for the floating ones). */
-    private int integerRadix = 10;
+    /** The radix of the last typed call (10 for the floating ones). */
+    private int lastRadix = 10;
 
     /**
-     * SC19, SC24: every typed reader starts here. The radix is checked first; a reader whose
-     * radix differs from the last typed reader's (the floating ones read in 10) forgets the typed
-     * memory, even when its token then turns out to have the wrong shape.
+     * SC19, SC24: every typed call starts here; the radix is checked first. Returns whether a
+     * remembered typed value may be used: always for the floating readers, and for an integer
+     * reader when its radix is the radix of the previous typed call, whatever came between.
      */
-    void reader(int kind, int radix) {
+    boolean reader(int kind, int radix) {
         ScannerSyntax.checkDigits(kind, radix);
-        if (radix != integerRadix) {
-            typeKey = -1;
-            integerRadix = radix;
-        }
+        boolean usable = kind >= ScannerSyntax.FLOAT || radix == lastRadix;
+        lastRadix = radix;
+        return usable;
     }
 
     /** Both kinds forgotten: by hasNextLine, a find, a skip, reset and every next call. */
@@ -70,8 +69,8 @@ final class ScannerCache {
     }
 
     /**
-     * The remembered token {start, end} for a typed reader of kind `key` at `at`, or null. The
-     * radix needs no check: reader() forgets the memory whenever the radix changes.
+     * The remembered token {start, end} for a typed reader of kind `key` at `at`, or null; the
+     * caller has asked reader() whether the radix allows it.
      */
     long[] type(int key, long at) {
         return key == typeKey && at == typeAt ? new long[] {typeStart, typeEnd} : null;

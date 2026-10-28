@@ -148,6 +148,26 @@ public class ScannerEdges {
         c.close();
         System.out.println("closed order " + ex(() -> c.findWithinHorizon("x", -1)) + " | " + ex(() -> c.findWithinHorizon((Pattern) null, 0)) + " | " + ex(() -> c.next((Pattern) null)) + " | " + ex(() -> c.hasNext((Pattern) null)) + " | " + ex(() -> c.findInLine((Pattern) null)) + " | " + ex(() -> c.skip((Pattern) null)) + " | " + ex(() -> c.hasNext((String) null)) + " | " + ex(() -> c.nextInt(37)));
         System.out.println("closed toString " + show(c).contains("[source closed=true]") + " | open " + ex(() -> s("x").findWithinHorizon((Pattern) null, -1)));
+        // SC20: the source is closed once, and a failure to close becomes ioException() (S17, S34).
+        int[] closes = {0};
+        Scanner twice = new Scanner(new StringReader("x") {
+            public void close() { closes[0]++; super.close(); }
+        });
+        twice.close();
+        twice.close();
+        Scanner bad = new Scanner(new Reader() {
+            public int read(char[] b, int off, int len) { return -1; }
+            public void close() throws IOException { throw new IOException("close failed"); }
+        });
+        String before = String.valueOf(bad.ioException());
+        bad.close();
+        System.out.println("close once " + closes[0] + " | close failure " + before + " -> " + bad.ioException());
+        // SC24: the radix a remembered integer token needs is the radix of the previous typed call.
+        System.out.println("SC24 last radix " + go(s("z 1"), q -> q.hasNextInt(36), q -> q.hasNextInt(16), q -> q.nextInt(16)) + " || " + go(s("z 1"), q -> q.hasNextInt(36), q -> q.hasNextLong(), q -> q.nextInt()) + " || " + go(s("1.5 x"), q -> q.hasNextDouble(), q -> q.hasNextInt(8), d, q -> q.nextDouble()) + " || " + go(s("z 1"), q -> q.hasNextInt(36), q -> q.hasNextInt(16), q -> q.nextInt(36)));
+        // SC24: a typed hasNext of the wrong shape forgets the pattern memory (S19).
+        System.out.println("SC24 wrong shape " + go(s("ab cd"), q -> q.hasNext("a.?"), q -> q.hasNextInt(), d, q -> q.next("a.?")) + " || " + go(s("ab cd"), q -> q.hasNext("a.?"), d, q -> q.next("a.?")));
+        // SC7: reset forgets where hasNextLine said yes, so nextLine sets its own match.
+        System.out.println("SC7 reset " + go(s("ab\ncd"), q -> q.hasNextLine(), q -> q.hasNext(), q -> q.reset(), q -> q.nextLine()));
         System.out.println("done");
     }
 }

@@ -18,13 +18,23 @@ import java.util.regex.Pattern;
  * The text a Scanner has read but not yet passed (docs/design/util-text.md SC8, SC9). Every
  * decision is made on this buffer; when a match might change with more text, the scanner reads
  * more and decides again. That makes the answers independent of how the source splits its reads,
- * except for the bounded searches util-text.md section 4 lists (a horizon that ends where the
- * text read so far ends, as with `\z`).
+ * except for the cases util-text.md section 4 lists.
  */
 final class ScannerInput {
     private static final int CHUNK = 1024;
     /** Passed text is dropped from the front only in large pieces, to keep the copying linear. */
     private static final int COMPACT = 8192;
+    /** SC2b: passed text kept before pos when compacting, for lookbehind (util-text.md section 4). */
+    private static final int MARGIN = 8192;
+    /** Below this much unread text a decision is retried after every read (see more). */
+    private static final int SMALL = 4096;
+    /** How far before the text read since the last decision a Probe looks. */
+    private static final int WINDOW = 128;
+
+    /** Whether the decision that asked for more input could now be settled: see more. */
+    interface Probe {
+        boolean settled(int from, int to);
+    }
 
     final StringBuilder buf = new StringBuilder();
     /** The next char of buf the scanner has not passed. */
@@ -37,6 +47,8 @@ final class ScannerInput {
 
     private final Readable source;
     private char[] chunk = new char[CHUNK];
+    /** The input position up to which lineEnd found no terminator. */
+    private long lineScanned;
 
     ScannerInput(Readable source) {
         this.source = source;
@@ -83,21 +95,27 @@ final class ScannerInput {
     }
 
     /**
-     * Every match sees the text around its region (lookaround reaches past it) but anchors only
-     * at the true ends of the input, as the oracle's do.
+     * SC2b: every match sees the text around its region (lookaround reaches past it, into the
+     * kept margin) but anchors only at the true ends of the input. A region never starts at the
+     * buffer's first char once text has been dropped (pos keeps the margin before it), so `^` and
+     * `\A` cannot match at that false start except through a lookbehind (section 4).
      */
     Matcher matcher(Pattern p, int from, int to) {
         return p.matcher(buf).useTransparentBounds(true).useAnchoringBounds(false).region(from, to);
     }
 
-    /** The index of the first line terminator at or after pos, or -1 if the buffer has none. */
+    /**
+     * The index of the first line terminator at or after pos, or -1 if the buffer has none. It
+     * resumes where the last unsuccessful call stopped, so waiting for a long line is linear.
+     */
     int lineEnd() {
-        for (int i = pos; i < buf.length(); i++) {
+        for (int i = (int) Math.max(pos, lineScanned - base); i < buf.length(); i++) {
             char c = buf.charAt(i);
             if (c == '\n' || c == '\r' || c == ' ' || c == ' ' || c == '\u0085') {
                 return i;
             }
         }
+        lineScanned = at(buf.length());
         return -1;
     }
 
@@ -107,15 +125,50 @@ final class ScannerInput {
     }
 
     /**
-     * Reads more from the source; false when the input has ended (SC9: a failure ends it). After
-     * true, buffer indexes taken before the call are stale. Each call asks for at least as much
-     * as is still unread, and keeps reading while a Reader says it will not block, so a decision
-     * retried after every read costs linear time overall rather than quadratic.
+     * Reads more for a decision that the text so far cannot settle; false when the input has
+     * ended (SC9: a failure ends it). After true, buffer indexes taken before the call are stale.
+     *
+     * <p>A decision costs time in proportion to the unread text, so retrying it after every read
+     * would be quadratic when a source hands out a long token in small pieces. Reads therefore go
+     * on, before the decision is retried, until one of three things holds: the unread text is
+     * still small (under SMALL chars, so an interactive line is answered at once); it has doubled
+     * since the decision was last made (so the retries cost linear time in all); or the probe,
+     * run only on the new text and a short window before it, says the decision may now be
+     * settled (a delimiter or line end arrived). The probe costs linear time too, and it is what
+     * keeps a source that blocks from being read further than it must: an interactive user who
+     * ends a long token with a delimiter gets the answer without typing more. With no probe, the
+     * decision is retried after every read.
      */
-    boolean more() {
+    boolean more(Probe probe) {
         if (ended) {
             return false;
         }
+        long unreadBefore = buf.length() - pos;
+        long probed = at(buf.length());
+        boolean appended = false;
+        while (true) {
+            int n = readSome();
+            if (n < 0) {
+                return appended; // after text was added, the caller must look once more
+            }
+            appended |= n > 0;
+            int unread = buf.length() - pos;
+            if (probe == null || unread < SMALL || unread >= 2 * unreadBefore) {
+                return true;
+            }
+            int from = (int) Math.max(pos, probed - base - WINDOW);
+            if (n > 0 && probe.settled(from, buf.length())) {
+                return true;
+            }
+            probed = at(buf.length());
+        }
+    }
+
+    /**
+     * One read, continued while a Reader says it will not block, of at least as much as is
+     * unread; the count appended, or -1 at the end of input.
+     */
+    private int readSome() {
         int want = Math.max(CHUNK, buf.length() - pos);
         if (chunk.length < want) {
             chunk = new char[want];
@@ -130,15 +183,16 @@ final class ScannerInput {
             got += n;
         }
         if (got == 0) {
-            return !ended;
+            return ended ? -1 : 0;
         }
-        if (pos > COMPACT && pos > buf.length() / 2) {
-            buf.delete(0, pos);
-            base += pos;
-            pos = 0;
+        if (pos > COMPACT + MARGIN && pos > buf.length() / 2) {
+            int drop = pos - MARGIN;
+            buf.delete(0, drop);
+            base += drop;
+            pos -= drop;
         }
         buf.append(chunk, 0, got);
-        return true;
+        return got;
     }
 
     /** One read into chunk[off, off + len); -1 marks the end of input. */

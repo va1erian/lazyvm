@@ -39,4 +39,8 @@ ctor file java.lang.IllegalArgumentException: bogus | java.lang.IllegalArgumentE
 ctor path java.lang.IllegalArgumentException: java.nio.charset.UnsupportedCharsetException: bogus | java.lang.IllegalArgumentException: java.nio.charset.IllegalCharsetNameException: b@d | java.lang.NullPointerException: charsetName | java.lang.NullPointerException: null | java.lang.NullPointerException: null | java.nio.file.NoSuchFileException: no-such-file-for-scanner-edges.txt
 closed order java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.IllegalStateException: Scanner closed | java.lang.NullPointerException: null | java.lang.StringIndexOutOfBoundsException: String index out of range: 37
 closed toString true | open java.lang.NullPointerException: null
+close once 1 | close failure null -> java.io.IOException: close failed
+SC24 last radix true false 35 | no match | rest [ 1/] || true false 35 | no match | rest [ 1/] || true false true 1.5 | no match | rest [ x/] || true false 35 | match [z] 0-1 | rest [ 1/]
+SC24 wrong shape true false true a | match [a] 0-1 | rest [b cd/] || true true ab | match [ab] 0-2 | rest [ cd/]
+SC7 reset true true scanner ab | match [ab<a>] 0-3 | rest [cd/]
 done

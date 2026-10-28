@@ -118,7 +118,8 @@ unless SC7a applies. A typed or pattern `hasNext…` that says true (`hasNextInt
 `hasNextLine` that says true leaves the line with its terminator. Two calls leave `match()` as the
 calls before them left it: a `nextLine` at the position where `hasNextLine` last said true, when
 only plain `hasNext()` calls came in between (so `hasNextLine`, `hasNext()`, `nextLine` ends with
-no match; any other call in between makes that `nextLine` set its own match), and a `next…` that
+no match; any other call in between, `reset()` included, makes that `nextLine` set its own match),
+and a `next…` that
 uses a token remembered under SC24. For `nextInt()` and the other numeric readers, `group()` is
 the whole token and `start()`/`end()` its place in the input (`groupCount()` and the other groups
 are free, section 4). Closing does not clear the last match. Pinned by: Scanners ("match int",
@@ -263,26 +264,32 @@ opening (`NoSuchFileException`). Pinned by: ScannerEdges ("ctor …").
 **SC22.** `reset()` restores the default delimiter, radix 10 and the default locale, and returns
 the scanner. Pinned by: Scanners ("reset").
 
-**SC24.** (Added after review.) A typed or pattern `hasNext…` that says true remembers its token,
-and the next `next…` of the same kind uses it if the scanner is still at the same position, even
-when the delimiter has changed since: `12 34`, `hasNextInt()`, `useDelimiter("")`, `nextInt()`
-gives 12 and leaves ` 34`. Same kind means the same typed reader with the same radix (`nextInt()`
-under radix 10 uses what `hasNextInt(10)` found, not what `hasNextInt(8)` or `hasNextLong()`
-found; `nextDouble` and `nextFloat` are different kinds), or for patterns the same `Pattern`
-object, or the same source string for the String forms. Booleans and plain `hasNext()` are
-never remembered. What is remembered is forgotten by `hasNextLine`, every `find…` and `skip`,
-`reset`, and every `next…` call, whether it succeeds or fails. A pattern `hasNext…` or
-`hasNextBoolean` replaces (or, saying false, forgets) only the pattern memory. A typed
-`hasNext…` replaces the pattern memory with its reader's shape when its token has that shape (one
-shape per radix for the integer readers, one for both floating ones) and forgets it otherwise;
-it replaces the typed memory only when its parse succeeds. So a typed `hasNext…` that says false
-leaves the typed memory: `hasNextInt()`, `useDelimiter(",")`, a false `hasNextInt()`, then
-`nextInt()` still gives 12, and `hasNextInt()` then a failing `hasNextByte()` on `1234` keeps 1234
-for `nextInt()`. Finally, a typed reader whose radix differs from the previous typed reader's
-(the floating ones count as radix 10) forgets the typed memory before anything else, wrong shape
-or not: `hasNextInt(16)`, `useDelimiter(",")`, a false `hasNextInt()` or `hasNextDouble()`, then
-`nextInt(16)` reads afresh. Plain `hasNext()`, `useDelimiter`, `useRadix` and `useLocale` keep
-both. A `next…` that uses the remembered token leaves `match()` unchanged (SC7).
+**SC24.** (Added after review; the radix rule corrected after the second review.) A typed or
+pattern `hasNext…` that says true remembers its token, and a later `next…` of the same kind uses
+it if the scanner is still at the same position, even when the delimiter has changed since:
+`12 34`, `hasNextInt()`, `useDelimiter("")`, `nextInt()` gives 12 and leaves ` 34`.
+
+- *Patterns.* `next(pattern)` uses the token remembered for the same `Pattern` object. The String
+  forms compile their argument; the oracle takes the compiled `Pattern` from a small cache that
+  `useDelimiter(String)` fills too, while LazyVM compares the strings (section 4).
+- *Typed readers.* Each kind is separate (`nextInt` does not use what `hasNextLong` found, nor
+  `nextDouble` what `hasNextFloat` found). The floating readers always use what they remembered.
+  An integer reader uses it only when its radix is the radix of the previous typed call (the
+  floating ones count as radix 10), whatever came between: `z 1`, `hasNextInt(36)`, a false
+  `hasNextInt(16)`, then `nextInt(16)` gives 35, as does `nextInt()` after a false
+  `hasNextLong()`; but `nextInt(36)` after that false `hasNextInt(16)` reads afresh.
+- *What forgets.* `hasNextLine`, every `find…` and `skip`, `reset`, and every `next…` call,
+  whether it succeeds or fails, forget both memories. A pattern `hasNext…` or `hasNextBoolean`
+  replaces (or, saying false, forgets) only the pattern memory. A typed `hasNext…` replaces the
+  pattern memory with its reader's shape when its token has that shape (one shape per radix for
+  the integer readers, one for both floating ones) and forgets it otherwise, so after `hasNext("a.?")`
+  on `ab cd` a false `hasNextInt()` makes a later `next("a.?")` read afresh; it replaces the typed
+  memory only when its parse succeeds. So a typed `hasNext…` that says false leaves the typed
+  memory: `hasNextInt()`, `useDelimiter(",")`, a false `hasNextInt()`, then `nextInt()` still
+  gives 12, and `hasNextInt()` then a failing `hasNextByte()` on `1234` keeps 1234 for
+  `nextInt()`. Plain `hasNext()`, `useDelimiter`, `useRadix` and `useLocale` keep both.
+- A `next…` that uses the remembered token leaves `match()` unchanged (SC7).
+
 Pinned by: ScannerEdges ("SC24 …").
 
 **SC23.** `toString()` of a scanner that has not read anything, under ROOT or US, is exactly
@@ -511,7 +518,25 @@ those rules, and `countTokens` matches. Pinned by: Tokenizers ("fuzz agree 3000 
   hand-written `lazy.util.ScannerPositions`). Tests that print positions keep their input under
   1 KB.
 - Known difference on both VMs: `findWithinHorizon("\\z", h)` and other searches whose horizon
-  ends exactly where the text read so far ends depend on how the source splits its reads.
+  ends exactly where the text read so far ends depend on how the source splits its reads, and so
+  does a delimiter containing `\z` over a Reader: both VMs can split a token at a read boundary.
+- Known difference (SC2b): to stay linear on long input, LazyVM drops passed text from its
+  buffer but keeps the last 8 KB of it before the position. Lookbehind, or `^` and `\A` inside a
+  lookbehind, that reach further back than that margin can give a different answer than on the
+  whole string; within the margin the answers are the String ones (`lazy.util.ScannerMargin`
+  pins a lookbehind delimiter and `^` past 8 KB). The oracle has the same class of artifact at
+  its own 1 KB buffer edges (there `(?<=\d),` splits wrongly and `^a` matches mid-input), so no
+  differential test covers this.
+- Known difference (SC24): the oracle finds the `Pattern` for `hasNext(String)` and
+  `next(String)` in a small cache of recently compiled patterns that `useDelimiter(String)` also
+  fills, and remembers tokens by that `Pattern` object; after six or more other
+  `useDelimiter(String)` calls between them, its `next("[0-9]+")` no longer uses the token that
+  `hasNext("[0-9]+")` remembered. LazyVM compares the pattern strings, so it does.
+- Reading long input from a source that hands out short reads stays linear (ScannerLong): the
+  scanner reads on before retrying a decision until the unread text has doubled or a probe of
+  the newly read text shows the token or line may have ended (see ScannerInput.more). A delimiter
+  whose match reaches more than 128 chars back from the new text may be noticed only at the next
+  doubling; the answer is the same, but over an interactive source it can arrive later.
 - `groupCount()` and the groups other than 0 of `match()` after a numeric reader or `nextLine`
   (the oracle exposes the groups of its internal patterns, 35 for an integer).
 - The state fields of `toString` (`position`, `match valid`, `need input`, `source closed`,
