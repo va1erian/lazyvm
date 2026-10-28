@@ -1,5 +1,6 @@
 package java.net;
 
+import java.util.Locale;
 import lazy.internal.UriParser;
 import lazy.internal.UriText;
 
@@ -198,14 +199,14 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
     }
 
     public int hashCode() {
-        int h = scheme == null ? 0 : scheme.toLowerCase().hashCode();
+        int h = scheme == null ? 0 : scheme.toLowerCase(Locale.ROOT).hashCode();
         h = hash(h, fragment);
         if (isOpaque()) {
             return hash(h, ssp);
         }
         h = hash(hash(h, path), query);
         if (host != null) {
-            return 31 * hash(hash(h, userInfo), host.toLowerCase()) + port;
+            return 31 * hash(hash(h, userInfo), host.toLowerCase(Locale.ROOT)) + port;
         }
         return hash(h, authority);
     }

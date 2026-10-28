@@ -1,10 +1,11 @@
 package java.lang;
 
+import java.util.Locale;
+
 /**
  * Case conversion of whole strings, the part of String.toUpperCase and toLowerCase that goes
  * beyond the one-to-one mapping of Character: characters that map to several (sharp s becomes
- * SS) and the Greek final sigma. The default locale is the root locale, so there is no Turkish or
- * Lithuanian tailoring.
+ * SS) and the Greek final sigma. Turkish, Azeri and Lithuanian add their own rules, in CaseLocale.
  */
 final class StringCase {
     private static final int SIGMA = 0x3A3;
@@ -24,18 +25,23 @@ final class StringCase {
     /** The sets of automaton states that decide a sigma; see unicode.rs. */
     static native int mask(int which);
 
-    static String convert(String s, boolean upper) {
+    static String convert(String s, boolean upper, Locale locale) {
+        int mode = CaseLocale.of(locale);
         int length = s.length();
         boolean sigmas = !upper && s.indexOf(SIGMA) >= 0;
         int accepting = sigmas ? mask(0) : 0;
         int before = 0;
         // The oracle returns a new string for U+0130 in upper case even though it maps to itself.
         boolean fresh = false;
+        boolean tailored = mode != CaseLocale.ROOT;
+        // Whether an earlier character changed case; Lithuanian keeps a dot above until one has.
+        boolean changed = false;
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; ) {
             int cp = s.codePointAt(i);
             int next = i + Character.charCount(cp);
-            if (!appendSpecial(sb, cp, upper)) {
+            if (!(tailored && CaseLocale.append(sb, s, i, cp, upper, mode, changed))
+                    && !appendSpecial(sb, cp, upper)) {
                 if (sigmas && cp == SIGMA) {
                     boolean last = (accepting >> before & 1) != 0 && !blockedAfter(s, next);
                     sb.append(last ? FINAL_SIGMA : SMALL_SIGMA);
@@ -44,6 +50,7 @@ final class StringCase {
                 }
             }
             fresh |= upper && cp == DOTTED_CAPITAL_I;
+            changed |= !changed && upper && mode == CaseLocale.LITHUANIAN && CaseLocale.changes(cp);
             if (sigmas) {
                 before = step(before, cp, false);
             }

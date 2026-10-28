@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import lazy.internal.FileSystem;
 import lazy.internal.PathSyntax;
 
@@ -437,7 +438,7 @@ public class File implements Serializable, Comparable<File> {
 
     // Spec F2: the path's hash ^ 1234321, of the lower-cased path on Windows.
     public int hashCode() {
-        String p = SYNTAX.ignoresCase() ? path.toLowerCase() : path;
+        String p = SYNTAX.ignoresCase() ? path.toLowerCase(Locale.ROOT) : path;
         return p.hashCode() ^ 1234321;
     }
 
