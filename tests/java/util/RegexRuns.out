@@ -1,0 +1,41 @@
+#[ ]*,[ ]* len5001: hitEnd=true requireEnd=false then \G at 5001
+#[ ]*,[ ]* len5006: [1,5005] hitEnd=true requireEnd=false then \G at 5005
+#\s*,\s* len10007: [5002,5005] [5006,10007] hitEnd=true requireEnd=false then \G at 10007
+fast
+#[ ]*,[ ]* len909: [607,908] hitEnd=true requireEnd=false then \G at 908
+#[ ]*,[ ]* len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*?,[ ]* len909: [607,908] hitEnd=true requireEnd=false then \G at 908
+#[ ]*?,[ ]* len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*+, len909: [607,908] hitEnd=true requireEnd=false then \G at 908
+#[ ]*+, len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]+,[ ]* len909: [607,908] hitEnd=true requireEnd=false then \G at 908
+#[ ]+,[ ]* len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]{2,}, len909: [607,908] hitEnd=true requireEnd=false then \G at 908
+#[ ]{2,}, len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*,(?=x) len909: [607,908] hitEnd=true requireEnd=false then \G at 908
+#[ ]*,(?=x) len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*(,)[ ]* len909: [607,908 907:908] hitEnd=true requireEnd=false then \G at 908
+#[ ]*(,)[ ]* len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*,?[ ]*x len909: [607,909] hitEnd=true requireEnd=false then \G at 909
+#[ ]*,?[ ]*x len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*(?:ab)*x len909: [908,909] hitEnd=true requireEnd=false then \G at 909
+#[ ]*(?:ab)*x len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*(?:ab)*+x len909: [908,909] hitEnd=true requireEnd=false then \G at 909
+#[ ]*(?:ab)*+x len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*[ab]+x len909: hitEnd=true requireEnd=false then \G at 907
+#[ ]*[ab]+x len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*(?<= {3})x len909: hitEnd=true requireEnd=false then \G at 907
+#[ ]*(?<= {3})x len603: hitEnd=true requireEnd=false then \G at 602
+#[ ]*\bx len909: [908,909] hitEnd=true requireEnd=false then \G at 909
+#[ ]*\bx len603: hitEnd=true requireEnd=true then \G at 603
+#[ ]*(?=( )|x)x len909: [908,909 906:907] hitEnd=true requireEnd=false then \G at 909
+#[ ]*(?=( )|x)x len603: hitEnd=true requireEnd=false then \G at 603
+#[ ]*(?: (?=(b)))*x len909: [908,909 -1:-1] hitEnd=true requireEnd=false then \G at 909
+#[ ]*(?: (?=(b)))*x len603: hitEnd=true requireEnd=false then \G at 603
+#(?:a|b)*, len909: [907,908] hitEnd=true requireEnd=false then \G at 908
+#(?:a|b)*, len603: hitEnd=true requireEnd=false then \G at 0
+#(?:a|b)*(?:ab)*x len909: [908,909] hitEnd=true requireEnd=false then \G at 909
+#(?:a|b)*(?:ab)*x len603: hitEnd=true requireEnd=false then \G at 303
+#[ ]*$ len909: [909,909] hitEnd=true requireEnd=true then \G at none
+#[ ]*$ len603: [303,603] [603,603] hitEnd=true requireEnd=true then \G at none
+done

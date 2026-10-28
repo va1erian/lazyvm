@@ -1,0 +1,52 @@
+IsLatin: 1111100000
+InBasicLatin: 1110011000
+javaLowerCase: 1011000010
+IsAlphabetic: 1111100110
+IsIdeographic: 0000000100
+IsWhite_Space: 0000010000
+IsHex_Digit: 1100001000
+IsDigit: 0000001000
+IsLetter: 1111100110
+IsLowercase: 1011000010
+IsUppercase: 0100100000
+IsTitlecase: 0000000000
+IsControl: 0000000000
+IsPunctuation: 0000000000
+IsAssigned: 1111111111
+IsAlnum: 1111101110
+IsBlank: 0000010000
+IsInherited: 0000000001
+IsCommon: 0000011000
+InGreek: 0000000010
+IsGreek: 0000000010
+IsCyrillic: 0000000000
+InCJKUnifiedIdeographs: 0000000100
+InLatin_1_Supplement: 0000000000
+IsjavaLowerCase: 1011000010
+Lower: 1010000000
+IsLu: 0100100000
+Lu: 0100100000
+L: 1111100110
+LOWER: Unknown character property name {LOWER}
+ISLATIN: Unknown character property name {ISLATIN}
+INBASICLATIN: Unknown character property name {INBASICLATIN}
+InBas\u0131cLatin: 1110011000
+IsLat\u0131n: 1111100000
+IsAlphabet\u0131c: 1111100110
+InBa\u017ficLatin: 1110011000
+\u0130sLatin: Unknown character property name {\u0130sLatin}
+IsLatin\u212a: Unknown character script name {Latin\u212a}
+sc=Latin: 1111100000
+SC=Latin: 1111100000
+script=Latin: 1111100000
+SCRIPT=Latin: 1111100000
+Script=latin: 1111100000
+blk=BasicLatin: 1110011000
+BLOCK=BASICLATIN: 1110011000
+gc=Lu: 0100100000
+GENERAL_CATEGORY=Lu: 0100100000
+General_Category=Lu: 0100100000
+bl\u212a=BasicLatin: 1110011000
+\u017fc=Latin: Unknown Unicode property {name=<\u017fc>, value=<Latin>}
+scr\u0131pt=Latin: Unknown Unicode property {name=<scr\u0131pt>, value=<Latin>}
+SCR\u0130PT=Latin: Unknown Unicode property {name=<scri\u0307pt>, value=<Latin>}

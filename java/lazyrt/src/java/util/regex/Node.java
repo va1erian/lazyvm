@@ -3,18 +3,31 @@ package java.util.regex;
 /**
  * A node of the compiled pattern. The parser builds a tree, then {@link #link}
  * wires every node to the node that must match after it, so matching is a walk
- * through `next` pointers: a node consumes input and calls `next.match`, and a
- * false return means "backtrack". Nodes that change matcher state restore it
- * when they return false; a true return leaves the state as the successful
- * match needs it.
+ * through `next` pointers, run by {@link Backtrack}: a node consumes input and
+ * hands on to `next`, or fails. A node that changes matcher state, or has
+ * another way to match, pushes a frame first, and its {@link #back} restores the
+ * state or tries the next way when the match backtracks into that frame.
  */
 abstract class Node {
     static final int UNBOUNDED = Integer.MAX_VALUE;
+    static final int FAIL = Backtrack.FAIL;
+    static final int DONE = Backtrack.DONE;
 
     Node next;
 
-    /** Tries to match here, then the rest of the pattern; i is a char index into the text. */
-    abstract boolean match(Matcher m, int i);
+    /**
+     * Matches this node at char index i. Returns where the match goes on, with m.cont set to the
+     * node to run there; FAIL to backtrack; or DONE when the whole pattern matched.
+     */
+    abstract int go(Matcher m, int i);
+
+    /**
+     * Resumes a frame this node pushed, once everything pushed after it has failed; `at` is where
+     * its ints lie in m.stack.data. Returns as go does (never DONE).
+     */
+    int back(Matcher m, int at) {
+        throw new IllegalStateException("no frame");
+    }
 
     /** Wires this subtree to continue at `after` and returns the node to enter it by. */
     Node link(Node after) {
@@ -54,36 +67,53 @@ abstract class Node {
         return a * b;
     }
 
+    /** A lookaround or atomic group: its body ends by returning to its scope (see Backtrack). */
+    abstract static class Scope extends Node {
+        /** The body matched; `at` is where the scope frame's ints lie. Returns as go does. */
+        abstract int matched(Matcher m, int at);
+
+        /** The body failed (from the start the frame holds); returns as back does. */
+        abstract int failed(Matcher m, int at);
+
+        final int back(Matcher m, int at) {
+            // The scope around this one is the innermost again.
+            Backtrack s = m.stack;
+            s.scope = s.data[at + Backtrack.OUTER];
+            return failed(m, at);
+        }
+    }
+
     /** The end of a successful pattern match. */
     static final class Accept extends Node {
-        boolean match(Matcher m, int i) {
+        int go(Matcher m, int i) {
             if (m.mustReachEnd && i != m.hi) {
-                return false;
+                return FAIL;
             }
             m.matchEnd = i;
-            return true;
+            return DONE;
         }
     }
 
-    /** The end of a lookahead or atomic body: records where it stopped and succeeds. */
+    /** The end of a lookahead or atomic body: records where it stopped and closes the scope. */
     static final class Stop extends Node {
-        boolean match(Matcher m, int i) {
+        int go(Matcher m, int i) {
             m.stopPos = i;
-            return true;
+            return m.stack.closeScope(m);
         }
     }
 
-    /** The end of a lookbehind body: succeeds only at the position the lookbehind was entered at. */
+    /** The end of a lookbehind body: matches only at the position the lookbehind was entered at. */
     static final class EndAt extends Node {
-        boolean match(Matcher m, int i) {
-            return i == m.behindTarget;
+        int go(Matcher m, int i) {
+            return i == m.behindTarget ? m.stack.closeScope(m) : FAIL;
         }
     }
 
     /** Matches nothing: used for an empty branch. */
     static final class Empty extends Node {
-        boolean match(Matcher m, int i) {
-            return next.match(m, i);
+        int go(Matcher m, int i) {
+            m.cont = next;
+            return i;
         }
 
         Node link(Node after) {
@@ -99,7 +129,7 @@ abstract class Node {
             this.items = items;
         }
 
-        boolean match(Matcher m, int i) {
+        int go(Matcher m, int i) {
             throw new IllegalStateException("unlinked sequence");
         }
 
@@ -148,13 +178,27 @@ abstract class Node {
             this.branches = branches;
         }
 
-        boolean match(Matcher m, int i) {
-            for (Node b : branches) {
-                if (b.match(m, i)) {
-                    return true;
-                }
+        // A frame holds the next branch to try and the position.
+        int go(Matcher m, int i) {
+            if (branches.length > 1) {
+                int at = m.stack.push(this);
+                int[] d = m.stack.data;
+                d[at] = 1;
+                d[at + 1] = i;
             }
-            return false;
+            m.cont = branches[0];
+            return i;
+        }
+
+        int back(Matcher m, int at) {
+            int[] d = m.stack.data;
+            int k = d[at];
+            int i = d[at + 1];
+            if (k + 1 < branches.length) {
+                m.stack.data[m.stack.push(this)] = k + 1;
+            }
+            m.cont = branches[k];
+            return i;
         }
 
         Node link(Node after) {

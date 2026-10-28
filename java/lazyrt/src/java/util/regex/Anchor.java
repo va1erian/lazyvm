@@ -31,8 +31,12 @@ final class Anchor extends Node {
         return kind == LAST_MATCH;
     }
 
-    boolean match(Matcher m, int i) {
-        return holds(m, i) && next.match(m, i);
+    int go(Matcher m, int i) {
+        if (!holds(m, i)) {
+            return FAIL;
+        }
+        m.cont = next;
+        return i;
     }
 
     /** Whether the assertion is true at i, without continuing the match. */

@@ -3,12 +3,12 @@ package java.util.regex;
 /**
  * A repeated group whose body is flat: literals, single-char classes, repeats of
  * a single-char class and zero-width anchors, with alternatives allowed only at
- * the top. Such a loop runs without recursion: the backtracking state of every
- * iteration lives in an int array, so (\w+\s?)* or (?:ab|c)* over thousands of
- * iterations does not consume Java frames. The match order is the same as the
- * recursive {@link Repeat.Loop}'s: iterations are tried greedily (or lazily),
- * within one iteration the first alternative and the longest repeat first, and
- * an iteration that consumed nothing ends the loop.
+ * the top. Such a loop keeps the backtracking state of every iteration in one int
+ * array, about 40 bytes per iteration of (\w+\s?)* or (?:ab|c)*, where a
+ * {@link Repeat.Loop} pushes a frame on the matcher's stack for each decision and
+ * each node with state. The match order is the same as Repeat.Loop's: iterations
+ * are tried greedily (or lazily), within one iteration the first alternative and
+ * the longest repeat first, and an iteration that consumed nothing ends the loop.
  */
 final class FlatLoop extends Node {
     // Frame layout, in ints: the loop position, the iterations done, the start of the
@@ -16,7 +16,9 @@ final class FlatLoop extends Node {
     // dropped, the enumerator (branch, resume flag), then positions and repeat counts.
     private static final int POS = 0, DONE = 1, LAST = 2, PHASE = 3, OLD_START = 4, OLD_END = 5;
     private static final int BRANCH = 6, RESUME = 7, DATA = 8;
-    private static final int ENTER = 0, ITERATE = 1, LEAVE = 2, EXIT_ONLY = 3;
+    // LEFT and DROP: the rest of the pattern failed after the loop left at this frame, which
+    // is then dropped (after LEFT, remembered as failed).
+    private static final int ENTER = 0, ITERATE = 1, LEAVE = 2, EXIT_ONLY = 3, LEFT = 4, DROP = 5;
 
     private final Node[][] branches;
     private final int group;
@@ -95,14 +97,24 @@ final class FlatLoop extends Node {
      * Each frame is one decision point of the loop: "at position i after c iterations". It
      * enumerates the ways the body can match at i, and for each way pushes a frame for the
      * next decision; a frame that runs out of ways leaves the loop at i (unless lazy, which
-     * left first) and is dropped, which resumes its parent.
+     * left first) and is dropped, which resumes its parent. Leaving the loop pushes one frame
+     * on the matcher's stack that holds this array, so a failure after the loop resumes here.
      */
-    boolean match(Matcher m, int start) {
+    int go(Matcher m, int start) {
         int[] st = new int[frameSize * 8];
-        int f = 0;
         st[PHASE] = ENTER;
         st[POS] = start;
         st[LAST] = -1;
+        return run(m, st, 0);
+    }
+
+    int back(Matcher m, int at) {
+        int f = m.stack.data[at];
+        return run(m, (int[]) m.stack.takeRef(), f);
+    }
+
+    /** Runs the decision points from frame f until the loop leaves (or fails: FAIL). */
+    private int run(Matcher m, int[] st, int f) {
         while (true) {
             int i = st[f + POS];
             int c = st[f + DONE];
@@ -114,15 +126,12 @@ final class FlatLoop extends Node {
                         break;
                     }
                     if (memoizable && m.memo.step() && m.memo.failed(id, c, slots, i)) {
-                        f = drop(m, st, f);
-                        if (f < 0) {
-                            return false;
-                        }
+                        st[f + PHASE] = DROP;
                         break;
                     }
                     st[f + PHASE] = ITERATE;
-                    if (lazy && !required && next.match(m, i)) {
-                        return true;
+                    if (lazy && !required) {
+                        return leave(m, st, f, i);
                     }
                     break;
                 case ITERATE:
@@ -131,52 +140,68 @@ final class FlatLoop extends Node {
                         st[f + PHASE] = LEAVE;
                         break;
                     }
-                    st[f + RESUME] = 1;
-                    int child = f + frameSize;
-                    if (child + frameSize > st.length) {
-                        int[] bigger = new int[st.length * 2];
-                        System.arraycopy(st, 0, bigger, 0, st.length);
-                        st = bigger;
-                    }
-                    if (records) {
-                        m.iterationEnd = e;
-                    }
-                    st[child + POS] = e;
-                    st[child + DONE] = c + 1;
-                    st[child + LAST] = i;
-                    st[child + PHASE] = ENTER;
-                    st[child + RESUME] = 0;
-                    if (group >= 0) {
-                        st[child + OLD_START] = m.groups[2 * group];
-                        st[child + OLD_END] = m.groups[2 * group + 1];
-                        m.groups[2 * group] = i;
-                        m.groups[2 * group + 1] = e;
-                    }
-                    f = child;
+                    st = iterate(m, st, f, e);
+                    f += frameSize;
                     break;
                 case LEAVE:
-                    if (!required && !lazy && next.match(m, i)) {
-                        return true;
+                    st[f + PHASE] = LEFT;
+                    if (!required && !lazy) {
+                        return leave(m, st, f, i);
                     }
+                    break;
+                case LEFT:
                     if (memoizable && m.memo.active()) {
                         m.memo.fail(id, c, slots, i);
                     }
-                    f = drop(m, st, f);
-                    if (f < 0) {
-                        return false;
-                    }
+                    st[f + PHASE] = DROP;
                     break;
+                case EXIT_ONLY:
+                    st[f + PHASE] = DROP;
+                    return leave(m, st, f, i);
                 default:
-                    if (next.match(m, i)) {
-                        return true;
-                    }
                     f = drop(m, st, f);
                     if (f < 0) {
-                        return false;
+                        return FAIL;
                     }
                     break;
             }
         }
+    }
+
+    /** Pushes the frame for the decision after an iteration of frame f that ended at e. */
+    private int[] iterate(Matcher m, int[] st, int f, int e) {
+        int i = st[f + POS];
+        st[f + RESUME] = 1;
+        int child = f + frameSize;
+        if (child + frameSize > st.length) {
+            int[] bigger = new int[st.length * 2];
+            System.arraycopy(st, 0, bigger, 0, st.length);
+            st = bigger;
+        }
+        if (records) {
+            m.iterationEnd = e;
+        }
+        st[child + POS] = e;
+        st[child + DONE] = st[f + DONE] + 1;
+        st[child + LAST] = i;
+        st[child + PHASE] = ENTER;
+        st[child + RESUME] = 0;
+        if (group >= 0) {
+            st[child + OLD_START] = m.groups[2 * group];
+            st[child + OLD_END] = m.groups[2 * group + 1];
+            m.groups[2 * group] = i;
+            m.groups[2 * group + 1] = e;
+        }
+        return st;
+    }
+
+    /** Leaves the loop at i, with a frame to come back to frame f of `st` if the rest fails. */
+    private int leave(Matcher m, int[] st, int f, int i) {
+        int at = m.stack.push(this);
+        m.stack.data[at] = f;
+        m.stack.setRef(st);
+        m.cont = next;
+        return i;
     }
 
     /** Drops frame f, undoing its capture, and returns its parent (-1 for the first frame). */

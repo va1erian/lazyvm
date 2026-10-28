@@ -1,0 +1,26 @@
+== the exact back reference case: the match starts after the c
+#(?:aa|(a))*\1b len33: [21,33 30:31]
+#(?:aa|(a)|aaa)*\1b len39: [21,39 36:37]
+#(?:(aa)|a)*\1b len40: [21,40 35:37]
+#(?:aa|(a)){2,}\1b len47: [21,47 44:45]
+== a body that must end at one place, after many failed attempts
+#(?<=^(?:ab){1,200})x len301: [300,301]
+#(?<=^(?:ab){3,300})x len401: [400,401]
+== a long run of failed starts first, so that the memo is on for the cases that follow
+#(?:a(a)++|b|aa|(a)*+b)*c len21012: [21011,21012 21008:21009 21010:21011]
+#(?:a|ab|(b)++a|(a)++b)*ac len21011: [21007,21011 21008:21009 21009:21010]
+#(?:aa|(a))*\1b len21014: [21000,21014 21011:21012]
+#(?:a|a(?=(a)))*b len21018: [21014,21018 21011:21012]
+#(?:(a)|(aa))*\1\2x len21016: [21000,21016 21009:21010 21010:21012]
+#[ab]*(?:ab){2,}x len21007: [21000,21007]
+== a capturing repeat of one character inside a lookaround or atomic group
+#(?:a|a(?=(a){2}))*b len21012: [21008,21012 21005:21006]
+#(?:a|a(?=(a)+?))*b len21012: [21008,21012 21005:21006]
+#(?:a|(?>(a)+?)a)*b len21012: [21008,21012 21005:21006]
+#(?:a|(?>(a){1,3})a)*b len21012: [21008,21012 21005:21006]
+== \G reads where a failed search left off, and the memo must not move that
+#(?:a{1,3}b?)*c|\G[ab]: no no no no
+#(?:a+b?)*c|\Ga: no no no no
+#(?:a+b?)*c|\Gb: no no no no
+#(?:ab|a)*c|\Ga: no no no no
+done

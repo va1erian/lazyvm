@@ -9,14 +9,20 @@ package java.util.regex;
  * <li><b>First character.</b> When the pattern must begin with one class, one literal, or a
  * repeat of a class that needs at least one char, a start whose char is not in it fails at once.
  * Such a failed attempt sets no flag and records no event, so it is skipped without being run.
- * <li><b>Rest of a run.</b> When the pattern is an unbounded repeat of one class (no group)
- * followed only by literals, classes, line breaks and anchors, a failed attempt at s has already
- * tried the rest of the pattern at every position from s to the end E of the run of that class.
- * An attempt at a later start inside the run (or at E, with nothing to repeat) tries a subset of
- * those positions with the same rest of the pattern, which does not depend on where the match
- * started, so it fails too. It would also set the same flags (only the positions tried before
- * are tried again) and leave the same event, E, so the search resumes after E. The rest of the
- * pattern must be "quiet": no repeat, loop or group that could record an event of its own.
+ * <li><b>Rest of a run.</b> When the pattern begins with an unbounded repeat of one class (no
+ * group), a failed attempt at s has already tried the rest of the pattern at every position from
+ * s to the end E of the run of that class (or s plus the minimum count). An attempt at a later
+ * start inside the run tries a subset of those positions with the same rest of the pattern, so
+ * it fails too and sets no flag the first attempt did not, provided the rest answers from the
+ * position alone: no capture in the pattern may stay set after its path fails
+ * (LoopMemo.keepsCaptures), as that is the one state a failed attempt leaves for the next. The
+ * last attempt the search would make inside the run is still made (at E-1, or at the last start
+ * the shortest match allows), and so is the one at E: every attempt before E first records the
+ * run's end E (a repeat whose runs record events), which replaces whatever an earlier attempt
+ * left, so the last one leaves the same event as the whole sequence would. When the rest is
+ * "quiet" (only literals, classes, line breaks and anchors), it records no event at all and the
+ * repeat need not record its runs either. This keeps a search for `\s*,\s*` linear over a long
+ * run of spaces.
  * </ul>
  */
 final class SearchHints {
@@ -47,7 +53,8 @@ final class SearchHints {
         CharClass run = null;
         if (first instanceof Repeat.CharRepeat) {
             Repeat.CharRepeat r = (Repeat.CharRepeat) first;
-            if (quiet && r.group < 0 && r.maxCount() == Node.UNBOUNDED) {
+            boolean replayable = quiet || (r.recordsRuns() && !LoopMemo.keepsCaptures(tree));
+            if (replayable && r.group < 0 && r.maxCount() == Node.UNBOUNDED) {
                 run = r.cc;
             }
         }
@@ -90,8 +97,11 @@ final class SearchHints {
         return startClass == null || startClass.test(Atoms.codePointAt(m, s));
     }
 
-    /** The last start that the failed attempt at s makes pointless. */
-    int skipTo(Matcher m, int s) {
+    /**
+     * The last start that the failed attempt at s makes pointless (see the class comment), given
+     * the last start the search tries.
+     */
+    int skipTo(Matcher m, int s, int last) {
         if (run == null) {
             return s;
         }
@@ -108,6 +118,6 @@ final class SearchHints {
             }
             j += w;
         }
-        return j;
+        return Math.max(s, Math.min(j - 2, last - 1));
     }
 }

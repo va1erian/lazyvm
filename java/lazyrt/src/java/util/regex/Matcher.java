@@ -42,6 +42,9 @@ public final class Matcher implements MatchResult {
     int iterationEnd = -1;
     /** Failed loop states of the current search (see LoopMemo). */
     final LoopMemo memo = new LoopMemo();
+    /** The backtracking stack of the current attempt, and the node it goes on with (see Node.go). */
+    final Backtrack stack = new Backtrack();
+    Node cont;
     int behindTarget;
 
     Matcher(Pattern parent, CharSequence text) {
@@ -240,7 +243,7 @@ public final class Matcher implements MatchResult {
         begin(from);
         mustReachEnd = false;
         if (parentPattern.anchoredStart) {
-            if (parentPattern.root.match(this, from)) {
+            if (stack.run(this, parentPattern.root, from)) {
                 return succeed(from);
             }
             first = -1;
@@ -252,11 +255,11 @@ public final class Matcher implements MatchResult {
         SearchHints hints = parentPattern.hints;
         for (int s = from; s <= guard; s++) {
             if (hints == null || hints.canStart(this, s)) {
-                if (parentPattern.root.match(this, s)) {
+                if (stack.run(this, parentPattern.root, s)) {
                     return succeed(s);
                 }
                 if (hints != null) {
-                    s = hints.skipTo(this, s);
+                    s = hints.skipTo(this, s, guard);
                 }
             }
             // Observed on the oracle: the step reads the pair even when the region end splits it.
@@ -274,7 +277,7 @@ public final class Matcher implements MatchResult {
         begin(from);
         mustReachEnd = whole;
         first = from;
-        if (parentPattern.root.match(this, from)) {
+        if (stack.run(this, parentPattern.root, from)) {
             return succeed(from);
         }
         first = -1;

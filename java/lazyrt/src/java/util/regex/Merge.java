@@ -5,7 +5,7 @@ final class Merge {
     private Merge() {
     }
 
-    /** Alternatives that are each one char of a class are one class, which runs without recursion. */
+    /** Alternatives that are each one char of a class are one class, which a repeat runs as a CharRepeat. */
     static Node alternation(Node[] branches) {
         CharClass[] parts = new CharClass[branches.length];
         for (int k = 0; k < branches.length; k++) {
