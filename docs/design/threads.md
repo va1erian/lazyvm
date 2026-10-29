@@ -149,9 +149,10 @@ A failure leaves the class erroneous, and every later use throws
 
 Before threads, `monitorenter` was a null check. Now the interpreter polls at
 branches and calls, frames carry their monitors, and `synchronized` does real
-work. On the existing heavy tests CPU time moved within noise (about ±2%,
-measured for S6-01/02); a loop doing nothing but `synchronized` blocks and
-`synchronized` calls is about 5% slower.
+work. Measured for S6-01/02 (CPU time, best of 3, Windows): the heavy
+existing tests (`CaseMapping`, `CharacterTables`, `GcChurn`, `RegexDepth`,
+`RegexMemoStarts`, `ScannerLong`) are 0.3% to 1.4% slower; a loop doing
+nothing but `synchronized` blocks and `synchronized` calls is about 5% slower.
 
 ## For S6-03 to S6-06
 

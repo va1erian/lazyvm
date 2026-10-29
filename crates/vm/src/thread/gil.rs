@@ -52,6 +52,7 @@ impl Gil {
 
     /// Whether a waiting thread asked for the VM. A relaxed read is
     /// enough: a late answer only delays a yield to the next safepoint.
+    #[inline]
     pub(crate) fn wanted(&self) -> bool {
         self.yield_request.load(Ordering::Relaxed)
     }
@@ -114,6 +115,7 @@ impl Vm {
 
     /// A safepoint: lets a waiting thread run. The interpreter calls this at
     /// backward branches and calls (docs/design/threads.md).
+    #[inline]
     pub(crate) fn safepoint(&mut self) {
         if self.gil.wanted() {
             self.blocking(|| ());

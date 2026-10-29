@@ -51,12 +51,17 @@ impl Vm {
     /// The object a call to `m` must lock: `None` unless `m` is
     /// `synchronized`; then the receiver, or the class's mirror for a
     /// static method. `args` must be rooted (they are the call's arguments).
+    #[inline]
     pub(super) fn lock_for_call(&mut self, m: MethodRef, args: &[Value]) -> VmResult<Option<Ref>> {
-        let method = self.method(m);
-        if method.access & classfile::ACC_SYNCHRONIZED == 0 {
+        if self.method(m).access & classfile::ACC_SYNCHRONIZED == 0 {
             return Ok(None);
         }
-        let obj = if method.is_static() {
+        self.lock_synchronized(m, args).map(Some)
+    }
+
+    #[cold]
+    fn lock_synchronized(&mut self, m: MethodRef, args: &[Value]) -> VmResult<Ref> {
+        let obj = if self.method(m).is_static() {
             self.mirror(m.class)?
         } else {
             args.first()
@@ -66,7 +71,7 @@ impl Vm {
                 .ok_or_else(VmError::npe)?
         };
         self.monitor_enter(obj)?;
-        Ok(Some(obj))
+        Ok(obj)
     }
 
     /// Records the method's monitor on the frame just pushed.
