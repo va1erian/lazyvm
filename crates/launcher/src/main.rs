@@ -17,11 +17,11 @@ const EXIT_INTERNAL: u8 = 70;
 const VM_STACK_BYTES: usize = 256 << 20;
 
 fn main() -> ExitCode {
-    // Arguments may hold unpaired surrogates (a Windows command line is UTF-16); `escape`
-    // keeps them, and `unescape` gives the Java strings back where they matter.
-    let args: Vec<String> = std::env::args_os()
+    // Arguments are kept as UTF-16 units: a Windows command line may hold unpaired
+    // surrogates, which `std::env::args` would panic on and which Java must see intact.
+    let args: Vec<options::Arg> = std::env::args_os()
         .skip(1)
-        .map(|a| platform::wtf::escape(&platform::wtf::to_units(&a)))
+        .map(|a| platform::wtf::to_units(&a))
         .collect();
     let launch = match options::parse(&args) {
         Ok(Command::Run(launch)) => launch,
@@ -66,10 +66,10 @@ fn run(mut launch: Launch) -> ExitCode {
     if launch.show_version {
         print_version();
     }
-    // `java.class.path` is what the user gave: the jar alone under -jar.
-    let user_classpath = match &launch.jar {
-        Some(jar) => vec![jar.clone()],
-        None => launch.classpath.clone(),
+    // `java.class.path` is what the user gave, empty entries included: the jar alone under -jar.
+    let classpath_text = match &launch.jar {
+        Some(jar) => vm::wtf::to_units(jar.as_os_str()),
+        None => launch.classpath_text.clone(),
     };
     if let Some(jar) = &launch.jar {
         match jarfile::resolve(jar) {
@@ -91,12 +91,12 @@ fn run(mut launch: Launch) -> ExitCode {
         vm.set_property(&name, vm::wtf::to_units(&v));
     }
     for (k, v) in &launch.properties {
-        vm.set_property(&vm::wtf::unescape(k), vm::wtf::unescape(v));
+        vm.set_property(k, v.clone());
     }
-    // The class path in use wins over -Djava.class.path, as with the oracle.
-    let joined = std::env::join_paths(&user_classpath).unwrap_or_default();
+    // Whichever of -cp and -Djava.class.path came last decided the class path (as with the
+    // oracle); the property says what was loaded from, and -jar replaces both.
     let name: Vec<u16> = "java.class.path".encode_utf16().collect();
-    vm.set_property(&name, vm::wtf::to_units(&joined));
+    vm.set_property(&name, classpath_text);
     if let Err(e) = vm.boot() {
         eprintln!("lazyvm: cannot start: the class library is missing or broken ({e})");
         eprintln!("  boot class path: {:?}", launch.boot_classpath);
@@ -108,7 +108,7 @@ fn run(mut launch: Launch) -> ExitCode {
 }
 
 /// Loads the main class and calls `public static void main(String[])`.
-fn run_main(vm: &mut Vm, main_class: &str, args: &[String]) -> Result<(), VmError> {
+fn run_main(vm: &mut Vm, main_class: &str, args: &[options::Arg]) -> Result<(), VmError> {
     let internal = main_class.replace('.', "/");
     let class = match vm.load_class(&internal) {
         Ok(c) => c,
@@ -135,7 +135,7 @@ fn run_main(vm: &mut Vm, main_class: &str, args: &[String]) -> Result<(), VmErro
     let len = i32::try_from(args.len()).map_err(|_| VmError::OutOfMemory)?;
     let array = vm.new_array_of("Ljava/lang/String;", len)?;
     for (i, a) in args.iter().enumerate() {
-        let s = vm.new_string_utf16(&vm::wtf::unescape(a))?;
+        let s = vm.new_string_utf16(a)?;
         vm.heap
             .array_mut(array)?
             .store(i, Value::Ref(Some(s)), false)?;

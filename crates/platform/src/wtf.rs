@@ -133,8 +133,8 @@ fn form(b: &[u8]) -> Option<(u32, usize)> {
 /// A Java string as a Rust `String` that loses nothing: a lone surrogate, and U+10FFFF,
 /// which serves as the escape marker, become the marker plus a code ("m" for U+10FFFF
 /// itself, "x" and four hex digits for a surrogate). Two distinct strings never share a
-/// result, and `unescape` undoes it. System property keys and command-line arguments
-/// that may hold unpaired surrogates use this form.
+/// result. System property names are stored in this form, so two names that differ
+/// only by an unpaired surrogate stay distinct.
 pub fn escape(units: &[u16]) -> String {
     const MARK: char = '\u{10FFFF}';
     let mut out = String::new();
@@ -143,36 +143,6 @@ pub fn escape(units: &[u16]) -> String {
             Ok(MARK) => out.push_str("\u{10FFFF}m"),
             Ok(c) => out.push(c),
             Err(e) => out.push_str(&format!("\u{10FFFF}x{:04x}", e.unpaired_surrogate())),
-        }
-    }
-    out
-}
-
-/// The UTF-16 units `escape` came from; text that is not an escape reads as itself.
-pub fn unescape(s: &str) -> Vec<u16> {
-    let mut out = Vec::new();
-    let mut chars = s.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c != '\u{10FFFF}' {
-            let mut buf = [0u16; 2];
-            out.extend_from_slice(c.encode_utf16(&mut buf));
-            continue;
-        }
-        let rest: String = chars.clone().take(5).collect();
-        let unit = rest
-            .strip_prefix('x')
-            .filter(|h| h.len() == 4)
-            .and_then(|h| u16::from_str_radix(h, 16).ok());
-        match (chars.peek(), unit) {
-            (Some('m'), _) => {
-                chars.next();
-                out.extend_from_slice(&[0xDBFF, 0xDFFF]);
-            }
-            (_, Some(u)) => {
-                chars.nth(4);
-                out.push(u);
-            }
-            _ => out.extend_from_slice(&[0xDBFF, 0xDFFF]),
         }
     }
     out
@@ -257,7 +227,7 @@ mod tests {
     }
 
     #[test]
-    fn escapes_are_exact_and_reversible() {
+    fn escapes_are_exact() {
         let esc = |s: &str| escape(&s.encode_utf16().collect::<Vec<_>>());
         assert_eq!(esc("java.home"), "java.home");
         assert_ne!(esc("k\u{10FFFF}"), esc("k"));
@@ -265,21 +235,5 @@ mod tests {
         assert_ne!(esc("\u{10FFFF}xd800"), escape(&[0xD800]));
         assert_ne!(escape(&[0xD800]), escape(&[0xDBFF]));
         assert_ne!(esc("\u{10FFFF}"), esc("\u{10FFFF}m"));
-        let samples: [&[u16]; 5] = [
-            &[0xD800],
-            &[0x61, 0xDBFF, 0x62],
-            &[0xDBFF, 0xDFFF, 0x78, 0xDC00],
-            &[0xDC00, 0xD800],
-            &[],
-        ];
-        for units in samples {
-            assert_eq!(unescape(&escape(units)), units);
-        }
-        // Malformed escapes read as the marker, never panic.
-        assert_eq!(unescape("\u{10FFFF}"), [0xDBFF, 0xDFFF]);
-        assert_eq!(
-            unescape("\u{10FFFF}x12"),
-            [0xDBFF, 0xDFFF, 0x78, 0x31, 0x32]
-        );
     }
 }
