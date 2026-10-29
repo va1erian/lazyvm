@@ -180,8 +180,12 @@ Before threads, `monitorenter` was a null check. Now the interpreter polls at
 branches and calls, frames carry their monitors, and `synchronized` does real
 work. Measured for S6-01/02 (CPU time, best of 3, Windows): the heavy
 existing tests (`CaseMapping`, `CharacterTables`, `GcChurn`, `RegexDepth`,
-`RegexMemoStarts`, `ScannerLong`) are 0.3% to 1.4% slower; a loop doing
-nothing but `synchronized` blocks and `synchronized` calls is about 5% slower.
+`RegexMemoStarts`, `ScannerLong`) were 0.3% to 1.4% slower in a quiet
+run, and 4% to 6% slower in a later, busier session, where the same build
+pair also differed by 4%: the machine's state matters as much as the change.
+The monitor handoff and locking after the frame push added about 1%,
+measured side by side. A loop doing nothing but `synchronized` blocks and
+`synchronized` calls is about 5% slower.
 
 ## For S6-03 to S6-06
 
