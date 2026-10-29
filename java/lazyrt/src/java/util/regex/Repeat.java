@@ -3,11 +3,12 @@ package java.util.regex;
 /**
  * Quantifiers. A body that always consumes exactly one code point of a class
  * (also inside one capturing group) gets {@link CharRepeat}, which counts
- * forward in a loop and backs off without recursion, so `.*` and `(\d)+` use
- * constant stack. A body made only of such pieces, literals and zero-width
- * anchors, possibly with alternatives, runs in {@link FlatLoop}, which keeps
- * its backtracking states in an array. Any other {@link Loop} recurses, about
- * four Java frames per iteration.
+ * forward in a loop and backs off one char at a time from a single frame, so
+ * `.*` and `(\d)+` take no stack per char. A body made only of such pieces,
+ * literals and zero-width anchors, possibly with alternatives, runs in
+ * {@link FlatLoop}, which keeps its backtracking states in an array. Any other
+ * {@link Loop} runs its body between {@link LoopTail} decisions, with a frame on
+ * the matcher's stack (Backtrack) for each decision.
  */
 final class Repeat {
     static final int GREEDY = 0, LAZY = 1, POSSESSIVE = 2;
@@ -21,8 +22,12 @@ final class Repeat {
             m.hitEnd = true;
             return 0;
         }
-        int c = Atoms.codePointAt(m, j);
-        return cc.test(c) ? Character.charCount(c) : 0;
+        // Inline for a char that does not start a pair, as in Atoms.One.
+        int c = m.text.charAt(j);
+        if (c >= Character.MIN_HIGH_SURROGATE && c <= Character.MAX_HIGH_SURROGATE) {
+            c = Atoms.codePointAt(m, j);
+        }
+        return !cc.test(c) ? 0 : c >= Character.MIN_SUPPLEMENTARY_CODE_POINT ? 2 : 1;
     }
 
     /** Width of the char ending at j when the scan started at i: 2 for a whole surrogate pair. */
@@ -52,8 +57,10 @@ final class Repeat {
          * event for Matcher.iterationEnd, except for a class made of alternatives (?:a|b)*, which
          * the oracle runs as a loop and which records nothing unless it is possessive.
          */
-        private boolean recordsRuns() {
-            return !fromAlternation || mode == POSSESSIVE;
+        private final boolean records;
+
+        boolean recordsRuns() {
+            return records;
         }
 
         /** A possessive repeat of a group leaves its capture set when the match later backs out. */
@@ -62,6 +69,8 @@ final class Repeat {
         }
         /** The class was written inside a (..) or (?:..) group. */
         final boolean grouped;
+        /** The class the rest of the pattern must begin with, or null (see leadingClass). */
+        private CharClass follow;
 
         CharRepeat(CharClass cc, int minCount, int maxCount, int mode, int group, boolean fromAlternation,
                    boolean question, boolean grouped) {
@@ -73,6 +82,7 @@ final class Repeat {
             this.group = group;
             this.fromAlternation = fromAlternation;
             this.question = question;
+            this.records = !fromAlternation || mode == POSSESSIVE;
         }
 
         int minCount() {
@@ -102,7 +112,7 @@ final class Repeat {
                     n++;
                 }
                 st[countAt] = n;
-                if (n > 0 && recordsRuns()) {
+                if (n > 0 && records) {
                     m.iterationEnd = j;
                 }
                 return n < minCount ? -1 : j;
@@ -117,7 +127,7 @@ final class Repeat {
                     return -1;
                 }
                 st[countAt] = n + 1;
-                if (recordsRuns()) {
+                if (records) {
                     m.iterationEnd = prevEnd + w;
                 }
                 return prevEnd + w;
@@ -129,34 +139,128 @@ final class Repeat {
             return prevEnd - widthBefore(m, p, prevEnd);
         }
 
-        /** Continues at j after n chars, with the group (if any) set to the last one. */
-        private boolean proceed(Matcher m, int i, int j, int n) {
-            if (group < 0 || n == 0) {
-                return next.match(m, j);
+        /**
+         * Goes on at j after n chars, with the group (if any) set to the last one. A frame is left
+         * when the repeat has another count to try, or a capture to undo: a possessive repeat
+         * does neither (observed on the oracle, RegexGroups, "possessive group keeps its capture").
+         */
+        private int proceed(Matcher m, int i, int j, int n) {
+            // A count after which the rest cannot begin is passed over: trying it would fail at
+            // once without any effect, because j is inside the bounds, its char is not a surrogate
+            // (a pair read whole could reach past the end and set hitEnd), and it is outside the
+            // class the rest must begin with. A lazy repeat still records each char it takes.
+            CharClass f = follow;
+            while (f != null && j < m.hi) {
+                char c = m.text.charAt(j);
+                if ((c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) || f.test(c)) {
+                    break;
+                }
+                if (mode == GREEDY && n > minCount) {
+                    n--;
+                    j -= widthBefore(m, i, j);
+                    continue;
+                }
+                int w = mode == LAZY && n < maxCount ? widthAt(m, cc, j) : 0;
+                if (w == 0) {
+                    return FAIL;
+                }
+                j += w;
+                n++;
+                if (records) {
+                    m.iterationEnd = j;
+                }
             }
-            int oldStart = m.groups[2 * group];
-            int oldEnd = m.groups[2 * group + 1];
-            m.groups[2 * group] = j - widthBefore(m, i, j);
-            m.groups[2 * group + 1] = j;
-            if (next.match(m, j)) {
-                return true;
+            boolean capture = group >= 0 && n > 0;
+            boolean more = mode == GREEDY ? n > minCount : mode == LAZY && n < maxCount;
+            if (more || (capture && mode != POSSESSIVE)) {
+                int at = m.stack.push(this);
+                int[] d = m.stack.data;
+                d[at] = i;
+                d[at + 1] = j;
+                d[at + 2] = n;
+                if (capture) {
+                    d[at + 3] = m.groups[2 * group];
+                    d[at + 4] = m.groups[2 * group + 1];
+                }
             }
-            if (mode == POSSESSIVE) {
-                // Observed on the oracle (RegexGroups, "possessive group keeps its capture"): a
-                // possessive repeat does not undo its capture when the rest of the match fails.
-                return false;
+            if (capture) {
+                m.groups[2 * group] = j - widthBefore(m, i, j);
+                m.groups[2 * group + 1] = j;
             }
-            m.groups[2 * group] = oldStart;
-            m.groups[2 * group + 1] = oldEnd;
-            return false;
+            m.cont = next;
+            return j;
         }
 
-        boolean match(Matcher m, int i) {
-            if (mode == LAZY) {
-                return lazy(m, i);
+        Node link(Node after) {
+            this.next = after;
+            // A possessive repeat that captures keeps its capture when the rest fails, so every
+            // try of the rest has an effect.
+            this.follow = keepsCapture() ? null : leadingClass(after);
+            return this;
+        }
+
+        /**
+         * The class a linked node must begin with when it fails at once, without any effect, at a
+         * char outside it: one class, or a literal run's first char, possibly entered through the
+         * opening halves of groups (which undo what they set when they fail). Else null.
+         */
+        private static CharClass leadingClass(Node n) {
+            while (n instanceof GroupNodes.Group) {
+                n = n.next;
             }
+            if (n instanceof Atoms.One) {
+                return ((Atoms.One) n).cc;
+            }
+            if (n instanceof Atoms.Str && !Character.isSurrogate(((Atoms.Str) n).chars[0])) {
+                return CharClass.single(((Atoms.Str) n).chars[0]);
+            }
+            return null;
+        }
+
+        /** The rest of the pattern failed after n chars: undo the capture and try the next count. */
+        int back(Matcher m, int at) {
+            int[] d = m.stack.data;
+            int i = d[at];
+            int j = d[at + 1];
+            int n = d[at + 2];
+            if (group >= 0 && n > 0) {
+                m.groups[2 * group] = d[at + 3];
+                m.groups[2 * group + 1] = d[at + 4];
+            }
+            if (mode == LAZY) {
+                int w = n >= maxCount ? 0 : widthAt(m, cc, j);
+                if (w == 0) {
+                    return FAIL;
+                }
+                j += w;
+                if (records) {
+                    m.iterationEnd = j;
+                }
+                return proceed(m, i, j, n + 1);
+            }
+            if (n == minCount) {
+                return FAIL;
+            }
+            return proceed(m, i, j - widthBefore(m, i, j), n - 1);
+        }
+
+        int go(Matcher m, int i) {
             int j = i;
             int n = 0;
+            if (mode == LAZY) {
+                while (n < minCount) {
+                    int w = widthAt(m, cc, j);
+                    if (w == 0) {
+                        return FAIL;
+                    }
+                    j += w;
+                    n++;
+                    if (records) {
+                        m.iterationEnd = j;
+                    }
+                }
+                return proceed(m, i, j, n);
+            }
             while (n < maxCount) {
                 int w = widthAt(m, cc, j);
                 if (w == 0) {
@@ -165,58 +269,10 @@ final class Repeat {
                 j += w;
                 n++;
             }
-            if (n > 0 && recordsRuns()) {
+            if (n > 0 && records) {
                 m.iterationEnd = j;
             }
-            if (n < minCount) {
-                return false;
-            }
-            if (mode == POSSESSIVE) {
-                return proceed(m, i, j, n);
-            }
-            while (true) {
-                if (proceed(m, i, j, n)) {
-                    return true;
-                }
-                if (n == minCount) {
-                    return false;
-                }
-                n--;
-                j -= widthBefore(m, i, j);
-            }
-        }
-
-        private boolean lazy(Matcher m, int i) {
-            int j = i;
-            int n = 0;
-            while (n < minCount) {
-                int w = widthAt(m, cc, j);
-                if (w == 0) {
-                    return false;
-                }
-                j += w;
-                n++;
-                if (recordsRuns()) {
-                    m.iterationEnd = j;
-                }
-            }
-            while (true) {
-                if (proceed(m, i, j, n)) {
-                    return true;
-                }
-                if (n >= maxCount) {
-                    return false;
-                }
-                int w = widthAt(m, cc, j);
-                if (w == 0) {
-                    return false;
-                }
-                j += w;
-                n++;
-                if (recordsRuns()) {
-                    m.iterationEnd = j;
-                }
-            }
+            return n < minCount ? FAIL : proceed(m, i, j, n);
         }
 
         int min() {
@@ -256,7 +312,7 @@ final class Repeat {
         final boolean possessive;
         /** The repeated atom was written as a (..) or (?:..) group. */
         final boolean inGroup;
-        private Tail tail;
+        private LoopTail tail;
         private FlatLoop flat;
 
         /** Lets this loop remember failed states (see LoopMemo). */
@@ -312,7 +368,7 @@ final class Repeat {
                 flat.records = recordsIterations();
                 return this;
             }
-            this.tail = new Tail(id, minCount, maxCount, lazy);
+            this.tail = new LoopTail(id, minCount, maxCount, lazy);
             tail.next = after;
             tail.memoizable = memoizable;
             tail.records = recordsIterations();
@@ -320,20 +376,25 @@ final class Repeat {
             return this;
         }
 
-        boolean match(Matcher m, int i) {
+        int go(Matcher m, int i) {
             if (flat != null) {
-                return flat.match(m, i);
+                return flat.go(m, i);
             }
-            int savedCount = m.loopCount[id];
-            int savedStart = m.loopStart[id];
+            int at = m.stack.push(this);
+            int[] d = m.stack.data;
+            d[at] = m.loopCount[id];
+            d[at + 1] = m.loopStart[id];
             m.loopCount[id] = 0;
             m.loopStart[id] = -1;
-            if (tail.match(m, i)) {
-                return true;
-            }
-            m.loopCount[id] = savedCount;
-            m.loopStart[id] = savedStart;
-            return false;
+            return tail.go(m, i);
+        }
+
+        /** The loop failed: an enclosing loop may enter it again, so its counters come back. */
+        int back(Matcher m, int at) {
+            int[] d = m.stack.data;
+            m.loopCount[id] = d[at];
+            m.loopStart[id] = d[at + 1];
+            return FAIL;
         }
 
         int min() {
@@ -348,68 +409,6 @@ final class Repeat {
 
         int max() {
             return mul(body.max(), maxCount);
-        }
-    }
-
-    /**
-     * The end of one iteration of a Loop body, where the loop decides to run the
-     * body again or leave. It starts the next iteration itself rather than
-     * through helper methods, because each Java frame saved here is one more
-     * iteration a pattern like (a|b)* can run before the frame limit.
-     */
-    private static final class Tail extends Node {
-        private final int id;
-        private final int minCount;
-        private final int maxCount;
-        private final boolean lazy;
-        private final int slots;
-        boolean memoizable;
-        boolean records;
-        Node head;
-
-        Tail(int id, int minCount, int maxCount, boolean lazy) {
-            this.slots = LoopMemo.slots(minCount, maxCount);
-            this.id = id;
-            this.minCount = minCount;
-            this.maxCount = maxCount;
-            this.lazy = lazy;
-        }
-
-        boolean match(Matcher m, int i) {
-            int c = m.loopCount[id];
-            if (c > 0 && i == m.loopStart[id]) {
-                // The last iteration consumed nothing, so more would add nothing; the minimum
-                // counts as met; observed on the oracle with (\n*?){2}a, see RegexQuantifiers).
-                return next.match(m, i);
-            }
-            if (c > 0 && records) {
-                m.iterationEnd = i;
-            }
-            boolean memo = memoizable && m.memo.step();
-            if (memo && m.memo.failed(id, c, slots, i)) {
-                return false;
-            }
-            boolean required = c < minCount;
-            if (lazy && !required && next.match(m, i)) {
-                return true;
-            }
-            if (required || c < maxCount) {
-                int savedStart = m.loopStart[id];
-                m.loopCount[id] = c + 1;
-                m.loopStart[id] = i;
-                if (head.match(m, i)) {
-                    return true;
-                }
-                m.loopCount[id] = c;
-                m.loopStart[id] = savedStart;
-            }
-            if (!required && !lazy && next.match(m, i)) {
-                return true;
-            }
-            if (memo) {
-                m.memo.fail(id, c, slots, i);
-            }
-            return false;
         }
     }
 

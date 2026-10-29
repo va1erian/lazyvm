@@ -50,21 +50,29 @@ final class Atoms {
             this.cc = cc;
         }
 
-        boolean match(Matcher m, int i) {
+        int go(Matcher m, int i) {
             if (i >= m.hi) {
                 m.hitEnd = true;
-                return false;
+                return FAIL;
             }
-            int c = codePointAt(m, i);
-            int end = i + Character.charCount(c);
+            // Inline for a char that does not start a pair: this is the hottest node.
+            int c = m.text.charAt(i);
+            if (c >= Character.MIN_HIGH_SURROGATE && c <= Character.MAX_HIGH_SURROGATE) {
+                c = codePointAt(m, i);
+            }
+            int end = c >= Character.MIN_SUPPLEMENTARY_CODE_POINT ? i + 2 : i + 1;
             if (end > m.hi && cc.isLoose()) {
                 // Observed on the oracle (RegexRegions): a case-folded literal that is part of a
                 // run is compared char by char, so it does not read a pair that a region end splits,
                 // as a class or a literal alone does.
                 m.hitEnd = true;
-                return false;
+                return FAIL;
             }
-            return cc.test(c) && next.match(m, end);
+            if (!cc.test(c)) {
+                return FAIL;
+            }
+            m.cont = next;
+            return end;
         }
 
         int min() {
@@ -88,9 +96,13 @@ final class Atoms {
             this.count = count;
         }
 
-        boolean match(Matcher m, int i) {
+        int go(Matcher m, int i) {
             int end = matchEnd(m, i);
-            return end >= 0 && next.match(m, end);
+            if (end < 0) {
+                return FAIL;
+            }
+            m.cont = next;
+            return end;
         }
 
         /** Where the run ends when it matches at i, or -1. */
@@ -135,27 +147,28 @@ final class Atoms {
             this.unicode = unicode;
         }
 
-        boolean match(Matcher m, int i) {
+        int go(Matcher m, int i) {
             if (2 * group + 1 >= m.groups.length) {
-                return false;
+                return FAIL;
             }
             int s = m.groups[2 * group];
             int e = m.groups[2 * group + 1];
             if (s < 0 || e < 0) {
-                return false;
+                return FAIL;
             }
             for (int k = 0; k < e - s; k++) {
                 if (i + k >= m.hi) {
                     m.hitEnd = true;
-                    return false;
+                    return FAIL;
                 }
                 char a = m.text.charAt(s + k);
                 char b = m.text.charAt(i + k);
                 if (ignoreCase ? !sameFolded(a, b, unicode) : a != b) {
-                    return false;
+                    return FAIL;
                 }
             }
-            return next.match(m, i + e - s);
+            m.cont = next;
+            return i + e - s;
         }
 
         int max() {
@@ -165,9 +178,13 @@ final class Atoms {
 
     /** \R: CRLF as one unit (and then only as one unit), or any single line terminator. */
     static final class LineBreak extends Node {
-        boolean match(Matcher m, int i) {
+        int go(Matcher m, int i) {
             int w = widthAt(m, i);
-            return w > 0 && next.match(m, i + w);
+            if (w == 0) {
+                return FAIL;
+            }
+            m.cont = next;
+            return i + w;
         }
 
         /** The length of the line break at i, or 0 when there is none. */

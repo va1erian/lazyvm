@@ -28,14 +28,17 @@ final class GroupNodes {
             return n;
         }
 
-        boolean match(Matcher m, int i) {
-            int old = m.open[n];
+        int go(Matcher m, int i) {
+            int at = m.stack.push(this);
+            m.stack.data[at] = m.open[n];
             m.open[n] = i;
-            if (next.match(m, i)) {
-                return true;
-            }
-            m.open[n] = old;
-            return false;
+            m.cont = next;
+            return i;
+        }
+
+        int back(Matcher m, int at) {
+            m.open[n] = m.stack.data[at];
+            return FAIL;
         }
 
         Node link(Node after) {
@@ -65,22 +68,27 @@ final class GroupNodes {
             this.n = n;
         }
 
-        boolean match(Matcher m, int i) {
-            int oldStart = m.groups[2 * n];
-            int oldEnd = m.groups[2 * n + 1];
+        int go(Matcher m, int i) {
+            int at = m.stack.push(this);
+            int[] d = m.stack.data;
+            d[at] = m.groups[2 * n];
+            d[at + 1] = m.groups[2 * n + 1];
             m.groups[2 * n] = m.open[n];
             m.groups[2 * n + 1] = i;
-            if (next.match(m, i)) {
-                return true;
-            }
-            m.groups[2 * n] = oldStart;
-            m.groups[2 * n + 1] = oldEnd;
-            return false;
+            m.cont = next;
+            return i;
+        }
+
+        int back(Matcher m, int at) {
+            int[] d = m.stack.data;
+            m.groups[2 * n] = d[at];
+            m.groups[2 * n + 1] = d[at + 1];
+            return FAIL;
         }
     }
 
     /** (?=x) (?!x) (?<=x) (?<!x). A lookbehind body may have any width; every start that could end here is tried. */
-    static final class Look extends Node {
+    static final class Look extends Node.Scope {
         private final Node body;
         private final boolean ahead;
         private final boolean positive;
@@ -120,33 +128,75 @@ final class GroupNodes {
             return this;
         }
 
-        boolean match(Matcher m, int i) {
-            boolean found = ahead ? lookAhead(m, i) : lookBehind(m, i);
-            return found == positive && next.match(m, i);
-        }
+        // A scope frame holds the bound to restore (hi for a lookahead, lo for a lookbehind), the
+        // behindTarget to restore, the position the lookaround was entered at, and for a
+        // lookbehind the start being tried, the code points stepped back to reach it, and the
+        // lowest start (in code-point mode the floor of a wrapped reach).
+        private static final int SAVED = 0, TARGET = 1, AT = 2, START = 3, STEPS = 4, LOWEST = 5;
 
-        private boolean lookAhead(Matcher m, int i) {
-            int hi = m.hi;
+        int go(Matcher m, int i) {
+            if (!ahead) {
+                return lookBehind(m, i);
+            }
             // Observed on the oracle (RegexRegions, "negative lookahead at the end"): a negative
             // lookahead entered at the end of the text sets requireEnd, and keeps it if the match
             // later fails; with transparent bounds the end is the end of the text.
             if (!positive && i >= (m.transparentBounds ? m.textLength : m.hi)) {
                 m.requireEnd = true;
             }
+            int at = m.stack.pushScope(this);
+            int[] d = m.stack.data;
+            d[at + SAVED] = m.hi;
+            d[at + AT] = i;
             if (m.transparentBounds) {
                 m.hi = m.textLength;
             }
-            boolean found = head.match(m, i);
-            m.hi = hi;
-            if (found) {
+            m.cont = head;
+            return i;
+        }
+
+        /** Goes on after the lookaround at i, given whether its body matched. */
+        private int outcome(Matcher m, boolean found, int i) {
+            if (found != positive) {
+                return FAIL;
+            }
+            m.cont = next;
+            return i;
+        }
+
+        int matched(Matcher m, int at) {
+            int[] d = m.stack.data;
+            if (ahead) {
+                m.hi = d[at + SAVED];
                 // Observed on the oracle (RegexAfterFailure): where a lookahead body ended, positive
                 // or negative, is the last event of the attempt, like the end of an atomic body.
                 m.iterationEnd = m.stopPos;
+            } else {
+                m.lo = d[at + SAVED];
+                m.behindTarget = d[at + TARGET];
             }
-            return found;
+            return outcome(m, true, d[at + AT]);
         }
 
-        private boolean lookBehind(Matcher m, int i) {
+        /** A lookbehind tries the next start. */
+        int failed(Matcher m, int at) {
+            int[] d = m.stack.data;
+            int i = d[at + AT];
+            if (ahead) {
+                m.hi = d[at + SAVED];
+                return outcome(m, false, i);
+            }
+            int lo = d[at + SAVED];
+            int target = d[at + TARGET];
+            int start = d[at + START];
+            int lowest = d[at + LOWEST];
+            if (byCodePoints) {
+                return nextByCodePoints(m, lo, target, i, start, d[at + STEPS], lowest);
+            }
+            return tryFrom(m, lo, target, i, start - 1, lowest);
+        }
+
+        private int lookBehind(Matcher m, int i) {
             int lo = m.lo;
             int target = m.behindTarget;
             if (m.transparentBounds) {
@@ -154,26 +204,26 @@ final class GroupNodes {
             }
             m.behindTarget = i;
             if (byCodePoints) {
-                boolean found = behindByCodePoints(m, i);
-                m.lo = lo;
-                m.behindTarget = target;
-                return found;
+                return behindByCodePoints(m, lo, target, i);
             }
             int lowest = i - maxLen;
             if (lowest < m.lo) {
                 lowest = m.lo;
             }
-            boolean found = false;
-            // A start the body cannot begin at fails without any effect, so it is not tried; over a
-            // long way back a bit set of the possible starts lets the loop jump between them.
-            StartIndex index = null;
-            if (firstChars != null && i - lowest > 2048) {
-                if (m.starts[id] == null) {
-                    m.starts[id] = new StartIndex(m, firstChars);
-                }
-                index = m.starts[id];
+            // Over a long way back, a bit set of the possible starts lets the search jump between them.
+            if (firstChars != null && i - lowest > 2048 && m.starts[id] == null) {
+                m.starts[id] = new StartIndex(m, firstChars);
             }
-            for (int start = i - minLen; start >= lowest && !found; start--) {
+            return tryFrom(m, lo, target, i, i - minLen, lowest);
+        }
+
+        /**
+         * Runs the body from the highest start at or below `start`, down to `lowest`, that the body
+         * can begin at: a start it cannot begin at fails without any effect, so it is not tried.
+         */
+        private int tryFrom(Matcher m, int lo, int target, int i, int start, int lowest) {
+            StartIndex index = firstChars != null && i - lowest > 2048 ? m.starts[id] : null;
+            for (; start >= lowest; start--) {
                 if (index != null) {
                     start = index.previous(start, lowest);
                     if (start < lowest) {
@@ -181,23 +231,41 @@ final class GroupNodes {
                     }
                 }
                 if (firstChars == null || firstChars.test(Atoms.codePointAt(m, start))) {
-                    found = head.match(m, start);
+                    return tryAt(m, lo, target, i, start, 0, lowest);
                 }
             }
+            return exhausted(m, lo, target, i);
+        }
+
+        /** Runs the body from `start`, in a scope that returns to this lookbehind. */
+        private int tryAt(Matcher m, int lo, int target, int i, int start, int steps, int lowest) {
+            int at = m.stack.pushScope(this);
+            int[] d = m.stack.data;
+            d[at + SAVED] = lo;
+            d[at + TARGET] = target;
+            d[at + AT] = i;
+            d[at + START] = start;
+            d[at + STEPS] = steps;
+            d[at + LOWEST] = lowest;
+            m.cont = head;
+            return start;
+        }
+
+        /** No start is left: the body did not match. */
+        private int exhausted(Matcher m, int lo, int target, int i) {
             m.lo = lo;
             m.behindTarget = target;
-            return found;
+            return outcome(m, false, i);
         }
 
         /**
          * Observed on the oracle (RegexLookbehindEdges): starts are tried by stepping back one code
          * point at a time over the text, not the region, from minLen of them (or the start of the
          * text when fewer lie behind) up to maxLen of them. A start before the region start is not
-         * tried (lowestStart), and a step that reads a pair the region start splits ends the
-         * search. A reach that wrapped negative is a bound in chars instead (see wrappedFloor).
+         * tried, and a step that reads a pair the region start splits ends the search. A reach that
+         * wrapped negative is a bound in chars instead (see wrappedFloor).
          */
-        private boolean behindByCodePoints(Matcher m, int i) {
-            int limit = maxLen >= 0 ? maxLen : Integer.MAX_VALUE;
+        private int behindByCodePoints(Matcher m, int lo, int target, int i) {
             int floor = maxLen >= 0 ? Integer.MIN_VALUE : wrappedFloor(m, i, -maxLen);
             int start = i;
             int n = 0;
@@ -206,22 +274,27 @@ final class GroupNodes {
                 n++;
             }
             if (start < m.lo) {
-                return false;
+                return exhausted(m, lo, target, i);
             }
-            if (n <= limit && start >= floor && head.match(m, start)) {
-                return true;
+            if (n <= stepLimit() && start >= floor) {
+                return tryAt(m, lo, target, i, start, n, floor);
             }
-            while (n < limit && start > m.lo) {
+            return nextByCodePoints(m, lo, target, i, start, n, floor);
+        }
+
+        /** Tries the start one code point before `start`, n steps back, when it is in reach. */
+        private int nextByCodePoints(Matcher m, int lo, int target, int i, int start, int n, int floor) {
+            if (n < stepLimit() && start > m.lo) {
                 start = stepBack(m, start);
-                n++;
-                if (start < m.lo || start < floor) {
-                    return false;
-                }
-                if (head.match(m, start)) {
-                    return true;
+                if (start >= m.lo && start >= floor) {
+                    return tryAt(m, lo, target, i, start, n + 1, floor);
                 }
             }
-            return false;
+            return exhausted(m, lo, target, i);
+        }
+
+        private int stepLimit() {
+            return maxLen >= 0 ? maxLen : Integer.MAX_VALUE;
         }
 
         /**
@@ -251,7 +324,7 @@ final class GroupNodes {
     }
 
     /** (?>x): matches x once and never backtracks into it. */
-    static final class Atomic extends Node {
+    static final class Atomic extends Node.Scope {
         private final Node body;
         private final boolean group;
         private Node head;
@@ -277,18 +350,25 @@ final class GroupNodes {
             return this;
         }
 
-        boolean match(Matcher m, int i) {
-            if (!group) {
-                return head.match(m, i) && next.match(m, m.stopPos);
+        int go(Matcher m, int i) {
+            m.stack.pushScope(this);
+            m.cont = head;
+            return i;
+        }
+
+        int matched(Matcher m, int at) {
+            if (group) {
+                // Observed on the oracle (RegexAfterFailure): when the body of a written (?>..)
+                // matches, what it records is where it ended, replacing the runs and iterations
+                // inside it; when it fails those stay.
+                m.iterationEnd = m.stopPos;
             }
-            // Observed on the oracle (RegexAfterFailure): when the body of a written (?>..)
-            // matches, what it records is where it ended, replacing the runs and iterations
-            // inside it; when it fails those stay.
-            if (!head.match(m, i)) {
-                return false;
-            }
-            m.iterationEnd = m.stopPos;
-            return next.match(m, m.stopPos);
+            m.cont = next;
+            return m.stopPos;
+        }
+
+        int failed(Matcher m, int at) {
+            return FAIL;
         }
 
         int min() {

@@ -63,7 +63,7 @@ final class Props {
     }
 
     private static CharClass keyValue(String rawKey, String value, String[] failure) {
-        String key = rawKey.toLowerCase();
+        String key = Blocks.foldName(rawKey, false);
         if (key.equals("sc") || key.equals("script")) {
             failure[0] = "Unknown character script name {" + value + "}";
             return Blocks.script(value);
@@ -91,7 +91,7 @@ final class Props {
     }
 
     private static CharClass binary(String name) {
-        String n = name.toUpperCase();
+        String n = Blocks.foldName(name, true);
         int kind;
         if (n.equals("ALPHABETIC")) {
             kind = CharClass.U_ALPHA;

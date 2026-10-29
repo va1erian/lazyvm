@@ -7,8 +7,8 @@ import java.util.regex.PatternSyntaxException;
 /**
  * Searches long enough to switch on the loop memo (LoopMemo), over patterns where remembering a
  * failed state would be wrong: back references, captures that survive a failed path and counted
- * loops. Each row lists every match with its groups. RegexMemoLoops has the rest; the two are
- * split so each stays well under the CI time limit.
+ * loops. Each row lists every match with its groups. RegexMemoLoops, RegexMemoStarts and
+ * RegexMemoAround have the rest; they are split so each stays well under the CI time limit.
  */
 public class RegexMemo {
     static String a(int n) {

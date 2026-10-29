@@ -14,17 +14,25 @@ exist (S11).
 |---|---|
 | `Pattern`, `Matcher`, `MatchResult`, `PatternSyntaxException` | the public API |
 | `PatternReader`, `ClassReader`, `GroupReader`, `Parser` | one inheritance chain: cursor and escapes, character classes, group headers, and the main loop with its explicit stack of open groups |
-| `Node`, `Atoms`, `Anchor`, `GroupNodes`, `Repeat`, `FlatLoop` | the node tree the parser builds and `link` wires into a chain |
+| `Node`, `Atoms`, `Anchor`, `GroupNodes`, `Repeat`, `LoopTail`, `FlatLoop` | the node tree the parser builds and `link` wires into a chain |
+| `Backtrack` | the backtracking stack of a match, on the heap, and the loop that runs the nodes |
 | `CharClass`, `CaseFold`, `Props`, `Category`, `Blocks`, `UnicodeData` | sets of code points, their case-insensitive forms, and the `\p{..}` names |
 | `LookbehindReach` | how far back a lookbehind may look, and which bodies compile |
 | `LoopMemo` | the failed loop states a long search remembers, and which loops may |
 | `SearchHints`, `StartIndex` | shortcuts for the start-position loop of a search and for a lookbehind over a long way back |
 | `Replacement` | `$n`, `${name}` and `\` expansion for `appendReplacement` |
 
-A match is a walk down `next` pointers: a node consumes input and calls
-`next.match`; false means backtrack. Nodes undo their own state when they
-return false. Captures made inside a lookaround body or an atomic group, and by
-a possessive repeat of one char, are not undone when the match later backs out:
+A match is a walk down `next` pointers, run by `Backtrack` in one loop: a
+node's `go` consumes input and names the node to run next, or fails. A node
+that has another way to match, or state to undo, first pushes a frame (its
+owner and up to seven ints) on a stack kept in arrays on the heap; a failure
+pops frames and calls each owner's `back`, newest first, which is the order in
+which a recursive matcher returns through the same nodes, so every flag,
+capture and event changes in the same order. No Java frame is used per node or
+per iteration. A lookaround or an atomic group opens a scope; when its body
+matches, the frames above the scope are dropped without being undone, which is
+why captures made inside a lookaround body or an atomic group, and by a
+possessive repeat of one char, are not undone when the match later backs out:
 the oracle leaves them set (`RegexGroups`, last block).
 
 `UnicodeData.java` is generated: `python tools/regex_data.py` dumps every block
@@ -123,8 +131,8 @@ high half just before the end is followed by the end, not by the end minus one
   whole pair (`RegexRegions`).
 - After a failed attempt, `\G` and the next `find()` start where the last
   "event" of the attempt ended, in the order they happened and not moved by
-  backing off (`RegexAfterFailure`, which also hashes a sweep over every pair
-  of 21 loop shapes): the end of a run of a repeated class (`a*`, `\d+`, not a
+  backing off (`RegexAfterFailure`, which with `RegexAfterFailureSweep` also
+  hashes a sweep over every pair of 26 fragments): the end of a run of a repeated class (`a*`, `\d+`, not a
   run of alternatives such as `(?:a|b)*`), the end of an iteration of a loop
   over a fixed-width body (`(?:ab)*`, not one written `?`, nor one over
   alternatives or a variable body, whose inner runs still count), and, for a
@@ -226,18 +234,31 @@ Two shortcuts keep the start-position loop of `find()` from being quadratic
 
 - a pattern that must begin with one class or literal skips the starts that
   cannot begin it;
-- a pattern that is an unbounded repeat of one class (no group) followed only
-  by literals, classes, line breaks and anchors skips the rest of a run after a
-  failed attempt: the attempt has already tried the rest of the pattern at
-  every position of the run, and the same rest of the pattern cannot succeed
-  from a later start inside it. A run holding a surrogate pair is not skipped.
+- a pattern that begins with an unbounded repeat of one class (no group) skips
+  the rest of a run after a failed attempt: the attempt has already tried the
+  rest of the pattern at every position of the run, and the same rest cannot
+  succeed from a later start inside it. The rest must answer from the position
+  alone, so no capture in the pattern may outlive a failed path, and unless it
+  is only literals, classes, line breaks and anchors the repeat must be one
+  whose runs count as events. The last start the search would try inside the
+  run, and the end of the run, are still tried: they leave the same end of the
+  previous match after a failure as all the skipped starts would
+  (`RegexRuns`, which reads it with `\G`). A run holding a surrogate pair is
+  not skipped. This keeps `\s*,\s*` linear over long runs of spaces.
+
+A repeat of one class (`[ ]*`, `.{2,}`) does not hand on to the rest of the
+pattern at a count after which the rest cannot begin (its first node is a class
+or a literal, possibly inside groups): that try would fail at once and without
+any effect, so backing off over a run costs one class test per char. A
+possessive repeat that captures always tries, because its capture outlives the
+failure.
 
 A lookbehind over an unbounded body that must begin with one class only tries
 the starts that can begin it, found by jumping through a bit set of the text
 (`StartIndex`), built once the way back is longer than 2048. The index is per
 matcher. `reset(input)` drops it, and so does `reset()` when the text is not a
 `String` (a `StringBuilder` can change); over a `String`, `find(int)`, `region`
-and `replaceAll` keep it, which `RegexLimits` times (`RegexIndexReset`,
+and `replaceAll` keep it, which `RegexLimitsSizes` times (`RegexIndexReset`,
 `RegexIndexPossessive` and `RegexIndexStrings` cover the dropped case).
 
 Measured with the oracle on the same machine (wall time including the start of
@@ -250,6 +271,28 @@ the VM; the oracle's run is the second figure):
 | `x*y` on 4000 `x` | 21.6 s | 0.08 s | 0.12 s |
 | `(?:(?<=(a)+)a|aa)*b` after 21000 `z` (ten runs) | over 300 s | 20 s | 13.6 s |
 
+Measured for S5-09 (the time of the search alone, in the same program; "before"
+is the recursive engine):
+
+| Input | before | after | oracle |
+|---|---|---|---|
+| `[ ]*,[ ]*` on `y` and 1000 spaces | 1.26 s | under 0.01 s | 3 ms |
+| `[ ]*,[ ]*` on `y` and 5000 spaces | about 40 s | 0.02 s | 0.03 s |
+| `\s*,\s*` on `y` and 100000 spaces | (quadratic) | 0.39 s | 5.2 s |
+| `(?:a|a*)*b(?=c)` on 14 `a` | 11.7 s | 0.25 s | 0.06 s |
+| `(?:a|a*)*b(?=c)` on 20 `a` | (about an hour) | 0.25 s | 7.5 s |
+| `(?:a|a*)*b(?=c)` on 30 `a` | | 0.25 s | over 120 s |
+| `(?:(a)b)*` on 100000 `ab` | `StackOverflowError` | 0.45 s | 2 ms |
+| `(?:(a)b)*` on 340000 `ab` | `StackOverflowError` | 1.6 s | |
+| `(?:(a)b)*` on 360000 `ab` (past the frame cap) | `StackOverflowError` | `StackOverflowError` after 1.6 s | |
+| `(?:a\|aa){0,30}b` on 80000 `a` | 26 s | 31 s | |
+| `(?:x\|xx)*y` on 2500000 `x` (`-Xmx1g`) | 33 s | 40 s | |
+| `(?:(?:ab)+c)*` on 30000 `ababc` | `StackOverflowError` | 0.35 s | `StackOverflowError` at 4000 |
+| `..{2,}ab` on 2000 `z` | 5.2 s | 4.1 s | 13 ms |
+
+The oracle is exponential on `(?:a|a*)*b(?=c)` too (0.23 s on 16 `a`, 7.5 s on
+20, 50 s on 22), so `RegexMemoAround` times 20 `a` rather than 30.
+
 ## Known gaps
 
 - **Unicode data.** General categories use `Character.getType`. lazyrt has no
@@ -257,7 +300,8 @@ the VM; the oracle's run is the second figure):
   script, with the spellings the oracle accepts for each. `\p{InSurrogatesArea}`
   is rejected by the oracle too; `InSurrogates_Area` is the accepted spelling.
 - **CANON_EQ** is accepted and ignored.
-- Search does not look for a literal prefix; every start position is tried.
+- Search does not look for a literal prefix; every start position is tried that
+  the shortcuts above do not rule out.
 - A lookbehind with a bounded window and a body that backs off (`x.{0,500}`)
   costs the length of the window for each start tried, in an interpreter: on
   20000 chars `(?<=x.{0,500})Z` is about 600 times slower than the oracle's
@@ -281,8 +325,6 @@ the VM; the oracle's run is the second figure):
   (17 of the 15000 plain fuzz cases, such as `\b(?>\p{javaLowerCase})\G` with
   `UNICODE_CASE` on `fooA`, which `lookingAt()` matches after a failed `matches()`
   on the oracle and not here).
-- A loop of loops is limited to roughly a thousand outer iterations here
-  (`(?:(?:ab)+c)*` on 4000 repetitions overflows; the oracle manages it).
 - The shortest match that bounds a failed search counts nothing for a repeat of
   alternatives or of a variable body (`\b(?:B|C)+z` on `""` reports
   `requireEnd` on the oracle), and nothing after the first such repeat in the
@@ -310,44 +352,67 @@ the VM; the oracle's run is the second figure):
   error positions and messages differ for patterns such as `\p{ L}`.
 - `(?<😀a*` reports a different error first than the oracle (the group-name
   check comes before the end of the pattern is noticed here).
-- **Depth of recursion.** A loop over a body that is not flat recurses, and the
-  VM allows 4096 Java frames (`Options::max_frames`); the oracle's default
-  stack goes deeper, so it throws `StackOverflowError` later. Measured with the
-  reviewer's `Depth8` probe (the most iterations that still match, searched up
-  to 400000): here `(?:(a)b)*` 817 (5 frames per iteration), `((a)b)*` 583 (7),
-  `(a)\1*` 2044 (2), `(?:(?=a)a)*` 1362 (3), `(?:a(b))*` 817, and `(?:(a)|b)*`
-  817 on `a`s, 1362 on `b`s and 510 on `ab`s. The oracle at its default stack
-  size (no `-Xss`) matches the first five at 400000 and `(?:(a)|b)*` up to about
-  1500 `a`s, 1750 `b`s and 680 `ab`s; with `-Xss8m` about 16200, 14500 and 6500
-  (these vary by a few percent from run to run). The cause is the frame limit
-  and the one-frame-per-node walk, not the matcher alone; a raised `max_frames`
-  moves the limits proportionally. A pattern nested too deeply to compile
-  raises `PatternSyntaxException` ("Stack overflow during pattern
-  compilation"), as on the oracle, with the index of the `(` of the deepest
-  group (the oracle's index depends on its stack); the depth where that happens
-  differs (see Cost and limits).
-- **Exponential blow-up.** A lookaround, an atomic group, a possessive repeat
-  or a back reference in the pattern turns `LoopMemo` off, and a pattern that
-  backtracks exponentially then does so 6 to 8 characters earlier than on the
-  oracle: `(?:a|a*)*b(?=c)` on 14 `a` takes 18 s here and 0.17 s there, and
-  `({0}+(.|.*()?))*\s` takes over 300 s on the reviewer's input. The plan item
-  S5-09 covers both this and the depth above.
+- **Depth.** Matching takes no Java frame per node or per iteration
+  (`Backtrack`). The stack is capped at 1048576 frames (32 MB of ints), and a
+  match that needs more throws `StackOverflowError`, as the oracle does when
+  its own stack runs out, within seconds and well before the heap would run
+  out (the alternative, filling the default heap, took about 9 s and left an
+  `OutOfMemoryError`). That is about 349000 iterations of `(?:(a)b)*` (three
+  frames: the loop's decision and the two halves of the group) and 1048000 of
+  `(a)\1*` or `(?:(?=a)a)*`. A matcher holds no stack or memo between searches:
+  both are made when a search starts and dropped when it ends, also when the
+  match throws (`RegexMatcherMemory` runs 101000 live matchers and a matcher
+  whose deep match threw in 48 MB).
+  `RegexDepth` runs 100000 iterations of loops over a group, a back reference
+  and a lookaround; the oracle at its default stack manages those shapes, but
+  throws `StackOverflowError` on others that run here, measured in a fresh JVM
+  each: `(?:(?:ab)+c)*` on 4000 repetitions, `(?:(a)|b)*` on 1400 `a`s and
+  `(?:(?<=a)b|a)*` on 100000 `ab`s (the oracle's limit depends on what ran
+  before in the same JVM). Compiling still recurses over the nesting of groups:
+  a pattern nested too deeply to compile raises `PatternSyntaxException`
+  ("Stack overflow during pattern compilation"), as on the oracle, with the
+  index of the `(` of the deepest group (the oracle's index depends on its
+  stack); the depth where that happens differs (see Cost and limits).
+- **Exponential blow-up.** A back reference, `\G`, or a capture that outlives a
+  failed path (a capturing group inside a lookaround or an atomic group, which
+  includes a possessive repeat of a group, or a capturing possessive repeat of
+  one char) turns `LoopMemo` off, and a pattern that backtracks exponentially
+  then does so as on the oracle, only slower. Lookarounds, atomic groups and
+  possessive repeats without such a capture no longer turn it off (S5-09):
+  `(?:a|a*)*b(?=c)` on 14 `a` took 12 s and takes 0.25 s, the same on 30 `a`
+  (the table under Long inputs).
+- **Speed of the stack.** Running the nodes from a heap stack costs more
+  bytecodes than the recursive walk did: about 1.7 to 1.9 times as many on
+  patterns that backtrack a lot through groups, alternatives and lookarounds,
+  which take 1.4 to 1.6 times as long (`RegexMemo`, and `RegexMemoLoops`, split
+  into `RegexMemoStarts` to stay under the CI limit). Short matches pay about
+  20% too: 200000 fresh `matches()` of `a?b?c` take 2.07 s against 1.73 s
+  before, `split` and `replaceAll` over 500 KB of text 17.0 s against 14.4 s,
+  and the long memo searches in the table above 18 to 20% more. Searches over
+  long runs of a class run fewer than before, through the shortcuts above and
+  the char fast paths of `Atoms.One` and `Repeat.widthAt`.
+- **Names under another default locale.** Property, block and script names are
+  folded through `Blocks.foldName` with `Locale.ROOT`, never the default
+  locale, which matches the oracle under every locale: a dotless `ı`, a long
+  `ſ` and the Kelvin sign still fold to ASCII letters (`RegexNamesLocale` runs
+  under a Turkish default).
 
 ## Cost and limits
 
-The default frame limit is 4096 Java frames. Matching is a walk through the
-node chain, so a pattern of more than about 4000 non-literal elements (not
-iterations) overflows, and so does a loop that recurses:
+Matching uses no Java frames per node (`Backtrack`), so neither the length of
+a pattern nor the number of iterations is bounded by the VM's 4096-frame limit
+(`Options::max_frames`); the stack's own cap of 1048576 frames is:
 
 - Loops over one character class (`.*`, `\w+`, `[^,]*?`), and the same inside
   one capturing group (`(\d)+`, `(a|b)*`; alternatives of single chars become one
-  class), run in a counting loop with no stack per iteration.
+  class), run in a counting loop with one frame for the whole run.
 - Loops over a *flat* body (literals, classes, repeats of a class, `\R`,
   zero-width anchors, alternatives of such sequences, optionally in one
   capturing group: `(\w+\s?)*`, `(?:ab|c)*`, `(?:ab)*+`, `\R+`) run in `FlatLoop`, which keeps the
-  backtracking state in an int array: no stack, about 40 bytes per iteration.
+  backtracking state in an int array: about 40 bytes per iteration.
 - Any other loop (a body with a nested group, lookaround or back reference, e.g.
-  `(?:(a)b)*`) recurses, about four frames per iteration: roughly 1000 iterations.
+  `(?:(a)b)*`) pushes a frame of 36 bytes for each decision and each node with
+  state: about 120 bytes per iteration of `(?:(a)b)*`, up to the frame cap.
 - Group nesting is parsed with an explicit stack (the reviewer's `Deep8` probe,
   at 300, 1000, 2000, 5000, 20000 and 200000 levels): here 2000 levels of any
   group kind compile, `(`, `(?=`, `(?!`, `(?<=` and `(?<!` fail at 5000, and
@@ -367,20 +432,31 @@ iterations) overflows, and so does a loop that recurses:
   once a search has taken 20000 loop steps it remembers, per loop, the
   (iteration count, position) states that failed and does not enter them again.
   The memo is a whitelist: it is on only for a pattern made entirely of
-  literals, classes, line breaks, groups, alternation, non-possessive loops and
-  anchors other than `\G`; one lookaround, atomic group, possessive loop,
-  back reference or `\G` turns it off for the whole pattern. The one visible
-  effect of a skipped state is where a failed search leaves the end of the
-  previous match, which a later `usePattern(\G)` could read; that is why `\G` in
-  the pattern turns the memo off, and why this one case is not covered.
-  It applies to loops that sit inside no other loop and no lookaround, in
-  patterns without back references anywhere (also after the loop) and without
+  literals, classes, line breaks, groups, alternation, loops, lookarounds,
+  atomic groups, possessive repeats and anchors other than `\G`, with no
+  capture that outlives a failed path; one back reference, `\G` or such a
+  capture turns it off for the whole pattern. A failed state also remembers
+  the last event its paths recorded, and skipping it records that event again,
+  so even where a failed search leaves the end of the previous match (which the
+  next `find()` and `\G` start from) is unchanged: with the memo switched on
+  from the first step and with it never on, 27500 fuzz cases give the same
+  output. Before S5-09 a skipped state could move that end, so a `find()` after
+  a failed `matches()` could find what the oracle does not. Failures are bits,
+  at most 67108864 states per loop (counts times positions; beyond that a loop
+  remembers nothing), as before S5-09; the events sit beside them in a hash
+  table of at most 524288 states, and a state that fails once the table is
+  full is remembered without its event, so only then can a skip move that end
+  as before.
+  It applies to loops that sit inside no other loop, lookaround or atomic
+  group, in patterns without back references anywhere (also after the loop)
+  and without
   a capturing group inside a lookaround or atomic group or a possessive repeat
   of a group (those keep their capture when a path fails, so which paths were
   tried would show in the groups). The class comment of `LoopMemo` lists what
   the outcome of a state depends on, and `RegexMemo` pins each guard with
   searches long enough to switch the memo on (a run of 21000 failing starts
-  first is the cheap way).
+  first is the cheap way), and `RegexMemoAround` does the same for lookarounds,
+  atomic groups and possessive repeats.
   Nested loops such as `((a+)+)+b` stay exponential in their inner loop.
   `(?:x+x+)+y` on 22 `x` takes 0.2 s and `(.*?,){11}P` on `1,` twenty times
   0.3 s here (45 s before); `(?:\w+\s?)*$` on 2000 words and a `!` finishes in

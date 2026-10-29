@@ -1,5 +1,7 @@
 package java.util.regex;
 
+import java.util.Locale;
+
 /**
  * Looks up \p{InBlock} and \p{IsScript} names in {@link UnicodeData}. Each
  * table entry lists every name the oracle accepts for it (RegexUnicode pins
@@ -18,8 +20,18 @@ final class Blocks {
         return find(UnicodeData.SCRIPTS, name);
     }
 
+    /**
+     * The name in upper or lower case, as the oracle folds property, block and script names: by
+     * Unicode case mapping of the whole string (a dotless i folds to I, a capital dotted I lowers
+     * to i and a combining dot), the same under every default locale: Locale.ROOT, never the
+     * default one, which under Turkish would turn InBasicLatin into a dotted I (RegexNamesLocale).
+     */
+    static String foldName(String name, boolean upper) {
+        return upper ? name.toUpperCase(Locale.ROOT) : name.toLowerCase(Locale.ROOT);
+    }
+
     private static CharClass find(String[] table, String name) {
-        String key = "|" + name.toUpperCase() + "|";
+        String key = "|" + foldName(name, true) + "|";
         for (String entry : table) {
             int colon = entry.indexOf(':');
             if (("|" + entry.substring(0, colon) + "|").indexOf(key) >= 0) {

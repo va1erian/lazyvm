@@ -40,8 +40,17 @@ public final class Matcher implements MatchResult {
     int stopPos;
     /** Where the most recent repeat iteration ended in the current attempt, or -1. */
     int iterationEnd = -1;
-    /** Failed loop states of the current search (see LoopMemo). */
-    final LoopMemo memo = new LoopMemo();
+    /**
+     * Failed loop states of the current search (see LoopMemo), made when it starts when the
+     * pattern has a loop, and dropped with the stack when it ends.
+     */
+    LoopMemo memo;
+    /**
+     * The backtracking stack of the current search, made when it starts and dropped when it ends
+     * (see release), and the node the match goes on with (see Node.go).
+     */
+    Backtrack stack;
+    Node cont;
     int behindTarget;
 
     Matcher(Pattern parent, CharSequence text) {
@@ -74,6 +83,7 @@ public final class Matcher implements MatchResult {
         }
         parentPattern = newPattern;
         allocate();
+        release();
         return this;
     }
 
@@ -232,15 +242,24 @@ public final class Matcher implements MatchResult {
         hi = regionEnd;
         oldLast = oldLast < 0 ? from : oldLast;
         iterationEnd = -1;
-        memo.reset(regionStart, regionEnd, parentPattern.loopCount);
+        memo = parentPattern.loopCount > 0 ? new LoopMemo(regionStart, regionEnd, parentPattern.loopCount) : null;
+        stack = new Backtrack();
         clearGroups();
     }
 
     private boolean search(int from) {
+        try {
+            return scan(from);
+        } finally {
+            release();
+        }
+    }
+
+    private boolean scan(int from) {
         begin(from);
         mustReachEnd = false;
         if (parentPattern.anchoredStart) {
-            if (parentPattern.root.match(this, from)) {
+            if (stack.run(this, parentPattern.root, from)) {
                 return succeed(from);
             }
             first = -1;
@@ -252,11 +271,11 @@ public final class Matcher implements MatchResult {
         SearchHints hints = parentPattern.hints;
         for (int s = from; s <= guard; s++) {
             if (hints == null || hints.canStart(this, s)) {
-                if (parentPattern.root.match(this, s)) {
+                if (stack.run(this, parentPattern.root, s)) {
                     return succeed(s);
                 }
                 if (hints != null) {
-                    s = hints.skipTo(this, s);
+                    s = hints.skipTo(this, s, guard);
                 }
             }
             // Observed on the oracle: the step reads the pair even when the region end splits it.
@@ -274,12 +293,23 @@ public final class Matcher implements MatchResult {
         begin(from);
         mustReachEnd = whole;
         first = from;
-        if (parentPattern.root.match(this, from)) {
-            return succeed(from);
+        try {
+            if (stack.run(this, parentPattern.root, from)) {
+                return succeed(from);
+            }
+        } finally {
+            release();
         }
         first = -1;
         oldLast = afterFailure();
         return false;
+    }
+
+    /** Lets go of what a search built, even when it threw, so an idle matcher holds little. */
+    private void release() {
+        stack = null;
+        cont = null;
+        memo = null;
     }
 
     /**

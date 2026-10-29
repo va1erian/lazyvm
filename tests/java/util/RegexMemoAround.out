@@ -1,0 +1,29 @@
+== exponential without the memo (the oracle needs seconds, it doubles with each a)
+#(?:a|a*)*b(?=c) len20: hitEnd=true requireEnd=false
+#(?:a|a*)*b(?=c) len17: hitEnd=true requireEnd=false
+fast
+== a greedy loop whose body captures, so it is not a flat loop (the oracle needs seconds)
+#(?:(a)|aa)*c len40: hitEnd=true requireEnd=false
+fast
+== after 21000 failing starts, so the memo is on
+#(?:a|a*)*b(?=c) len21026: [14,22] hitEnd=true requireEnd=false
+#(?:a|a*)*b(?!c) len21026: [0,13] [23,26] hitEnd=true requireEnd=false
+#(a)(?:a|a*)*(b)(?=c) len21026: [14,22 14:15 21:22] hitEnd=true requireEnd=false
+#(?:a(?=a)|a)*b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+#(?:a(?!b)|aa)*b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+#(?:(?<=a)a|a)*b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+#(?:(?<!b)a|aa)*b(?<=ab) len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+#(?:(?>a|aa)|a)*b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+#(?:a|(?>a*))*b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+#(?:a|a*+)*b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+#(?:aa|a)*+b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+#(?:a|aa)*(?>b)c len21026: [14,23] hitEnd=true requireEnd=false
+#((?:a|aa)*)(b)(?=c) len21026: [14,22 14:21 21:22] hitEnd=true requireEnd=false
+#(?:a|aa)*(?=(?:a|aa)*b)a*b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+== a failed matches() long enough for the memo, then find() from where it left off
+#(?:[ab]+?.)*?c: matches false, find no, then \G at 42
+#(?:[ab]+?.)*?(?=a)?c: matches false, find no, then \G at 42
+#(?:[ab]+?.)*?(?=c)c: matches false, find no, then \G at 42
+#(?:[ab]+?.)*?(?>c): matches false, find no, then \G at 42
+#[ ]*((?:(?>[ab]?.)|.?+[ab]{0,2}?){2,}|[ab]*){2,}c++: matches false, find no, then \G at 8
+done

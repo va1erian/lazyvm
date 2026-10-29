@@ -340,7 +340,7 @@ Goal: the everyday `java.util` and `java.io` surface from
       `finalize` is never called).
       Check: `tests/java/lang/WeakRefs`.
 
-- [ ] S5-09 `java.util.regex` engine: an explicit backtrack stack (no recursion per
+- [x] S5-09 `java.util.regex` engine: an explicit backtrack stack (no recursion per
       iteration, so a non-flat loop runs as deep as the heap allows instead of
       about 500 to 2000 iterations), and the loop memo extended across lookarounds
       and possessive repeats (so `(?:a|a*)*b(?=c)` stops being exponential).
@@ -348,9 +348,11 @@ Goal: the everyday `java.util` and `java.io` surface from
       `docs/regex.md` for the measured limits.
       Check: the `Regex*` goldens unchanged, plus `tests/java/util/RegexDepth`
       (100000 iterations of `(?:(a)b)*`, `(a)\1*`, `(?:(?=a)a)*`) and a timed
-      `RegexMemo` row for `(?:a|a*)*b(?=c)` on 30 `a`, and a timed row for
-      `[ ]*,[ ]*` failing to `find` in 5000 spaces (42 s at S5-04, the oracle
-      25 ms).
+      row for `(?:a|a*)*b(?=c)` (`RegexMemoAround`: on 20 `a`, because the oracle
+      is exponential on it too and does not finish 30 `a` to bless the golden;
+      30 `a` takes 0.25 s here), a timed `RegexRuns` row for `[ ]*,[ ]*` failing
+      to `find` in 5000 spaces (42 s at S5-04, 0.02 s now, the oracle 25 ms), and
+      `RegexNamesLocale` (property names under a Turkish default).
 
 Gate: `tests/java/s5/WordCount` (reads a 5 MB file, counts with `HashMap`,
 prints the top 20 with `printf`) matches the oracle on both platforms.

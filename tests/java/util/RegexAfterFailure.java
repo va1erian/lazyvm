@@ -7,7 +7,8 @@ import java.util.regex.Pattern;
  * Where the matcher's "end of the previous match" is after an attempt fails, which is where \G
  * matches and where the next find() starts. Each row reads it back with \G after a failed
  * matches(), lookingAt() and find() on a set of texts ("-" when the call succeeded). The sweep at
- * the end hashes the same readings for every pair of 26 fragments and all texts up to length 4.
+ * the end hashes the same readings for pairs of 26 fragments and all texts up to length 4: here
+ * the first half of the first fragments, in RegexAfterFailureSweep the second.
  */
 public class RegexAfterFailure {
     static final String[] TEXTS = {"", "a", "b", "ab", "aab", "aabx", "abcx", "abx", "ababx", "ababab", "1,22,333;", "aaax", "abab", "abc",
@@ -63,7 +64,17 @@ public class RegexAfterFailure {
             "(?:a(?!a)|b)*c", "(?=(?>a+))c", "(?:a(?=a)|b)+?c"}) {
             row(re);
         }
-        System.out.println("== every pair of fragments");
+        sweep(0, FRAGMENTS.length / 2);
+        System.out.println("done");
+    }
+
+    /**
+     * Hashes the readings of every pattern x y c with x one of FRAGMENTS[from..to) and y any
+     * fragment, over every text of a, b and c up to length 4. RegexAfterFailureSweep runs the
+     * second half, so each test stays well under the CI time limit.
+     */
+    static void sweep(int from, int to) {
+        System.out.println("== every pair of fragments, the first one of " + from + " to " + to);
         String[] texts = new String[121];
         int n = 0;
         texts[n++] = "";
@@ -84,7 +95,8 @@ public class RegexAfterFailure {
         }
         long hash = 0;
         int patterns = 0;
-        for (String x : FRAGMENTS) {
+        for (int k = from; k < to; k++) {
+            String x = FRAGMENTS[k];
             for (String y : FRAGMENTS) {
                 Pattern p = Pattern.compile(x + y + "c");
                 StringBuilder sb = new StringBuilder();
@@ -98,6 +110,5 @@ public class RegexAfterFailure {
             }
         }
         System.out.println(patterns + " patterns, hash " + hash);
-        System.out.println("done");
     }
 }
