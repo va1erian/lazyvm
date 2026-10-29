@@ -1,7 +1,8 @@
 # `lazy.ui`: Java bindings for xui (design)
 
 Status: S9-01 in [`plan-2.md`](plan-2.md), reviewed by the owner (decisions
-at the end). Nothing here is built yet. It was written against xui at
+at the end). The S9-02 spike built the core of it for `samples/counter`
+("Spike results"); S9-02 to S9-06 build the rest. It was written against xui at
 `71dc3b5903ac94dba00466a6d6a00d69251beeab`, the revision LazyOS's `xui-app`
 pins, after reading its README, `docs/architecture.md`, `docs/widgets.md`,
 `docs/forms.md`, `docs/headless-screenshots.md`, `xui-core`'s `Backend`, `Ui`
@@ -356,8 +357,8 @@ So:
 
 ## xui gaps found so far
 
-To be filed on `va1erian/xui` once S9-02 or the item named confirms each in
-code.
+To be filed on `va1erian/xui` once code confirms each. The S9-02 spike
+confirmed 2 (the size), 5, 6, 7 and 8; the others wait for the item named.
 
 1. **No way to pump the loop from outside.** `Backend::run` blocks until
    quit. A `pump(timeout)` step would let `lazy.gfx`'s program-owned loop
