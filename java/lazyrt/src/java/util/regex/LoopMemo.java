@@ -42,35 +42,44 @@ package java.util.regex;
  * marks its entry with {@link #enter} (NO_EVENT, "nothing since"), so on failure the last event
  * is simply what Matcher.iterationEnd holds, and NO_EVENT means the value before the entry.
  * </ul>
- * So a skipped state changes nothing a caller can see.
+ * So a skipped state changes nothing a caller can see, as long as its event fits in the event
+ * table ({@link #EVENTS}); a state remembered beyond that is skipped without its event, which can
+ * move where a failed search leaves off (the memo did that for every state before S5-09).
+ *
+ * <p>Failures are bits, up to {@link #LIMIT_BITS} states per loop; the last events are a hash
+ * table beside them, holding only the states that recorded one.
  *
  * <p>{@link #prepare} marks the loops that qualify. Nothing is remembered, or even allocated,
  * until a search has taken {@link #AFTER} loop steps, so ordinary matches pay for a counter only.
  */
 final class LoopMemo {
     static final int AFTER = 20000;
-    /** Largest table, in states, one loop may use; a bigger one is not worth the memory. */
-    private static final long LIMIT = 1L << 21;
+    /** Largest failure table, in states, one loop may use; a bigger one is not worth the memory. */
+    private static final long LIMIT_BITS = 1L << 26;
+    /** Most failed states whose last event is remembered (12 MB of table when full). */
+    private static final int EVENTS = 1 << 19;
     /** Matcher.iterationEnd while nothing has been recorded since a state was entered. */
     private static final int NO_EVENT = -2;
 
     private int work;
     private int lo;
     private int span;
+    private int loops;
+    /** Per loop, a bit per state (count slot times position): set when the state failed. */
+    private long[][] bits;
     /**
-     * Per loop, per state: 0 when not known to fail, 1 when it failed without recording an event,
-     * else the position of the last event its paths recorded, plus 2.
+     * The last event of each failed state that recorded one, by open addressing: a key is the
+     * loop and the state's bit, plus 1 so that 0 marks a free entry.
      */
-    private int[][] states;
+    private long[] eventKeys;
+    private int[] eventPositions;
+    private int eventCount;
 
-    void reset(int regionStart, int regionEnd, int loops) {
-        work = 0;
+    /** The memo of one search over the region, for a pattern with this many loops. */
+    LoopMemo(int regionStart, int regionEnd, int loops) {
         lo = regionStart;
         span = regionEnd - regionStart + 1;
-        states = null;
-        if (loops > 0) {
-            states = new int[loops][];
-        }
+        this.loops = loops;
     }
 
     /** Counts one loop step; true once the search has done enough of them to start remembering. */
@@ -83,15 +92,19 @@ final class LoopMemo {
      * paths left, as running them would, and returns true.
      */
     boolean skip(Matcher m, int loop, int count, int slots, int pos) {
-        int[] table = states == null ? null : states[loop];
+        long[] table = bits == null ? null : bits[loop];
         if (table == null || pos < lo || pos >= lo + span) {
             return false;
         }
-        int known = table[index(count, slots, pos)];
-        if (known > 1) {
-            m.iterationEnd = known - 2;
+        long bit = bit(count, slots, pos);
+        if ((table[(int) (bit >> 6)] & (1L << (bit & 63))) == 0) {
+            return false;
         }
-        return known != 0;
+        int event = eventCount == 0 ? NO_EVENT : event(key(loop, bit));
+        if (event != NO_EVENT) {
+            m.iterationEnd = event;
+        }
+        return true;
     }
 
     /** Marks the entry of a state whose failure is to be remembered; returns what to pass to failed. */
@@ -107,19 +120,79 @@ final class LoopMemo {
         if (last == NO_EVENT) {
             m.iterationEnd = before;
         }
-        if (states == null || pos < lo || pos >= lo + span || (long) slots * span > LIMIT) {
+        if (loops == 0 || pos < lo || pos >= lo + span || (long) slots * span > LIMIT_BITS) {
             return;
         }
-        int[] table = states[loop];
-        if (table == null) {
-            table = new int[slots * span];
-            states[loop] = table;
+        if (bits == null) {
+            bits = new long[loops][];
         }
-        table[index(count, slots, pos)] = last == NO_EVENT ? 1 : last + 2;
+        long[] table = bits[loop];
+        if (table == null) {
+            table = new long[(int) (((long) slots * span + 63) >> 6)];
+            bits[loop] = table;
+        }
+        long bit = bit(count, slots, pos);
+        if (last != NO_EVENT) {
+            putEvent(key(loop, bit), last);
+        }
+        table[(int) (bit >> 6)] |= 1L << (bit & 63);
     }
 
-    private int index(int count, int slots, int pos) {
-        return (count < slots ? count : slots - 1) * span + (pos - lo);
+    private long bit(int count, int slots, int pos) {
+        return (long) (count < slots ? count : slots - 1) * span + (pos - lo);
+    }
+
+    private static long key(int loop, long bit) {
+        return ((long) loop << 40 | bit) + 1;
+    }
+
+    private static int slotOf(long key, int mask) {
+        return (int) ((key * 0x9E3779B97F4A7C15L) >>> 40) & mask;
+    }
+
+    /** The event recorded for the key, or NO_EVENT. */
+    private int event(long key) {
+        int mask = eventKeys.length - 1;
+        for (int k = slotOf(key, mask); eventKeys[k] != 0; k = (k + 1) & mask) {
+            if (eventKeys[k] == key) {
+                return eventPositions[k];
+            }
+        }
+        return NO_EVENT;
+    }
+
+    /** Records an event; once the table is full, further states are remembered without one. */
+    private void putEvent(long key, int position) {
+        if (eventCount >= EVENTS) {
+            return;
+        }
+        if (eventKeys == null || 2 * (eventCount + 1) > eventKeys.length) {
+            growEvents();
+        }
+        int mask = eventKeys.length - 1;
+        int k = slotOf(key, mask);
+        while (eventKeys[k] != 0) {
+            k = (k + 1) & mask;
+        }
+        eventKeys[k] = key;
+        eventPositions[k] = position;
+        eventCount++;
+    }
+
+    private void growEvents() {
+        long[] oldKeys = eventKeys;
+        int[] oldPositions = eventPositions;
+        int size = oldKeys == null ? 256 : oldKeys.length * 2;
+        eventKeys = new long[size];
+        eventPositions = new int[size];
+        eventCount = 0;
+        if (oldKeys != null) {
+            for (int k = 0; k < oldKeys.length; k++) {
+                if (oldKeys[k] != 0) {
+                    putEvent(oldKeys[k], oldPositions[k]);
+                }
+            }
+        }
     }
 
     /** The slot count for a loop: counts below the minimum differ, counts beyond it do not. */

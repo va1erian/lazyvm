@@ -283,7 +283,10 @@ is the recursive engine):
 | `(?:a|a*)*b(?=c)` on 20 `a` | (about an hour) | 0.25 s | 7.5 s |
 | `(?:a|a*)*b(?=c)` on 30 `a` | | 0.25 s | over 120 s |
 | `(?:(a)b)*` on 100000 `ab` | `StackOverflowError` | 0.45 s | 2 ms |
-| `(?:(a)b)*` on 1000000 `ab` | `StackOverflowError` | 5 s | |
+| `(?:(a)b)*` on 340000 `ab` | `StackOverflowError` | 1.6 s | |
+| `(?:(a)b)*` on 360000 `ab` (past the frame cap) | `StackOverflowError` | `StackOverflowError` after 1.6 s | |
+| `(?:a\|aa){0,30}b` on 80000 `a` | 26 s | 31 s | |
+| `(?:x\|xx)*y` on 2500000 `x` (`-Xmx1g`) | 33 s | 40 s | |
 | `(?:(?:ab)+c)*` on 30000 `ababc` | `StackOverflowError` | 0.35 s | `StackOverflowError` at 4000 |
 | `..{2,}ab` on 2000 `z` | 5.2 s | 4.1 s | 13 ms |
 
@@ -350,10 +353,16 @@ The oracle is exponential on `(?:a|a*)*b(?=c)` too (0.23 s on 16 `a`, 7.5 s on
 - `(?<😀a*` reports a different error first than the oracle (the group-name
   check comes before the end of the pattern is noticed here).
 - **Depth.** Matching takes no Java frame per node or per iteration
-  (`Backtrack`), so a loop over any body runs as many iterations as the heap
-  holds frames for: about 120 bytes per iteration of `(?:(a)b)*` (three frames:
-  the loop's decision and the two halves of the group), so 1000000 iterations
-  match at the default heap and 2000000 run out of memory (`OutOfMemoryError`).
+  (`Backtrack`). The stack is capped at 1048576 frames (32 MB of ints), and a
+  match that needs more throws `StackOverflowError`, as the oracle does when
+  its own stack runs out, within seconds and well before the heap would run
+  out (the alternative, filling the default heap, took about 9 s and left an
+  `OutOfMemoryError`). That is about 349000 iterations of `(?:(a)b)*` (three
+  frames: the loop's decision and the two halves of the group) and 1048000 of
+  `(a)\1*` or `(?:(?=a)a)*`. A matcher holds no stack or memo between searches:
+  both are made when a search starts and dropped when it ends, also when the
+  match throws (`RegexMatcherMemory` runs 101000 live matchers and a matcher
+  whose deep match threw in 48 MB).
   `RegexDepth` runs 100000 iterations of loops over a group, a back reference
   and a lookaround; the oracle at its default stack manages those shapes, but
   throws `StackOverflowError` on others that run here, measured in a fresh JVM
@@ -376,9 +385,12 @@ The oracle is exponential on `(?:a|a*)*b(?=c)` too (0.23 s on 16 `a`, 7.5 s on
   bytecodes than the recursive walk did: about 1.7 to 1.9 times as many on
   patterns that backtrack a lot through groups, alternatives and lookarounds,
   which take 1.4 to 1.6 times as long (`RegexMemo`, and `RegexMemoLoops`, split
-  into `RegexMemoStarts` to stay under the CI limit). Searches over runs of a
-  class run fewer than before, through the shortcuts above and the char fast
-  paths of `Atoms.One` and `Repeat.widthAt`.
+  into `RegexMemoStarts` to stay under the CI limit). Short matches pay about
+  20% too: 200000 fresh `matches()` of `a?b?c` take 2.07 s against 1.73 s
+  before, `split` and `replaceAll` over 500 KB of text 17.0 s against 14.4 s,
+  and the long memo searches in the table above 18 to 20% more. Searches over
+  long runs of a class run fewer than before, through the shortcuts above and
+  the char fast paths of `Atoms.One` and `Repeat.widthAt`.
 - **Names under another default locale.** Property, block and script names are
   folded through `Blocks.foldName` with `Locale.ROOT`, never the default
   locale, which matches the oracle under every locale: a dotless `ı`, a long
@@ -389,7 +401,7 @@ The oracle is exponential on `(?:a|a*)*b(?=c)` too (0.23 s on 16 `a`, 7.5 s on
 
 Matching uses no Java frames per node (`Backtrack`), so neither the length of
 a pattern nor the number of iterations is bounded by the VM's 4096-frame limit
-(`Options::max_frames`); the heap is the bound:
+(`Options::max_frames`); the stack's own cap of 1048576 frames is:
 
 - Loops over one character class (`.*`, `\w+`, `[^,]*?`), and the same inside
   one capturing group (`(\d)+`, `(a|b)*`; alternatives of single chars become one
@@ -400,7 +412,7 @@ a pattern nor the number of iterations is bounded by the VM's 4096-frame limit
   backtracking state in an int array: about 40 bytes per iteration.
 - Any other loop (a body with a nested group, lookaround or back reference, e.g.
   `(?:(a)b)*`) pushes a frame of 36 bytes for each decision and each node with
-  state: about 120 bytes per iteration of `(?:(a)b)*`.
+  state: about 120 bytes per iteration of `(?:(a)b)*`, up to the frame cap.
 - Group nesting is parsed with an explicit stack (the reviewer's `Deep8` probe,
   at 300, 1000, 2000, 5000, 20000 and 200000 levels): here 2000 levels of any
   group kind compile, `(`, `(?=`, `(?!`, `(?<=` and `(?<!` fail at 5000, and
@@ -429,9 +441,12 @@ a pattern nor the number of iterations is bounded by the VM's 4096-frame limit
   next `find()` and `\G` start from) is unchanged: with the memo switched on
   from the first step and with it never on, 27500 fuzz cases give the same
   output. Before S5-09 a skipped state could move that end, so a `find()` after
-  a failed `matches()` could find what the oracle does not. A table holds at
-  most 2097152 states per loop (counts times positions); beyond that the memo
-  does not remember.
+  a failed `matches()` could find what the oracle does not. Failures are bits,
+  at most 67108864 states per loop (counts times positions; beyond that a loop
+  remembers nothing), as before S5-09; the events sit beside them in a hash
+  table of at most 524288 states, and a state that fails once the table is
+  full is remembered without its event, so only then can a skip move that end
+  as before.
   It applies to loops that sit inside no other loop, lookaround or atomic
   group, in patterns without back references anywhere (also after the loop)
   and without

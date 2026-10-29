@@ -1,8 +1,13 @@
 package java.util.regex;
 
 /**
- * The backtracking stack of one matcher, kept in growable arrays on the heap, so a match can run
- * as many loop iterations as memory allows instead of being bounded by the VM's frame limit.
+ * The backtracking stack of one matcher, kept in growable arrays on the heap, so a match is not
+ * bounded by the VM's frame limit. It is bounded by {@link #MAX_FRAMES} instead: a match that needs
+ * more throws StackOverflowError, as the oracle does when its stack runs out, well before the
+ * heap would. The arrays are made on the first push. A matcher makes a stack when a search
+ * starts and drops it when the search ends, however it ends (Matcher.release), so an idle matcher,
+ * or one whose match threw, holds none of it: the recursive engine dropped the same state with
+ * its Java frames.
  *
  * <p>A match runs as a loop here: each node's {@link Node#go} either moves on (it returns a
  * position and sets {@code Matcher.cont} to the node to run there), fails, or ends the match. A
@@ -28,16 +33,18 @@ final class Backtrack {
     /** Where a scope frame keeps the scope that was open before it (Node.Scope restores it). */
     static final int OUTER = 7;
 
-    /** Frames kept between attempts; a deeper stack is let go when its attempt ends. */
-    private static final int KEPT = 1 << 14;
+    /** The most frames a match may use: 32 MB of ints, about 350000 iterations of (?:(a)b)*. */
+    static final int MAX_FRAMES = 1 << 20;
+    /** Frames made by the first push of a search. */
+    private static final int FIRST = 4;
+    private static final Node[] NO_OWNERS = new Node[0];
+    private static final int[] NO_INTS = new int[0];
 
-    private Node[] owners = new Node[64];
+    private Node[] owners = NO_OWNERS;
     /** The frames' ints; a caller re-reads this field after every push, which may replace it. */
-    int[] data = new int[64 << SHIFT];
+    int[] data = NO_INTS;
     /** One object per frame, made the first time a frame carries one (see FlatLoop). */
     private Object[] refs;
-    /** The frames below this index may still hold an object in refs. */
-    private int refsTop;
     private int frames;
     /** The frame of the innermost open scope, or -1. */
     int scope;
@@ -50,35 +57,16 @@ final class Backtrack {
             i = node.go(m, i);
             while (i < 0) {
                 if (i == DONE) {
-                    release();
                     return true;
                 }
                 int f = frames - 1;
                 if (f < 0) {
-                    release();
                     return false;
                 }
                 frames = f;
                 i = owners[f].back(m, f << SHIFT);
             }
             node = m.cont;
-        }
-    }
-
-    /**
-     * Lets go of what the attempt left behind, which the recursive engine dropped with its Java
-     * frames: the loop states frames still point to, and a stack a deep match grew, so that a
-     * matcher that lives on does not keep them.
-     */
-    private void release() {
-        if (owners.length > KEPT) {
-            owners = new Node[64];
-            data = new int[64 << SHIFT];
-            refs = null;
-            refsTop = 0;
-        }
-        for (; refsTop > 0; refsTop--) {
-            refs[refsTop - 1] = null;
         }
     }
 
@@ -132,9 +120,6 @@ final class Backtrack {
             refs = bigger;
         }
         refs[frames - 1] = o;
-        if (frames > refsTop) {
-            refsTop = frames;
-        }
     }
 
     /** The object of the frame just popped for a back call, released from the stack. */
@@ -145,11 +130,10 @@ final class Backtrack {
     }
 
     private void grow() {
-        if (frames > (Integer.MAX_VALUE >> SHIFT) / 2) {
-            // The ints of twice as many frames would not fit in one array.
-            throw new OutOfMemoryError("Regex backtracking stack");
+        if (frames >= MAX_FRAMES) {
+            throw new StackOverflowError();
         }
-        int size = frames * 2;
+        int size = frames == 0 ? FIRST : Math.min(frames * 2, MAX_FRAMES);
         Node[] biggerOwners = new Node[size];
         int[] biggerData = new int[size << SHIFT];
         System.arraycopy(owners, 0, biggerOwners, 0, frames);

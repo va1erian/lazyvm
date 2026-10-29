@@ -57,8 +57,10 @@ final class Repeat {
          * event for Matcher.iterationEnd, except for a class made of alternatives (?:a|b)*, which
          * the oracle runs as a loop and which records nothing unless it is possessive.
          */
+        private final boolean records;
+
         boolean recordsRuns() {
-            return !fromAlternation || mode == POSSESSIVE;
+            return records;
         }
 
         /** A possessive repeat of a group leaves its capture set when the match later backs out. */
@@ -80,6 +82,7 @@ final class Repeat {
             this.group = group;
             this.fromAlternation = fromAlternation;
             this.question = question;
+            this.records = !fromAlternation || mode == POSSESSIVE;
         }
 
         int minCount() {
@@ -109,7 +112,7 @@ final class Repeat {
                     n++;
                 }
                 st[countAt] = n;
-                if (n > 0 && recordsRuns()) {
+                if (n > 0 && records) {
                     m.iterationEnd = j;
                 }
                 return n < minCount ? -1 : j;
@@ -124,7 +127,7 @@ final class Repeat {
                     return -1;
                 }
                 st[countAt] = n + 1;
-                if (recordsRuns()) {
+                if (records) {
                     m.iterationEnd = prevEnd + w;
                 }
                 return prevEnd + w;
@@ -143,8 +146,15 @@ final class Repeat {
          */
         private int proceed(Matcher m, int i, int j, int n) {
             // A count after which the rest cannot begin is passed over: trying it would fail at
-            // once without any effect. A lazy repeat still records each char it takes.
-            while (!canFollow(m, j)) {
+            // once without any effect, because j is inside the bounds, its char is not a surrogate
+            // (a pair read whole could reach past the end and set hitEnd), and it is outside the
+            // class the rest must begin with. A lazy repeat still records each char it takes.
+            CharClass f = follow;
+            while (f != null && j < m.hi) {
+                char c = m.text.charAt(j);
+                if ((c >= Character.MIN_SURROGATE && c <= Character.MAX_SURROGATE) || f.test(c)) {
+                    break;
+                }
                 if (mode == GREEDY && n > minCount) {
                     n--;
                     j -= widthBefore(m, i, j);
@@ -156,7 +166,7 @@ final class Repeat {
                 }
                 j += w;
                 n++;
-                if (recordsRuns()) {
+                if (records) {
                     m.iterationEnd = j;
                 }
             }
@@ -179,19 +189,6 @@ final class Repeat {
             }
             m.cont = next;
             return j;
-        }
-
-        /**
-         * False only when the rest of the pattern would fail at j at once and without any effect:
-         * j is inside the bounds, its char is not a surrogate (a pair read whole could reach past
-         * the end and set hitEnd), and it is outside the class the rest must begin with.
-         */
-        private boolean canFollow(Matcher m, int j) {
-            if (follow == null || j >= m.hi) {
-                return true;
-            }
-            char c = m.text.charAt(j);
-            return Character.isSurrogate(c) || follow.test(c);
         }
 
         Node link(Node after) {
@@ -236,7 +233,7 @@ final class Repeat {
                     return FAIL;
                 }
                 j += w;
-                if (recordsRuns()) {
+                if (records) {
                     m.iterationEnd = j;
                 }
                 return proceed(m, i, j, n + 1);
@@ -258,7 +255,7 @@ final class Repeat {
                     }
                     j += w;
                     n++;
-                    if (recordsRuns()) {
+                    if (records) {
                         m.iterationEnd = j;
                     }
                 }
@@ -272,7 +269,7 @@ final class Repeat {
                 j += w;
                 n++;
             }
-            if (n > 0 && recordsRuns()) {
+            if (n > 0 && records) {
                 m.iterationEnd = j;
             }
             return n < minCount ? FAIL : proceed(m, i, j, n);
