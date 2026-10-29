@@ -26,6 +26,31 @@ required before S10's packages can install third-party jars and before S12-S13 r
 
 Gate: `tools/test.py` with `-Xverify:all` (the default from now on) passes on both platforms.
 
+## S11. Streams, `java.time`, logging, JDWP
+
+Runs right after S8, ahead of S9 and S10, and keeps its number: by then S4,
+S6 and S8 have finished the interpreter, so S11-05 tunes the final
+interpreter, and the S8 verifier lets it drop the per-instruction checks
+that malformed bytecode needs today. Real apps (the Minicraft Plus port)
+need its library items, and its speed, before `lazy.ui` and LazyOS
+packaging.
+
+- [ ] S11-01 `java.util.stream`: all stream types and collectors, sequential
+      only (`parallel()` is accepted and ignored).
+      Check: `tests/java/stream/*`.
+- [ ] S11-02 `java.time` subset ([`decisions.md`](decisions.md) D6) and the
+      `%t` conversions of `Formatter`.
+      Check: `tests/java/time/*` (fixed clocks only).
+- [ ] S11-03 `java.util.logging` minimal.
+      Check: `tests/java/util/Logging`.
+- [ ] S11-04 JDWP over a socket (`-agentlib:jdwp=transport=dt_socket,…`):
+      breakpoints, stepping, stack frames, locals, and evaluate-free variable
+      views, enough for IntelliJ's debugger.
+      Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
+- [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
+      inline caches only if a benchmark proves a 20% win.
+      Check: `tools/bench.py` before and after, in the PR.
+
 ## S9. `lazy.ui` on xui
 
 Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or Swing.
@@ -99,24 +124,6 @@ Goal: Java apps are first-class LazyOS apps. They talk Messenger with
 
 Gate: `samples/healthwatch` subscribes to `system/health/*`, shows it in a
 `lazy.ui` list and posts a notification on errors, on LazyOS.
-
-## S11. Streams, `java.time`, logging, JDWP
-
-- [ ] S11-01 `java.util.stream`: all stream types and collectors, sequential
-      only (`parallel()` is accepted and ignored).
-      Check: `tests/java/stream/*`.
-- [ ] S11-02 `java.time` subset ([`decisions.md`](decisions.md) D6) and the
-      `%t` conversions of `Formatter`.
-      Check: `tests/java/time/*` (fixed clocks only).
-- [ ] S11-03 `java.util.logging` minimal.
-      Check: `tests/java/util/Logging`.
-- [ ] S11-04 JDWP over a socket (`-agentlib:jdwp=transport=dt_socket,…`):
-      breakpoints, stepping, stack frames, locals, and evaluate-free variable
-      views, enough for IntelliJ's debugger.
-      Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
-- [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
-      inline caches only if a benchmark proves a 20% win.
-      Check: `tools/bench.py` before and after, in the PR.
 
 ## S12. Explore: AWT on xui
 
