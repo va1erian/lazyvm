@@ -164,11 +164,16 @@ impl Vm {
         }
         f.next_pc = f.pc + len;
         let at = f.stack.len() - n;
+        // The arguments are still on this frame's stack, so they stay rooted
+        // while this thread waits for a `synchronized` method's monitor.
+        let args: Vec<Value> = f.stack[at..].to_vec();
         if self.method(m).is_native() {
             let native = self.native_for(m)?;
+            let lock = self.lock_for_call(m, &args)?;
             // The arguments stay on this frame's stack during the call, so they are rooted.
-            let args: Vec<Value> = self.top()?.stack[at..].to_vec();
-            let result = native(self, &args)?;
+            let result = native(self, &args);
+            self.drop_method_lock(lock);
+            let result = result?;
             let ret = self.method(m).ret;
             let f = self.top()?;
             f.stack.truncate(at);
@@ -183,11 +188,16 @@ impl Vm {
                 }
             }
             f.pc = f.next_pc;
-            return Ok(Flow::Next);
+            return Ok(Flow::Poll);
         }
-        let args = self.top()?.stack.split_off(at);
-        self.push_frame(m, &args)?;
-        Ok(Flow::Next)
+        let lock = self.lock_for_call(m, &args)?;
+        self.top()?.stack.truncate(at);
+        if let Err(e) = self.push_frame(m, &args) {
+            self.drop_method_lock(lock);
+            return Err(e);
+        }
+        self.hold_method_lock(lock)?;
+        Ok(Flow::Poll)
     }
 }
 

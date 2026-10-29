@@ -1,4 +1,4 @@
-//! Constants from the pool, fields, allocation, type checks, `athrow` and monitors.
+//! Constants from the pool, fields, allocation, type checks, and `athrow`.
 //!
 //! Rooting rule: resolution and class initialization can run Java code, so
 //! each instruction resolves and initializes *before* popping its operands.
@@ -41,12 +41,6 @@ impl Vm {
                 return Err(VmError::Throw(ex));
             }
             0xc0 | 0xc1 => self.type_check(op)?,
-            0xc2 | 0xc3 => {
-                // Monitors arrive with threads in S6; the null check is required now.
-                let f = self.top()?;
-                f.pop_nonnull()?;
-                f.advance(1);
-            }
             0xc5 => self.op_multianewarray()?,
             _ => return Err(VmError::verify(format!("op_object cannot run {op:#04x}"))),
         }

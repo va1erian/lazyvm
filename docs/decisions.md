@@ -114,8 +114,10 @@ decision marked **(proposed)** is not in force until the owner confirms it.
   `wait`, monitor contention) and every few thousand backward branches. That
   gives real concurrency for I/O and a simple memory model, but no parallel
   bytecode, which is not a goal. GC runs under the lock, so it stops the world
-  without safepoint handshakes. Until S6 the VM runs one thread, and
-  `Thread.start` throws `UnsupportedOperationException`.
+  without safepoint handshakes. Built in S6: the threads hand the `Vm`
+  itself over, a holder yields at backward branches and calls after a 5 ms
+  slice, and a monitor's owner lives in the object's heap slot
+  ([`design/threads.md`](design/threads.md)).
 
 ## D6. Class library scope
 
