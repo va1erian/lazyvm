@@ -82,6 +82,20 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       Check: `tools/test.py --filter gfx` on Windows and
       `tools/lazyos_test.py --filter gfx` on LazyOS (both headless); on
       Windows, a demo window screenshot showing the scaled frame.
+- [x] S9-00b (prototype, ahead of the stage) `lazy.gfx.Surface`: native
+      drawing on an `int[]` (clear, fill, rect, line, blit with flips, alpha
+      test, key and solid colours, and a masked blend), so that a game's
+      sprites cost one call each instead of a pixel loop in the interpreter
+      ([`gfx.md`](gfx.md), "Drawing"). Plain Rust in `crates/gfx/src/raster.rs`,
+      no new dependency.
+      Check: `cargo test -p gfx raster` (fills, masks and blits against
+      pixel-by-pixel references, blending against floating-point
+      source-over, lines against the classic Bresenham loop);
+      `tools/test.py --filter gfx` on Windows and `tools/lazyos_test.py
+      --filter gfx` on LazyOS, where `SurfaceDraw`'s pixels are worked out by
+      hand from the rules; the Minicraft Plus port drawn through `Surface`
+      on Windows, its frames compared with the pixel-loop version and its
+      frame times recorded in the PR (the port stays outside this repo).
 - [ ] S9-01 Design note `docs/ui.md`: read the xui README and `xui-core` at
       LazyOS's pinned rev, then map its update model, widget set, layout and
       theming onto a Java API (a `render()` method returning a node tree,

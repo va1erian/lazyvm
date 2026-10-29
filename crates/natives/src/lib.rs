@@ -19,6 +19,7 @@ mod lang_string_case;
 mod lang_system;
 mod lang_throwable;
 mod lazy_gfx;
+mod lazy_gfx_draw;
 mod math;
 mod real_path;
 mod reflect;
@@ -40,6 +41,7 @@ pub fn register_all(vm: &mut Vm) {
     lang_string_case::register(vm);
     internal::register(vm);
     lazy_gfx::register(vm);
+    lazy_gfx_draw::register(vm);
     files::register(vm);
     file_attrs::register(vm);
     reflect::register(vm);

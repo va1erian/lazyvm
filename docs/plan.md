@@ -44,7 +44,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S7 | Networking | not started |
 | S8 | Verifier and hardening | not started |
 | S11 | Streams, `java.time`, logging, JDWP | not started |
-| S9 | `lazy.ui` on xui | not started (S9-00 prototype done) |
+| S9 | `lazy.ui` on xui | not started (S9-00 and S9-00b prototypes done) |
 | S10 | Messenger and LazyOS integration | not started |
 | S12 | Explore: AWT on xui | not started |
 | S13 | Explore: Swing and media | not started |

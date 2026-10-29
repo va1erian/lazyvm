@@ -201,6 +201,28 @@ Handles name entries in a table owned by the VM thread. Except where noted
 above, an unknown handle is `IllegalStateException`. Sizes are checked in Java
 and again in Rust.
 
+### `lazy.gfx.Surface` (docs/gfx.md)
+Every native gets the surface as its first seven arguments: its `int[]`, its
+width and height, and its clip as `x0, y0, x1, y1` (far edges excluded). Rust
+checks them again: an array shorter than `width * height`, a negative size or
+a clip outside the surface is `IllegalArgumentException`. All drawing is cut
+to the clip; no coordinate overflows.
+- `private static native void fill0(int[] px, int w, int h, int cx0, int cy0, int cx1, int cy1, int x, int y, int rw, int rh, int argb, boolean blend)`:
+  paints `argb` by its alpha, or writes it as it is when `blend` is false
+  (`clear`). `rect` is four `fill0` calls in Java.
+- `private static native void line0(int[] px, int w, int h, int cx0, int cy0, int cx1, int cy1, int x0, int y0, int x1, int y1, int argb)`
+- `private static native void blit0(int[] px, int w, int h, int cx0, int cy0, int cx1, int cy1, int[] src, int sw, int sh, int sx, int sy, int bw, int bh, int dx, int dy, int flags, int key, int keyColor, int solid)`:
+  flags other than the five `Surface` constants are `IllegalArgumentException`;
+  a non-empty source rectangle outside `src` is `IndexOutOfBoundsException`,
+  even where the clip hides it.
+- `private static native void blendMask0(int[] px, int w, int h, int cx0, int cy0, int cx1, int cy1, int[] mask, int rgb, int strength)`:
+  a mask shorter than `w * h` or a strength outside 0 to 255 is
+  `IllegalArgumentException`.
+
+`blit0` and `blendMask0` copy the part they read into a per-thread buffer
+first, since the heap lends one array at a time; failing to grow it is
+`OutOfMemoryError`.
+
 ## Known differences from Java 8
 
 - `StrictMath` (and `Math`, which delegates to it) gives `libm`'s results, not
