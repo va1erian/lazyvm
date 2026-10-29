@@ -42,16 +42,44 @@ final class Shutdown {
         return hooks.remove(hook) != null;
     }
 
-    /** Starts every hook, then waits for all of them; only the first call does. */
+    /**
+     * The VM's shutdown after the last non-daemon thread: the hooks, unless
+     * a System.exit is already under way, in which case this thread waits
+     * for it to end the VM.
+     */
     static void runHooks() {
-        Thread[] list;
-        synchronized (Shutdown.class) {
-            if (hooksStarted) {
-                return;
-            }
-            hooksStarted = true;
-            list = hooks.keySet().toArray(new Thread[0]);
+        Thread[] list = begin();
+        if (list == null) {
+            blockForever();
         }
+        run(list);
+    }
+
+    /** System.exit: the hooks, then the end. Any later caller blocks forever. */
+    static void exit(int status) {
+        Thread[] list = begin();
+        if (list == null) {
+            blockForever();
+        }
+        run(list);
+        VM.exit(status);
+    }
+
+    /** The hooks to run if this is the first shutdown, or null. */
+    private static synchronized Thread[] begin() {
+        if (exiting) {
+            return null;
+        }
+        exiting = true;
+        hooksStarted = true;
+        return hooks.keySet().toArray(new Thread[0]);
+    }
+
+    /**
+     * Starts every hook, then waits for all of them. A hook that cannot start
+     * (it already ran) ends the sequence with its exception, as on Java 8.
+     */
+    private static void run(Thread[] list) {
         for (Thread hook : list) {
             hook.start();
         }
@@ -69,20 +97,6 @@ final class Shutdown {
                 // Shutdown goes on; the hooks still get their chance.
             }
         }
-    }
-
-    /** System.exit: the hooks, then the end. A second caller blocks forever. */
-    static void exit(int status) {
-        boolean first;
-        synchronized (Shutdown.class) {
-            first = !exiting;
-            exiting = true;
-        }
-        if (!first) {
-            blockForever();
-        }
-        runHooks();
-        VM.exit(status);
     }
 
     private static void blockForever() {

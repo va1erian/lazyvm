@@ -1,0 +1,4 @@
+join(MAX) waited for the end: true
+join(MAX, nanos): timeout value is negative
+sleep(MAX, nanos): java.lang.IllegalArgumentException: timeout value is negative
+wait(MAX) notified

@@ -128,12 +128,24 @@ impl Vm {
     pub fn exit_process(&mut self, code: i32) -> ! {
         let _ = platform::flush(platform::Stream::Out);
         let _ = platform::flush(platform::Stream::Err);
-        std::process::exit(code)
+        // The status the launcher gives for an exit on the main thread.
+        std::process::exit(i32::from(code as u8))
     }
 }
 
-/// The body of a started thread's OS thread.
+/// The body of a started thread's OS thread. A panic (a VM bug) would drop
+/// the VM with it and leave every other thread waiting for it forever, so
+/// it ends the process instead.
 fn thread_main(gil: Arc<Gil>, me: usize) {
+    let body = std::panic::AssertUnwindSafe(|| run_thread(gil, me));
+    if std::panic::catch_unwind(body).is_err() {
+        eprintln!("lazyvm: internal error: a VM thread panicked");
+        let _ = platform::flush(platform::Stream::Out);
+        std::process::exit(EXIT_INTERNAL);
+    }
+}
+
+fn run_thread(gil: Arc<Gil>, me: usize) {
     let mut vm = gil.acquire();
     vm.current = me;
     vm.resume_state(me);

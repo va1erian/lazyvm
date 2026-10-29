@@ -9,6 +9,9 @@ use crate::class::MethodRef;
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
+/// Monitors one frame may hold through `monitorenter`.
+const MAX_FRAME_MONITORS: usize = 4096;
+
 fn imse() -> VmError {
     VmError::bare("java/lang/IllegalMonitorStateException")
 }
@@ -19,6 +22,11 @@ impl Vm {
             // The object stays on the stack, so it is rooted while this
             // thread waits for the monitor.
             let obj = self.top()?.peek(0)?.reference()?.ok_or_else(VmError::npe)?;
+            // javac nests blocks a handful deep; only hostile code goes on
+            // entering in a loop, and it must not grow the list forever.
+            if self.top()?.monitors.len() >= MAX_FRAME_MONITORS {
+                return Err(VmError::bare("java/lang/StackOverflowError"));
+            }
             self.monitor_enter(obj)?;
             let f = self.top()?;
             f.pop()?;

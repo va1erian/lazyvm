@@ -139,6 +139,8 @@ public class Thread implements Runnable {
         if (nanos < 0 || nanos > 999999) {
             throw new IllegalArgumentException("nanosecond timeout value out of range");
         }
+        // Rounding Long.MAX_VALUE up wraps it negative, which Java 8 reports
+        // as a negative timeout (observed); so does join below.
         if (nanos >= 500000 || (nanos != 0 && millis == 0)) {
             millis++;
         }
@@ -240,13 +242,12 @@ public class Thread implements Runnable {
             }
             return;
         }
-        long deadline = System.nanoTime() + millis * 1000000L;
-        while (isAlive()) {
-            long left = (deadline - System.nanoTime() + 999999L) / 1000000L;
-            if (left <= 0) {
-                return;
-            }
+        // Elapsed time, not a deadline: millis * 10^6 could overflow.
+        long start = System.nanoTime();
+        long left = millis;
+        while (isAlive() && left > 0) {
             wait(left);
+            left = millis - (System.nanoTime() - start) / 1000000L;
         }
     }
 
