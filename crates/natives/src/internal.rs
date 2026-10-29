@@ -29,7 +29,12 @@ pub fn register(vm: &mut Vm) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         clear_property,
     );
-    vm.register_native(VM_CLASS, "environment", "()[Ljava/lang/String;", environment);
+    vm.register_native(
+        VM_CLASS,
+        "environment",
+        "()[Ljava/lang/String;",
+        environment,
+    );
     vm.register_native(VM_CLASS, "environmentIgnoresCase", "()Z", |_, _| {
         ret_bool(platform::environment_ignores_case())
     });
