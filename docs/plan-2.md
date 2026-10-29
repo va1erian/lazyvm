@@ -30,7 +30,7 @@ Gate: `tools/test.py` with `-Xverify:all` (the default from now on) passes on bo
 
 Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or Swing.
 
-- [ ] S9-00 (prototype, ahead of the stage) `lazy.gfx`: pixel windows for
+- [x] S9-00 (prototype, ahead of the stage) `lazy.gfx`: pixel windows for
       games, with a program-owned loop, polled input and PNG decoding
       ([`gfx.md`](gfx.md)). Windows host on winit + softbuffer, plus a
       headless backend; the LazyOS host waits for S9-04. First user: a
