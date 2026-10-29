@@ -458,7 +458,7 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
         rule into the guest's listening port, and passes the addresses to
         the tests ([`async.md`](async.md), "Files").
       Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/net.rs`, `crates/natives/src/lazy_async.rs`, `tools/lazyos_test.py`.
-      Check: `cargo test -p platform net`; on Windows `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `Ipv6Loopback`; on LazyOS (`tools/lazyos_test.py --net`) `tests/lazy/net/HostEcho`, `HostInbound`, `SocketQuota`.
+      Check: `cargo test -p platform net`; on Windows `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `Ipv6Loopback`; on LazyOS (`tools/lazyos_test.py --net`) `tests/lazy/net/HostEcho`, `HostInbound`.
       Needs: S6-06.
 
 Gate: `samples/tcpget` sends a hand-written HTTP/1.0 `GET` over `lazy.net` to a

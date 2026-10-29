@@ -153,7 +153,8 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
   the platform (LazyOS: one `wait` naming `WAIT_CALLS`, endpoints and a
   `WAIT_FD` epoll descriptor for sockets, from S10-02; Windows, and LazyOS
   until then: `mio`, see [`async.md`](async.md)). Completions arrive on
-  the loop's executor, and code moves to another one (in UI code,
+  the loop's executor (a stage the program settles itself, by `cancel` for
+  example, completes on the program's thread), and code moves to another one (in UI code,
   `Ui.executor()`) with the standard `*Async` methods; every async API returns
   `CompletionStage<T>`. Cancelling the `CompletableFuture` cancels the
   underlying operation (`msg_cancel`, socket close).
