@@ -124,22 +124,19 @@ pub fn default_properties() -> Vec<(String, OsString)> {
     .collect()
 }
 
-/// The process environment as `name=value` entries, each ending in a NUL, for
-/// `System.getenv`. LazyOS passes whatever environment its launcher gave the
-/// process (possibly none), through the same `std` call. Entries without a
-/// name (Windows drive variables such as `=C:`) are left out.
-pub fn environment() -> Vec<u16> {
-    let mut out = Vec::new();
-    for (name, value) in std::env::vars_os() {
-        if name.is_empty() {
-            continue;
-        }
-        out.extend(wtf_units(&name));
-        out.push(u16::from(b'='));
-        out.extend(wtf_units(&value));
-        out.push(0);
-    }
-    out
+/// The process environment as (name, value) pairs in UTF-16, for `System.getenv`.
+/// LazyOS passes whatever environment its launcher gave the process (possibly
+/// none), through the same `std` call. Windows drive variables such as `=C:`
+/// are ordinary entries whose names start with '='.
+pub fn environment() -> Vec<(Vec<u16>, Vec<u16>)> {
+    std::env::vars_os()
+        .map(|(name, value)| (wtf_units(&name), wtf_units(&value)))
+        .collect()
+}
+
+/// Whether environment variable names compare ignoring case (Windows).
+pub fn environment_ignores_case() -> bool {
+    cfg!(windows)
 }
 
 #[cfg(windows)]

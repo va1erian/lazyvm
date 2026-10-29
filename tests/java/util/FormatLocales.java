@@ -9,6 +9,7 @@ public class FormatLocales {
         "it-CH", "es-ES", "es-MX", "es-AR", "pt-PT", "pt-BR", "nl-NL", "nl-BE", "ru-RU", "pl-PL", "ja-JP",
         "zh-CN", "zh-TW", "ko-KR", "sv-SE", "da-DK", "fi-FI", "nb-NO", "no-NO", "cs-CZ", "uk-UA", "ar-SA",
         "he-IL", "el-GR", "hu-HU", "ro-RO", "id-ID", "vi-VN", "bg-BG", "ca-ES", "sr-RS", "und", "xx-YY", "de-XX",
+        "sr-Latn-RS", "sr-Latn-ME", "sr-Latn-BA", "sr-Latn", "sr-Cyrl-RS", "sr-Latn-XX", "de-Latn-DE",
     };
 
     static String esc(String s) {
@@ -30,6 +31,10 @@ public class FormatLocales {
             System.out.println(t + " " + esc(String.format(l, "%.2f|%,d|%,.3f|%e|%g|%10.1f|%d|%,d|%+,.2f|%(,.1f|%E|%G|%#.0f",
                     1234567.891, 1234567, 1234567.891, 1234.5, 1234.5, 2.25, -5, -1234567, 9876.543, -1234.55,
                     0.000123, 1e10, 3.0)));
+        }
+        // A language that merely looks like part of the table's own syntax is just unknown.
+        for (String odd : new String[] {";", ",", "a,b", "de,fr", ".", ";,", ",;"}) {
+            System.out.println(odd + " " + String.format(new Locale(odd), "%,.2f", 1234567.891));
         }
         System.out.println(String.format((Locale) null, "%,.2f", 1234567.891));
         System.out.println(String.format(Locale.ROOT, "%,.2f", 1234567.891));

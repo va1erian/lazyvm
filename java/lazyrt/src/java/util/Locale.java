@@ -2,8 +2,9 @@ package java.util;
 
 /**
  * A language, script, country, variant and extensions. LazyVM has little
- * locale data: Formatter and Scanner know the number symbols of a few
- * languages (LocaleSymbols); everything else behaves as en-US. The default
+ * locale data: Formatter knows the number symbols of a few languages
+ * (LocaleSymbols); Scanner still reads numbers with the ROOT symbols and
+ * everything else behaves as en-US. The default
  * comes from the user.language, user.country, user.variant and user.script
  * properties, which LazyVM sets to en, US, "" and "" unless -D says otherwise.
  */
@@ -36,7 +37,9 @@ public final class Locale implements java.io.Serializable {
         DISPLAY, FORMAT
     }
 
-    private static Locale defaultLocale;
+    // The base default is read once, when the class is initialised (System does that at
+    // startup), so later changes to the user.* properties do not move it.
+    private static Locale defaultLocale = fromProperties();
     private static Locale formatLocale;
     private static Locale displayLocale;
 
@@ -117,32 +120,53 @@ public final class Locale implements java.io.Serializable {
         return LocaleTags.format(language, script, country, variant, extensions);
     }
 
-    private static String property(String key, String fallbackKey) {
-        String v = System.getProperty(key);
-        return v != null ? v : System.getProperty(fallbackKey);
+    // The base default, from user.language, user.script, user.country and user.variant.
+    // user.region, when set, supplies country and variant ("FR_CA" is country FR, variant CA)
+    // in place of user.country and user.variant, and the script is then empty.
+    private static Locale fromProperties() {
+        String region = System.getProperty("user.region");
+        String script = nonNullOr(System.getProperty("user.script"), "");
+        String country = nonNullOr(System.getProperty("user.country"), "");
+        String variant = nonNullOr(System.getProperty("user.variant"), "");
+        if (region != null) {
+            int cut = region.indexOf('_');
+            script = "";
+            country = cut < 0 ? region : region.substring(0, cut);
+            variant = cut < 0 ? "" : region.substring(cut + 1);
+        }
+        String lang = nonNullOr(System.getProperty("user.language"), "en");
+        if (!script.isEmpty()) {
+            script = ascii(script.substring(0, 1), true) + ascii(script.substring(1), false);
+        }
+        return new Locale(lang, script, country, variant, "");
     }
 
-    // `suffix` is "" for the base default, ".format" or ".display" for a category.
-    private static Locale fromProperties(String suffix) {
-        String lang = property("user.language" + suffix, "user.language");
-        String script = property("user.script" + suffix, "user.script");
-        String region = property("user.country" + suffix, "user.country");
-        String variant = property("user.variant" + suffix, "user.variant");
-        return new Locale(lang == null || lang.isEmpty() ? "en" : lang, script == null ? "" : script,
-                region == null ? "" : region, variant == null ? "" : variant, "");
+    // A category default starts from the base default and takes each field from its own
+    // property (user.language.format ...) when that is set. Like the reference, it is worked
+    // out on first use, so only these properties are read late, never the base ones.
+    private static Locale forCategory(String suffix) {
+        Locale base = defaultLocale;
+        String script = nonNullOr(System.getProperty("user.script" + suffix), base.script);
+        if (!script.isEmpty()) {
+            script = ascii(script.substring(0, 1), true) + ascii(script.substring(1), false);
+        }
+        return new Locale(nonNullOr(System.getProperty("user.language" + suffix), base.language), script,
+                nonNullOr(System.getProperty("user.country" + suffix), base.country),
+                nonNullOr(System.getProperty("user.variant" + suffix), base.variant), "");
+    }
+
+    private static String nonNullOr(String s, String def) {
+        return s == null ? def : s;
     }
 
     public static synchronized Locale getDefault() {
-        if (defaultLocale == null) {
-            defaultLocale = fromProperties("");
-        }
         return defaultLocale;
     }
 
     public static synchronized Locale getDefault(Category category) {
         if (category == Category.FORMAT) {
             if (formatLocale == null) {
-                formatLocale = fromProperties(".format");
+                formatLocale = forCategory(".format");
             }
             return formatLocale;
         }
@@ -150,7 +174,7 @@ public final class Locale implements java.io.Serializable {
             throw new NullPointerException();
         }
         if (displayLocale == null) {
-            displayLocale = fromProperties(".display");
+            displayLocale = forCategory(".display");
         }
         return displayLocale;
     }

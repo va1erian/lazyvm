@@ -31,11 +31,26 @@ public class SetProperty {
         System.setProperty("flag", "TRUE");
         System.out.println(Boolean.getBoolean("flag"));
         boolean inRange = true;
+        java.util.HashSet<Double> seen = new java.util.HashSet<Double>();
+        double lo = 1.0;
+        double hi = 0.0;
         for (int i = 0; i < 1000; i++) {
             double d = Math.random();
             inRange &= d >= 0.0 && d < 1.0;
+            seen.add(Double.valueOf(d));
+            lo = Math.min(lo, d);
+            hi = Math.max(hi, d);
         }
-        System.out.println(inRange);
+        // A constant would fail all three; no real sequence of 1000 draws does.
+        System.out.println(inRange + " " + (seen.size() > 990) + " " + (lo < 0.1) + " " + (hi > 0.9));
+        // Keys are exact: two lone surrogates are two properties.
+        System.setProperty("\ud800", "a");
+        System.setProperty("\udbff", "b");
+        System.out.println(System.getProperty("\ud800") + System.getProperty("\udbff"));
+        System.out.println(System.clearProperty("\ud800") + " " + System.getProperty("\udbff") + " "
+                + System.getProperty("\ud800"));
+        System.setProperty("\udbff\udc00", "pair");
+        System.out.println(System.getProperty("\udbff\udc00") + " " + System.getProperty("\udbff"));
         try {
             throw new InvalidParameterException();
         } catch (IllegalArgumentException e) {

@@ -32,6 +32,12 @@
 [en_US__a_] L=en S= C=US V=_a_ tag=en-US ek=[] rt=false hc=96731286
 [ja_JP_JP_X] L=ja S= C=JP V=JP_X tag=ja-JP-x-lvariant-JP-X ek=[] rt=true hc=103140994
 [en_US_lvariant] L=en S= C=US V=lvariant tag=en-US-lvariant ek=[] rt=true hc=-421622158
+[und__NY] L=und S= C= V=NY tag=und-x-lvariant-NY ek=[] rt=false hc=-840787712
+[und] L=und S= C= V= tag=und ek=[] rt=false hc=-840790219
+[und_US] L=und S= C=US V= tag=und-US ek=[] rt=false hc=-840705961
+[e__NY] L=e S= C= V=NY tag=x-lvariant-NY ek=[] rt=false hc=3011398
+[und] L=und S= C= V= tag=und ek=[] rt=false hc=-840790219
+[de__x y] L=de S= C= V=x y tag=de ek=[] rt=false hc=95477424
 [] L= S= C= V= tag=und ek=[] rt=true hc=0
 [ja_JP] L=ja S= C=JP V= tag=ja-JP ek=[] rt=true hc=100856547
 [zh_CN] L=zh S= C=CN V= tag=zh-CN ek=[] rt=true hc=115834631

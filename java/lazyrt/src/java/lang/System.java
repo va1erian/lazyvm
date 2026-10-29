@@ -18,6 +18,8 @@ public final class System {
         in = new java.io.BufferedInputStream(new ConsoleInputStream(0));
         out = new PrintStream(new ConsoleOutputStream(1), true);
         err = new PrintStream(new ConsoleOutputStream(2), true);
+        // Fixes the default locales before any user code can change the user.* properties.
+        java.util.Locale.getDefault();
     }
 
     private System() {

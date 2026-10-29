@@ -69,16 +69,14 @@ final class LocaleTags {
 
     // The first extended language subtag replaces the language; up to three are skipped.
     private void readLanguage() {
-        language = lower(tags.get(0));
+        // Only the lower-case spelling means "undetermined"; UND stays a language code.
+        language = tags.get(0).equals("und") ? "" : lower(tags.get(0));
         at = 1;
         for (int k = 0; k < 3 && at < tags.size() && isAlpha(tags.get(at), 3, 3); k++) {
             if (k == 0) {
                 language = lower(tags.get(at));
             }
             at++;
-        }
-        if (language.equals("und")) {
-            language = "";
         }
     }
 
@@ -203,7 +201,7 @@ final class LocaleTags {
             k++;
         }
         String privateUse = privateUse(extension(ext, 'x'), parts.subList(firstOld, k));
-        boolean bare = sb.toString().equals("und");
+        boolean bare = !isAlpha(language, 2, 8) && sb.toString().equals("und");
         String plain = withoutPrivate(ext);
         if (!plain.isEmpty()) {
             sb.append('-').append(plain);
@@ -252,6 +250,9 @@ final class LocaleTags {
     static String extension(String ext, char key) {
         List<String> sub = split(ext, '-');
         for (int i = 0; i < sub.size(); i++) {
+            if (key != 'x' && sub.get(i).equals("x")) {
+                return null; // private use runs to the end and holds no extensions
+            }
             if (sub.get(i).length() == 1 && sub.get(i).charAt(0) == key) {
                 int j = i + 1;
                 // Private use may hold one-letter subtags, so it runs to the end.

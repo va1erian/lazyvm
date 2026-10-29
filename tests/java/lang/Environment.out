@@ -13,4 +13,13 @@ remove java.lang.UnsupportedOperationException
 clear java.lang.UnsupportedOperationException
 keySet.remove java.lang.UnsupportedOperationException
 setValue java.lang.UnsupportedOperationException
+false false null null
+containsValue(null) java.lang.NullPointerException
+containsValue(1) java.lang.ClassCastException
+containsValue(nope) ok
+true
+true
+true
+true
+true
 true

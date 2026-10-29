@@ -31,6 +31,8 @@ public class LocaleBasics {
         p(new Locale("", "", "abcde")); p(new Locale("EN", "us", "Posix")); p(new Locale("en", "US", "  "));
         p(new Locale("en", "US", "_")); p(new Locale("en", "US", "a__b")); p(new Locale("en", "US", "_a_"));
         p(new Locale("ja", "JP", "JP_X")); p(new Locale("en", "US", "lvariant"));
+        p(new Locale("und", "", "NY")); p(new Locale("und")); p(new Locale("und", "US")); p(new Locale("e", "", "NY"));
+        p(new Locale("UND")); p(new Locale("de", "", "x y"));
         p(Locale.ROOT); p(Locale.JAPAN); p(Locale.CHINA); p(Locale.ENGLISH);
         System.out.println(new Locale("en", "US").equals(Locale.forLanguageTag("en-US")) + " "
                 + Locale.forLanguageTag("en-Latn").equals(Locale.ENGLISH) + " "

@@ -4,7 +4,7 @@ use platform::Stream;
 use vm::heap::Array;
 use vm::{Value, Vm, VmError, VmResult};
 
-use crate::{arg, int, long, obj, ret_int, ret_ref, ret_void};
+use crate::{arg, int, long, obj, ret_bool, ret_int, ret_ref, ret_void};
 
 const VM_CLASS: &str = "lazy/internal/VM";
 const OUT: &str = "lazy/internal/ConsoleOutputStream";
@@ -29,8 +29,9 @@ pub fn register(vm: &mut Vm) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         clear_property,
     );
-    vm.register_native(VM_CLASS, "environment", "()Ljava/lang/String;", |vm, _| {
-        ret_ref(Some(vm.new_string_utf16(&platform::environment())?))
+    vm.register_native(VM_CLASS, "environment", "()[Ljava/lang/String;", environment);
+    vm.register_native(VM_CLASS, "environmentIgnoresCase", "()Z", |_, _| {
+        ret_bool(platform::environment_ignores_case())
     });
     vm.register_native(VM_CLASS, "exit", "(I)V", |_, a| {
         Err(VmError::Exit(int(a, 0)?))
@@ -79,8 +80,39 @@ pub fn register(vm: &mut Vm) {
     vm.register_native("java/lang/Thread", "sleep", "(J)V", sleep);
 }
 
+/// The environment as name, value, name, value... in one String[].
+fn environment(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
+    let pairs = platform::environment();
+    let len = i32::try_from(pairs.len() * 2).map_err(|_| VmError::OutOfMemory)?;
+    let array = vm.new_array_of("Ljava/lang/String;", len)?;
+    for (i, units) in pairs.iter().flat_map(|(n, v)| [n, v]).enumerate() {
+        let s = vm.new_string_utf16(units)?;
+        vm.heap
+            .array_mut(array)?
+            .store(i, Value::Ref(Some(s)), false)?;
+    }
+    ret_ref(Some(array))
+}
+
+/// The property map's key for a Java string, exact for lone surrogates: those
+/// (and U+10FFFF, the escape marker) become the marker and a code, so two
+/// distinct strings never share a key.
+fn property_key(vm: &Vm, v: Value) -> VmResult<String> {
+    const MARK: char = '\u{10FFFF}';
+    let r = v.reference()?.ok_or_else(VmError::npe)?;
+    let mut key = String::new();
+    for c in char::decode_utf16(vm.string_utf16(r)?) {
+        match c {
+            Ok(MARK) => key.push_str("\u{10FFFF}m"),
+            Ok(c) => key.push(c),
+            Err(e) => key.push_str(&format!("\u{10FFFF}x{:04x}", e.unpaired_surrogate())),
+        }
+    }
+    Ok(key)
+}
+
 fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = vm.string_arg(arg(args, 0)?)?;
+    let key = property_key(vm, arg(args, 0)?)?;
     match vm.properties.get(&key).cloned() {
         Some(v) => ret_ref(Some(vm.new_string_utf16(&v)?)),
         None => ret_ref(None),
@@ -95,7 +127,7 @@ fn old_property(vm: &mut Vm, old: Option<Vec<u16>>) -> VmResult<Option<Value>> {
 }
 
 fn set_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = vm.string_arg(arg(args, 0)?)?;
+    let key = property_key(vm, arg(args, 0)?)?;
     let value = obj(args, 1)?;
     let units = vm.string_utf16(value)?;
     let old = vm.properties.insert(key, units);
@@ -103,7 +135,7 @@ fn set_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
 }
 
 fn clear_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = vm.string_arg(arg(args, 0)?)?;
+    let key = property_key(vm, arg(args, 0)?)?;
     let old = vm.properties.remove(&key);
     old_property(vm, old)
 }

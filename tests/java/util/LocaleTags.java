@@ -139,7 +139,8 @@ public class LocaleTags {
         "EN-LATN-US",
         "en-us-posix",
         "en-US-pOsIx",
-        "ABC-def",
+        "en-x-u-foo-t-bar", "en-x-u-ca-japanese", "US-x-NY-u", "en-u-ca-gregory-x-u-nu-latn", "de-und-zh",
+        "und-abc", "UND-us", "de-und", "und-und", "de-und-und", "ABC-def",
         "en-US-U-CA-x-A",
         "en-t-m0-und",
         "x-x",
@@ -236,7 +237,7 @@ public class LocaleTags {
             System.out.println("<" + t + "> [" + l + "] " + l.getLanguage() + "|" + l.getScript() + "|"
                     + l.getCountry() + "|" + l.getVariant() + " tag=" + l.toLanguageTag()
                     + " ext=" + l.getExtensionKeys() + " x=" + l.getExtension('x') + " u=" + l.getExtension('u')
-                    + " uk=" + l.getUnicodeLocaleKeys() + " ua=" + l.getUnicodeLocaleAttributes()
+                    + " ca=" + l.getUnicodeLocaleType("ca") + " uk=" + l.getUnicodeLocaleKeys() + " ua=" + l.getUnicodeLocaleAttributes()
                     + " hash=" + l.hashCode());
         }
         try {
