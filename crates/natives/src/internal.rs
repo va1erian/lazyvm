@@ -17,6 +17,18 @@ pub fn register(vm: &mut Vm) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         get_property,
     );
+    vm.register_native(
+        VM_CLASS,
+        "setProperty",
+        "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+        set_property,
+    );
+    vm.register_native(
+        VM_CLASS,
+        "clearProperty",
+        "(Ljava/lang/String;)Ljava/lang/String;",
+        clear_property,
+    );
     vm.register_native(VM_CLASS, "environment", "()Ljava/lang/String;", |vm, _| {
         ret_ref(Some(vm.new_string_utf16(&platform::environment())?))
     });
@@ -73,6 +85,27 @@ fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         Some(v) => ret_ref(Some(vm.new_string_utf16(&v)?)),
         None => ret_ref(None),
     }
+}
+
+fn old_property(vm: &mut Vm, old: Option<Vec<u16>>) -> VmResult<Option<Value>> {
+    match old {
+        Some(v) => ret_ref(Some(vm.new_string_utf16(&v)?)),
+        None => ret_ref(None),
+    }
+}
+
+fn set_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let key = vm.string_arg(arg(args, 0)?)?;
+    let value = obj(args, 1)?;
+    let units = vm.string_utf16(value)?;
+    let old = vm.properties.insert(key, units);
+    old_property(vm, old)
+}
+
+fn clear_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let key = vm.string_arg(arg(args, 0)?)?;
+    let old = vm.properties.remove(&key);
+    old_property(vm, old)
 }
 
 fn get_resource(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

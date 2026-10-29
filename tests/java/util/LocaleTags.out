@@ -1,0 +1,224 @@
+<en> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-US> [en_US] en||US| tag=en-US ext=[] x=null u=null uk=[] ua=[] hash=96636889
+<EN-us> [en_US] en||US| tag=en-US ext=[] x=null u=null uk=[] ua=[] hash=96636889
+<en-Latn-US> [en_US_#Latn] en|Latn|US| tag=en-Latn-US ext=[] x=null u=null uk=[] ua=[] hash=-1929371928
+<sr-Latn-RS> [sr_RS_#Latn] sr|Latn|RS| tag=sr-Latn-RS ext=[] x=null u=null uk=[] ua=[] hash=-1916326353
+<zh-Hans-CN> [zh_CN_#Hans] zh|Hans|CN| tag=zh-Hans-CN ext=[] x=null u=null uk=[] ua=[] hash=-2024864731
+<zh-Hant-TW> [zh_TW_#Hant] zh|Hant|TW| tag=zh-Hant-TW ext=[] x=null u=null uk=[] ua=[] hash=-2024847154
+<de-DE-1996> [de_DE_1996] de||DE|1996 tag=de-DE-1996 ext=[] x=null u=null uk=[] ua=[] hash=96944835
+<de-1996> [de__1996] de|||1996 tag=de-1996 ext=[] x=null u=null uk=[] ua=[] hash=96877348
+<sl-rozaj> [sl__rozaj] sl|||rozaj tag=sl-rozaj ext=[] x=null u=null uk=[] ua=[] hash=218130893
+<sl-rozaj-biske> [sl__rozaj_biske] sl|||rozaj_biske tag=sl-rozaj-biske ext=[] x=null u=null uk=[] ua=[] hash=-735340620
+<sl-rozaj-biske-1994> [sl__rozaj_biske_1994] sl|||rozaj_biske_1994 tag=sl-rozaj-biske-1994 ext=[] x=null u=null uk=[] ua=[] hash=-1348602212
+<en-US-POSIX> [en_US_POSIX] en||US|POSIX tag=en-US-POSIX ext=[] x=null u=null uk=[] ua=[] hash=172954172
+<ca-ES-valencia> [ca_ES_valencia] ca||ES|valencia tag=ca-ES-valencia ext=[] x=null u=null uk=[] ua=[] hash=-1330280219
+<es-419> [es_419] es||419| tag=es-419 ext=[] x=null u=null uk=[] ua=[] hash=98299574
+<es-005> [es_005] es||005| tag=es-005 ext=[] x=null u=null uk=[] ua=[] hash=98179325
+<zh-guoyu> [cmn] cmn||| tag=cmn ext=[] x=null u=null uk=[] ua=[] hash=-1356740548
+<i-klingon> [tlh] tlh||| tag=tlh ext=[] x=null u=null uk=[] ua=[] hash=-871147248
+<i-ami> [ami] ami||| tag=ami ext=[] x=null u=null uk=[] ua=[] hash=-1414147805
+<i-bnn> [bnn] bnn||| tag=bnn ext=[] x=null u=null uk=[] ua=[] hash=-1384446178
+<i-hak> [hak] hak||| tag=hak ext=[] x=null u=null uk=[] ua=[] hash=-1224766418
+<i-lux> [lb] lb||| tag=lb ext=[] x=null u=null uk=[] ua=[] hash=102659786
+<i-navajo> [nv] nv||| tag=nv ext=[] x=null u=null uk=[] ua=[] hash=105102648
+<i-pwn> [pwn] pwn||| tag=pwn ext=[] x=null u=null uk=[] ua=[] hash=-975326375
+<i-tao> [tao] tao||| tag=tao ext=[] x=null u=null uk=[] ua=[] hash=-881097442
+<i-tay> [tay] tay||| tag=tay ext=[] x=null u=null uk=[] ua=[] hash=-880799532
+<i-tsu> [tsu] tsu||| tag=tsu ext=[] x=null u=null uk=[] ua=[] hash=-864295318
+<sgn-BE-FR> [sfb] sfb||| tag=sfb ext=[] x=null u=null uk=[] ua=[] hash=-905496271
+<sgn-BE-NL> [vgt] vgt||| tag=vgt ext=[] x=null u=null uk=[] ua=[] hash=-818149059
+<sgn-CH-DE> [sgg] sgg||| tag=sgg ext=[] x=null u=null uk=[] ua=[] hash=-904423795
+<art-lojban> [jbo] jbo||| tag=jbo ext=[] x=null u=null uk=[] ua=[] hash=-1166465431
+<no-bok> [nb] nb||| tag=nb ext=[] x=null u=null uk=[] ua=[] hash=104506828
+<no-nyn> [nn] nn||| tag=nn ext=[] x=null u=null uk=[] ua=[] hash=104864320
+<zh-cmn> [cmn] cmn||| tag=cmn ext=[] x=null u=null uk=[] ua=[] hash=-1356740548
+<zh-cmn-Hans-CN> [cmn_CN_#Hans] cmn|Hans|CN| tag=cmn-Hans-CN ext=[] x=null u=null uk=[] ua=[] hash=797594191
+<zh-min> [nan__#x-zh-min] nan||| tag=nan-x-zh-min ext=[x] x=zh-min u=null uk=[] ua=[] hash=356100909
+<zh-min-nan> [nan] nan||| tag=nan ext=[] x=null u=null uk=[] ua=[] hash=-1052902139
+<zh-xiang> [hsn] hsn||| tag=hsn ext=[] x=null u=null uk=[] ua=[] hash=-1208053667
+<zh-hakka> [hak] hak||| tag=hak ext=[] x=null u=null uk=[] ua=[] hash=-1224766418
+<zh-gan> [gan] gan||| tag=gan ext=[] x=null u=null uk=[] ua=[] hash=-1253306196
+<zh-wuu> [wuu] wuu||| tag=wuu ext=[] x=null u=null uk=[] ua=[] hash=-776560823
+<zh-yue> [yue] yue||| tag=yue ext=[] x=null u=null uk=[] ua=[] hash=-719779177
+<en-GB-oed> [en_GB_#x-oed] en||GB| tag=en-GB-x-oed ext=[x] x=oed u=null uk=[] ua=[] hash=57900869
+<cel-gaulish> [xtg__#x-cel-gaulish] xtg||| tag=xtg-x-cel-gaulish ext=[x] x=cel-gaulish u=null uk=[] ua=[] hash=840561312
+<he> [iw] iw||| tag=he ext=[] x=null u=null uk=[] ua=[] hash=100514834
+<iw> [iw] iw||| tag=he ext=[] x=null u=null uk=[] ua=[] hash=100514834
+<he-IL> [iw_IL] iw||IL| tag=he-IL ext=[] x=null u=null uk=[] ua=[] hash=100587343
+<yi> [ji] ji||| tag=yi ext=[] x=null u=null uk=[] ua=[] hash=101021281
+<ji> [ji] ji||| tag=yi ext=[] x=null u=null uk=[] ua=[] hash=101021281
+<id> [in] in||| tag=id ext=[] x=null u=null uk=[] ua=[] hash=100246715
+<in> [in] in||| tag=id ext=[] x=null u=null uk=[] ua=[] hash=100246715
+<in-ID> [in_ID] in||ID| tag=id-ID ext=[] x=null u=null uk=[] ua=[] hash=100318976
+<ja-JP-u-ca-japanese> [ja_JP_#u-ca-japanese] ja||JP| tag=ja-JP-u-ca-japanese ext=[u] x=null u=ca-japanese uk=[ca] ua=[] hash=1703426059
+<ja-JP-x-lvariant-JP> [ja_JP_JP_#u-ca-japanese] ja||JP|JP tag=ja-JP-u-ca-japanese-x-lvariant-JP ext=[u] x=null u=ca-japanese uk=[ca] ua=[] hash=1703425729
+<th-TH-u-nu-thai> [th_TH_#u-nu-thai] th||TH| tag=th-TH-u-nu-thai ext=[u] x=null u=nu-thai uk=[nu] ua=[] hash=-1917602414
+<th-TH-x-lvariant-TH> [th_TH_TH_#u-nu-thai] th||TH|TH tag=th-TH-u-nu-thai-x-lvariant-TH ext=[u] x=null u=nu-thai uk=[nu] ua=[] hash=-1917599994
+<en-u-ca-gregory-nu-latn> [en__#u-ca-gregory-nu-latn] en||| tag=en-u-ca-gregory-nu-latn ext=[u] x=null u=ca-gregory-nu-latn uk=[ca, nu] ua=[] hash=1683588525
+<en-u-attr1-attr2-ca-gregory> [en__#u-attr1-attr2-ca-gregory] en||| tag=en-u-attr1-attr2-ca-gregory ext=[u] x=null u=attr1-attr2-ca-gregory uk=[ca] ua=[attr1, attr2] hash=-1503107300
+<en-u-nu-latn-ca-gregory> [en__#u-ca-gregory-nu-latn] en||| tag=en-u-ca-gregory-nu-latn ext=[u] x=null u=ca-gregory-nu-latn uk=[ca, nu] ua=[] hash=1683588525
+<en-u-ca> [en__#u-ca] en||| tag=en-u-ca ext=[u] x=null u=ca uk=[ca] ua=[] hash=99918337
+<en-u-ca-gregory-ca-buddhist> [en__#u-ca-gregory] en||| tag=en-u-ca-gregory ext=[u] x=null u=ca-gregory uk=[ca] ua=[] hash=-1342799803
+<en-t-fr> [en__#t-fr] en||| tag=en-t-fr ext=[t] x=null u=null uk=[] ua=[] hash=99890802
+<en-a-bbb-ccc> [en__#a-bbb-ccc] en||| tag=en-a-bbb-ccc ext=[a] x=null u=null uk=[] ua=[] hash=1486537947
+<en-a-bbb-b-ccc> [en__#a-bbb-b-ccc] en||| tag=en-a-bbb-b-ccc ext=[a, b] x=null u=null uk=[] ua=[] hash=1906263798
+<en-b-ccc-a-bbb> [en__#a-bbb-b-ccc] en||| tag=en-a-bbb-b-ccc ext=[a, b] x=null u=null uk=[] ua=[] hash=1906263798
+<en-x-private> [en__#x-private] en||| tag=en-x-private ext=[x] x=private u=null uk=[] ua=[] hash=-1440000103
+<x-private> [] ||| tag=x-private ext=[x] x=private u=null uk=[] ua=[] hash=-1343614674
+<x-lvariant-foo> [] |||foo tag=x-lvariant-foo ext=[] x=null u=null uk=[] ua=[] hash=101574
+<en-x-lvariant-foo> [en__foo] en|||foo tag=en-x-lvariant-foo ext=[] x=null u=null uk=[] ua=[] hash=96654205
+<en-US-x-lvariant-POSIX> [en_US_POSIX] en||US|POSIX tag=en-US-POSIX ext=[] x=null u=null uk=[] ua=[] hash=172954172
+<en-a-bbb-x-ccc> [en__#a-bbb-x-ccc] en||| tag=en-a-bbb-x-ccc ext=[a, x] x=ccc u=null uk=[] ua=[] hash=1884636128
+<en-abc> [abc] abc||| tag=abc ext=[] x=null u=null uk=[] ua=[] hash=-1424485282
+<en-abcd> [en__#Abcd] en|Abcd|| tag=en-Abcd ext=[] x=null u=null uk=[] ua=[] hash=2050997913
+<en-abcde> [en__abcde] en|||abcde tag=en-abcde ext=[] x=null u=null uk=[] ua=[] hash=189152026
+<en-abcdefgh> [en__abcdefgh] en|||abcdefgh tag=en-abcdefgh ext=[] x=null u=null uk=[] ua=[] hash=1356226363
+<en-abcdefghi> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<e> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<eng> [eng] eng||| tag=eng ext=[] x=null u=null uk=[] ua=[] hash=-1298767262
+<engl> [engl] engl||| tag=engl ext=[] x=null u=null uk=[] ua=[] hash=-1603862030
+<abcdefgh> [abcdefgh] abcdefgh||| tag=abcdefgh ext=[] x=null u=null uk=[] ua=[] hash=1810884860
+<abcdefghi> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<en_US> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<en-> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<-en> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<en--US> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-US-> [en_US] en||US| tag=en-US ext=[] x=null u=null uk=[] ua=[] hash=96636889
+<> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<und> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<und-US> [_US] ||US| tag=und-US ext=[] x=null u=null uk=[] ua=[] hash=84258
+<und-Latn> [] |Latn|| tag=und-Latn ext=[] x=null u=null uk=[] ua=[] hash=-2026008817
+<und-x-foo> [] ||| tag=x-foo ext=[x] x=foo u=null uk=[] ua=[] hash=112264689
+<en-US-US> [en_US] en||US| tag=en-US ext=[] x=null u=null uk=[] ua=[] hash=96636889
+<en-Latn-Latn> [en__#Latn] en|Latn|| tag=en-Latn ext=[] x=null u=null uk=[] ua=[] hash=-1929456186
+<en-123> [en_123] en||123| tag=en-123 ext=[] x=null u=null uk=[] ua=[] hash=98062021
+<en-1234> [en__1234] en|||1234 tag=en-1234 ext=[] x=null u=null uk=[] ua=[] hash=98062073
+<en-12> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-1a> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-1ab> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-1abc> [en__1abc] en|||1abc tag=en-1abc ext=[] x=null u=null uk=[] ua=[] hash=98108744
+<en-a1b2c3d4> [en__a1b2c3d4] en|||a1b2c3d4 tag=en-a1b2c3d4 ext=[] x=null u=null uk=[] ua=[] hash=743305015
+<en-U-CA-GREGORY> [en__#u-ca-gregory] en||| tag=en-u-ca-gregory ext=[u] x=null u=ca-gregory uk=[ca] ua=[] hash=-1342799803
+<en-X-PRIVATE> [en__#x-private] en||| tag=en-x-private ext=[x] x=private u=null uk=[] ua=[] hash=-1440000103
+<en-x> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-u> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-a> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-x-> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-x-a> [en__#x-a] en||| tag=en-x-a ext=[x] x=a u=null uk=[] ua=[] hash=96505595
+<en-x-abcdefghi> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-a-> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<ja-Jpan-JP> [ja_JP_#Jpan] ja|Jpan|JP| tag=ja-Jpan-JP ext=[] x=null u=null uk=[] ua=[] hash=-1969123786
+<en-Latn-US-u-ca-gregory-x-foo> [en_US_#Latn_u-ca-gregory-x-foo] en|Latn|US| tag=en-Latn-US-u-ca-gregory-x-foo ext=[u, x] x=foo u=ca-gregory uk=[ca] ua=[] hash=-957710914
+<en-US-u-ca-gregory-t-fr-x-foo> [en_US_#t-fr-u-ca-gregory-x-foo] en||US| tag=en-US-t-fr-u-ca-gregory-x-foo ext=[t, u, x] x=foo u=ca-gregory uk=[ca] ua=[] hash=-467757433
+<qaa-Qaaa-QM-x-southern> [qaa_QM_#Qaaa_x-southern] qaa|Qaaa|QM| tag=qaa-Qaaa-QM-x-southern ext=[x] x=southern u=null uk=[] ua=[] hash=-1396893718
+<de-Latn-DE-1901> [de_DE_1901_#Latn] de|Latn|DE|1901 tag=de-Latn-DE-1901 ext=[] x=null u=null uk=[] ua=[] hash=-1929064266
+<en-DE-1901-1996> [en_DE_1901_1996] en||DE|1901_1996 tag=en-DE-1901-1996 ext=[] x=null u=null uk=[] ua=[] hash=-870778383
+<en-1901-1996-1901> [en__1901_1996_1901] en|||1901_1996_1901 tag=en-1901-1996-1901 ext=[] x=null u=null uk=[] ua=[] hash=-1615954172
+<en-1996-DE> [en__1996] en|||1996 tag=en-1996 ext=[] x=null u=null uk=[] ua=[] hash=98068988
+<en-u-co-phonebk-x-a> [en__#u-co-phonebk-x-a] en||| tag=en-u-co-phonebk-x-a ext=[u, x] x=a u=co-phonebk uk=[co] ua=[] hash=-559438182
+<en-u-islamic-ca-islamic> [en__#u-islamic-ca-islamic] en||| tag=en-u-islamic-ca-islamic ext=[u] x=null u=islamic-ca-islamic uk=[ca] ua=[islamic] hash=-1522393503
+<en-u-attr-attr> [en__#u-attr] en||| tag=en-u-attr ext=[u] x=null u=attr uk=[] ua=[attr] hash=-812664066
+<en-u-aa> [en__#u-aa] en||| tag=en-u-aa ext=[u] x=null u=aa uk=[aa] ua=[] hash=99918543
+<en-u-aaa-bbb> [en__#u-aaa-bbb] en||| tag=en-u-aaa-bbb ext=[u] x=null u=aaa-bbb uk=[] ua=[aaa, bbb] hash=-1177831031
+<en-u-co-trad-ca> [en__#u-ca-co-trad] en||| tag=en-u-ca-co-trad ext=[u] x=null u=ca-co-trad uk=[ca, co] ua=[] hash=-877634692
+<en-u-abc-co> [en__#u-abc-co] en||| tag=en-u-abc-co ext=[u] x=null u=abc-co uk=[co] ua=[abc] hash=1958473912
+<en-u-x-foo> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<zh-Hans-u-co-pinyin> [zh__#Hans_u-co-pinyin] zh|Hans|| tag=zh-Hans-u-co-pinyin ext=[u] x=null u=co-pinyin uk=[co] ua=[] hash=-145268254
+<de-DE-u-co-phonebk> [de_DE_#u-co-phonebk] de||DE| tag=de-DE-u-co-phonebk ext=[u] x=null u=co-phonebk uk=[co] ua=[] hash=-1807911600
+<tr-TR> [tr_TR] tr||TR| tag=tr-TR ext=[] x=null u=null uk=[] ua=[] hash=110607876
+<TR-tr> [tr_TR] tr||TR| tag=tr-TR ext=[] x=null u=null uk=[] ua=[] hash=110607876
+<Tr-Tr> [tr_TR] tr||TR| tag=tr-TR ext=[] x=null u=null uk=[] ua=[] hash=110607876
+<en-latn-us> [en_US_#Latn] en|Latn|US| tag=en-Latn-US ext=[] x=null u=null uk=[] ua=[] hash=-1929371928
+<EN-LATN-US> [en_US_#Latn] en|Latn|US| tag=en-Latn-US ext=[] x=null u=null uk=[] ua=[] hash=-1929371928
+<en-us-posix> [en_US_posix] en||US|posix tag=en-US-posix ext=[] x=null u=null uk=[] ua=[] hash=203491932
+<en-US-pOsIx> [en_US_pOsIx] en||US|pOsIx tag=en-US-pOsIx ext=[] x=null u=null uk=[] ua=[] hash=202537628
+<ABC-def> [def] def||| tag=def ext=[] x=null u=null uk=[] ua=[] hash=-1335737893
+<en-US-U-CA-x-A> [en_US_#u-ca-x-a] en||US| tag=en-US-u-ca-x-a ext=[u, x] x=a u=ca uk=[ca] ua=[] hash=1903974764
+<en-t-m0-und> [en__#t-m0-und] en||| tag=en-t-m0-und ext=[t] x=null u=null uk=[] ua=[] hash=519756365
+<x-x> [] ||| tag=x-x ext=[x] x=x u=null uk=[] ua=[] hash=116835
+<x-x-x> [] ||| tag=x-x-x ext=[x] x=x-x u=null uk=[] ua=[] hash=112279950
+<a-b> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<i-default> [en__#x-i-default] en||| tag=en-x-i-default ext=[x] x=i-default u=null uk=[] ua=[] hash=790080383
+<i-enochian> [] ||| tag=x-i-enochian ext=[x] x=i-enochian u=null uk=[] ua=[] hash=-2089688060
+<i-mingo> [see__#x-i-mingo] see||| tag=see-x-i-mingo ext=[x] x=i-mingo u=null uk=[] ua=[] hash=32033484
+<en-GB-oxendict> [en_GB_oxendict] en||GB|oxendict tag=en-GB-oxendict ext=[] x=null u=null uk=[] ua=[] hash=-1897451452
+<zh-TW-xiang> [zh_TW_xiang] zh||TW|xiang tag=zh-TW-xiang ext=[] x=null u=null uk=[] ua=[] hash=229898552
+<zh-Hant-xiang> [zh__xiang_#Hant] zh|Hant||xiang tag=zh-Hant-xiang ext=[] x=null u=null uk=[] ua=[] hash=-1910883270
+<art> [art] art||| tag=art ext=[] x=null u=null uk=[] ua=[] hash=-1409202499
+<art-lojban-x-foo> [art__lojban_#x-foo] art|||lojban tag=art-lojban-x-foo ext=[x] x=foo u=null uk=[] ua=[] hash=1814791124
+<sgn> [sgn] sgn||| tag=sgn ext=[] x=null u=null uk=[] ua=[] hash=-904215258
+<sgn-BE> [sgn_BE] sgn||BE| tag=sgn-BE ext=[] x=null u=null uk=[] ua=[] hash=-904149693
+<sgn-BE-FR-x-foo> [sgn_BE] sgn||BE| tag=sgn-BE ext=[] x=null u=null uk=[] ua=[] hash=-904149693
+<zh-min-nan-TW> [min_TW] min||TW| tag=min-TW ext=[] x=null u=null uk=[] ua=[] hash=-1074059701
+<zh-cmn-TW> [cmn_TW] cmn||TW| tag=cmn-TW ext=[] x=null u=null uk=[] ua=[] hash=-1356657127
+<en-aaaaa-aaaaa> [en__aaaaa_aaaaa] en|||aaaaa_aaaaa tag=en-aaaaa-aaaaa ext=[] x=null u=null uk=[] ua=[] hash=1029324090
+<en-1994-1994> [en__1994_1994] en|||1994_1994 tag=en-1994-1994 ext=[] x=null u=null uk=[] ua=[] hash=-1387359882
+<en-x-lvariant-foo-bar> [en__foo_bar] en|||foo_bar tag=en-x-lvariant-foo-bar ext=[] x=null u=null uk=[] ua=[] hash=-584078383
+<en-x-lvariant-foo-x> [en__foo_x] en|||foo_x tag=en-x-lvariant-foo-x ext=[] x=null u=null uk=[] ua=[] hash=194168310
+<en-x-lvariant-ab> [en__ab] en|||ab tag=en-x-lvariant-ab ext=[] x=null u=null uk=[] ua=[] hash=96555736
+<en-x-lvariant> [en__#x-lvariant] en||| tag=en-x-lvariant ext=[x] x=lvariant u=null uk=[] ua=[] hash=1985072889
+<en-x-lvariant-foo-lvariant-bar> [en__foo_lvariant_bar] en|||foo_lvariant_bar tag=en-x-lvariant-foo-lvariant-bar ext=[] x=null u=null uk=[] ua=[] hash=760367869
+<en-x-foo-lvariant-bar> [en__bar_#x-foo] en|||bar tag=en-x-foo-lvariant-bar ext=[x] x=foo u=null uk=[] ua=[] hash=57919291
+<en-1996-x-lvariant-foo> [en__1996_foo] en|||1996_foo tag=en-1996-x-lvariant-foo ext=[] x=null u=null uk=[] ua=[] hash=327678851
+<en-z-abc-x-def> [en__#z-abc-x-def] en||| tag=en-z-abc-x-def ext=[x, z] x=def u=null uk=[] ua=[] hash=-1521873723
+<en-y-abc-a-x> [en__#y-abc] en||| tag=en-y-abc ext=[y] x=null u=null uk=[] ua=[] hash=58609593
+<en-9-abc> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-a-bc-a-de> [en__#a-bc] en||| tag=en-a-bc ext=[a] x=null u=null uk=[] ua=[] hash=99453850
+<en-a-bc-de> [en__#a-bc-de] en||| tag=en-a-bc-de ext=[a] x=null u=null uk=[] ua=[] hash=1482193814
+<en-a-bcdefghi> [en__#a-bcdefghi] en||| tag=en-a-bcdefghi ext=[a] x=null u=null uk=[] ua=[] hash=-1933963705
+<en-US-x-lvariant-ab-cd> [en_US_ab_cd] en||US|ab_cd tag=en-US-x-lvariant-ab-cd ext=[] x=null u=null uk=[] ua=[] hash=189232408
+<EN-x-LVARIANT-Foo> [en__Foo] en|||Foo tag=en-x-lvariant-Foo ext=[] x=null u=null uk=[] ua=[] hash=96623453
+<en-u-ca-gregory-x-lvariant-foo> [en__foo_#u-ca-gregory] en|||foo tag=en-u-ca-gregory-x-lvariant-foo ext=[u] x=null u=ca-gregory uk=[ca] ua=[] hash=-1342892657
+<en-U-CA-Gregory-X-LVARIANT-FOO> [en__FOO_#u-ca-gregory] en|||FOO tag=en-u-ca-gregory-x-lvariant-FOO ext=[u] x=null u=ca-gregory uk=[ca] ua=[] hash=-1342860881
+<ja-JP-x-lvariant-JP-foo> [ja_JP_JP_foo] ja||JP|JP_foo tag=ja-JP-x-lvariant-JP-foo ext=[] x=null u=null uk=[] ua=[] hash=-1998740176
+<th-x-lvariant-TH> [th__TH] th|||TH tag=th-x-lvariant-TH ext=[] x=null u=null uk=[] ua=[] hash=110229376
+<ja-x-lvariant-JP> [ja__JP] ja|||JP tag=ja-x-lvariant-JP ext=[] x=null u=null uk=[] ua=[] hash=100785327
+<ja-JP-u-ca-gregory-x-lvariant-JP> [ja_JP_JP_#u-ca-gregory] ja||JP|JP tag=ja-JP-u-ca-gregory-x-lvariant-JP ext=[u] x=null u=ca-gregory uk=[ca] ua=[] hash=-1405797669
+<th-TH-u-nu-latn-x-lvariant-TH> [th_TH_TH_#u-nu-latn] th||TH|TH tag=th-TH-u-nu-latn-x-lvariant-TH ext=[u] x=null u=nu-latn uk=[nu] ua=[] hash=-1919946223
+<en-US-x-lvariant-JP> [en_US_JP] en||US|JP tag=en-US-x-lvariant-JP ext=[] x=null u=null uk=[] ua=[] hash=96639263
+<ja-JP-x-lvariant-JP-x-foo> [ja_JP_JP_x_foo] ja||JP|JP_x_foo tag=ja-JP-x-lvariant-JP-x-foo ext=[] x=null u=null uk=[] ua=[] hash=1039176489
+<zh-Hant-TW-u-ca-roc> [zh_TW_#Hant_u-ca-roc] zh|Hant|TW| tag=zh-Hant-TW-u-ca-roc ext=[u] x=null u=ca-roc uk=[ca] ua=[] hash=-202276639
+<EN-GB-OED> [en_GB_#x-oed] en||GB| tag=en-GB-x-oed ext=[x] x=oed u=null uk=[] ua=[] hash=57900869
+<En-gb-oed-x-foo> [en_GB] en||GB| tag=en-GB ext=[] x=null u=null uk=[] ua=[] hash=96622908
+<I-KLINGON> [tlh] tlh||| tag=tlh ext=[] x=null u=null uk=[] ua=[] hash=-871147248
+<art-lojban-1996> [art__lojban_1996] art|||lojban_1996 tag=art-lojban-1996 ext=[] x=null u=null uk=[] ua=[] hash=1562461305
+<sgn-be-fr> [sfb] sfb||| tag=sfb ext=[] x=null u=null uk=[] ua=[] hash=-905496271
+<en-a-b> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-a-bb-b-cc-a-dd> [en__#a-bb-b-cc] en||| tag=en-a-bb-b-cc ext=[a, b] x=null u=null uk=[] ua=[] hash=1598469915
+<en-t-en-u-ca-x-y> [en__#t-en-u-ca-x-y] en||| tag=en-t-en-u-ca-x-y ext=[t, u, x] x=y u=ca uk=[ca] ua=[] hash=-1377224401
+<en-u-ca-gregory-nu> [en__#u-ca-gregory-nu] en||| tag=en-u-ca-gregory-nu ext=[u] x=null u=ca-gregory-nu uk=[ca, nu] ua=[] hash=1964536885
+<en-u-nu-ca> [en__#u-ca-nu] en||| tag=en-u-ca-nu ext=[u] x=null u=ca-nu uk=[ca, nu] ua=[] hash=2053261449
+<en-u-nu-latn-attr> [en__#u-nu-latn-attr] en||| tag=en-u-nu-latn-attr ext=[u] x=null u=nu-latn-attr uk=[nu] ua=[] hash=382266006
+<en-u-attr-ca-gregory-attr2> [en__#u-attr-ca-gregory-attr2] en||| tag=en-u-attr-ca-gregory-attr2 ext=[u] x=null u=attr-ca-gregory-attr2 uk=[ca] ua=[attr] hash=1920806597
+<en-u-b-a-ca-x> [en] en||| tag=en ext=[] x=null u=null uk=[] ua=[] hash=96552631
+<en-u-zz-yy-ca-a> [en__#u-ca-yy-zz] en||| tag=en-u-ca-yy-zz ext=[u] x=null u=ca-yy-zz uk=[ca, yy, zz] ua=[] hash=1163045761
+<de-DE-u-co-phonebk-co-trad> [de_DE_#u-co-phonebk] de||DE| tag=de-DE-u-co-phonebk ext=[u] x=null u=co-phonebk uk=[co] ua=[] hash=-1807911600
+<de-DE-u-ca-bb-cc> [de_DE_#u-bb-ca-cc] de||DE| tag=de-DE-u-bb-ca-cc ext=[u] x=null u=bb-ca-cc uk=[bb, ca, cc] ua=[] hash=166204868
+<en-U-cc-X-A> [en__#u-cc-x-a] en||| tag=en-u-cc-x-a ext=[u, x] x=a u=cc uk=[cc] ua=[] hash=1897546496
+<cmn-Hans> [cmn__#Hans] cmn|Hans|| tag=cmn-Hans ext=[] x=null u=null uk=[] ua=[] hash=797527386
+<zh-abc-def-ghi-jkl> [abc] abc||| tag=abc ext=[] x=null u=null uk=[] ua=[] hash=-1424485282
+<zh-abc-def-ghi-Hans> [abc__#Hans] abc|Hans|| tag=abc-Hans ext=[] x=null u=null uk=[] ua=[] hash=729782652
+<zh-abc-def> [abc] abc||| tag=abc ext=[] x=null u=null uk=[] ua=[] hash=-1424485282
+<en-abc-Latn> [abc__#Latn] abc|Latn|| tag=abc-Latn ext=[] x=null u=null uk=[] ua=[] hash=844473197
+<e-abc> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<a-abc> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<en-abcd-abc> [en__#Abcd] en|Abcd|| tag=en-Abcd ext=[] x=null u=null uk=[] ua=[] hash=2050997913
+<1n> [] ||| tag=und ext=[] x=null u=null uk=[] ua=[] hash=0
+<en-US-1abc-abc> [en_US_1abc] en||US|1abc tag=en-US-1abc ext=[] x=null u=null uk=[] ua=[] hash=98193002
+<en-US-1abcd> [en_US_1abcd] en||US|1abcd tag=en-US-1abcd ext=[] x=null u=null uk=[] ua=[] hash=144876492
+<en-US-abcd> [en_US] en||US| tag=en-US ext=[] x=null u=null uk=[] ua=[] hash=96636889
+<ja-JP-u-nu-latn-x-lvariant-JP> [ja_JP_JP_#u-nu-latn] ja||JP|JP tag=ja-JP-u-nu-latn-x-lvariant-JP ext=[u] x=null u=nu-latn uk=[nu] ua=[] hash=-1927400012
+<th-TH-u-ca-gregory-x-lvariant-TH> [th_TH_TH_#u-ca-gregory] th||TH|TH tag=th-TH-u-ca-gregory-x-lvariant-TH ext=[u] x=null u=ca-gregory uk=[ca] ua=[] hash=-1398473346
+<ja-JP-u-x-lvariant-JP> [ja_JP] ja||JP| tag=ja-JP ext=[] x=null u=null uk=[] ua=[] hash=100856547
+<ja-JP-a-bb-x-lvariant-JP> [ja_JP_JP_#a-bb] ja||JP|JP tag=ja-JP-a-bb-x-lvariant-JP ext=[a] x=null u=null uk=[] ua=[] hash=103690501
+<ja-JP-x-foo-lvariant-JP> [ja_JP_JP_#x-foo] ja||JP|JP tag=ja-JP-x-foo-lvariant-JP ext=[x] x=foo u=null uk=[] ua=[] hash=11794904
+<engl-abc> [abc] abc||| tag=abc ext=[] x=null u=null uk=[] ua=[] hash=-1424485282
+<x-a-abcdefghi> [] ||| tag=x-a ext=[x] x=a u=null uk=[] ua=[] hash=116812
+<en-x-a--b> [en__#x-a] en||| tag=en-x-a ext=[x] x=a u=null uk=[] ua=[] hash=96505595
+<en-x-a-> [en__#x-a] en||| tag=en-x-a ext=[x] x=a u=null uk=[] ua=[] hash=96505595
+<en-US-x-lvariant-abcdefghi> [en_US_#x-lvariant] en||US| tag=en-US-x-lvariant ext=[x] x=lvariant u=null uk=[] ua=[] hash=1985087383
+<en-x-lvariant-> [en__#x-lvariant] en||| tag=en-x-lvariant ext=[x] x=lvariant u=null uk=[] ua=[] hash=1985072889
+<en-x-lvariant-a-b-abcdefghi> [en__a_b] en|||a_b tag=en-x-lvariant-a-b ext=[] x=null u=null uk=[] ua=[] hash=96648891
+<en-a-bbb> [en__#a-bbb] en||| tag=en-a-bbb ext=[a] x=null u=null uk=[] ua=[] hash=11378177
+<en-US-a-bbb-x-yy> [en_US_#a-bbb-x-yy] en||US| tag=en-US-a-bbb-x-yy ext=[a, x] x=yy u=null uk=[] ua=[] hash=1272905877
+NPE

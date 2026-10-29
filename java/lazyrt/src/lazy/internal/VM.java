@@ -10,6 +10,11 @@ public final class VM {
     /** The process environment as NUL-terminated name=value entries. */
     public static native String environment();
 
+    /** Sets a system property; returns the old value or null. */
+    public static native String setProperty(String key, String value);
+
+    public static native String clearProperty(String key);
+
     public static native void exit(int status);
 
     public static native void gc();

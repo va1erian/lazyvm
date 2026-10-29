@@ -24,7 +24,7 @@ public final class Scanner implements Iterator<String>, Closeable {
     private final ScannerInput in;
     private final ScannerTokens tokens;
     private final ScannerCache cache = new ScannerCache();
-    private Locale locale = Locale.getDefault();
+    private Locale locale = Locale.getDefault(Locale.Category.FORMAT);
     private int radix = 10;
     private boolean closed;
     /** The result match() gives; null when there is none (SC7). */
@@ -89,7 +89,7 @@ public final class Scanner implements Iterator<String>, Closeable {
     /** SC22; SC7, SC24: it also forgets what hasNextLine saw and what hasNext calls remembered. */
     public Scanner reset() {
         useDelimiter(ScannerTokens.WHITESPACE);
-        locale = Locale.getDefault();
+        locale = Locale.getDefault(Locale.Category.FORMAT);
         radix = 10;
         cache.forget();
         lineSeen = -1;

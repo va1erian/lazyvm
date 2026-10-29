@@ -33,18 +33,35 @@ public final class System {
     public static native int identityHashCode(Object x);
 
     public static String getProperty(String key) {
-        if (key == null) {
-            throw new NullPointerException("key can't be null");
-        }
-        if (key.length() == 0) {
-            throw new IllegalArgumentException("key can't be empty");
-        }
+        checkKey(key);
         return VM.getProperty(key);
     }
 
     public static String getProperty(String key, String def) {
         String value = getProperty(key);
         return value == null ? def : value;
+    }
+
+    public static String setProperty(String key, String value) {
+        checkKey(key);
+        if (value == null) {
+            throw new NullPointerException();
+        }
+        return VM.setProperty(key, value);
+    }
+
+    public static String clearProperty(String key) {
+        checkKey(key);
+        return VM.clearProperty(key);
+    }
+
+    private static void checkKey(String key) {
+        if (key == null) {
+            throw new NullPointerException("key can't be null");
+        }
+        if (key.length() == 0) {
+            throw new IllegalArgumentException("key can't be empty");
+        }
     }
 
     public static String getenv(String name) {

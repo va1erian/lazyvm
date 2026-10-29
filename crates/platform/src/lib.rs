@@ -107,6 +107,12 @@ pub fn default_properties() -> Vec<(String, OsString)> {
         ("path.separator", if windows { ";" } else { ":" }),
         ("line.separator", if windows { "\r\n" } else { "\n" }),
         ("file.encoding", "UTF-8"),
+        // The default locale is en-US whatever the OS is set to, so output is the same on every
+        // machine; -D overrides these (Locale.getDefault).
+        ("user.language", "en"),
+        ("user.country", "US"),
+        ("user.variant", ""),
+        ("user.script", ""),
     ]
     .into_iter()
     .map(|(k, v)| (k.to_owned(), OsString::from(v)))

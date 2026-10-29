@@ -275,7 +275,7 @@ public class PrintWriter extends Writer {
     }
 
     public PrintWriter format(String format, Object... args) {
-        return formatIn(Locale.getDefault(), format, args);
+        return formatIn(Locale.getDefault(Locale.Category.FORMAT), format, args);
     }
 
     public PrintWriter format(Locale l, String format, Object... args) {

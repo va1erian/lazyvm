@@ -17,11 +17,11 @@ public final class Formatter implements Closeable, Flushable {
     private IOException lastException;
 
     public Formatter() {
-        this(new StringBuilder(), Locale.getDefault());
+        this(new StringBuilder(), Locale.getDefault(Locale.Category.FORMAT));
     }
 
     public Formatter(Appendable a) {
-        this(a, Locale.getDefault());
+        this(a, Locale.getDefault(Locale.Category.FORMAT));
     }
 
     public Formatter(Locale l) {
@@ -34,11 +34,11 @@ public final class Formatter implements Closeable, Flushable {
     }
 
     public Formatter(PrintStream ps) {
-        this(Objects.requireNonNull(ps), Locale.getDefault());
+        this(Objects.requireNonNull(ps), Locale.getDefault(Locale.Category.FORMAT));
     }
 
     public Formatter(OutputStream os) {
-        this(new PrintStream(os), Locale.getDefault());
+        this(new PrintStream(os), Locale.getDefault(Locale.Category.FORMAT));
     }
 
     private void ensureOpen() {
