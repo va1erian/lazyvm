@@ -355,6 +355,37 @@ Goal: the everyday `java.util` and `java.io` surface from
       to `find` in 5000 spaces (42 s at S5-04, 0.02 s now, the oracle 25 ms), and
       `RegexNamesLocale` (property names under a Turkish default).
 
+S5-10 to S5-12 were added at the S5 checkpoint (2026-10-29) for the gaps the
+Minicraft Plus port found. They run after S6-01 and S6-02.
+
+- [ ] S5-10 `java.math`: `BigInteger`, `BigDecimal`, `MathContext` and
+      `RoundingMode`, the whole Java SE 8 API of each. That covers arithmetic,
+      bit operations, `modPow`/`modInverse`/`gcd`, `isProbablePrime`, radix
+      parsing and printing, `toByteArray`, scale and rounding, and the three
+      `BigDecimal` string forms. `valueOf(double)` and `new BigDecimal(double)`
+      must be exact. Also: `Scanner`'s `BigInteger`/`BigDecimal` readers, and
+      `Formatter` on both types. Long values must not be quadratic: multiplying
+      and printing a 100000-digit number takes under 2 s.
+      Check: `tests/java/math/BigIntegers`, `BigDecimals`, `MathFuzz` (seeded
+      random operations), `tests/java/util/ScannerBig`.
+- [ ] S5-11 `java.util.zip` over the `miniz_oxide` the VM already uses for jars:
+      - `ZipFile`, `ZipEntry`, `ZipInputStream`, `ZipOutputStream`, `ZipException`;
+      - `Inflater`/`Deflater` and their streams, `GZIPInputStream`/`GZIPOutputStream`;
+      - `CRC32`, `Adler32`, `CheckedInputStream`.
+      A malformed archive is an exception, never a panic. Tests print contents
+      and checksums, never compressed bytes, since those may differ from zlib's.
+      Check: `tests/java/zip/ZipReadWrite` (written with `ZipOutputStream`,
+      read back with `ZipFile` and `ZipInputStream`, and a checked-in fixture
+      zip), `GzipRoundTrip`, `Checksums`, `ZipMalformed`.
+- [ ] S5-12 Resources as URLs, before the rest of S7-02. It covers:
+      - `java.net.URL` for `file:` and `jar:`: parts, `toString`, `equals` and
+        `hashCode`, `openStream`, and a minimal `URLConnection` for those protocols;
+      - `MalformedURLException`, `URI.toURL`;
+      - `Class.getResource` and `ClassLoader.getResource`/`getResources`, which
+        return `file:` or `jar:` URLs.
+      Unknown protocols throw `MalformedURLException` until S7-02 adds `http`.
+      Check: `tests/java/net/UrlFile`, `ResourceUrls` (also with `--jar`).
+
 Gate: `tests/java/s5/WordCount` (reads a 5 MB file, counts with `HashMap`,
 prints the top 20 with `printf`) matches the oracle on both platforms.
 
@@ -409,7 +440,8 @@ Goal: blocking `java.net`, non-blocking `java.nio.channels`, and
       options and timeouts.
       Check: `cargo test -p lazyvm-win sockets`; LazyOS `tools/lazyos_test.py --net` with the image's networking switch.
 - [ ] S7-02 `java.net`: `InetAddress`, `Socket`, `ServerSocket`,
-      `DatagramSocket`, `URI` (RFC 2396 as the Javadoc says), `URL`,
+      `DatagramSocket`, `URI` (RFC 2396 as the Javadoc says), `URL` (`http`;
+      `file:` and `jar:` come with S5-12),
       `URLEncoder`/`URLDecoder`, and the exceptions (`ConnectException`,
       `SocketTimeoutException`, `UnknownHostException`).
       Check: `tests/java/net/EchoServer` (a server and client in one test on localhost), `UriParse`, `UrlParts` (both).

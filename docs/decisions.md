@@ -127,6 +127,9 @@ decision marked **(proposed)** is not in force until the owner confirms it.
 | `java.util.function` | S4 | All 43 interfaces |
 | `java.io` | S5 | Byte and char streams, buffering, `File`, `PrintStream`/`PrintWriter`, `RandomAccessFile`, `Data*Stream` |
 | `java.nio` | S5 | `charset` (UTF-8, UTF-16 variants, ISO-8859-1, US-ASCII), `ByteBuffer` (heap only), and a `file` subset (`Path`, `Paths`, `Files` read, write, list, walk, attributes) |
+| `java.math` | S5 | `BigInteger`, `BigDecimal`, `MathContext`, `RoundingMode` |
+| `java.util.zip` | S5 | `ZipFile`, `ZipEntry`, `ZipInputStream`/`ZipOutputStream`, `Inflater`/`Deflater` and their streams, GZIP streams, `CRC32`, `Adler32` |
+| `javax.security.auth` | S5 | Only `Destroyable` and `DestroyFailedException`, which apps implement as plain interfaces |
 | `java.util.concurrent` | S6 | Atomics, locks, `ExecutorService`/`ThreadPoolExecutor`, `ScheduledExecutorService`, `ConcurrentHashMap`, `CountDownLatch`, `Semaphore`, blocking queues, `CompletableFuture`/`CompletionStage`, `ForkJoinPool` (simple) |
 | `java.net` | S7 | `InetAddress` (DNS through the platform), `Socket`, `ServerSocket`, `DatagramSocket`, `URI`, `URL`, `URLEncoder`/`URLDecoder`, `HttpURLConnection` (`http`, and `https` through rustls) |
 | `java.nio.channels` | S7 | `SocketChannel`, `ServerSocketChannel`, `Selector` (non-blocking), `AsynchronousSocketChannel` bridged onto the reactor |
