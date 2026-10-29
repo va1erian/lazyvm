@@ -124,7 +124,9 @@ Goal: Java apps are first-class LazyOS apps. They talk Messenger with
       Check: LazyOS `midlc` tests; `tests/lazy/msg/CodecRoundTrip` against fixtures encoded by the Rust codecs.
 - [ ] S10-02 `lazy.msg` runtime: `Messenger.connect(Class<I>)` resolves and
       binds through the registry, calls go through the begin-call / completion
-      path (no thread parked per call), `@Deadline`, and errors as
+      path (no thread parked per call) on the S6-06 loop, whose LazyOS park
+      becomes the one `wait` over `WAIT_CALLS`, endpoints and `mio`'s epoll
+      descriptor as `WAIT_FD` ([`async.md`](async.md)), `@Deadline`, and errors as
       `MessengerException` with the friendly error text.
       Check: on LazyOS `tests/lazy/msg/EchoCall` against `os.lazy.echo` (both deadline and peer-death cases).
 - [ ] S10-03 Topics and services: `@Subscribe` handlers discovered by
@@ -245,7 +247,7 @@ S7, which ships only the `lazy.net` async TCP API.
 
 - [ ] S15-01 The rest of the platform sockets: UDP, blocking calls on the
       S7-01 layer, socket options and timeouts.
-      Check: `cargo test -p lazyvm-win sockets::udp` and `sockets::blocking`; LazyOS `tools/lazyos_test.py --net` with the image's networking switch.
+      Check: `cargo test -p platform net::udp` and `net::blocking`; LazyOS `tools/lazyos_test.py --net` with the image's networking switch.
       Needs: S7-01.
 - [ ] S15-02 `java.net`: `InetAddress`, `Socket`, `ServerSocket`,
       `DatagramSocket`, the rest of `URI` (RFC 2396 as the Javadoc says),

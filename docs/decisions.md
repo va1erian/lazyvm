@@ -151,7 +151,8 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
 
 - `lazy.async`: the event loop. `Loop` owns a reactor thread that waits on
   the platform (LazyOS: one `wait` naming `WAIT_CALLS`, endpoints and a
-  `WAIT_FD` epoll descriptor for sockets; Windows: `mio`). Completions are
+  `WAIT_FD` epoll descriptor for sockets, from S10-02; Windows, and LazyOS
+  until then: `mio`, see [`async.md`](async.md)). Completions are
   handed to an `Executor` the caller chooses (default: the loop's executor;
   in UI code: `Ui.executor()`), and every async API returns
   `CompletionStage<T>`. Cancelling the `CompletableFuture` cancels the
