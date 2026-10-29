@@ -378,15 +378,19 @@ public final class String implements java.io.Serializable, Comparable<String>, C
     }
 
     public String toLowerCase() {
-        return convertCase(false);
+        return toLowerCase(Locale.getDefault());
+    }
+
+    public String toLowerCase(Locale locale) {
+        return StringCase.convert(this, false, locale);
     }
 
     public String toUpperCase() {
-        return convertCase(true);
+        return toUpperCase(Locale.getDefault());
     }
 
-    private String convertCase(boolean upper) {
-        return StringCase.convert(this, upper);
+    public String toUpperCase(Locale locale) {
+        return StringCase.convert(this, true, locale);
     }
 
     public String trim() {
@@ -414,17 +418,7 @@ public final class String implements java.io.Serializable, Comparable<String>, C
     public native String intern();
 
     public static String join(CharSequence delimiter, CharSequence... elements) {
-        if (delimiter == null || elements == null) {
-            throw new NullPointerException();
-        }
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < elements.length; i++) {
-            if (i > 0) {
-                sb.append(delimiter);
-            }
-            sb.append(elements[i]);
-        }
-        return sb.toString();
+        return join(delimiter, java.util.Arrays.asList(elements));
     }
 
     public static String join(CharSequence delimiter, Iterable<? extends CharSequence> elements) {

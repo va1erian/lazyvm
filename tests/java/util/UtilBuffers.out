@@ -13,4 +13,9 @@ decode 'QQ==\n' B IllegalArgumentException: Input byte array has incorrect endin
 valueOf bytes {0, 71} size 128 buffer pos 1 lim 12
 valueOf bytes order ignored {0} 0
 valueOf longs {64} size 128 buffer pos 1 lim 5
+decode index direct: Input byte array has incorrect ending byte at 4 | MIME Input byte array has incorrect ending byte at 5 | pos 3
+decode index read-only: Input byte array has incorrect ending byte at 4 | MIME Input byte array has incorrect ending byte at 5 | pos 3
+decode index slice offset 1: Input byte array has incorrect ending byte at 7 | MIME Input byte array has incorrect ending byte at 8 | pos 2
+decode index heap: Input byte array has incorrect ending byte at 7 | MIME Input byte array has incorrect ending byte at 8 | pos 3
+decode read-only pos 0 lim 5 cap 5 [hello] array true in pos 8
 done

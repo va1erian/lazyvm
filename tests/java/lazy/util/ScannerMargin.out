@@ -1,0 +1,6 @@
+lookbehind (?<=\d),: 5000 tokens, string agrees, reader agrees
+lookbehind (?<=b)c: 10000 tokens, string agrees, reader agrees
+lookbehind (?<=#.{20}),: 1001 tokens, string agrees, reader agrees
+string ^a found 1 at line 0, (?m)^a found 6000
+reader ^a found 1 at line 0, (?m)^a found 6000
+done

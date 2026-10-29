@@ -112,5 +112,5 @@ store fuzz \#a=<d83d>\=<1>|
 store fuzz \:\#a<20ac><d83d>=\f\\\r\=|\t\n=|<d83d><1>=<d83d>\\<20ac>|
 store fuzz \:a\r<d83d>\ =|
 store fuzz \!\!\f<20ac>\n=|<d83d>\t<20ac>=\:|
-store fuzz hash -5995935076524029597 round trips 600 600
+store fuzz hash 4935579427483934377 round trips 600 600
 done
