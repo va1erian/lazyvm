@@ -118,6 +118,36 @@ pub fn default_properties() -> Vec<(String, OsString)> {
     .collect()
 }
 
+/// The process environment as `name=value` entries, each ending in a NUL, for
+/// `System.getenv`. LazyOS passes whatever environment its launcher gave the
+/// process (possibly none), through the same `std` call. Entries without a
+/// name (Windows drive variables such as `=C:`) are left out.
+pub fn environment() -> Vec<u16> {
+    let mut out = Vec::new();
+    for (name, value) in std::env::vars_os() {
+        if name.is_empty() {
+            continue;
+        }
+        out.extend(wtf_units(&name));
+        out.push(u16::from(b'='));
+        out.extend(wtf_units(&value));
+        out.push(0);
+    }
+    out
+}
+
+#[cfg(windows)]
+fn wtf_units(s: &std::ffi::OsStr) -> Vec<u16> {
+    use std::os::windows::ffi::OsStrExt;
+    s.encode_wide().collect()
+}
+
+// Unix names are bytes; ill-formed ones read as U+FFFD.
+#[cfg(not(windows))]
+fn wtf_units(s: &std::ffi::OsStr) -> Vec<u16> {
+    s.to_string_lossy().encode_utf16().collect()
+}
+
 /// 64 bits that differ on every call and in every run, for `new Random()`
 /// and `UUID.randomUUID()` (docs/design/util.md R3, util-data.md U8).
 ///

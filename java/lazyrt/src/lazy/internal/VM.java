@@ -7,6 +7,9 @@ public final class VM {
 
     public static native String getProperty(String key);
 
+    /** The process environment as NUL-terminated name=value entries. */
+    public static native String environment();
+
     public static native void exit(int status);
 
     public static native void gc();

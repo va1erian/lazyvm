@@ -47,6 +47,17 @@ public final class System {
         return value == null ? def : value;
     }
 
+    public static String getenv(String name) {
+        if (name == null) {
+            throw new NullPointerException();
+        }
+        return lazy.internal.Environment.lookup(name);
+    }
+
+    public static java.util.Map<String, String> getenv() {
+        return lazy.internal.Environment.map();
+    }
+
     public static String lineSeparator() {
         if (lineSeparator == null) {
             String s = VM.getProperty("line.separator");

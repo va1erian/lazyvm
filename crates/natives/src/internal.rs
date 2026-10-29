@@ -17,6 +17,9 @@ pub fn register(vm: &mut Vm) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         get_property,
     );
+    vm.register_native(VM_CLASS, "environment", "()Ljava/lang/String;", |vm, _| {
+        ret_ref(Some(vm.new_string_utf16(&platform::environment())?))
+    });
     vm.register_native(VM_CLASS, "exit", "(I)V", |_, a| {
         Err(VmError::Exit(int(a, 0)?))
     });

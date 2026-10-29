@@ -17,6 +17,13 @@ public final class Boolean implements java.io.Serializable, Comparable<Boolean> 
         this(parseBoolean(s));
     }
 
+    public static boolean getBoolean(String name) {
+        if (name == null || name.length() == 0) {
+            return false;
+        }
+        return parseBoolean(System.getProperty(name));
+    }
+
     public static boolean parseBoolean(String s) {
         return s != null && s.equalsIgnoreCase("true");
     }
