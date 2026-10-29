@@ -97,7 +97,28 @@ fn run(mut launch: Launch) -> ExitCode {
     }
     let main_class = launch.main_class.clone().unwrap_or_default();
     let result = run_main(&mut vm, &main_class, &launch.args);
-    finish(&mut vm, result)
+    match finish(&mut vm, result) {
+        Ended::Exit(code) => code,
+        Ended::Main(code) => after_main(&mut vm, code),
+    }
+}
+
+/// How the main thread ended.
+enum Ended {
+    /// `main` returned (`SUCCESS`) or its uncaught exception was reported.
+    Main(ExitCode),
+    /// `System.exit`, `Runtime.halt` or a VM failure: nothing else runs.
+    Exit(ExitCode),
+}
+
+/// After `main`, the VM lives on until the last non-daemon thread ends,
+/// then runs the shutdown hooks (`Runtime.addShutdownHook`).
+fn after_main(vm: &mut Vm, code: ExitCode) -> ExitCode {
+    match vm.shutdown_after_main() {
+        Ok(()) | Err(VmError::Throw(_)) => code,
+        Err(VmError::Exit(c)) => ExitCode::from(c as u8),
+        Err(e) => internal(&e.to_string()),
+    }
 }
 
 /// Loads the main class and calls `public static void main(String[])`.
@@ -139,22 +160,22 @@ fn run_main(vm: &mut Vm, main_class: &str, args: &[String]) -> Result<(), VmErro
 
 /// Turns the outcome of `main` into an exit status, printing an uncaught
 /// exception the way `ThreadGroup.uncaughtException` does.
-fn finish(vm: &mut Vm, result: Result<(), VmError>) -> ExitCode {
+fn finish(vm: &mut Vm, result: Result<(), VmError>) -> Ended {
     let err = match result {
-        Ok(()) => return ExitCode::SUCCESS,
-        Err(VmError::Exit(code)) => return ExitCode::from(code as u8),
-        Err(VmError::Internal(msg)) => return internal(&msg),
+        Ok(()) => return Ended::Main(ExitCode::SUCCESS),
+        Err(VmError::Exit(code)) => return Ended::Exit(ExitCode::from(code as u8)),
+        Err(VmError::Internal(msg)) => return Ended::Exit(internal(&msg)),
         Err(e) => e,
     };
     let ex = match vm.materialize(err) {
         Ok(ex) => ex,
-        Err(VmError::Exit(code)) => return ExitCode::from(code as u8),
-        Err(e) => return internal(&e.to_string()),
+        Err(VmError::Exit(code)) => return Ended::Exit(ExitCode::from(code as u8)),
+        Err(e) => return Ended::Exit(internal(&e.to_string())),
     };
     match report_uncaught(vm, ex) {
-        Ok(()) | Err(VmError::Throw(_)) => ExitCode::from(1),
-        Err(VmError::Exit(code)) => ExitCode::from(code as u8),
-        Err(e) => internal(&e.to_string()),
+        Ok(()) | Err(VmError::Throw(_)) => Ended::Main(ExitCode::from(1)),
+        Err(VmError::Exit(code)) => Ended::Exit(ExitCode::from(code as u8)),
+        Err(e) => Ended::Exit(internal(&e.to_string())),
     }
 }
 

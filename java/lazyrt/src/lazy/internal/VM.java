@@ -42,10 +42,18 @@ public final class VM {
     /** The generated class implementing an annotation type: a subclass of AnnotationBase. */
     static native Class<?> annotationClass(Class<?> annotationType);
 
-    /** Called by the VM when an exception escapes the main thread. */
+    /**
+     * Called by the VM when an exception escapes the main thread: it goes to
+     * the thread's handler, as for any other thread.
+     */
     static void uncaught(Throwable t) {
-        System.err.print("Exception in thread \"" + Thread.currentThread().getName() + "\" ");
-        t.printStackTrace(System.err);
+        Thread current = Thread.currentThread();
+        try {
+            current.getUncaughtExceptionHandler().uncaughtException(current, t);
+        } catch (Throwable u) {
+            System.err.print("\nException: " + u.getClass().getName()
+                    + " thrown from the UncaughtExceptionHandler in thread \"" + current.getName() + "\"\n");
+        }
         System.err.flush();
     }
 }
