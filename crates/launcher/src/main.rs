@@ -74,7 +74,7 @@ fn run(mut launch: Launch) -> ExitCode {
     if let Some(jar) = &launch.jar {
         match jarfile::resolve(jar) {
             Ok(j) => {
-                launch.main_class = Some(j.main_class);
+                launch.main_class = Some(j.main_class.encode_utf16().collect());
                 launch.classpath = j.classpath;
             }
             Err(msg) => {
@@ -103,7 +103,16 @@ fn run(mut launch: Launch) -> ExitCode {
         return ExitCode::from(1);
     }
     let main_class = launch.main_class.clone().unwrap_or_default();
-    let result = run_main(&mut vm, &main_class, &launch.args);
+    let result = match String::from_utf16(&main_class) {
+        Ok(name) => run_main(&mut vm, &name, &launch.args),
+        // Class names are well-formed text, so a name with an unpaired surrogate names no
+        // class; looking up its lossy spelling could find a different one.
+        Err(_) => {
+            let shown = String::from_utf16_lossy(&main_class);
+            eprintln!("Error: Could not find or load main class {shown}");
+            Err(VmError::Exit(1))
+        }
+    };
     finish(&mut vm, result)
 }
 

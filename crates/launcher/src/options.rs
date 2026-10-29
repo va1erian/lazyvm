@@ -60,8 +60,8 @@ pub struct Launch {
     /// `-D` properties, name and value, in order.
     pub properties: Vec<(Arg, Arg)>,
     pub options: Options,
-    /// The class to run, or `None` with `-jar` (the manifest names it).
-    pub main_class: Option<String>,
+    /// The class to run, as given, or `None` with `-jar` (the manifest names it).
+    pub main_class: Option<Arg>,
     /// `-jar <file>`: the jar is the whole application class path.
     pub jar: Option<PathBuf>,
     pub args: Vec<Arg>,
@@ -99,7 +99,7 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                 boot_classpath: boot,
                 properties,
                 options,
-                main_class: Some(a.to_owned()),
+                main_class: Some(args[i].clone()),
                 jar: None,
                 args: args[i + 1..].to_vec(),
                 show_version,
@@ -174,9 +174,7 @@ fn split_path(s: &OsStr) -> Vec<PathBuf> {
 
 /// The application class path: an empty entry (or an empty value) is the current directory.
 fn split_classpath(s: &OsStr) -> Vec<PathBuf> {
-    if s.is_empty() {
-        return vec![PathBuf::from(".")];
-    }
+    // An empty value splits into one empty entry, so it needs no case of its own.
     std::env::split_paths(s)
         .map(|p| {
             if p.as_os_str().is_empty() {
@@ -257,7 +255,7 @@ mod tests {
         let Ok(Command::Run(l)) = parse(&args) else {
             panic!("should parse")
         };
-        assert_eq!(l.main_class.as_deref(), Some("app.Main"));
+        assert_eq!(l.main_class, Some(units("app.Main")));
         assert_eq!(l.args, [units("x"), units("-y")]);
         assert_eq!(l.properties, [(units("k"), units("v"))]);
         assert_eq!(l.options.heap_limit, 64 << 20);

@@ -53,11 +53,12 @@ CASES = {
     "cp_empty_property": ["-Djava.class.path=", "app.Props", "nosuch"],
     "cp_trailing_separator": [f"-Djava.class.path={J}/app{SEP}", "app.Props", "java.class.path"],
     "cp_leading_separator": ["-cp", f"{SEP}{J}/app", "app.Props", "java.class.path"],
+    "cp_empty_entry": ["-cp", f"{J}/nothing{SEP}", "app.Props", "java.class.path"],
     "cp_property_after_cp": ["-cp", f"{J}/nothing", f"-Djava.class.path={J}/app", "app.Props", "java.class.path"],
     "cp_cp_after_property": [f"-Djava.class.path={J}/nothing", "-cp", f"{J}/app", "app.Props", "java.class.path"],
 }
 # Cases that must run from another directory (relative to the repo root).
-RUN_IN = {"cp_empty_value": f"{J}/app", "cp_empty_property": f"{J}/app"}
+RUN_IN = {"cp_empty_value": f"{J}/app", "cp_empty_property": f"{J}/app", "cp_empty_entry": f"{J}/app"}
 
 
 def jar(path: Path, classes: Path, manifest: str | None) -> None:
@@ -164,6 +165,12 @@ def checks(exe: str, env: dict[str, str]) -> list[tuple[str, str, object]]:
     fresh(OUT / ("y" + mark + "xd800"), None)
     jar_ref = run([exe, "-jar", str(OUT / "app.jar"), "x"], env)
     missing = chr(0xFFFD)
+    # A decoy class named app.Pr<U+FFFD>: app.Props with its name patched (same byte length).
+    decoy = fresh(OUT / "decoy", None)
+    (decoy / "app").mkdir()
+    props = (app / "app" / "Props.class").read_bytes()
+    (decoy / "app" / ("Pr" + missing + ".class")).write_bytes(
+        props.replace(b"app/Props", b"app/Pr" + missing.encode("utf-8")))
     return [
         # -D keys are stored the way getProperty looks them up, marker character included.
         ("property_marker_keys",
@@ -183,6 +190,11 @@ def checks(exe: str, env: dict[str, str]) -> list[tuple[str, str, object]]:
         ("main_class_message",
          run([exe, "-cp", str(app), "app.Q" + lone], env),
          testlib.transcript("", f"Error: Could not find or load main class app.Q{missing}\n", 1)),
+        # ... and never resolves to the class its lossy spelling names.
+        ("main_class_lone_not_decoy",
+         run([exe, "-cp", str(decoy), "app.Pr" + lone, "nosuch"], env),
+         testlib.transcript("", f"Error: Could not find or load main class app.Pr{missing}\n", 1)),
+        ("main_class_decoy_exists", run([exe, "-cp", str(decoy), "app.Pr" + missing, "nosuch"], env), none),
         # "." is the current directory, whether given or the default.
         ("classpath_dot", run([exe, "-cp", ".", "app.Props", "nosuch"], env, app), none),
         ("classpath_default", run([exe, "app.Props", "nosuch"], no_cp, app), none),
