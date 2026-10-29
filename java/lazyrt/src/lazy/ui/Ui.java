@@ -46,8 +46,9 @@ public final class Ui {
      * Opens {@code window} and runs it until it closes. Call it once per process, from the main
      * thread. An exception thrown by a callback closes the window and is rethrown from here.
      *
-     * @throws IllegalStateException on a second call, or with no window system (use {@code
-     *     -Dlazy.ui=headless})
+     * @throws IllegalStateException on a second call, with no window system (use {@code
+     *     -Dlazy.ui=headless}), or under the plain {@code lazyvm} launcher, which has no
+     *     {@code lazy.ui} (run {@code lazyvm-ui})
      */
     public static void run(Window window) {
         nonNull(window, "window");
@@ -56,7 +57,12 @@ public final class Ui {
         ran = true;
         Encoder out = new Encoder();
         window.content.encode(out);
-        run0(window.title, window.width, window.height, out.ops(), out.strings.toArray());
+        try {
+            run0(window.title, window.width, window.height, out.ops(), out.strings.toArray());
+        } catch (UnsatisfiedLinkError e) {
+            // The plain lazyvm binary leaves xui out (docs/ui.md, "Size").
+            throw new IllegalStateException("lazy.ui needs the lazyvm-ui launcher", e);
+        }
     }
 
     static int register(Widget w) {

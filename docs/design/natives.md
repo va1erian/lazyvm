@@ -210,6 +210,9 @@ above, an unknown handle is `IllegalStateException`. Sizes are checked in Java
 and again in Rust.
 
 ### `lazy.ui.Ui` (docs/ui.md; S9-02 spike)
+These live in `crates/natives-ui` and are registered only by `lazyvm-ui`;
+under `lazyvm` they are missing, and `Ui.run` turns the
+`UnsatisfiedLinkError` into `IllegalStateException`.
 - `private static native void run0(String title, int width, int height, int[] ops, Object[] strings)`:
   builds the window from the op list (`crates/xui-bind/src/tree.rs`; every
   `strings` element a `String`) and runs it until it closes, calling

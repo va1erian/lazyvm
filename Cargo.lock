@@ -792,6 +792,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "launcher-ui"
+version = "0.1.0"
+dependencies = [
+ "launcher",
+ "natives-ui",
+]
+
+[[package]]
 name = "lazyvm-win"
 version = "0.1.0"
 dependencies = [
@@ -907,9 +915,17 @@ version = "0.1.0"
 dependencies = [
  "classfile",
  "gfx",
- "lazyvm-win",
  "libm",
  "platform",
+ "vm",
+]
+
+[[package]]
+name = "natives-ui"
+version = "0.1.0"
+dependencies = [
+ "lazyvm-win",
+ "natives",
  "vm",
  "xui-bind",
 ]

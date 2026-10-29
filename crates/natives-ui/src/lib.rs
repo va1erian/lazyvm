@@ -1,4 +1,5 @@
-//! `lazy.ui`: Java widget trees on xui (docs/ui.md). The `xui-bind` crate
+//! `lazy.ui`: Java widget trees on xui (docs/ui.md), registered only by the
+//! `lazyvm-ui` launcher (`crates/launcher-ui`). The `xui-bind` crate
 //! builds and runs the window; this module moves the op list off the heap
 //! and turns each widget message into one upcall to `Ui.dispatch`, through
 //! the VM lent for the length of the loop.
@@ -12,10 +13,11 @@ use vm::interp::with_lent;
 use vm::{MethodRef, Value, Vm, VmError, VmResult};
 use xui_bind::{Headless, Host, Stats, Tree};
 
-use crate::{arg, int, obj, ret_void};
+use natives::{arg, int, obj, ret_void};
 
 const UI: &str = "lazy/ui/Ui";
 
+/// Registers the `lazy.ui` natives; `launcher-ui` calls it after `natives::register_all`.
 pub fn register(vm: &mut Vm) {
     vm.register_native(
         UI,

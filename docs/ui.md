@@ -264,6 +264,7 @@ As in `lazy.gfx`, the host is picked by `-Dlazy.ui=`:
 | (unset) | LazyOS | `xui-app`'s `LazyOSBackend` over xuid, from `crates/lazyvm-lazyos`, since `xui-app` is GPL (S9-04, needs LOS-02) |
 | `headless` | both | `xui-canvas`'s `OffscreenBackend`, driven by `lazy.internal.ui.Headless` |
 
+Only `lazyvm-ui` links any of this ("Size").
 `crates/xui-bind` (MIT OR Apache-2.0, like the other VM crates) depends on
 `xui-core` and on `xui-canvas` with its default features off, which is the
 offscreen backend alone. The window hosts plug in where D10 puts them:
@@ -340,11 +341,16 @@ Fonts count too:
 
 So:
 
-- The UI sits behind a `ui` cargo feature, like `lazy.gfx`'s `desktop`, so a
-  VM can be built without it.
-- S9-02's PR measures `tools/size.py` with and without the feature on both
-  platforms before any widget work, and stops for the owner if it passes
-  80 % of the budget. S9-03 measures again with `winit-backend`.
+- **The UI is a second binary.** `lazyvm` has no `lazy.ui` and links no
+  xui; `lazyvm-ui` (`crates/launcher-ui`) is the same launcher plus the
+  `lazy.ui` natives (`crates/natives-ui`). They are separate crates rather
+  than a cargo feature, so a workspace build cannot unify xui into
+  `lazyvm`. Under `lazyvm`, `Ui.run` throws `IllegalStateException` naming
+  `lazyvm-ui`. Both binaries share `lazyrt.jar` (the `lazy.ui` classes cost
+  it a few KB).
+- `tools/size.py` checks both against D14, on Windows and musl, in CI. A
+  PR that adds widgets says what `lazyvm-ui` costs, and stops for the owner
+  past 80 % of the budget.
 - Only the widgets apps use are bound. xui's optional crates (rich text, the
   code editor, web views, forms, scripts) stay out.
 
@@ -391,11 +397,11 @@ at 125 % scale, with numbers reproduced by a second, independent run.
 
 | Measure | Result |
 |---|---|
-| Size, no `lazy.ui` (`--no-default-features --features desktop`) | 1,628,252 B (41 %) |
-| Size, headless `lazy.ui` only | 2,698,481 B (67 %) |
-| Size, full UI with the winit host (default) | 2,999,806 B (75 %) |
-| Size, musl with the headless UI | 2,995,159 B (75 %) |
-| A trivial `Hello`, warm start, no UI / full UI build | ~16 ms / ~16 ms |
+| Size, `lazyvm` (no xui), Windows / musl | 1,628,323 B (41 %) / 1,612,661 B (40 %) |
+| Size, a headless-only UI build, Windows | 2,698,481 B (67 %) |
+| Size, `lazyvm-ui` with the winit host, Windows | 3,001,273 B (75 %) |
+| Size, `lazyvm-ui` (headless until S9-04), musl | 2,994,088 B (75 %) |
+| A trivial `Hello`, warm start, `lazyvm` / `lazyvm-ui` | ~16 ms / ~16 ms |
 | Counter: launch to the window shown, still empty | 24 to 29 ms |
 | Counter: `run0` to mounted widgets (`build`, event loop included) | 39 to 48 ms |
 | Counter: launch to widgets on screen (estimate: VM start ~16 ms + `build`) | ~55 to 65 ms |

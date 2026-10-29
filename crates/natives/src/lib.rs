@@ -20,8 +20,6 @@ mod lang_system;
 mod lang_throwable;
 mod lazy_gfx;
 mod lazy_gfx_draw;
-#[cfg(feature = "ui")]
-mod lazy_ui;
 mod math;
 mod real_path;
 mod reflect;
@@ -44,21 +42,22 @@ pub fn register_all(vm: &mut Vm) {
     internal::register(vm);
     lazy_gfx::register(vm);
     lazy_gfx_draw::register(vm);
-    #[cfg(feature = "ui")]
-    lazy_ui::register(vm);
     files::register(vm);
     file_attrs::register(vm);
     reflect::register(vm);
     reflect_access::register(vm);
 }
 
-fn arg(args: &[Value], i: usize) -> VmResult<Value> {
+// The argument helpers below are shared with the other natives crates
+// (`natives-ui`), so every native reads its arguments one way.
+
+pub fn arg(args: &[Value], i: usize) -> VmResult<Value> {
     args.get(i)
         .copied()
         .ok_or_else(|| VmError::Internal(format!("native argument {i} missing")))
 }
 
-fn int(args: &[Value], i: usize) -> VmResult<i32> {
+pub fn int(args: &[Value], i: usize) -> VmResult<i32> {
     arg(args, i)?.int()
 }
 
@@ -75,7 +74,7 @@ fn float(args: &[Value], i: usize) -> VmResult<f32> {
 }
 
 /// A reference argument that must not be null.
-fn obj(args: &[Value], i: usize) -> VmResult<Ref> {
+pub fn obj(args: &[Value], i: usize) -> VmResult<Ref> {
     arg(args, i)?.reference()?.ok_or_else(VmError::npe)
 }
 
@@ -95,6 +94,6 @@ fn ret_ref(r: Option<Ref>) -> VmResult<Option<Value>> {
     Ok(Some(Value::Ref(r)))
 }
 
-fn ret_void() -> VmResult<Option<Value>> {
+pub fn ret_void() -> VmResult<Option<Value>> {
     Ok(None)
 }
