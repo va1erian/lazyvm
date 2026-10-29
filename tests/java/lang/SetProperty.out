@@ -1,0 +1,15 @@
+null v w
+w null null
+set null key java.lang.NullPointerException: key can't be null
+set empty key java.lang.IllegalArgumentException: key can't be empty
+set null value java.lang.NullPointerException
+[null]
+set empty value ok
+clear null java.lang.NullPointerException: key can't be null
+clear empty java.lang.IllegalArgumentException: key can't be empty
+5
+32 32
+true
+true
+java.security.InvalidParameterException null
+java.security.InvalidParameterException: m

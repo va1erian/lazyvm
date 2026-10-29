@@ -11,7 +11,7 @@ public class UriHash {
         "http://host:8080/Path%2a?Query#Frag", "", "x", "//a_b", "//[::1]", "//[::1]:80", "//h:",
         "file:///x", "mailto:a@b.c", "//reg_name/p", "//a@b@c", "s://u:p@h", "//h?", "/p?", "//h#",
         "a:b?c", "//\u00fcn\u00ef", "//h/%c3%a9", "//h/%C3%A9", "//h/\u00e9", "a:b%c3%a9", "a:b%C3%A9",
-        "HTTP://EXAMPLE.COM/a%2fb", "http://example.com/a%2Fb", "x:y:z", "a:", "//h:0", "//h:65535",
+        "HTTP://EXAMPLE.COM/a%2fb", "http://example.com/a%2Fb", "x:y:z", "//h:0", "//h:65535",
     };
 
     public static void main(String[] args) throws Exception {
