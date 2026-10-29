@@ -452,7 +452,7 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
       Check: `cargo test -p lazyvm-win sockets`; `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused` (both; LazyOS through `tools/lazyos_test.py --net` with the image's networking switch).
       Needs: S6-06.
 
-Gate: `samples/fetch` sends a hand-written HTTP/1.0 `GET` over `lazy.net` to a
+Gate: `samples/tcpget` sends a hand-written HTTP/1.0 `GET` over `lazy.net` to a
 live host and prints the status line and body size on both platforms (manual
 live run, recorded in the PR).
 

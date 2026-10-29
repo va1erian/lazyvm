@@ -49,6 +49,7 @@ never a panic.
       breakpoints, stepping, stack frames, locals, and evaluate-free variable
       views, enough for IntelliJ's debugger.
       Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
+      Needs: S7-01 (its socket layer carries the JDWP connection).
 - [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
       inline caches only if a benchmark proves a 20% win. The suite is our
       own code, shaped like what games run: a sprite blit loop, a noise and
@@ -244,7 +245,7 @@ S7, which ships only the `lazy.net` async TCP API.
 
 - [ ] S15-01 The rest of the platform sockets: UDP, blocking calls on the
       S7-01 layer, socket options and timeouts.
-      Check: `cargo test -p lazyvm-win sockets`; LazyOS `tools/lazyos_test.py --net` with the image's networking switch.
+      Check: `cargo test -p lazyvm-win sockets::udp` and `sockets::blocking`; LazyOS `tools/lazyos_test.py --net` with the image's networking switch.
       Needs: S7-01.
 - [ ] S15-02 `java.net`: `InetAddress`, `Socket`, `ServerSocket`,
       `DatagramSocket`, the rest of `URI` (RFC 2396 as the Javadoc says),
