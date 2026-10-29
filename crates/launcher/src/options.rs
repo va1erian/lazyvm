@@ -41,7 +41,7 @@ const IGNORED_PREFIXES: &[&str] = &[
 
 #[derive(Debug)]
 pub enum Command {
-    Run(Launch),
+    Run(Box<Launch>),
     Version,
     Help,
 }
@@ -93,7 +93,7 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
             let boot = boot
                 .or_else(default_boot)
                 .ok_or("cannot find lazyrt: pass -Xbootclasspath:<dir>")?;
-            return Ok(Command::Run(Launch {
+            return Ok(Command::Run(Box::new(Launch {
                 classpath: split_classpath(&os(&classpath_text)),
                 classpath_text,
                 boot_classpath: boot,
@@ -103,7 +103,7 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                 jar: None,
                 args: args[i + 1..].to_vec(),
                 show_version,
-            }));
+            })));
         }
         match a {
             "-cp" | "-classpath" | "--class-path" => {
@@ -127,7 +127,7 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                 let boot = boot
                     .or_else(default_boot)
                     .ok_or("cannot find lazyrt: pass -Xbootclasspath:<path>")?;
-                return Ok(Command::Run(Launch {
+                return Ok(Command::Run(Box::new(Launch {
                     classpath: Vec::new(),
                     classpath_text: Vec::new(),
                     boot_classpath: boot,
@@ -137,7 +137,7 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                     jar: Some(PathBuf::from(os(jar))),
                     args: args[i + 2..].to_vec(),
                     show_version,
-                }));
+                })));
             }
             _ if a.starts_with("-Xbootclasspath:") => {
                 boot = Some(split_path(&os(&args[i][16..])));

@@ -24,7 +24,7 @@ fn main() -> ExitCode {
         .map(|a| platform::wtf::to_units(&a))
         .collect();
     let launch = match options::parse(&args) {
-        Ok(Command::Run(launch)) => launch,
+        Ok(Command::Run(launch)) => *launch,
         Ok(Command::Version) => {
             print_version();
             return ExitCode::SUCCESS;
