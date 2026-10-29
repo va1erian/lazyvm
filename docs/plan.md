@@ -454,8 +454,9 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
       - Failures complete the stage exceptionally with an `IOException`;
         `lazy.net` adds no `java.net` types.
       - `tools/lazyos_test.py --net`: boots with LazyOS's networking switch
-        and its host peers (`tools/net/hostpeers.py`), and passes their
-        addresses to the tests.
+        and its host peers (`tools/net/hostpeers.py`), adds the `hostfwd`
+        rule into the guest's listening port, and passes the addresses to
+        the tests ([`async.md`](async.md), "Files").
       Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/net.rs`, `crates/natives/src/lazy_async.rs`, `tools/lazyos_test.py`.
       Check: `cargo test -p platform net`; on Windows `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `Ipv6Loopback`; on LazyOS (`tools/lazyos_test.py --net`) `tests/lazy/net/HostEcho`, `HostInbound`, `SocketQuota`.
       Needs: S6-06.

@@ -44,9 +44,9 @@ import lazy.net.Tcp;
 
 public class Echo {
     public static void main(String[] args) {
-        Tcp.listen("localhost", 7000, Echo::serve)
+        Tcp.listen("0.0.0.0", 7000, Echo::serve)
            .whenComplete((l, error) -> {
-               if (error != null) System.err.println(error.getCause().getMessage());
+               if (error != null) System.err.println(error.getMessage());
                else System.out.println("echo on port " + l.port());
            });
     }
@@ -74,8 +74,11 @@ public class Later {
 ```
 
 `main` returns at once in all three; the program lives as long as the loop
-has work ("Lifetime" below). A dependent stage fails with a
-`CompletionException` whose cause is the `IOException`, hence `getCause()`.
+has work ("Lifetime" below). A stage the API returns fails with the
+`IOException` itself; a stage built from it (`thenCompose` and so on) fails
+with a `CompletionException` around it, hence `getCause()` in `Fetch` and
+not in `Echo`. `Echo` listens on every interface (`"0.0.0.0"`), which also
+works on LazyOS ("LazyOS" below).
 
 ## `lazy.async.Loop`
 
@@ -94,7 +97,9 @@ That is the whole class. Running a task on the loop is
 so `Loop` has no `submit` of its own.
 
 **Where code runs.** Every stage this API returns is completed on the loop's
-thread, and no stage is complete when the call that made it returns. Under
+thread, and no stage is complete when the call that made it returns (a
+second `close()` included: it returns a new stage that completes on the loop
+after the first). Under
 `CompletableFuture`'s rules, an action attached to a pending stage runs on
 the thread that completes it, so on the loop; an action attached after the
 stage completed runs at once on the attaching thread. Handlers attached
@@ -116,13 +121,18 @@ count it as pending, and the common pool's threads are daemons, so `main`
 
 - `static CompletionStage<Connection> connect(String host, int port)`:
   resolves `host` (a name, or an IPv4 or IPv6 literal) and tries each address
-  in the order the resolver gives them until one connects. Each attempt gives
-  up after 30 s; the stage fails with the last attempt's error.
+  in the order the resolver gives them until one connects. Addresses of a
+  family the platform lacks are skipped. Each attempt gives up after 30 s;
+  the stage fails with the last attempted address's error, or
+  `no usable address: host` when every address was skipped.
 - `static CompletionStage<Listener> listen(String host, int port, Consumer<Connection> onAccept)`:
   binds every address `host` resolves to, on one port (`"localhost"` is
-  127.0.0.1 and ::1, `"0.0.0.0"` every IPv4 interface; port 0 picks a free
-  one). An address family the platform lacks is skipped; the stage fails if
-  nothing could be bound. The stage completes before the first `onAccept`,
+  127.0.0.1 and ::1, `"0.0.0.0"` every IPv4 interface). With port 0 the
+  first address gets a free port and the others bind that port; if one of
+  them finds it taken, everything is closed and the whole bind is retried
+  with a new free port, up to 8 times. An address family the platform lacks
+  is skipped; any other error closes what was bound and fails the stage, as
+  does having nothing to bind. The stage completes before the first `onAccept`,
   which then runs on the loop's thread for each connection, in arrival
   order, until the listener is closed. An `onAccept` that throws is reported
   to the uncaught exception handler, that connection is closed, and the
@@ -140,7 +150,8 @@ Safe to use from any thread.
 - `CompletionStage<byte[]> read()`: the next bytes that arrive, 1 to 64 KiB
   of them, or an empty array at end of stream, every time once the stream
   has ended. One `read` or `readAll` may be pending at a time; starting a
-  second is an `IllegalStateException`.
+  second is an `IllegalStateException`. The slot is free again before the
+  stage completes, so a handler may start the next read at once.
 - `CompletionStage<byte[]> readAll()`: everything up to end of stream. Past
   16 MiB it closes the connection and fails, so a hostile peer cannot fill
   the heap; bigger bodies are read in a loop with `read`.
@@ -151,10 +162,11 @@ Safe to use from any thread.
   with `IOException`, `closed`). A pending `read` completes with end of
   stream; a pending `readAll` fails, since its body is cut short. Queued
   writes are sent, then the sending side is shut down, and what the peer
-  still sends is discarded until it closes too; this order keeps our last
-  bytes from being lost to a reset. If that takes over 10 s, the connection
-  is reset and writes not yet sent fail. Closing twice returns the same
-  stage.
+  still sends is discarded until it closes too, so our last bytes are not
+  lost to a reset. After 10 s, or at once if the stage is cancelled, the
+  socket is closed as it stands and writes not yet sent fail. The stage
+  completes when the socket is closed. A second `close()` returns a new
+  stage that completes after the first.
 - `String peer()`: the remote address as `host:port` with the numeric host
   (`127.0.0.1:52144`, `[::1]:7000`).
 
@@ -189,8 +201,9 @@ uses no `java.net` ones (S15 adds those).
 **Cancellation.** `stage.toCompletableFuture().cancel(true)` reaches the
 platform: a cancelled `delay` removes its timer, a cancelled `connect`
 abandons the attempt (or drops its lookup's answer) and closes its socket,
-and a cancelled `read`, `readAll` or `write` closes the connection (a
-half-done read or write leaves the stream in no useful state). The same
+and a cancelled `read`, `readAll` or `write` aborts the connection (a
+half-done read or write leaves the stream in no useful state): the socket
+is closed at once, without the `close()` sequence, and queued writes fail. The same
 holds for `complete`, `completeExceptionally`, `obtrudeValue` and
 `obtrudeException` called on a returned stage: an operation finished from
 outside is withdrawn and stops counting as pending. Cancelling a stage made
@@ -252,9 +265,24 @@ the VM exits, as files do (`design/files.md`).
 
 Every stage is a `lazy.internal.LoopFuture`, a `CompletableFuture` subclass
 that overrides `cancel`, `complete`, `completeExceptionally`,
-`obtrudeValue` and `obtrudeException` to withdraw the operation
-(`Reactor.cancel(id)`) before completing; the dispatcher completes it
-through `super`.
+`obtrudeValue` and `obtrudeException`. Each operation settles exactly once:
+
+- Operation ids come from a 64-bit counter and are never reused. One table
+  maps ids to their futures, under the same lock as `pending`.
+- Whoever removes the id from the table settles it: the dispatcher on a
+  completion, or an override called from outside. An override on a future
+  that is already done, or whose id is gone, does nothing.
+- An override that wins calls `Reactor.cancel(id)`, completes the future
+  through `super`, and subtracts from `pending` only after that returns, so
+  work its handlers start is counted first. The dispatcher completes through
+  `super` too.
+- A completion whose id is gone still carries what the reactor made: the
+  dispatcher closes a connected or accepted socket and drops read bytes, so
+  a cancel that races a success leaks nothing.
+
+S6-05's `CompletableFuture` must not call its own public completion methods
+through virtual dispatch, or these overrides would run for its internal
+completions too.
 
 The natives are in `lazy.internal.Reactor`, used by `lazy.async` and
 `lazy.net` only: each request (`connect`, `listen`, `accept`, `read`,
@@ -267,7 +295,9 @@ backpressure hold.
 
 ### Windows
 
-`mio` on IOCP, as published. Nothing is Windows-only in our code.
+`mio` on IOCP, as published. Nothing is Windows-only in our code. Closing a
+socket that still holds unread input makes Windows send a reset, which the
+`close()` sequence avoids by reading to the peer's end first.
 
 ### LazyOS
 
@@ -290,6 +320,12 @@ document:
 - **Quotas.** 64 sockets in all and 8 per program; past that, `connect` and
   `listen` fail with `too many sockets`. A listener queues at most 16
   connections.
+- **Ports below 1024** are refused to every program, so `listen` on one
+  fails.
+- **Closing hands over to `netd`.** Dropping the descriptor is always
+  graceful there: `netd` sends what was written and finishes the close in
+  the background, so a socket closed after the 10 s limit or by an abort
+  may still drain on the wire.
 - **A closed host port is silence, not a refusal**, under QEMU's user
   networking on a Windows host, so such a connect ends in the 30 s timeout.
 
@@ -309,8 +345,10 @@ implementation is the default, and the launcher installs
 
 ## Dependencies and size
 
-`mio` (MIT), with the `os-poll` and `net` features, and on Windows the
-`windows-sys` it brings (MIT or Apache-2.0). S6-06 records them in
+`mio` (MIT), with the `os-poll` and `net` features; on Windows the
+`windows-sys` it brings (MIT or Apache-2.0; its `THIRD_PARTY.md` row gains
+`platform` beside `gfx`), and on the musl build `libc` (MIT or Apache-2.0,
+a new row). S6-06 records them in
 `THIRD_PARTY.md`, passes `tools/licenses.py`, and reports the
 `tools/size.py` delta in its PR; it is expected to be tens of kilobytes.
 
@@ -324,10 +362,12 @@ implementation is the default, and the launcher installs
   trait), `crates/platform/src/net.rs` (sockets, resolvers);
   `crates/natives/src/lazy_async.rs` (the `Reactor` natives).
 - `tools/lazyos_test.py --net` (S7-01): boots the image with LazyOS's
-  networking switch and the host peers of LazyOS `tools/net/hostpeers.py`
-  (an echo server the guest reaches at `10.0.2.2:47771`, and a client that
-  connects into the guest's port 47773), and passes their addresses to the
-  tests as system properties.
+  networking switch, adds the QEMU `hostfwd` rule that maps a host port to
+  the guest's 47773 (as LazyOS `tools/net/run.py` does), runs the host peers
+  of LazyOS `tools/net/hostpeers.py` (an echo server the guest reaches at
+  `10.0.2.2:47771`, and the inbound client, started when the guest test
+  prints its `listening` marker), and passes the addresses to the tests as
+  system properties.
 
 ## Tests
 
@@ -345,11 +385,12 @@ Hand-written goldens (`lazy.*`, D9). "Both" means Windows and LazyOS.
   `getrusage(RUSAGE_THREAD)` on LazyOS, whose `clock_gettime` has no
   thread clock), and the S6 gate `Pipeline`.
 - S7-01, Windows: `tests/lazy/net/AsyncEcho` (listen on port 0, connect,
-  echo, close both ends), `ManyClients` (500 at once), `ConnectRefused` (a
+  echo, close both ends; each next `read` is started inside the previous
+  one's handler), `ManyClients` (500 at once), `ConnectRefused` (a
   port whose listener was just closed), `Backpressure` (a peer that writes 8
   MiB to a reader that waits still completes, with bounded heap),
   `CancelRead`, `ReadTimeout` (the pattern above), `Ipv6Loopback`.
 - S7-01, LazyOS (`--net`): `tests/lazy/net/HostEcho` (connect to the host
-  echo server, echo 1 MiB, close), `HostInbound` (listen on 47773 and serve
-  the host's client), `SocketQuota` (eight connections succeed, the ninth
+  echo server, echo 1 MiB, close), `HostInbound` (listen on `0.0.0.0:47773`,
+  print `listening`, and serve the host's client), `SocketQuota` (eight connections succeed, the ninth
   fails with `too many sockets`).
