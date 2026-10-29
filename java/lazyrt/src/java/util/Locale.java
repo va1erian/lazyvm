@@ -38,9 +38,21 @@ public final class Locale implements java.io.Serializable {
         if (language == null || country == null || variant == null) {
             throw new NullPointerException();
         }
-        this.language = language.toLowerCase();
-        this.country = country.toUpperCase();
+        this.language = ascii(language, false);
+        this.country = ascii(country, true);
         this.variant = variant;
+    }
+
+    // Only the ASCII letters change case, whatever the default locale is.
+    private static String ascii(String s, boolean upper) {
+        char[] chars = s.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            char c = chars[i];
+            if (upper ? c >= 'a' && c <= 'z' : c >= 'A' && c <= 'Z') {
+                chars[i] = (char) (c ^ 0x20);
+            }
+        }
+        return new String(chars);
     }
 
     public Locale(String language, String country) {
