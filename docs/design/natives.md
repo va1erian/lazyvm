@@ -223,7 +223,7 @@ and again in Rust.
   `-Dlazy.ui.stats=true` prints the build time, upcalls and changes on stderr.
 - The op list is the tree in pre-order; every node starts with its opcode
   and the registry id Java gave it (ids are unique; `strings` indexes are
-  into the `strings` array; lengths are 0 to 32768; at most 16 levels):
+  into the `strings` array; lengths are 0 to 32768; layouts nest at most 16 deep):
   `1 id padding gap n` (column) or `2 id padding gap n` (row), then its `n`
   children; `3 id text` (label); `4 id text click` (button, `click` 1 when
   Java listens). The root is a column or row, and nothing may follow it.

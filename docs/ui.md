@@ -396,8 +396,9 @@ at 125 % scale, with numbers reproduced by a second, independent run.
 | Size, full UI with the winit host (default) | 2,999,806 B (75 %) |
 | Size, musl with the headless UI | 2,995,159 B (75 %) |
 | A trivial `Hello`, warm start, no UI / full UI build | ~16 ms / ~16 ms |
-| Counter: launch to visible window | 24 to 29 ms |
-| Counter: `Ui.run` to built window (`build`) | 39 to 48 ms |
+| Counter: launch to the window shown, still empty | 24 to 29 ms |
+| Counter: `run0` to mounted widgets (`build`, event loop included) | 39 to 48 ms |
+| Counter: launch to widgets on screen (estimate: VM start ~16 ms + `build`) | ~55 to 65 ms |
 | Java per click (dispatch, lambda, string concat, `setText0`) | ~8 us; the first click ~0.55 ms (class loading) |
 | Headless click with its layout and a rendered frame | ~77 us, of which ~8 us is Java |
 | Idle CPU over 2 s; 100 hovers; 100 resizes | 0 to 31 ms (timer granularity 15.6 ms); zero upcalls for hovers and resizes |

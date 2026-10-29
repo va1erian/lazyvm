@@ -14,6 +14,7 @@ mod tree;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Instant;
 
 pub use table::set_text;
 pub use tree::{Tree, op};
@@ -42,9 +43,9 @@ pub type Dispatch = Box<dyn FnMut(i32, i32) -> bool>;
 /// What one run cost, for `-Dlazy.ui.stats=true` (docs/ui.md, "Evidence").
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Stats {
-    /// Microseconds from the start of `run` to a built window: decoding,
-    /// opening the window (and on a window host starting its loop), and
-    /// mounting the widgets.
+    /// Microseconds from the once-per-process check in `run` to mounted
+    /// widgets: building the backend (winit's event loop), decoding, opening
+    /// the window and mounting. The window shows, empty, before the end.
     pub build_us: u64,
     /// Messages handed to Java.
     pub upcalls: u64,
@@ -74,7 +75,8 @@ pub fn run(
     if RAN.swap(true, Ordering::SeqCst) {
         return Err("lazy.ui runs once per process".into());
     }
-    let result = host().and_then(|host| host::run(&host, title, size, tree, dispatch));
+    let start = Instant::now();
+    let result = host().and_then(|host| host::run(&host, start, title, size, tree, dispatch));
     table::clear();
     result
 }

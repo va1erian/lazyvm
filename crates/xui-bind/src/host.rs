@@ -14,12 +14,12 @@ use crate::{Dispatch, Headless, Host, Stats, table, tree};
 
 pub(crate) fn run(
     host: &Host,
+    start: Instant,
     title: &str,
     (w, h): (u32, u32),
     tree: crate::Tree,
     dispatch: Dispatch,
 ) -> Result<Stats, String> {
-    let start = Instant::now();
     let root = RefCell::new(Some(tree::decode(&tree)?));
     let stats = Rc::new(Cell::new(Stats::default()));
     let window = Rc::new(Cell::new(WindowId::NONE));
