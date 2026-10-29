@@ -12,5 +12,10 @@ workspace = true
 [dependencies]
 vm = { path = "../vm" }
 platform = { path = "../platform" }
+gfx = { path = "../gfx", default-features = false }
 libm = "0.2"
 classfile = { path = "../classfile" }
+
+[features]
+default = ["desktop"]
+desktop = ["gfx/desktop"]

@@ -214,6 +214,8 @@ lazyvm/
   crates/natives        native methods of lazyrt and lazy.*
   crates/platform       the Platform trait and StdPlatform (files, console,
                         clock, sockets through Rust std, on both systems)
+  crates/gfx            lazy.gfx pixel windows: headless, and the Windows
+                        host on winit + softbuffer (S9-00, docs/gfx.md)
   crates/lazyvm-win     Windows-only parts: xui winit window host (S9)
   crates/lazyvm-lazyos  LazyOS-only parts: Messenger, xuid (GPL-3.0-or-later, S9)
   crates/launcher       the `lazyvm` / `java` command line
