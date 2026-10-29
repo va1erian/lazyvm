@@ -164,8 +164,8 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
   directly, matching `xui-core`'s retained update model (revised in S9-01,
   [`ui.md`](ui.md); the first draft assumed a re-rendering `render`).
   Callbacks run on the UI thread, and I/O is never done on it. An exception
-  from a callback ends `Ui.run` and, if uncaught, stops the program with an
-  error dialog.
+  from a callback ends `Ui.run` and is rethrown; if uncaught, it stops the
+  program, and a window host first shows an error dialog.
 - `lazy.msg`: Messenger. The source of truth is the `.midl` file: LazyOS's
   `midlc` gains a Java backend that generates the interface types and codecs,
   with no reflection on the wire path. Annotations keep the hand-written side

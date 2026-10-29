@@ -117,12 +117,14 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       `tools/size.py` with and without the feature, in the PR.
 - [ ] S9-03 Windows window host via the xui `winit-backend`: one `Ui.run` per
       process, on the main thread (a second is `IllegalStateException`), with
-      DPI, resize, close, the clipboard and the error dialog. Measure the
+      DPI, resize, close, the clipboard and the uncaught-exception message
+      box ([`ui.md`](ui.md), "When a callback throws"). Measure the
       size again with `winit-backend`.
       Check: `samples/counter` runs on Windows; `tools/ui_shot.py` captures a screenshot and checks non-blank pixels;
-      a sample whose callback throws shows the error dialog (screenshot in the PR);
-      resizing a mounted window a hundred times makes zero upcalls
-      (`-Dlazy.ui.stats=true`); `tools/size.py`, in the PR.
+      a sample whose callback throws and does not catch it shows the error
+      message box (screenshot in the PR), and one that catches it shows none;
+      `tools/ui_shot.py --resize 100` resizes the window from outside and the
+      `-Dlazy.ui.stats=true` line shows zero upcalls; `tools/size.py`, in the PR.
 - [ ] S9-04 LazyOS window host via xuid (`xui-app`'s `LazyOSBackend`, from
       `crates/lazyvm-lazyos`), with input routing and the trace markers
       `LAZYVM:UI:UP:PASS`.

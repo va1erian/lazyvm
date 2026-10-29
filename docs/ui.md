@@ -160,17 +160,28 @@ out until an app asks; each costs binary size.
 
 ### When a callback throws
 
-- The binding records the exception and makes **no further upcalls**: it
+- The binding records the exception and **starts no further callback**: it
   drops the messages still queued (xui's drain would otherwise keep calling
-  `App::update`), leaves any nested modal loop, and asks the backend to quit.
-  The exception is never in flight while more Java runs.
-- On a window host, before quitting, it closes the app's windows and shows
-  an xui message dialog with the exception and its trace, inside the same
-  loop (there can be no second one), since a UI app often has no console.
-  The dialog is built by the binding from Rust values only, so a broken app
-  cannot break the report. Headless, there is no dialog.
-- `Ui.run` then rethrows the exception. If nothing catches it, the program
-  stops as for any uncaught exception: stack trace on stderr, nonzero exit.
+  `App::update`), closes the app's windows and asks the backend to quit.
+- If the exception came from a modal dialog's callback, the dialog's loop
+  ends and its `open` rethrows the exception into the opener's callback,
+  which is still on the Java stack. The opener's own code may catch it and
+  finish, but the shutdown goes on regardless: no new callback starts, and
+  `Ui.run` rethrows the original exception.
+- `Ui.run` rethrows the exception. If the program catches it, nothing else
+  happens. If nothing does, the program stops as for any uncaught exception
+  (stack trace on stderr, nonzero exit), and, since a UI app often has no
+  console, the host first shows an error dialog with the exception and its
+  trace, when a `lazy.ui` window was opened in this run and the host is not
+  headless.
+- That dialog cannot be an xui one on Windows: by then `Ui.run` has consumed
+  the process's only winit loop, and xui's message dialog lives inside an
+  existing window. So the Windows host shows a system message box (Win32
+  `MessageBoxW`, through the `windows-sys` crate winit already brings), from
+  the VM's uncaught-exception path. On LazyOS, S9-04 decides between an xui
+  window on a fresh `LazyOSBackend` (xuid has no one-loop rule) and the
+  system's own notification. The text is built from Rust values only, so a
+  broken app cannot break the report.
 
 ### Building: one native call per mount
 
@@ -287,7 +298,9 @@ host. The Javadoc of `Ui.run` and `lazy.gfx.Window.open` says so, and
   the upcalls and natives made. A headless test hovers over and scrolls a
   mounted window a hundred times and asserts zero upcalls; another types ten
   characters into an `Edit` with an `onChange` and asserts ten. Resizing is
-  measured the same way on the Windows host (S9-03).
+  measured on the Windows host (S9-03): `tools/ui_shot.py --resize 100`
+  resizes the sample's window from outside (`SetWindowPos`) and reads the
+  stats line.
 - Real windows are judged by screenshots: `tools/ui_shot.py` on Windows,
   LazyOS's `qemu_shot.py` there (S9-03, S9-04).
 
@@ -367,9 +380,9 @@ and fonts, animation helpers, and a diffing `render()` layer.
 
 1. Retained "build once, change directly", as xui itself works, with the API
    above. D8 is reworded to match.
-2. An exception in a callback ends `Ui.run`, is rethrown and stops the
-   program if uncaught, with an error dialog when there is a window host
-   ("When a callback throws").
+2. An exception in a callback ends `Ui.run` and is rethrown. If uncaught, it
+   stops the program, and a window host first shows an error dialog ("When a
+   callback throws").
 3. `lazy.gfx` and `lazy.ui` are exclusive in one process until gap 1 is
    fixed, and that is documented ("Backends").
 4. Headless goldens use a font from the test tree.
