@@ -130,8 +130,8 @@ decision marked **(proposed)** is not in force until the owner confirms it.
 | `java.math` | S5 | `BigInteger`, `BigDecimal`, `MathContext`, `RoundingMode` |
 | `java.util.zip` | S5 | `ZipFile`, `ZipEntry`, `ZipInputStream`/`ZipOutputStream`, `Inflater`/`Deflater` and their streams, GZIP streams, `CRC32`, `Adler32` |
 | `java.util.concurrent` | S6 | Atomics, locks, `ExecutorService`/`ThreadPoolExecutor`, `ScheduledExecutorService`, `ConcurrentHashMap`, `CountDownLatch`, `Semaphore`, blocking queues, `CompletableFuture`/`CompletionStage`, `ForkJoinPool` (simple) |
-| `java.net` | S7 | `InetAddress` (DNS through the platform), `Socket`, `ServerSocket`, `DatagramSocket`, `URI`, `URL`, `URLEncoder`/`URLDecoder`, `HttpURLConnection` (`http`, and `https` through rustls) |
-| `java.nio.channels` | S7 | `SocketChannel`, `ServerSocketChannel`, `Selector` (non-blocking), `AsynchronousSocketChannel` bridged onto the reactor |
+| `java.net` | S15 (`file:`/`jar:` URLs in S5) | `InetAddress` (DNS through the platform), `Socket`, `ServerSocket`, `DatagramSocket`, `URI`, `URL`, `URLEncoder`/`URLDecoder`, `HttpURLConnection` (`http`, and `https` through rustls) |
+| `java.nio.channels` | S15 | `SocketChannel`, `ServerSocketChannel`, `Selector` (non-blocking), `AsynchronousSocketChannel` bridged onto the reactor |
 | `java.util.stream` | S11 | Sequential streams in full; `parallel()` accepted and run sequentially |
 | `java.time` | S11 | `Instant`, `Duration`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZoneOffset`, `DateTimeFormatter` (ISO and pattern); no zone database at first |
 | `java.util.logging` | S11 | `Logger`, `Level`, `ConsoleHandler` |
@@ -156,9 +156,9 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
   in UI code: `Ui.executor()`), and every async API returns
   `CompletionStage<T>`. Cancelling the `CompletableFuture` cancels the
   underlying operation (`msg_cancel`, socket close).
-- `lazy.net`: async sockets, TLS and HTTP returning `CompletionStage`. These
-  sit beside `java.net`, sharing the reactor; `java.net` blocking calls are
-  built on the same platform layer.
+- `lazy.net`: async sockets returning `CompletionStage` (TCP in S7; TLS and
+  HTTP in S15). They sit beside `java.net`, sharing the reactor; `java.net`
+  blocking calls (S15) are built on the same platform layer.
 - `lazy.ui`: Java bindings for xui. xui owns the UI thread and its event loop;
   Java describes the UI as a tree that a `render` method rebuilds from state,
   matching `xui-core`'s update model (read its README at the pinned rev before
@@ -302,6 +302,6 @@ at the end of S5).
   code, tables, a dependency) rather than raise the number. Raising it is the
   owner's decision and changes this entry.
 - **Above 80 %** the tool warns. A plan item expected to add a lot (TLS in
-  S7-05, fonts and imaging for AWT and Swing) says in its PR what it costs.
+  S15-04, fonts and imaging for AWT and Swing) says in its PR what it costs.
 - **Data the VM needs** (Unicode tables, and later time zones or fonts)
   counts, whether it is embedded in the binary or shipped in the jar.
