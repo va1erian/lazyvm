@@ -48,8 +48,19 @@ packaging.
       views, enough for IntelliJ's debugger.
       Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
 - [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
-      inline caches only if a benchmark proves a 20% win.
-      Check: `tools/bench.py` before and after, in the PR.
+      inline caches only if a benchmark proves a 20% win. The suite is our
+      own code, shaped like what games run: a sprite blit loop, a noise and
+      flood-fill kernel like world generation, calls and field access.
+      `String` case mapping gets an ASCII fast path that covers the
+      `Locale` overloads too (every locale but tr, az and lt), since games
+      call it every tick.
+      Check: `tools/bench.py` before and after, in the PR. The Minicraft
+      Plus port (GPL-3.0, `va1erian/minicraft-plus-revived-lz`, branch
+      `lazyvm-port`) is measured by the owner outside the repo, with its
+      `lazyvm/scripts/*.keys` and `-Dminicraft.lazyvm.stats=true`; no game
+      code or game numbers go into the repo. Its frame time also includes
+      the port's own drawing loops and `lazy.gfx`, so its frame rate is not
+      the interpreter's alone.
 
 ## S9. `lazy.ui` on xui
 
