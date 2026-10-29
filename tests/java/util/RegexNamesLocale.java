@@ -1,6 +1,7 @@
 // VMARGS: -Duser.language=tr -Duser.country=TR
 package util;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -13,6 +14,9 @@ import java.util.regex.PatternSyntaxException;
  */
 public class RegexNamesLocale {
     public static void main(String[] args) {
+        // The VM arguments make Turkish the default on the oracle; a VM that does not read them
+        // gets it here, so both run the names under the same default.
+        Locale.setDefault(new Locale("tr", "TR"));
         String[] names = {
             "IsLatin", "InBasicLatin", "javaLowerCase", "IsAlphabetic", "IsIdeographic", "IsWhite_Space",
             "IsHex_Digit", "IsDigit", "IsLetter", "IsLowercase", "IsUppercase", "IsTitlecase", "IsControl",

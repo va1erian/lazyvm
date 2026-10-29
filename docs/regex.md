@@ -131,8 +131,8 @@ high half just before the end is followed by the end, not by the end minus one
   whole pair (`RegexRegions`).
 - After a failed attempt, `\G` and the next `find()` start where the last
   "event" of the attempt ended, in the order they happened and not moved by
-  backing off (`RegexAfterFailure`, which also hashes a sweep over every pair
-  of 21 loop shapes): the end of a run of a repeated class (`a*`, `\d+`, not a
+  backing off (`RegexAfterFailure`, which with `RegexAfterFailureSweep` also
+  hashes a sweep over every pair of 26 fragments): the end of a run of a repeated class (`a*`, `\d+`, not a
   run of alternatives such as `(?:a|b)*`), the end of an iteration of a loop
   over a fixed-width body (`(?:ab)*`, not one written `?`, nor one over
   alternatives or a variable body, whose inner runs still count), and, for a
@@ -258,7 +258,7 @@ the starts that can begin it, found by jumping through a bit set of the text
 (`StartIndex`), built once the way back is longer than 2048. The index is per
 matcher. `reset(input)` drops it, and so does `reset()` when the text is not a
 `String` (a `StringBuilder` can change); over a `String`, `find(int)`, `region`
-and `replaceAll` keep it, which `RegexLimits` times (`RegexIndexReset`,
+and `replaceAll` keep it, which `RegexLimitsSizes` times (`RegexIndexReset`,
 `RegexIndexPossessive` and `RegexIndexStrings` cover the dropped case).
 
 Measured with the oracle on the same machine (wall time including the start of
@@ -380,10 +380,10 @@ The oracle is exponential on `(?:a|a*)*b(?=c)` too (0.23 s on 16 `a`, 7.5 s on
   class run fewer than before, through the shortcuts above and the char fast
   paths of `Atoms.One` and `Repeat.widthAt`.
 - **Names under another default locale.** Property, block and script names are
-  folded with `String.toUpperCase()` and `toLowerCase()` through
-  `Blocks.foldName`; lazyrt's methods do not read the default locale yet, which
-  matches the oracle under every locale (`RegexNamesLocale` runs under a
-  Turkish default). When they start to, `foldName` must pass `Locale.ROOT`.
+  folded through `Blocks.foldName` with `Locale.ROOT`, never the default
+  locale, which matches the oracle under every locale: a dotless `ı`, a long
+  `ſ` and the Kelvin sign still fold to ASCII letters (`RegexNamesLocale` runs
+  under a Turkish default).
 
 ## Cost and limits
 
