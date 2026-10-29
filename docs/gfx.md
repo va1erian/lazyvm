@@ -111,6 +111,9 @@ open at a time.
 
 - The LazyOS host (above), several windows at once on the desktop, the mouse
   in frame coordinates rather than window pixels, window icons, fullscreen.
+- Sharing a process with `lazy.ui`: both need winit's one event loop, so a
+  program opens windows from one or the other, and the second is
+  `IllegalStateException` ([`ui.md`](ui.md), "Backends").
 - Sound. Minicraft Plus plays short WAV clips; a `lazy.audio` with
   `Clip.play()` over a mixer thread in Rust is the likely next prototype.
 - Gamepads.

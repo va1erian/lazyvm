@@ -96,30 +96,43 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       hand from the rules; the Minicraft Plus port drawn through `Surface`
       on Windows, its frames compared with the pixel-loop version and its
       frame times recorded in the PR (the port stays outside this repo).
-- [ ] S9-01 Design note `docs/ui.md`: read the xui README and `xui-core` at
-      LazyOS's pinned rev, then map its update model, widget set, layout and
-      theming onto a Java API (a `render()` method returning a node tree,
-      state changes triggering a re-render, callbacks on the UI thread,
-      `Ui.executor()` for completions). The note lists the xui gaps found for
-      Windows ("xui rehauled", [`decisions.md`](decisions.md) D4) as issues on
-      the xui repo.
+- [x] S9-01 Design note [`docs/ui.md`](ui.md): read the xui README and
+      `xui-core` at LazyOS's pinned rev, then map its update model, widget
+      set, layout and theming onto a Java API. The owner chose xui's own
+      retained model (build once, change widgets directly, one upcall per
+      message) over a re-rendering `render()`. The note lists the xui gaps
+      found so far ("xui rehauled", [`decisions.md`](decisions.md) D4); each
+      is filed as an issue on the xui repo once S9-02 confirms it in code.
       Check: the note is reviewed by the owner before S9-02 starts.
-- [ ] S9-02 `xui-bind` crate and natives: Java node trees become xui nodes,
-      events are routed back to Java callbacks, and Java objects are kept alive
-      by handles for as long as xui holds them.
-      Check: `tests/lazy/ui/Counter` in headless mode (xui's offscreen surface), comparing a pixel checksum golden.
+- [ ] S9-02 `xui-bind` crate and natives, behind a `ui` cargo feature: the
+      run loop with its one upcall (`Ui.dispatch`), the mount op list, the
+      widget registry, `set0`, `Label`, `Button` and the layouts, on xui's
+      offscreen backend. Measure the binary size with and without the
+      feature first ([`ui.md`](ui.md), "Size").
+      Check: `tests/lazy/ui/Counter` headless on both platforms, comparing a
+      pixel checksum golden; `tests/lazy/ui/IdleCost` (hover, resize and
+      scroll a hundred times, zero upcalls); `tests/lazy/ui/CallbackThrows`
+      (`Ui.run` rethrows, the program exits nonzero, no dialog headless);
+      `tools/size.py` with and without the feature, in the PR.
 - [ ] S9-03 Windows window host via the xui `winit-backend`: one window per
-      `Ui.run(app)`, with DPI, resize, close and the clipboard.
-      Check: `samples/counter` runs on Windows; `tools/ui_shot.py` captures a screenshot and checks non-blank pixels.
-- [ ] S9-04 LazyOS window host via xuid (`os.lazy.display.v1` client mode, as
-      `xui-app` does), with input routing and the trace markers
+      `Ui.run(window)`, with DPI, resize, close and the clipboard.
+      Check: `samples/counter` runs on Windows; `tools/ui_shot.py` captures a screenshot and checks non-blank pixels;
+      a sample whose callback throws shows the error dialog (screenshot in the PR).
+- [ ] S9-04 LazyOS window host via xuid (`xui-app`'s `LazyOSBackend`, from
+      `crates/lazyvm-lazyos`), with input routing and the trace markers
       `LAZYVM:UI:UP:PASS`.
       Needs: LOS-02.
       Check: LazyOS `tools/screenshot/qemu_shot.py` on the `--lazyvm-ui` demo plus `pngstats.py --min-nonblack 0.01`.
 - [ ] S9-05 Widget coverage: the xui widgets apps need (labels, buttons, text
-      fields, lists, scroll, tabs, menus, dialogs, canvas drawing), each with a
-      headless golden.
+      fields, lists, scroll, tabs, menus, dialogs, `Canvas` with a recorded
+      `Drawing`, timers, secondary windows), each with a headless golden.
       Check: `tests/lazy/ui/*` headless goldens.
+- [ ] S9-06 `Ui.executor()`: other threads hand work to the UI thread
+      through xui's `Proxy`, and every other `lazy.ui` call off the UI thread
+      throws `IllegalStateException` ([`ui.md`](ui.md), "Threads").
+      Needs: S6-01, S6-06.
+      Check: `tests/lazy/ui/Executor` (a worker thread updates a label 100
+      times; the label's final text and the dispatch count are the golden).
 
 Gate: `samples/notes` (a small notes app with a list, an editor and file
 save, using `lazy.async` for I/O) runs on Windows and LazyOS with screenshots

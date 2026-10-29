@@ -160,9 +160,12 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
   sit beside `java.net`, sharing the reactor; `java.net` blocking calls are
   built on the same platform layer.
 - `lazy.ui`: Java bindings for xui. xui owns the UI thread and its event loop;
-  Java describes the UI as a tree that a `render` method rebuilds from state,
-  matching `xui-core`'s update model (read its README at the pinned rev before
-  designing S9). Callbacks run on the UI thread, and I/O is never done on it.
+  Java builds each window once from widget objects and changes them
+  directly, matching `xui-core`'s retained update model (revised in S9-01,
+  [`ui.md`](ui.md); the first draft assumed a re-rendering `render`).
+  Callbacks run on the UI thread, and I/O is never done on it. An exception
+  from a callback ends `Ui.run` and, if uncaught, stops the program with an
+  error dialog.
 - `lazy.msg`: Messenger. The source of truth is the `.midl` file: LazyOS's
   `midlc` gains a Java backend that generates the interface types and codecs,
   with no reflection on the wire path. Annotations keep the hand-written side
