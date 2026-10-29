@@ -130,21 +130,52 @@ fn form(b: &[u8]) -> Option<(u32, usize)> {
     (cp >= min && cp <= 0x10FFFF).then_some((cp, n))
 }
 
-/// The system property map's key for a Java string, the one way keys are built (the
-/// natives and the launcher's -D both use it). A lone surrogate, and U+10FFFF, which
-/// serves as the escape marker, become the marker plus a code, so two distinct strings
-/// never share a key.
-pub fn property_key(units: &[u16]) -> String {
+/// A Java string as a Rust `String` that loses nothing: a lone surrogate, and U+10FFFF,
+/// which serves as the escape marker, become the marker plus a code ("m" for U+10FFFF
+/// itself, "x" and four hex digits for a surrogate). Two distinct strings never share a
+/// result, and `unescape` undoes it. System property keys and command-line arguments
+/// that may hold unpaired surrogates use this form.
+pub fn escape(units: &[u16]) -> String {
     const MARK: char = '\u{10FFFF}';
-    let mut key = String::new();
+    let mut out = String::new();
     for c in char::decode_utf16(units.iter().copied()) {
         match c {
-            Ok(MARK) => key.push_str("\u{10FFFF}m"),
-            Ok(c) => key.push(c),
-            Err(e) => key.push_str(&format!("\u{10FFFF}x{:04x}", e.unpaired_surrogate())),
+            Ok(MARK) => out.push_str("\u{10FFFF}m"),
+            Ok(c) => out.push(c),
+            Err(e) => out.push_str(&format!("\u{10FFFF}x{:04x}", e.unpaired_surrogate())),
         }
     }
-    key
+    out
+}
+
+/// The UTF-16 units `escape` came from; text that is not an escape reads as itself.
+pub fn unescape(s: &str) -> Vec<u16> {
+    let mut out = Vec::new();
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '\u{10FFFF}' {
+            let mut buf = [0u16; 2];
+            out.extend_from_slice(c.encode_utf16(&mut buf));
+            continue;
+        }
+        let rest: String = chars.clone().take(5).collect();
+        let unit = rest
+            .strip_prefix('x')
+            .filter(|h| h.len() == 4)
+            .and_then(|h| u16::from_str_radix(h, 16).ok());
+        match (chars.peek(), unit) {
+            (Some('m'), _) => {
+                chars.next();
+                out.extend_from_slice(&[0xDBFF, 0xDFFF]);
+            }
+            (_, Some(u)) => {
+                chars.nth(4);
+                out.push(u);
+            }
+            _ => out.extend_from_slice(&[0xDBFF, 0xDFFF]),
+        }
+    }
+    out
 }
 
 #[cfg(test)]
@@ -226,13 +257,29 @@ mod tests {
     }
 
     #[test]
-    fn property_keys_are_exact() {
-        let key = |s: &str| property_key(&s.encode_utf16().collect::<Vec<_>>());
-        assert_eq!(key("java.home"), "java.home");
-        assert_ne!(key("k\u{10FFFF}"), key("k"));
+    fn escapes_are_exact_and_reversible() {
+        let esc = |s: &str| escape(&s.encode_utf16().collect::<Vec<_>>());
+        assert_eq!(esc("java.home"), "java.home");
+        assert_ne!(esc("k\u{10FFFF}"), esc("k"));
         // The marker's own spelling cannot be forged with a lone surrogate or plain text.
-        assert_ne!(key("\u{10FFFF}xd800"), property_key(&[0xD800]));
-        assert_ne!(property_key(&[0xD800]), property_key(&[0xDBFF]));
-        assert_ne!(key("\u{10FFFF}"), key("\u{10FFFF}m"));
+        assert_ne!(esc("\u{10FFFF}xd800"), escape(&[0xD800]));
+        assert_ne!(escape(&[0xD800]), escape(&[0xDBFF]));
+        assert_ne!(esc("\u{10FFFF}"), esc("\u{10FFFF}m"));
+        let samples: [&[u16]; 5] = [
+            &[0xD800],
+            &[0x61, 0xDBFF, 0x62],
+            &[0xDBFF, 0xDFFF, 0x78, 0xDC00],
+            &[0xDC00, 0xD800],
+            &[],
+        ];
+        for units in samples {
+            assert_eq!(unescape(&escape(units)), units);
+        }
+        // Malformed escapes read as the marker, never panic.
+        assert_eq!(unescape("\u{10FFFF}"), [0xDBFF, 0xDFFF]);
+        assert_eq!(
+            unescape("\u{10FFFF}x12"),
+            [0xDBFF, 0xDFFF, 0x78, 0x31, 0x32]
+        );
     }
 }

@@ -68,7 +68,9 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     while i < args.len() {
         let a = args[i].as_str();
         if !a.starts_with('-') {
-            let cp = classpath.unwrap_or_else(default_classpath);
+            let cp = classpath
+                .or_else(|| property_classpath(&properties))
+                .unwrap_or_else(default_classpath);
             let boot = boot
                 .or_else(default_boot)
                 .ok_or("cannot find lazyrt: pass -Xbootclasspath:<dir>")?;
@@ -136,6 +138,15 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         i += 1;
     }
     Err("no main class given".into())
+}
+
+/// Without `-cp`, `-Djava.class.path=...` is the class path (the last one given).
+fn property_classpath(properties: &[(String, String)]) -> Option<Vec<PathBuf>> {
+    let (_, v) = properties
+        .iter()
+        .rev()
+        .find(|(k, _)| k == "java.class.path")?;
+    Some(split_path(v))
 }
 
 fn split_path(s: &str) -> Vec<PathBuf> {

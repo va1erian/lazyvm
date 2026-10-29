@@ -102,10 +102,45 @@ def build() -> None:
         "Class-Path: lib.jar x/../loop.jar y/../loop.jar\r\n\r\n")
 
 
-def run(cmd: list[str], env: dict[str, str]) -> str:
-    done = subprocess.run(cmd, cwd=ROOT, capture_output=True, env=env, timeout=60)
+def run(cmd: list[str], env: dict[str, str], cwd: Path = ROOT) -> str:
+    done = subprocess.run(cmd, cwd=cwd, capture_output=True, env=env, timeout=60)
     return testlib.transcript(done.stdout.decode("utf-8", "replace"),
                               done.stderr.decode("utf-8", "replace"), done.returncode)
+
+
+def props_line(text: str, value: str) -> str:
+    """What app.Props prints for an argument: its length, its last UTF-16 unit and the property."""
+    raw = text.encode("utf-16-le", "surrogatepass")
+    return f"{len(raw) // 2} {int.from_bytes(raw[-2:], 'little')} {value}"
+
+
+def checks(exe: str, env: dict[str, str]) -> list[tuple[str, str, str]]:
+    """Hand-written cases (name, got, expected) that the oracle cannot bless: java.exe reads
+    its command line through the ANSI code page, so the arguments below never reach it intact."""
+    app = OUT / "app"
+    no_cp = {k: v for k, v in env.items() if k != "CLASSPATH"}
+    mark = chr(0x10FFFF)  # the VM's own escape marker, a valid character
+    lone = chr(0xD800)  # not Unicode: a Windows command line can still carry it
+    keys = ["k" + mark, "k" + mark + "m"]
+    none = "6 104 null\n"  # app.Props nosuch
+    return [
+        # -D keys are stored the way getProperty looks them up, marker character included.
+        ("property_marker_keys",
+         run([exe, f"-D{keys[0]}=mark", f"-D{keys[1]}=spelled", "-cp", str(app), "app.Props", *keys], env),
+         props_line(keys[0], "mark") + "\n" + props_line(keys[1], "spelled") + "\n"),
+        # A lone surrogate in an argument is data, not a crash.
+        ("lone_surrogate_argument",
+         run([exe, f"-D{lone}=lone", "-cp", str(app), "app.Props", lone], env),
+         props_line(lone, "lone") + "\n"),
+        # "." is the current directory, whether given or the default.
+        ("classpath_dot", run([exe, "-cp", ".", "app.Props", "nosuch"], env, app), none),
+        ("classpath_default", run([exe, "app.Props", "nosuch"], no_cp, app), none),
+        # Without -cp the property is the class path; with -cp the real class path wins.
+        ("property_classpath", run([exe, f"-Djava.class.path={app}", "app.Props", "nosuch"], no_cp), none),
+        ("classpath_beats_property",
+         run([exe, "-Djava.class.path=elsewhere", "-cp", str(app), "app.Props", "java.class.path"], env),
+         props_line("java.class.path", str(app)) + "\n"),
+    ]
 
 
 def main() -> None:
@@ -132,6 +167,13 @@ def main() -> None:
         else:
             failed += 1
             print(f"FAIL {name}\n--- expected\n{golden.read_text(encoding='utf-8') if golden.is_file() else '(none)'}--- got\n{got}")
+    if not args.bless:
+        for name, got, expected in checks(exe, env):
+            if got == expected:
+                print(f"PASS {name}")
+            else:
+                failed += 1
+                print(f"FAIL {name}\n--- expected\n{expected}--- got\n{got}")
     if failed:
         die(f"{failed} launcher case(s) failed")
 

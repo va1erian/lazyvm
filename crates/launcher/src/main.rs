@@ -17,7 +17,12 @@ const EXIT_INTERNAL: u8 = 70;
 const VM_STACK_BYTES: usize = 256 << 20;
 
 fn main() -> ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    // Arguments may hold unpaired surrogates (a Windows command line is UTF-16); `escape`
+    // keeps them, and `unescape` gives the Java strings back where they matter.
+    let args: Vec<String> = std::env::args_os()
+        .skip(1)
+        .map(|a| platform::wtf::escape(&platform::wtf::to_units(&a)))
+        .collect();
     let launch = match options::parse(&args) {
         Ok(Command::Run(launch)) => launch,
         Ok(Command::Version) => {
@@ -57,12 +62,6 @@ fn print_version() {
     eprintln!("LazyVM (build {v}, interpreted mode, runs Java 8 bytecode)");
 }
 
-/// Stores a system property under the same key the `System` natives look it up by.
-fn set_property(vm: &mut Vm, key: &str, value: Vec<u16>) {
-    let units: Vec<u16> = key.encode_utf16().collect();
-    vm.properties.insert(vm::wtf::property_key(&units), value);
-}
-
 fn run(mut launch: Launch) -> ExitCode {
     if launch.show_version {
         print_version();
@@ -88,13 +87,16 @@ fn run(mut launch: Launch) -> ExitCode {
     let mut vm = Vm::new(classpath, launch.options.clone());
     natives::register_all(&mut vm);
     for (k, v) in platform::default_properties() {
-        set_property(&mut vm, &k, vm::wtf::to_units(&v));
+        let name: Vec<u16> = k.encode_utf16().collect();
+        vm.set_property(&name, vm::wtf::to_units(&v));
     }
-    let joined = std::env::join_paths(&user_classpath).unwrap_or_default();
-    set_property(&mut vm, "java.class.path", vm::wtf::to_units(&joined));
     for (k, v) in &launch.properties {
-        set_property(&mut vm, k, v.encode_utf16().collect());
+        vm.set_property(&vm::wtf::unescape(k), vm::wtf::unescape(v));
     }
+    // The class path in use wins over -Djava.class.path, as with the oracle.
+    let joined = std::env::join_paths(&user_classpath).unwrap_or_default();
+    let name: Vec<u16> = "java.class.path".encode_utf16().collect();
+    vm.set_property(&name, vm::wtf::to_units(&joined));
     if let Err(e) = vm.boot() {
         eprintln!("lazyvm: cannot start: the class library is missing or broken ({e})");
         eprintln!("  boot class path: {:?}", launch.boot_classpath);
@@ -133,7 +135,7 @@ fn run_main(vm: &mut Vm, main_class: &str, args: &[String]) -> Result<(), VmErro
     let len = i32::try_from(args.len()).map_err(|_| VmError::OutOfMemory)?;
     let array = vm.new_array_of("Ljava/lang/String;", len)?;
     for (i, a) in args.iter().enumerate() {
-        let s = vm.new_string(a)?;
+        let s = vm.new_string_utf16(&vm::wtf::unescape(a))?;
         vm.heap
             .array_mut(array)?
             .store(i, Value::Ref(Some(s)), false)?;

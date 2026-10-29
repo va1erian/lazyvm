@@ -99,17 +99,8 @@ fn environment(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
     ret_ref(Some(array))
 }
 
-fn property_key(vm: &Vm, v: Value) -> VmResult<String> {
-    let r = v.reference()?.ok_or_else(VmError::npe)?;
-    Ok(vm::wtf::property_key(&vm.string_utf16(r)?))
-}
-
-fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = property_key(vm, arg(args, 0)?)?;
-    match vm.properties.get(&key).cloned() {
-        Some(v) => ret_ref(Some(vm.new_string_utf16(&v)?)),
-        None => ret_ref(None),
-    }
+fn units_arg(vm: &Vm, v: Value) -> VmResult<Vec<u16>> {
+    vm.string_utf16(v.reference()?.ok_or_else(VmError::npe)?)
 }
 
 fn old_property(vm: &mut Vm, old: Option<Vec<u16>>) -> VmResult<Option<Value>> {
@@ -119,17 +110,23 @@ fn old_property(vm: &mut Vm, old: Option<Vec<u16>>) -> VmResult<Option<Value>> {
     }
 }
 
+fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let key = units_arg(vm, arg(args, 0)?)?;
+    let old = vm.property(&key).map(<[u16]>::to_vec);
+    old_property(vm, old)
+}
+
 fn set_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = property_key(vm, arg(args, 0)?)?;
+    let key = units_arg(vm, arg(args, 0)?)?;
     let value = obj(args, 1)?;
     let units = vm.string_utf16(value)?;
-    let old = vm.properties.insert(key, units);
+    let old = vm.set_property(&key, units);
     old_property(vm, old)
 }
 
 fn clear_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = property_key(vm, arg(args, 0)?)?;
-    let old = vm.properties.remove(&key);
+    let key = units_arg(vm, arg(args, 0)?)?;
+    let old = vm.clear_property(&key);
     old_property(vm, old)
 }
 

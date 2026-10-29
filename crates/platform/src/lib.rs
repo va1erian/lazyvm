@@ -5,6 +5,7 @@
 //! get their own crates in S9 (docs/decisions.md D10).
 
 pub mod files;
+pub mod wtf;
 
 use std::ffi::OsString;
 use std::io::{self, Read, Write};
@@ -130,25 +131,13 @@ pub fn default_properties() -> Vec<(String, OsString)> {
 /// are ordinary entries whose names start with '='.
 pub fn environment() -> Vec<(Vec<u16>, Vec<u16>)> {
     std::env::vars_os()
-        .map(|(name, value)| (wtf_units(&name), wtf_units(&value)))
+        .map(|(name, value)| (wtf::to_units(&name), wtf::to_units(&value)))
         .collect()
 }
 
 /// Whether environment variable names compare ignoring case (Windows).
 pub fn environment_ignores_case() -> bool {
     cfg!(windows)
-}
-
-#[cfg(windows)]
-fn wtf_units(s: &std::ffi::OsStr) -> Vec<u16> {
-    use std::os::windows::ffi::OsStrExt;
-    s.encode_wide().collect()
-}
-
-// Unix names are bytes; ill-formed ones read as U+FFFD.
-#[cfg(not(windows))]
-fn wtf_units(s: &std::ffi::OsStr) -> Vec<u16> {
-    s.to_string_lossy().encode_utf16().collect()
 }
 
 /// 64 bits that differ on every call and in every run, for `new Random()`
