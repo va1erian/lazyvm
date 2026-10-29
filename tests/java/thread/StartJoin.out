@@ -1,0 +1,34 @@
+Thread[main,5,main] alive=true daemon=false state=RUNNABLE group=main parent=system
+before start: NEW alive=false
+Thread-0 sum=59998 TERMINATED alive=false
+Thread-1 sum=119997 TERMINATED alive=false
+Thread-2 sum=179997 TERMINATED alive=false
+Thread-3 sum=239998 TERMINATED alive=false
+Thread-4 sum=300000 TERMINATED alive=false
+Thread-5 sum=360003 TERMINATED alive=false
+Thread-6 sum=420000 TERMINATED alive=false
+Thread-7 sum=479998 TERMINATED alive=false
+start twice: java.lang.IllegalThreadStateException
+terminated toString: Thread[Thread-0,5,]
+after join(20): alive=true
+setDaemon on a live thread: java.lang.IllegalThreadStateException
+after join(): alive=false
+join of an unstarted thread returns: NEW
+join(-1): timeout value is negative
+parent daemon=true child daemon=true
+default priority 5
+set 10, inherited 3
+priority 11: java.lang.IllegalArgumentException
+own handler: own boom in own
+handler is the group: true
+default handler: viaDefault boom in viaDefault
+after printed: TERMINATED
+thread saw initial, thread value, main+child
+main has main value, main
+after remove: initial
+no initial value: null
+main returns
+last thread done after main
+--- stderr ---
+Exception in thread "printed" java.lang.IllegalStateException: boom in printed
+	at thread.StartJoin$Boom.run(StartJoin.java:17)

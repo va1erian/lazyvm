@@ -1,0 +1,5 @@
+hook ran
+--- stderr ---
+Exception in thread "main" java.lang.IllegalStateException: main fails
+	at thread.ShutdownUncaught.main(ShutdownUncaught.java:7)
+--- exit 1 ---

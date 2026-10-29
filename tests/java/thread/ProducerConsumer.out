@@ -1,0 +1,24 @@
+consumed 6000 items, sum 18003000 (expected 18003000)
+buffer never overfilled: true
+block counter 40000, static method counter 40000
+nested holds: true
+after wait still nested: true
+two levels left: true
+released: false
+recursive synchronized method: 51
+class lock after: false
+wait: java.lang.IllegalMonitorStateException
+timed wait: java.lang.IllegalMonitorStateException
+notify: java.lang.IllegalMonitorStateException
+notifyAll: java.lang.IllegalMonitorStateException
+negative timeout: timeout value is negative
+holdsLock(null): java.lang.NullPointerException
+synchronized (null): NullPointerException
+notify on a lock another thread holds: java.lang.IllegalMonitorStateException
+handler: thrown while holding the lock
+lock free after the exception
+caught from a synchronized method, class lock held: false
+after notify 1: woken 1
+after notify 2: woken 2
+after notify 3: woken 3
+after notify 4: woken 4

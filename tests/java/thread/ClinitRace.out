@@ -1,0 +1,9 @@
+every thread saw: 42 42 42 42 42 42 42 42
+Slow initialized 1 time(s)
+ExceptionInInitializerError 1, NoClassDefFoundError 7
+java.lang.NoClassDefFoundError: Could not initialize class thread.ClinitRace$Bad
+Bad initializer ran 1 time(s)
+later use: Could not initialize class thread.ClinitRace$Bad
+recursive: A.x=11 B.y=10
+SelfStarter.value=7, other thread still waiting: true
+then: other thread saw 7

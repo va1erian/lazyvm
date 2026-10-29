@@ -1,0 +1,13 @@
+duplicate: java.lang.IllegalArgumentException: Hook previously registered
+a finished thread is accepted
+live thread: java.lang.IllegalArgumentException: Hook already running
+null hook: java.lang.NullPointerException
+remove null: java.lang.NullPointerException
+remove registered: true
+remove again: false
+main returns
+worker ends after main
+hook one, in one
+hook two, after one
+add during shutdown: java.lang.IllegalStateException: Shutdown in progress
+remove during shutdown: java.lang.IllegalStateException: Shutdown in progress
