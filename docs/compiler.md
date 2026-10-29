@@ -79,8 +79,8 @@ Run an existing Java 8-bytecode compiler with `lazyvm`. Candidates:
   runs, a strong end-to-end test of the interpreter, the verifier and the
   class library; the same jar works on Windows and LazyOS.
 - **Against:** it cannot start before S8 (D1: the verifier comes before any
-  jar we did not build) and needs S4, S5 and S7 (`URLClassLoader` builds on
-  `java.net.URL`) as well, plus three `javax` packages that D6 rules out today
+  jar we did not build) and needs S4 and S5 (`URLClassLoader` builds on
+  S5-12's `file:` and `jar:` URLs) as well, plus three `javax` packages that D6 rules out today
   (section 5). It is placed after S11 so the S11-05 performance pass comes
   first: an interpreted javac's speed is the main risk. The compiler's
   internals are opaque to us under the clean room, so failures are found by differential

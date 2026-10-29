@@ -127,9 +127,11 @@ decision marked **(proposed)** is not in force until the owner confirms it.
 | `java.util.function` | S4 | All 43 interfaces |
 | `java.io` | S5 | Byte and char streams, buffering, `File`, `PrintStream`/`PrintWriter`, `RandomAccessFile`, `Data*Stream` |
 | `java.nio` | S5 | `charset` (UTF-8, UTF-16 variants, ISO-8859-1, US-ASCII), `ByteBuffer` (heap only), and a `file` subset (`Path`, `Paths`, `Files` read, write, list, walk, attributes) |
+| `java.math` | S5 | `BigInteger`, `BigDecimal`, `MathContext`, `RoundingMode` |
+| `java.util.zip` | S5 | `ZipFile`, `ZipEntry`, `ZipInputStream`/`ZipOutputStream`, `Inflater`/`Deflater` and their streams, GZIP streams, `CRC32`, `Adler32` |
 | `java.util.concurrent` | S6 | Atomics, locks, `ExecutorService`/`ThreadPoolExecutor`, `ScheduledExecutorService`, `ConcurrentHashMap`, `CountDownLatch`, `Semaphore`, blocking queues, `CompletableFuture`/`CompletionStage`, `ForkJoinPool` (simple) |
-| `java.net` | S7 | `InetAddress` (DNS through the platform), `Socket`, `ServerSocket`, `DatagramSocket`, `URI`, `URL`, `URLEncoder`/`URLDecoder`, `HttpURLConnection` (`http`, and `https` through rustls) |
-| `java.nio.channels` | S7 | `SocketChannel`, `ServerSocketChannel`, `Selector` (non-blocking), `AsynchronousSocketChannel` bridged onto the reactor |
+| `java.net` | S15 (`file:`/`jar:` URLs in S5) | `InetAddress` (DNS through the platform), `Socket`, `ServerSocket`, `DatagramSocket`, `URI`, `URL`, `URLEncoder`/`URLDecoder`, `HttpURLConnection` (`http`, and `https` through rustls) |
+| `java.nio.channels` | S15 | `SocketChannel`, `ServerSocketChannel`, `Selector` (non-blocking), `AsynchronousSocketChannel` bridged onto the reactor |
 | `java.util.stream` | S11 | Sequential streams in full; `parallel()` accepted and run sequentially |
 | `java.time` | S11 | `Instant`, `Duration`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZoneOffset`, `DateTimeFormatter` (ISO and pattern); no zone database at first |
 | `java.util.logging` | S11 | `Logger`, `Level`, `ConsoleHandler` |
@@ -149,18 +151,23 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
 
 - `lazy.async`: the event loop. `Loop` owns a reactor thread that waits on
   the platform (LazyOS: one `wait` naming `WAIT_CALLS`, endpoints and a
-  `WAIT_FD` epoll descriptor for sockets; Windows: `mio`). Completions are
-  handed to an `Executor` the caller chooses (default: the loop's executor;
-  in UI code: `Ui.executor()`), and every async API returns
+  `WAIT_FD` epoll descriptor for sockets, from S10-02; Windows, and LazyOS
+  until then: `mio`, see [`async.md`](async.md)). Completions arrive on
+  the loop's executor (a stage the program settles itself, by `cancel` for
+  example, completes on the program's thread), and code moves to another one (in UI code,
+  `Ui.executor()`) with the standard `*Async` methods; every async API returns
   `CompletionStage<T>`. Cancelling the `CompletableFuture` cancels the
   underlying operation (`msg_cancel`, socket close).
-- `lazy.net`: async sockets, TLS and HTTP returning `CompletionStage`. These
-  sit beside `java.net`, sharing the reactor; `java.net` blocking calls are
-  built on the same platform layer.
+- `lazy.net`: async sockets returning `CompletionStage` (TCP in S7; TLS and
+  HTTP in S15). They sit beside `java.net`, sharing the reactor; `java.net`
+  blocking calls (S15) are built on the same platform layer.
 - `lazy.ui`: Java bindings for xui. xui owns the UI thread and its event loop;
-  Java describes the UI as a tree that a `render` method rebuilds from state,
-  matching `xui-core`'s update model (read its README at the pinned rev before
-  designing S9). Callbacks run on the UI thread, and I/O is never done on it.
+  Java builds each window once from widget objects and changes them
+  directly, matching `xui-core`'s retained update model (revised in S9-01,
+  [`ui.md`](ui.md); the first draft assumed a re-rendering `render`).
+  Callbacks run on the UI thread, and I/O is never done on it. An exception
+  from a callback ends `Ui.run` and is rethrown; if uncaught, it stops the
+  program, and a window host first shows an error dialog.
 - `lazy.msg`: Messenger. The source of truth is the `.midl` file: LazyOS's
   `midlc` gains a Java backend that generates the interface types and codecs,
   with no reflection on the wire path. Annotations keep the hand-written side
@@ -213,12 +220,16 @@ lazyvm/
   crates/vm             interpreter, heap, GC, threads, class loading
   crates/natives        native methods of lazyrt and lazy.*
   crates/platform       the Platform trait and StdPlatform (files, console,
-                        clock, sockets through Rust std, on both systems)
+                        clock through Rust std; sockets and the reactor
+                        on mio; on both systems)
   crates/gfx            lazy.gfx pixel windows: headless, and the Windows
                         host on winit + softbuffer (S9-00, docs/gfx.md)
+  crates/xui-bind       lazy.ui on xui: the op list, the widgets, the loop (S9)
+  crates/natives-ui     the lazy.ui natives, linked only by lazyvm-ui
   crates/lazyvm-win     Windows-only parts: xui winit window host (S9)
   crates/lazyvm-lazyos  LazyOS-only parts: Messenger, xuid (GPL-3.0-or-later, S9)
-  crates/launcher       the `lazyvm` / `java` command line
+  crates/launcher       the `lazyvm` / `java` command line (a lib and its bin)
+  crates/launcher-ui    `lazyvm-ui`: the same launcher plus lazy.ui (S9)
   java/lazyrt           the java.* class library (Java source)
   java/lazy-api         the lazy.* API (Java source)
   tests/java            differential and lazy.* tests with .out goldens
@@ -293,13 +304,14 @@ The VM stays small: on every platform, the release binary with its debug info
 stripped and gzipped (-9), plus `lazyrt.jar` as built (already deflated), is
 under 4,000,000 bytes. `tools/size.py` measures it and fails above the budget,
 and CI runs it for the Windows binary and for the static musl binary LazyOS
-runs. The budget is the owner's choice (October 2026, with the sum near 1.4 MB
+runs. Both launchers are held to it: `lazyvm`, and `lazyvm-ui`, which adds
+`lazy.ui` and xui (docs/ui.md, "Size"). The budget is the owner's choice (October 2026, with the sum near 1.4 MB
 at the end of S5).
 
 - **Over budget** is a failing gate like any other: shrink something (dead
   code, tables, a dependency) rather than raise the number. Raising it is the
   owner's decision and changes this entry.
 - **Above 80 %** the tool warns. A plan item expected to add a lot (TLS in
-  S7-05, fonts and imaging for AWT and Swing) says in its PR what it costs.
+  S15-04, fonts and imaging for AWT and Swing) says in its PR what it costs.
 - **Data the VM needs** (Unicode tables, and later time zones or fonts)
   counts, whether it is embedded in the binary or shipped in the jar.

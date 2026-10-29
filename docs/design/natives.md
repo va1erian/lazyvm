@@ -28,6 +28,14 @@ The VM reads and writes these fields by name. Keep their names and types.
 | `java.lang.Throwable` | `private String detailMessage` | Set by the VM when it throws with a message |
 | `lazy.gfx.Event` | `public int type, key, x, y, button`, `public char ch` | Filled by `Window.poll0` |
 
+## VM-called methods
+
+The VM calls these Java methods from natives, by name and descriptor.
+
+| Class | Method | Use |
+|---|---|---|
+| `lazy.ui.Ui` | `private static void dispatch(int id, int kind)` | The one upcall per widget message, from inside `run0`'s loop (docs/ui.md) |
+
 ## Natives
 
 ### `java.lang.Object`
@@ -200,6 +208,53 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
 Handles name entries in a table owned by the VM thread. Except where noted
 above, an unknown handle is `IllegalStateException`. Sizes are checked in Java
 and again in Rust.
+
+### `lazy.ui.Ui` (docs/ui.md; S9-02 spike)
+These live in `crates/natives-ui` and are registered only by `lazyvm-ui`;
+under `lazyvm` they are missing, and `Ui.run` turns the
+`UnsatisfiedLinkError` into `IllegalStateException`.
+- `private static native void run0(String title, int width, int height, int[] ops, Object[] strings)`:
+  builds the window from the op list (`crates/xui-bind/src/tree.rs`; every
+  `strings` element a `String`) and runs it until it closes, calling
+  `Ui.dispatch` for each message with the VM lent to the loop
+  (`vm::interp::with_lent`). Sizes are 1 to 8192. A malformed op list, a
+  second call in the process, or no window host is `IllegalStateException`;
+  an exception thrown by `dispatch` stops the loop, and `run0` rethrows it.
+  `-Dlazy.ui=headless` uses xui's offscreen backend; with it,
+  `-Dlazy.ui.clicks=<n>` clicks the first listened-to button `n` times and
+  `-Dlazy.ui.dump=<file>` writes the last frame as a binary PPM.
+  `-Dlazy.ui.stats=true` prints the build time, upcalls and changes on stderr.
+- The op list is the tree in pre-order; every node starts with its opcode
+  and the registry id Java gave it (ids are unique; `strings` indexes are
+  into the `strings` array; lengths are 0 to 32768; layouts nest at most 16 deep):
+  `1 id padding gap n` (column) or `2 id padding gap n` (row), then its `n`
+  children; `3 id text` (label); `4 id text click` (button, `click` 1 when
+  Java listens). The root is a column or row, and nothing may follow it.
+  `Ui.dispatch` receives event kind 1 for a click.
+- `static native void setText0(int id, String text)`: a label's or button's
+  text; `IllegalStateException` for an id that names no mounted widget.
+
+### `lazy.gfx.Surface` (docs/gfx.md)
+Every native gets the surface as its first seven arguments: its `int[]`, its
+width and height, and its clip as `x0, y0, x1, y1` (far edges excluded). Rust
+checks them again: an array shorter than `width * height`, a negative size or
+a clip outside the surface is `IllegalArgumentException`. All drawing is cut
+to the clip; no coordinate overflows.
+- `private static native void fill0(int[] px, int w, int h, int cx0, int cy0, int cx1, int cy1, int x, int y, int rw, int rh, int argb, boolean blend)`:
+  paints `argb` by its alpha, or writes it as it is when `blend` is false
+  (`clear`). `rect` is four `fill0` calls in Java.
+- `private static native void line0(int[] px, int w, int h, int cx0, int cy0, int cx1, int cy1, int x0, int y0, int x1, int y1, int argb)`
+- `private static native void blit0(int[] px, int w, int h, int cx0, int cy0, int cx1, int cy1, int[] src, int sw, int sh, int sx, int sy, int bw, int bh, int dx, int dy, int flags, int key, int keyColor, int solid)`:
+  flags other than the five `Surface` constants are `IllegalArgumentException`;
+  a non-empty source rectangle outside `src` is `IndexOutOfBoundsException`,
+  even where the clip hides it.
+- `private static native void blendMask0(int[] px, int w, int h, int cx0, int cy0, int cx1, int cy1, int[] mask, int rgb, int strength)`:
+  a mask shorter than `w * h` or a strength outside 0 to 255 is
+  `IllegalArgumentException`.
+
+`blit0` and `blendMask0` copy the part they read into a per-thread buffer
+first, since the heap lends one array at a time; failing to grow it is
+`OutOfMemoryError`.
 
 ## Known differences from Java 8
 

@@ -1,4 +1,4 @@
-# LazyVM plan, part 2: S8-S14 and LazyOS items
+# LazyVM plan, part 2: S8-S15 and LazyOS items
 
 Continues [`plan.md`](plan.md), which has the work-item format, the status
 table and S0-S7. The same rules apply ([`../AGENTS.md`](../AGENTS.md)).
@@ -26,6 +26,51 @@ required before S10's packages can install third-party jars and before S12-S13 r
 
 Gate: `tools/test.py` with `-Xverify:all` (the default from now on) passes on both platforms.
 
+## S11. Streams, `java.time`, logging, JDWP
+
+Goal: the library items real apps use, a debugger, and the interpreter's
+speed, before `lazy.ui` and LazyOS packaging.
+
+S11 runs right after S8, ahead of S9 and S10, and keeps its number. By
+then S4, S6 and S8 have finished the interpreter, so S11-05 tunes the
+final one. Checks the verifier has proven may be dropped only where
+verification cannot be turned off; malformed code is still an error,
+never a panic.
+
+- [ ] S11-01 `java.util.stream`: all stream types and collectors, sequential
+      only (`parallel()` is accepted and ignored).
+      Check: `tests/java/stream/*`.
+- [ ] S11-02 `java.time` subset ([`decisions.md`](decisions.md) D6) and the
+      `%t` conversions of `Formatter`.
+      Check: `tests/java/time/*` (fixed clocks only).
+- [ ] S11-03 `java.util.logging` minimal.
+      Check: `tests/java/util/Logging`.
+- [ ] S11-04 JDWP over a socket (`-agentlib:jdwp=transport=dt_socket,…`):
+      breakpoints, stepping, stack frames, locals, and evaluate-free variable
+      views, enough for IntelliJ's debugger.
+      Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
+      Needs: S7-01 (its socket layer carries the JDWP connection).
+- [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
+      inline caches only if a benchmark proves a 20% win. The suite is our
+      own code, shaped like what games run: a sprite blit loop, a noise and
+      flood-fill kernel like world generation, calls and field access, and
+      `String` case mapping. Case mapping gets an ASCII fast path that also
+      covers the `Locale` overloads (every locale but tr, az and lt), since
+      games call it every tick. The Minicraft Plus port (GPL-3.0,
+      `va1erian/minicraft-plus-revived-lz`, branch `lazyvm-port`) is an
+      outside measure the owner runs with its `lazyvm/scripts/*.keys` and
+      `-Dminicraft.lazyvm.stats=true`; no game code or game numbers go into
+      the repo. Its frame time includes the port's own drawing loops and
+      `lazy.gfx`, so its frame rate is not the interpreter's alone.
+      Files: `bench/`, `tools/bench.py`, `crates/vm/src/interp`,
+      `java/lazyrt/src/java/lang/StringCase.java`.
+      Check: `tools/bench.py` before and after on both platforms, in the PR;
+      `tests/java/lang/CaseMapping` and `StringCaseLocale`, with ASCII
+      strings under tr, az and lt added and blessed.
+
+Gate: `tools/test.py` passes on both platforms, and `tools/bench.py` shows
+no regression against the S8 baseline.
+
 ## S9. `lazy.ui` on xui
 
 Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or Swing.
@@ -38,30 +83,89 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       Check: `tools/test.py --filter gfx` on Windows and
       `tools/lazyos_test.py --filter gfx` on LazyOS (both headless); on
       Windows, a demo window screenshot showing the scaled frame.
-- [ ] S9-01 Design note `docs/ui.md`: read the xui README and `xui-core` at
-      LazyOS's pinned rev, then map its update model, widget set, layout and
-      theming onto a Java API (a `render()` method returning a node tree,
-      state changes triggering a re-render, callbacks on the UI thread,
-      `Ui.executor()` for completions). The note lists the xui gaps found for
-      Windows ("xui rehauled", [`decisions.md`](decisions.md) D4) as issues on
-      the xui repo.
+- [x] S9-00b (prototype, ahead of the stage) `lazy.gfx.Surface`: native
+      drawing on an `int[]` (clear, fill, rect, line, blit with flips, alpha
+      test, key and solid colours, and a masked blend), so that a game's
+      sprites cost one call each instead of a pixel loop in the interpreter
+      ([`gfx.md`](gfx.md), "Drawing"). Plain Rust in `crates/gfx/src/raster.rs`,
+      no new dependency.
+      Check: `cargo test -p gfx raster` (fills, masks and blits against
+      pixel-by-pixel references, blending against floating-point
+      source-over, lines against the classic Bresenham loop);
+      `tools/test.py --filter gfx` on Windows and `tools/lazyos_test.py
+      --filter gfx` on LazyOS, where `SurfaceDraw`'s pixels are worked out by
+      hand from the rules; the Minicraft Plus port drawn through `Surface`
+      on Windows, its frames compared with the pixel-loop version and its
+      frame times recorded in the PR (the port stays outside this repo).
+- [x] S9-01 Design note [`docs/ui.md`](ui.md): read the xui README and
+      `xui-core` at LazyOS's pinned rev, then map its update model, widget
+      set, layout and theming onto a Java API. The owner chose xui's own
+      retained model (build once, change widgets directly, one upcall per
+      message) over a re-rendering `render()`. The note lists the xui gaps
+      found so far ("xui rehauled", [`decisions.md`](decisions.md) D4); each
+      is filed as an issue on the xui repo once code confirms it (the S9-02
+      spike confirmed five; [`ui.md`](ui.md), "xui gaps").
       Check: the note is reviewed by the owner before S9-02 starts.
-- [ ] S9-02 `xui-bind` crate and natives: Java node trees become xui nodes,
-      events are routed back to Java callbacks, and Java objects are kept alive
-      by handles for as long as xui holds them.
-      Check: `tests/lazy/ui/Counter` in headless mode (xui's offscreen surface), comparing a pixel checksum golden.
-- [ ] S9-03 Windows window host via the xui `winit-backend`: one window per
-      `Ui.run(app)`, with DPI, resize, close and the clipboard.
-      Check: `samples/counter` runs on Windows; `tools/ui_shot.py` captures a screenshot and checks non-blank pixels.
-- [ ] S9-04 LazyOS window host via xuid (`os.lazy.display.v1` client mode, as
-      `xui-app` does), with input routing and the trace markers
+- [x] S9-02s (spike, ahead of S9-02) `samples/counter` as a Windows
+      executable, to measure size and speed ([`ui.md`](ui.md), "Spike
+      results"): `crates/xui-bind` (op list, widget table, loop, headless
+      host), `crates/lazyvm-win` (the winit host), `crates/natives-ui`, the
+      VM lent to callbacks (`vm::interp::lend`), and `lazy.ui`'s `Ui`,
+      `Window`, `Layout`, `Label` and `Button`. `lazy.ui` ships as a second
+      binary, `lazyvm-ui` (`crates/launcher-ui`); `lazyvm` links no xui. On
+      Windows the VM runs on the main thread and `opengl32.dll` is
+      delay-loaded (ui.md gaps 6 and 7).
+      Check: `samples/counter` headless with 1000 scripted clicks and
+      `-Dlazy.ui.stats=true` (one upcall per click); a real window driven
+      from outside (clicks, hovers, resizes, zero upcalls for the last two),
+      with screenshots; `tools/size.py` for both binaries on Windows and
+      musl; all figures reproduced by an independent run (PR #27).
+- [ ] S9-02 Finish the binding on the spike: `set0`/`get0`, `Panel` and
+      `Panel.set` with generation-tagged ids, the `lazy.gfx` exclusivity
+      check, `lazy.internal.ui.Headless` (scripted input and a manual clock)
+      in place of the spike's `-Dlazy.ui.clicks`, and the `THIRD_PARTY.md`
+      rows for xui's tree curated.
+      Check: `tests/lazy/ui/Counter` headless on both platforms, comparing a
+      pixel checksum golden; `tests/lazy/ui/IdleCost` (hover and scroll a
+      hundred times, zero upcalls); `tests/lazy/ui/StaleId` (a message queued
+      for a widget a `Panel.set` destroyed does not fire its successor); `tests/lazy/ui/CallbackThrows`
+      (`Ui.run` rethrows, the program exits nonzero, no dialog headless);
+      `tools/size.py` for `lazyvm` and `lazyvm-ui`, in the PR.
+- [ ] S9-03 Windows window host via the xui `winit-backend` in
+      `crates/lazyvm-win` (from the spike, which also moved the VM to the
+      main thread and delay-loads `opengl32.dll`): DPI, resize, close, the
+      clipboard and the uncaught-exception message box ([`ui.md`](ui.md),
+      "When a callback throws"). The message box is one `unsafe` call to
+      `MessageBoxW` in `crates/lazyvm-win`, with a `// SAFETY:` comment
+      (shared rule 4).
+      Check: `samples/counter` runs on Windows under `lazyvm-ui`; `tools/ui_shot.py` captures a screenshot and checks non-blank pixels;
+      a sample whose callback throws and does not catch it shows the error
+      message box (screenshot in the PR), and one that catches it shows none;
+      `tools/ui_shot.py --resize 100` resizes the window from outside and the
+      `-Dlazy.ui.stats=true` line shows zero upcalls; `tools/size.py --exe` on `lazyvm-ui`, in the PR.
+- [ ] S9-04 LazyOS window host for the musl `lazyvm-ui`, via xuid
+      (`xui-app`'s `LazyOSBackend`, from `crates/lazyvm-lazyos`, the font
+      registered from a system file: [`ui.md`](ui.md), "Size"), with input
+      routing and the trace markers
       `LAZYVM:UI:UP:PASS`.
       Needs: LOS-02.
       Check: LazyOS `tools/screenshot/qemu_shot.py` on the `--lazyvm-ui` demo plus `pngstats.py --min-nonblack 0.01`.
 - [ ] S9-05 Widget coverage: the xui widgets apps need (labels, buttons, text
-      fields, lists, scroll, tabs, menus, dialogs, canvas drawing), each with a
-      headless golden.
-      Check: `tests/lazy/ui/*` headless goldens.
+      fields, lists, scroll, tabs, menus, dialogs, `Canvas` with a recorded
+      `Drawing`, timers, secondary windows), each with a headless golden;
+      timers run on the headless driver's clock. Modal dialogs and secondary
+      windows are checked on the Windows host until xui's offscreen backend
+      can run them ([`ui.md`](ui.md), gap 5).
+      Check: `tests/lazy/ui/*` headless goldens; dialog and secondary-window
+      screenshots on Windows, in the PR.
+- [ ] S9-06 `Ui.executor()`: other threads hand work to the UI thread
+      (a Java-side queue; only a payload-free wake crosses xui's `Proxy`), and
+      every other `lazy.ui` call off the UI thread
+      throws `IllegalStateException` ([`ui.md`](ui.md), "Threads").
+      Needs: S6-01, S6-06.
+      Check: `tests/lazy/ui/Executor` headless (a worker thread submits 100
+      label updates; the label's final text and the 100 runs, in order, are
+      the golden), and `samples/counter` with a worker thread on Windows.
 
 Gate: `samples/notes` (a small notes app with a list, an editor and file
 save, using `lazy.async` for I/O) runs on Windows and LazyOS with screenshots
@@ -79,7 +183,12 @@ Goal: Java apps are first-class LazyOS apps. They talk Messenger with
       Check: LazyOS `midlc` tests; `tests/lazy/msg/CodecRoundTrip` against fixtures encoded by the Rust codecs.
 - [ ] S10-02 `lazy.msg` runtime: `Messenger.connect(Class<I>)` resolves and
       binds through the registry, calls go through the begin-call / completion
-      path (no thread parked per call), `@Deadline`, and errors as
+      path (no thread parked per call) on the S6-06 loop: the reactor thread
+      owns every Messenger handle and begins, drains and cancels every call,
+      and its LazyOS park becomes the one `wait` over `WAIT_CALLS`, endpoints
+      and `mio`'s epoll descriptor as `WAIT_FD`, through the park trait
+      `crates/platform` defines and `crates/lazyvm-lazyos` implements
+      ([`async.md`](async.md)), `@Deadline`, and errors as
       `MessengerException` with the friendly error text.
       Check: on LazyOS `tests/lazy/msg/EchoCall` against `os.lazy.echo` (both deadline and peer-death cases).
 - [ ] S10-03 Topics and services: `@Subscribe` handlers discovered by
@@ -99,24 +208,6 @@ Goal: Java apps are first-class LazyOS apps. They talk Messenger with
 
 Gate: `samples/healthwatch` subscribes to `system/health/*`, shows it in a
 `lazy.ui` list and posts a notification on errors, on LazyOS.
-
-## S11. Streams, `java.time`, logging, JDWP
-
-- [ ] S11-01 `java.util.stream`: all stream types and collectors, sequential
-      only (`parallel()` is accepted and ignored).
-      Check: `tests/java/stream/*`.
-- [ ] S11-02 `java.time` subset ([`decisions.md`](decisions.md) D6) and the
-      `%t` conversions of `Formatter`.
-      Check: `tests/java/time/*` (fixed clocks only).
-- [ ] S11-03 `java.util.logging` minimal.
-      Check: `tests/java/util/Logging`.
-- [ ] S11-04 JDWP over a socket (`-agentlib:jdwp=transport=dt_socket,…`):
-      breakpoints, stepping, stack frames, locals, and evaluate-free variable
-      views, enough for IntelliJ's debugger.
-      Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
-- [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
-      inline caches only if a benchmark proves a 20% win.
-      Check: `tools/bench.py` before and after, in the PR.
 
 ## S12. Explore: AWT on xui
 
@@ -204,11 +295,45 @@ needs the D6 "Compiler support" row confirmed.
       `java/lazyrt/src/java/{lang,util,util/zip,util/jar,text,net}` as far as
       javac needs them, `tools/javac_on_lazyvm.py`, `tools/lazyos_test.py`.
       Check: on Windows, `tools/javac_on_lazyvm.py` compiles the sources with javac 8 on the oracle JVM and with javac 8 on LazyVM, and every class file is byte-identical. On LazyOS, `tools/lazyos_test.py --javac` compiles each test with javac 8 on LazyVM into a writable guest directory (`/tmp`) with its resources beside it, runs it there, and its transcript matches the test's `.out`. Local only: both need the oracle's `tools.jar`, so CI skips them.
-      Needs: the owner's confirmation of S14 and the D6 "Compiler support" row; S4, S5, S7, S8, S11 (the S11-05 performance pass comes first: an interpreted javac's speed is the main risk to the stage).
+      Needs: the owner's confirmation of S14 and the D6 "Compiler support" row; S4, S5 (S5-12 gives `URLClassLoader` its `file:` and `jar:` URLs), S8, S11 (the S11-05 performance pass comes first: an interpreted javac's speed is the main risk to the stage).
 
 Gate: `tests/java/s4/Showcase` compiled by javac 8 on LazyVM matches its
 `.out`, on Windows (`tools/javac_on_lazyvm.py --filter s4.Showcase --run`)
 and on LazyOS (`tools/lazyos_test.py --javac --filter s4.Showcase`).
+
+## S15. Full network stack
+
+Goal: blocking `java.net`, non-blocking `java.nio.channels`, and TLS and HTTP
+for both `java.net` and `lazy.net`, on the S7-01 socket layer. Deferred from
+S7, which ships only the `lazy.net` async TCP API.
+
+- [ ] S15-01 The rest of the platform sockets: UDP, blocking calls on the
+      S7-01 layer, socket options and timeouts.
+      Check: `cargo test -p platform net::udp` and `net::blocking`; LazyOS `tools/lazyos_test.py --net` (from S7-01).
+      Needs: S7-01.
+- [ ] S15-02 `java.net`: `InetAddress`, `Socket`, `ServerSocket`,
+      `DatagramSocket`, the rest of `URI` (RFC 2396 as the Javadoc says),
+      `URL` (`http`; `file:` and `jar:` come with S5-12),
+      `URLEncoder`/`URLDecoder`, and the exceptions (`ConnectException`,
+      `SocketTimeoutException`, `UnknownHostException`).
+      Check: `tests/java/net/EchoServer` (a server and client in one test on localhost), `UriParse`, `UrlParts` (both).
+- [ ] S15-03 `java.nio.channels`: `SocketChannel`, `ServerSocketChannel`,
+      `DatagramChannel` and `Selector` over the reactor;
+      `AsynchronousSocketChannel` with `Future` and `CompletionHandler`.
+      Check: `tests/java/net/SelectorEcho`, `AsyncChannelEcho`.
+- [ ] S15-04 TLS through rustls, with nettls's MIT pure-Rust `crypto` provider
+      on both platforms (no `ring`/`aws-lc`). Roots come from the Mozilla bundle
+      at the LazyOS well-known path, and on Windows from a bundled copy. There
+      is no "trust all" switch. Exposed as `lazy.net.Tls.wrap(connection, host)`
+      and as `https` in `HttpURLConnection`.
+      Check: `tests/lazy/net/TlsLocal` against a local test server with a test CA (both).
+- [ ] S15-05 HTTP: `HttpURLConnection` (HTTP/1.1, chunked, redirects,
+      keep-alive) and `lazy.net.Http.get/post` → `CompletionStage<Response>`
+      with streaming bodies.
+      Check: `tests/lazy/net/HttpLocal` against `tools/test_http_server.py`; `tests/java/net/HttpUrlConn`.
+
+Gate: `samples/fetch` downloads a page over HTTPS with `lazy.net.Http` and
+prints its status and size on both platforms (manual live run, recorded in the PR).
 
 ## LazyOS-side work items
 
@@ -218,7 +343,8 @@ These land in the LazyOS repo. Read its `AGENTS.md` and
 - [ ] LOS-01 Test hook: a `LAZYOS_LAZYVM` build switch that embeds a staged
       directory (the musl `lazyvm`, `lazyrt.jar`, the tests) and a `run_demo.py
       --lazyvm-test` mode that runs the suite and prints `LAZYVM:TEST:<name>:PASS|FAIL`.
-- [ ] LOS-02 A display grant and launcher entry for `lazyvm` UI apps (like any
-      xui app), plus a `--lazyvm-ui` demo.
+- [ ] LOS-02 The musl `lazyvm-ui` binary staged beside `lazyvm`, a display
+      grant and launcher entry for `lazyvm-ui` apps (like any xui app), plus
+      a `--lazyvm-ui` demo.
 - [ ] LOS-03 The `midlc` Java backend (S10-01).
 - [ ] LOS-04 The core package, MIME type and app packaging (S10-05).

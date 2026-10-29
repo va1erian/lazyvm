@@ -7,6 +7,7 @@
 
 mod headless;
 mod image;
+pub mod raster;
 mod scale;
 
 #[cfg(all(windows, feature = "desktop"))]
