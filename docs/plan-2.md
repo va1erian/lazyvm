@@ -1,4 +1,4 @@
-# LazyVM plan, part 2: S8-S14 and LazyOS items
+# LazyVM plan, part 2: S8-S15 and LazyOS items
 
 Continues [`plan.md`](plan.md), which has the work-item format, the status
 table and S0-S7. The same rules apply ([`../AGENTS.md`](../AGENTS.md)).
@@ -49,6 +49,7 @@ never a panic.
       breakpoints, stepping, stack frames, locals, and evaluate-free variable
       views, enough for IntelliJ's debugger.
       Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
+      Needs: S7-01 (its socket layer carries the JDWP connection).
 - [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
       inline caches only if a benchmark proves a 20% win. The suite is our
       own code, shaped like what games run: a sprite blit loop, a noise and
@@ -272,11 +273,45 @@ needs the D6 "Compiler support" row confirmed.
       `java/lazyrt/src/java/{lang,util,util/zip,util/jar,text,net}` as far as
       javac needs them, `tools/javac_on_lazyvm.py`, `tools/lazyos_test.py`.
       Check: on Windows, `tools/javac_on_lazyvm.py` compiles the sources with javac 8 on the oracle JVM and with javac 8 on LazyVM, and every class file is byte-identical. On LazyOS, `tools/lazyos_test.py --javac` compiles each test with javac 8 on LazyVM into a writable guest directory (`/tmp`) with its resources beside it, runs it there, and its transcript matches the test's `.out`. Local only: both need the oracle's `tools.jar`, so CI skips them.
-      Needs: the owner's confirmation of S14 and the D6 "Compiler support" row; S4, S5, S7, S8, S11 (the S11-05 performance pass comes first: an interpreted javac's speed is the main risk to the stage).
+      Needs: the owner's confirmation of S14 and the D6 "Compiler support" row; S4, S5 (S5-12 gives `URLClassLoader` its `file:` and `jar:` URLs), S8, S11 (the S11-05 performance pass comes first: an interpreted javac's speed is the main risk to the stage).
 
 Gate: `tests/java/s4/Showcase` compiled by javac 8 on LazyVM matches its
 `.out`, on Windows (`tools/javac_on_lazyvm.py --filter s4.Showcase --run`)
 and on LazyOS (`tools/lazyos_test.py --javac --filter s4.Showcase`).
+
+## S15. Full network stack
+
+Goal: blocking `java.net`, non-blocking `java.nio.channels`, and TLS and HTTP
+for both `java.net` and `lazy.net`, on the S7-01 socket layer. Deferred from
+S7, which ships only the `lazy.net` async TCP API.
+
+- [ ] S15-01 The rest of the platform sockets: UDP, blocking calls on the
+      S7-01 layer, socket options and timeouts.
+      Check: `cargo test -p lazyvm-win sockets::udp` and `sockets::blocking`; LazyOS `tools/lazyos_test.py --net` with the image's networking switch.
+      Needs: S7-01.
+- [ ] S15-02 `java.net`: `InetAddress`, `Socket`, `ServerSocket`,
+      `DatagramSocket`, the rest of `URI` (RFC 2396 as the Javadoc says),
+      `URL` (`http`; `file:` and `jar:` come with S5-12),
+      `URLEncoder`/`URLDecoder`, and the exceptions (`ConnectException`,
+      `SocketTimeoutException`, `UnknownHostException`).
+      Check: `tests/java/net/EchoServer` (a server and client in one test on localhost), `UriParse`, `UrlParts` (both).
+- [ ] S15-03 `java.nio.channels`: `SocketChannel`, `ServerSocketChannel`,
+      `DatagramChannel` and `Selector` over the reactor;
+      `AsynchronousSocketChannel` with `Future` and `CompletionHandler`.
+      Check: `tests/java/net/SelectorEcho`, `AsyncChannelEcho`.
+- [ ] S15-04 TLS through rustls, with nettls's MIT pure-Rust `crypto` provider
+      on both platforms (no `ring`/`aws-lc`). Roots come from the Mozilla bundle
+      at the LazyOS well-known path, and on Windows from a bundled copy. There
+      is no "trust all" switch. Exposed as `lazy.net.Tls.wrap(connection, host)`
+      and as `https` in `HttpURLConnection`.
+      Check: `tests/lazy/net/TlsLocal` against a local test server with a test CA (both).
+- [ ] S15-05 HTTP: `HttpURLConnection` (HTTP/1.1, chunked, redirects,
+      keep-alive) and `lazy.net.Http.get/post` → `CompletionStage<Response>`
+      with streaming bodies.
+      Check: `tests/lazy/net/HttpLocal` against `tools/test_http_server.py`; `tests/java/net/HttpUrlConn`.
+
+Gate: `samples/fetch` downloads a page over HTTPS with `lazy.net.Http` and
+prints its status and size on both platforms (manual live run, recorded in the PR).
 
 ## LazyOS-side work items
 

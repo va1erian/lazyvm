@@ -76,7 +76,7 @@ trailing dots and spaces ignored (`d2..\in` resolves) and reports one it cannot 
 any extension) is an ordinary name: a real file of that name (made through `\\?\`) is its real path, else
 `NoSuchFileException`. [CanonWin; NioEdges: toRealPath of a missing path]
 
-**U1.** `java.net.URI` (the part file names need; S7-02 adds the rest) parses left to right, so the leftmost bad
+**U1.** `java.net.URI` (the part file names need; S15-02 adds the rest) parses left to right, so the leftmost bad
 component is reported: scheme (`"Expected scheme name"` for a leading `:`, `"Illegal character in scheme name"`),
 `"Expected scheme-specific part"` for nothing (or only a fragment) after it, then the opaque part, or `//` and the
 authority (`"Expected authority"` when nothing follows), path, query, fragment, each `"Illegal character in <part>"`

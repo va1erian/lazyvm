@@ -9,7 +9,7 @@ import lazy.internal.UriText;
  * (user info, host and port when it is a server authority), path, query and
  * fragment (lazy.internal.UriParser), the component getters, comparison in
  * the Javadoc's component order, and the (scheme, host, path, fragment)
- * constructor. normalize, resolve, relativize and toURL come with S7-02.
+ * constructor. normalize, resolve, relativize and toURL come with S15-02.
  * Escaping is lazy.internal.UriText's.
  */
 public final class URI implements Comparable<URI>, java.io.Serializable {
