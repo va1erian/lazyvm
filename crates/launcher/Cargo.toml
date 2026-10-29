@@ -20,7 +20,10 @@ platform = { path = "../platform" }
 classfile = { path = "../classfile" }
 
 [features]
-default = ["desktop"]
+default = ["desktop", "ui"]
 # `lazy.gfx` desktop windows (docs/gfx.md); `--no-default-features` builds a
 # smaller VM whose windows are headless only.
 desktop = ["natives/desktop"]
+# `lazy.ui` on xui (docs/ui.md, "Size"): `--no-default-features --features
+# desktop` measures the VM without it.
+ui = ["natives/ui"]

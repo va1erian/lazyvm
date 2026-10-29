@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/classfile", "crates/platform", "crates/vm", "crates/natives", "crates/gfx", "crates/launcher"]
+members = ["crates/classfile", "crates/platform", "crates/vm", "crates/natives", "crates/gfx", "crates/xui-bind", "crates/lazyvm-win", "crates/launcher"]
 
 [workspace.package]
 version = "0.1.0"

@@ -20,6 +20,8 @@ mod lang_system;
 mod lang_throwable;
 mod lazy_gfx;
 mod lazy_gfx_draw;
+#[cfg(feature = "ui")]
+mod lazy_ui;
 mod math;
 mod real_path;
 mod reflect;
@@ -42,6 +44,8 @@ pub fn register_all(vm: &mut Vm) {
     internal::register(vm);
     lazy_gfx::register(vm);
     lazy_gfx_draw::register(vm);
+    #[cfg(feature = "ui")]
+    lazy_ui::register(vm);
     files::register(vm);
     file_attrs::register(vm);
     reflect::register(vm);

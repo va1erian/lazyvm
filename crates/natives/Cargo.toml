@@ -15,7 +15,15 @@ platform = { path = "../platform" }
 gfx = { path = "../gfx", default-features = false }
 libm = "0.2"
 classfile = { path = "../classfile" }
+xui-bind = { path = "../xui-bind", optional = true }
+
+# The `lazy.ui` window host (docs/ui.md); Windows only, so the musl build
+# never pulls winit in whatever the features.
+[target.'cfg(windows)'.dependencies]
+lazyvm-win = { path = "../lazyvm-win", optional = true }
 
 [features]
-default = ["desktop"]
-desktop = ["gfx/desktop"]
+default = ["desktop", "ui"]
+desktop = ["gfx/desktop", "dep:lazyvm-win"]
+# `lazy.ui` on xui (docs/ui.md); headless only without `desktop`.
+ui = ["dep:xui-bind"]

@@ -13,7 +13,8 @@ use vm::{ClassPath, Value, Vm, VmError};
 
 /// The exit status for an internal VM failure, as in `sysexits.h`.
 const EXIT_INTERNAL: u8 = 70;
-/// Reserved, not committed, by the OS until used.
+/// Reserved, not committed, by the OS until used (`build.rs` on Windows).
+#[cfg_attr(windows, allow(dead_code))]
 const VM_STACK_BYTES: usize = 256 << 20;
 
 fn main() -> ExitCode {
@@ -33,20 +34,36 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    // Loading, initialization and calls from natives recurse on the Rust
-    // stack (bounded by `Options::max_nesting`); give the VM room for that.
-    let vm_thread = std::thread::Builder::new()
-        .name("main".into())
-        .stack_size(VM_STACK_BYTES)
-        .spawn(move || run(launch));
-    let code = match vm_thread.map(|t| t.join()) {
-        Ok(Ok(code)) => code,
-        Ok(Err(_)) => internal("the VM thread panicked"),
-        Err(e) => internal(&format!("cannot start the VM thread: {e}")),
+    let code = match run_vm(launch) {
+        Ok(code) => code,
+        Err(msg) => internal(&msg),
     };
     let _ = platform::flush(platform::Stream::Out);
     let _ = platform::flush(platform::Stream::Err);
     code
+}
+
+/// Loading, initialization and calls from natives recurse on the Rust stack
+/// (bounded by `Options::max_nesting`); give the VM room for that. On
+/// Windows the VM keeps the main thread, which windows need (`build.rs`
+/// sizes its stack); elsewhere it gets a thread of its own.
+#[cfg(windows)]
+fn run_vm(launch: Launch) -> Result<ExitCode, String> {
+    let run = std::panic::AssertUnwindSafe(move || run(launch));
+    std::panic::catch_unwind(run).map_err(|_| "the VM thread panicked".to_string())
+}
+
+#[cfg(not(windows))]
+fn run_vm(launch: Launch) -> Result<ExitCode, String> {
+    let vm_thread = std::thread::Builder::new()
+        .name("main".into())
+        .stack_size(VM_STACK_BYTES)
+        .spawn(move || run(launch));
+    match vm_thread.map(|t| t.join()) {
+        Ok(Ok(code)) => Ok(code),
+        Ok(Err(_)) => Err("the VM thread panicked".into()),
+        Err(e) => Err(format!("cannot start the VM thread: {e}")),
+    }
 }
 
 /// On stderr, in the `<name> version "<version>"` shape IDEs parse.

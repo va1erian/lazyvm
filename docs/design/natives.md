@@ -28,6 +28,14 @@ The VM reads and writes these fields by name. Keep their names and types.
 | `java.lang.Throwable` | `private String detailMessage` | Set by the VM when it throws with a message |
 | `lazy.gfx.Event` | `public int type, key, x, y, button`, `public char ch` | Filled by `Window.poll0` |
 
+## VM-called methods
+
+The VM calls these Java methods from natives, by name and descriptor.
+
+| Class | Method | Use |
+|---|---|---|
+| `lazy.ui.Ui` | `private static void dispatch(int id, int kind)` | The one upcall per widget message, from inside `run0`'s loop (docs/ui.md) |
+
 ## Natives
 
 ### `java.lang.Object`
@@ -200,6 +208,21 @@ again and throws `IndexOutOfBoundsException` rather than trusting them.
 Handles name entries in a table owned by the VM thread. Except where noted
 above, an unknown handle is `IllegalStateException`. Sizes are checked in Java
 and again in Rust.
+
+### `lazy.ui.Ui` (docs/ui.md; S9-02 spike)
+- `private static native void run0(String title, int width, int height, int[] ops, Object[] strings)`:
+  builds the window from the op list (`crates/xui-bind/src/tree.rs`; every
+  `strings` element a `String`) and runs it until it closes, calling
+  `Ui.dispatch` for each message with the VM lent to the loop
+  (`vm::interp::with_lent`). Sizes are 1 to 8192. A malformed op list, a
+  second call in the process, or no window host is `IllegalStateException`;
+  an exception thrown by `dispatch` stops the loop, and `run0` rethrows it.
+  `-Dlazy.ui=headless` uses xui's offscreen backend; with it,
+  `-Dlazy.ui.clicks=<n>` clicks the first listened-to button `n` times and
+  `-Dlazy.ui.dump=<file>` writes the last frame as a binary PPM.
+  `-Dlazy.ui.stats=true` prints the build time, upcalls and changes on stderr.
+- `static native void setText0(int id, String text)`: a label's or button's
+  text; `IllegalStateException` for an id that names no mounted widget.
 
 ### `lazy.gfx.Surface` (docs/gfx.md)
 Every native gets the surface as its first seven arguments: its `int[]`, its

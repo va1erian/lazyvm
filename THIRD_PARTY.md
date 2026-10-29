@@ -31,3 +31,135 @@ license outside the allowed list (`docs/decisions.md` D2).
 | `windows-targets` | MIT OR Apache-2.0 | gfx, Windows only (through windows-sys) | Win32 import libraries |
 | `windows_x86_64_msvc` | MIT OR Apache-2.0 | gfx, Windows only (through windows-targets) | The same, for x86_64 MSVC |
 | `windows-link` | MIT OR Apache-2.0 | gfx, Windows only (through windows-sys) | Win32 linking |
+
+## xui (the `lazy.ui` S9-02 spike)
+
+The crates `xui-bind` and `lazyvm-win` pull in through xui (docs/ui.md). Generated
+from `cargo metadata` for the spike: the "Why" column is each crate's own summary
+and is to be curated, and the list trimmed, before S9-02 merges.
+
+| Crate | License | Used by | Why |
+|---|---|---|---|
+| `ab_glyph` | Apache-2.0 | xui-bind (through sctk-adwaita) | API for loading, scaling, positioning and rasterizing OpenType font glyphs |
+| `ab_glyph_rasterizer` | Apache-2.0 | xui-bind (through ab_glyph) | Coverage rasterization for lines, quadratic & cubic beziers |
+| `ahash` | MIT OR Apache-2.0 | xui-bind (through winit) | A non-cryptographic hash function using AES-NI for high performance |
+| `arboard` | MIT OR Apache-2.0 | xui-bind (through xui-canvas) | Image and text handling for the OS clipboard |
+| `arrayref` | BSD-2-Clause | xui-bind (through tiny-skia) | Macros to take array references of slices |
+| `arrayvec` | MIT OR Apache-2.0 | xui-bind (through tiny-skia) | A vector with fixed capacity, backed by an array (it can be stored on the stack too). Impl |
+| `as-raw-xcb-connection` | MIT OR Apache-2.0 | xui-bind (through softbuffer) | Trait to facilitate interoperatibility with libxcb C API |
+| `bytemuck` | Zlib OR Apache-2.0 OR MIT | xui-bind (through softbuffer) | A crate for mucking around with piles of bytes |
+| `bytemuck_derive` | Zlib OR Apache-2.0 OR MIT | xui-bind (through bytemuck) | derive proc-macros for `bytemuck` |
+| `calloop` | MIT | xui-bind (through winit) | A callback-based event loop |
+| `calloop-wayland-source` | MIT | xui-bind (through smithay-client-toolkit) | A wayland-rs client event source for callloop |
+| `cc` | MIT OR Apache-2.0 | xui-bind (through wayland-backend) | A build-time dependency for Cargo build scripts to assist in invoking the native C compile |
+| `clipboard-win` | BSL-1.0 | xui-bind (through arboard) | Provides simple way to interact with Windows clipboard |
+| `core_maths` | MIT | xui-bind (through harfrust) | Extension trait for full float functionality in `#[no_std]` backed by `libm` |
+| `cosmic-text` | MIT OR Apache-2.0 | xui-bind (through xui-canvas) | Pure Rust multi-line text handling |
+| `ctor` | Apache-2.0 OR MIT | xui-bind (through tiny-xlib) | __attribute__((constructor)) for Rust |
+| `dlib` | MIT | xui-bind (through wayland-sys) | Helper macros for handling manually loading optional system libraries |
+| `downcast-rs` | MIT/Apache-2.0 | xui-bind (through wayland-backend) | Trait object downcasting support using only safe Rust. It supports type parameters, associ |
+| `error-code` | BSL-1.0 | xui-bind (through clipboard-win) | Error code |
+| `fastrand` | Apache-2.0 OR MIT | xui-bind (through softbuffer) | A simple and fast random number generator |
+| `find-msvc-tools` | MIT OR Apache-2.0 | xui-bind (through cc) | Find windows-specific tools, read MSVC versions from the registry and from COM interfaces |
+| `font-types` | MIT OR Apache-2.0 | xui-bind (through read-fonts) | Scalar types used in fonts |
+| `font-types` | MIT OR Apache-2.0 | xui-bind (through read-fonts) | Scalar types used in fonts |
+| `fontconfig-parser` | MIT | xui-bind (through fontdb) | fontconfig file parser in pure Rust |
+| `fontdb` | MIT | xui-bind (through cosmic-text) | A simple, in-memory font database with CSS-like queries |
+| `gethostname` | Apache-2.0 | xui-bind (through x11rb) | gethostname for all platforms |
+| `getrandom` | MIT OR Apache-2.0 | xui-bind (through ahash) | A small cross-platform library for retrieving random data from system source |
+| `gl_generator` | Apache-2.0 | xui-bind (through glutin_egl_sys) | Code generators for creating bindings to the Khronos OpenGL APIs |
+| `glow` | MIT OR Apache-2.0 OR Zlib | xui-bind (through xui-canvas) | GL on Whatever: a set of bindings to run GL (Open GL, OpenGL ES, and WebGL) anywhere, and  |
+| `glutin` | Apache-2.0 | xui-bind (through xui-canvas) | Cross-platform OpenGL context provider |
+| `glutin_egl_sys` | Apache-2.0 | xui-bind (through glutin) | The egl bindings for glutin |
+| `glutin_glx_sys` | Apache-2.0 | xui-bind (through glutin) | The glx bindings for glutin |
+| `glutin_wgl_sys` | Apache-2.0 | xui-bind (through glutin) | The wgl bindings for glutin |
+| `harfrust` | MIT | xui-bind (through cosmic-text) | A complete HarfBuzz shaping algorithm port to Rust |
+| `khronos_api` | Apache-2.0 | xui-bind (through gl_generator) | The Khronos XML API Registry, exposed as byte string constants |
+| `libc` | MIT OR Apache-2.0 | xui-bind (through winit) | Raw FFI bindings to platform libraries like libc |
+| `libloading` | ISC | xui-bind (through glutin) | Bindings around the platform's dynamic library loading primitives with greatly improved me |
+| `linebender_resource_handle` | Apache-2.0 OR MIT | xui-bind (through cosmic-text) | Raw resource handle for immutable blobs with dynamic lifetimes |
+| `linux-raw-sys` | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | xui-bind (through rustix) | Generated bindings for Linux's userspace API |
+| `linux-raw-sys` | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | xui-bind (through rustix) | Generated bindings for Linux's userspace API |
+| `lock_api` | MIT OR Apache-2.0 | xui-bind (through parking_lot) | Wrappers to create fully-featured Mutex and RwLock types. Compatible with no_std |
+| `log` | MIT OR Apache-2.0 | xui-bind (through arboard) | A lightweight logging facade for Rust |
+| `memchr` | Unlicense OR MIT | xui-bind (through quick-xml) | Provides extremely fast (uses SIMD on x86_64, aarch64 and wasm32) routines for 1, 2 or 3 b |
+| `memmap2` | MIT OR Apache-2.0 | xui-bind (through softbuffer) | Cross-platform Rust API for memory-mapped file IO |
+| `once_cell` | MIT OR Apache-2.0 | xui-bind (through glutin) | Single assignment cells and lazy values |
+| `owned_ttf_parser` | Apache-2.0 | xui-bind (through ab_glyph) | ttf-parser plus support for owned data |
+| `parking_lot` | MIT OR Apache-2.0 | xui-bind (through arboard) | More compact and efficient implementations of the standard synchronization primitives |
+| `parking_lot_core` | MIT OR Apache-2.0 | xui-bind (through parking_lot) | An advanced API for creating custom synchronization primitives |
+| `percent-encoding` | MIT OR Apache-2.0 | xui-bind (through arboard) | Percent encoding and decoding |
+| `pkg-config` | MIT OR Apache-2.0 | xui-bind (through wayland-sys) | A library to run the pkg-config system tool at build time in order to be used in Cargo bui |
+| `polling` | Apache-2.0 OR MIT | xui-bind (through calloop) | Portable interface to epoll, kqueue, event ports, and IOCP |
+| `proc-macro2` | MIT OR Apache-2.0 | xui-bind (through bytemuck_derive) | A substitute implementation of the compiler's `proc_macro` API to decouple token-based lib |
+| `quick-xml` | MIT | xui-bind (through wayland-scanner) | High performance xml reader and writer |
+| `quote` | MIT OR Apache-2.0 | xui-bind (through wasm-bindgen-macro) | Quasi-quoting macro quote!(...) |
+| `rangemap` | MIT/Apache-2.0 | xui-bind (through cosmic-text) | Map and set data structures whose keys are stored as ranges.  Contiguous and overlapping r |
+| `read-fonts` | MIT OR Apache-2.0 | xui-bind (through harfrust) | Reading OpenType font files |
+| `read-fonts` | MIT OR Apache-2.0 | xui-bind (through harfrust) | Reading OpenType font files |
+| `roxmltree` | MIT OR Apache-2.0 | xui-bind (through fontconfig-parser) | Represent an XML as a read-only tree |
+| `rustc-hash` | Apache-2.0 OR MIT | xui-bind (through cosmic-text) | A speedy, non-cryptographic hashing algorithm used by rustc |
+| `rustix` | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | xui-bind (through winit) | Safe Rust bindings to POSIX/Unix/Linux/Winsock-like syscalls |
+| `rustix` | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | xui-bind (through winit) | Safe Rust bindings to POSIX/Unix/Linux/Winsock-like syscalls |
+| `scoped-tls` | MIT/Apache-2.0 | xui-bind (through wayland-backend) | Library implementation of the standard library's old `scoped_thread_local!` macro for prov |
+| `scopeguard` | MIT OR Apache-2.0 | xui-bind (through lock_api) | A RAII scope guard that will run a given closure when it goes out of scope, even if the co |
+| `sctk-adwaita` | MIT | xui-bind (through winit) | Adwaita-like SCTK Frame |
+| `self_cell` | Apache-2.0 OR GPL-2.0-only | xui-bind (through cosmic-text) | Safe-to-use proc-macro-free self-referential structs in stable Rust |
+| `shlex` | MIT OR Apache-2.0 | xui-bind (through cc) | Split a string into shell words, like Python's shlex |
+| `skrifa` | MIT OR Apache-2.0 | xui-bind (through cosmic-text) | Metadata reader and glyph scaler for OpenType fonts |
+| `skrifa` | MIT OR Apache-2.0 | xui-bind (through cosmic-text) | Metadata reader and glyph scaler for OpenType fonts |
+| `slab` | MIT | xui-bind (through calloop) | Pre-allocated storage for a uniform data type |
+| `slotmap` | Zlib | xui-bind (through glow) | Slotmap data structure |
+| `smallvec` | MIT OR Apache-2.0 | xui-bind (through harfrust) | 'Small vector' optimization: store up to a small number of items on the stack |
+| `smithay-client-toolkit` | MIT | xui-bind (through winit) | Toolkit for making client wayland applications |
+| `strict-num` | MIT | xui-bind (through tiny-skia-path) | A collection of bounded numeric types |
+| `swash` | Apache-2.0 OR MIT | xui-bind (through cosmic-text) | Font introspection, complex text shaping and glyph rendering |
+| `syn` | MIT OR Apache-2.0 | xui-bind (through windows-implement) | Parser for Rust source code |
+| `syn` | MIT OR Apache-2.0 | xui-bind (through windows-implement) | Parser for Rust source code |
+| `sys-locale` | MIT OR Apache-2.0 | xui-bind (through cosmic-text) | Small and lightweight library to obtain the active system locale |
+| `thiserror` | MIT OR Apache-2.0 | xui-bind (through ndk) | derive(Error) |
+| `thiserror-impl` | MIT OR Apache-2.0 | xui-bind (through thiserror) | Implementation detail of the `thiserror` crate |
+| `tiny-skia` | BSD-3-Clause | xui-bind (through xui-canvas) | A tiny Skia subset ported to Rust |
+| `tiny-skia-path` | BSD-3-Clause | xui-bind (through tiny-skia) | A tiny-skia Bezier path implementation |
+| `tiny-xlib` | MIT OR Apache-2.0 OR Zlib | xui-bind (through softbuffer) | A tiny Xlib wrapper for Rust |
+| `tinyvec` | Zlib OR Apache-2.0 OR MIT | xui-bind (through fontdb) | `tinyvec` provides 100% safe vec-like data structures |
+| `ttf-parser` | MIT OR Apache-2.0 | xui-bind (through fontdb) | A high-level, safe, zero-allocation font parser for TrueType, OpenType, and AAT |
+| `unicode-bidi` | MIT OR Apache-2.0 | xui-bind (through cosmic-text) | Implementation of the Unicode Bidirectional Algorithm |
+| `unicode-ident` | (MIT OR Apache-2.0) AND Unicode-3.0 | xui-bind (through wasm-bindgen-shared) | Determine whether characters have the XID_Start or XID_Continue properties according to Un |
+| `unicode-linebreak` | Apache-2.0 | xui-bind (through cosmic-text) | Implementation of the Unicode Line Breaking Algorithm |
+| `unicode-script` | MIT OR Apache-2.0 | xui-bind (through cosmic-text) | This crate exposes the Unicode `Script` and `Script_Extension` properties from [UAX #24](h |
+| `version_check` | MIT/Apache-2.0 | xui-bind (through slotmap) | Tiny crate to check the version of the installed/running rustc |
+| `wayland-backend` | MIT | xui-bind (through softbuffer) | Low-level bindings to the Wayland protocol |
+| `wayland-client` | MIT | xui-bind (through softbuffer) | Bindings to the standard C implementation of the wayland protocol, client side |
+| `wayland-csd-frame` | MIT | xui-bind (through smithay-client-toolkit) | Common trait and types for wayland CSD interop |
+| `wayland-cursor` | MIT | xui-bind (through smithay-client-toolkit) | Bindings to libwayland-cursor |
+| `wayland-protocols` | MIT | xui-bind (through winit) | Generated API for the officials wayland protocol extensions |
+| `wayland-protocols-plasma` | MIT | xui-bind (through winit) | Generated API for the Plasma wayland protocol extensions |
+| `wayland-protocols-wlr` | MIT | xui-bind (through smithay-client-toolkit) | Generated API for the WLR wayland protocol extensions |
+| `wayland-scanner` | MIT | xui-bind (through wayland-client) | Wayland Scanner for generating rust APIs from XML wayland protocol files |
+| `wayland-sys` | MIT | xui-bind (through glutin) | FFI bindings to the various libwayland-*.so libraries. You should only need this crate if  |
+| `windows` | MIT OR Apache-2.0 | xui-bind (through xui-canvas) | Rust for Windows |
+| `windows-collections` | MIT OR Apache-2.0 | xui-bind (through windows) | Windows collection types |
+| `windows-core` | MIT OR Apache-2.0 | xui-bind (through windows) | Core type support for COM and Windows |
+| `windows-future` | MIT OR Apache-2.0 | xui-bind (through windows) | Windows async types |
+| `windows-implement` | MIT OR Apache-2.0 | xui-bind (through windows-core) | The implement macro for the Windows crates |
+| `windows-interface` | MIT OR Apache-2.0 | xui-bind (through windows-core) | The interface macro for the Windows crates |
+| `windows-numerics` | MIT OR Apache-2.0 | xui-bind (through windows) | Windows numeric types |
+| `windows-result` | MIT OR Apache-2.0 | xui-bind (through windows-core) | Windows error handling |
+| `windows-strings` | MIT OR Apache-2.0 | xui-bind (through windows-core) | Windows string types |
+| `windows-threading` | MIT OR Apache-2.0 | xui-bind (through windows-future) | Windows threading |
+| `x11-dl` | MIT | xui-bind (through glutin) | X11 library bindings for Rust |
+| `x11rb` | MIT OR Apache-2.0 | xui-bind (through arboard) | Rust bindings to X11 |
+| `x11rb-protocol` | MIT OR Apache-2.0 | xui-bind (through x11rb) | Rust bindings to X11 |
+| `xcursor` | MIT | xui-bind (through wayland-cursor) | A library for loading XCursor themes |
+| `xkbcommon-dl` | MIT | xui-bind (through winit) | Dynamically loaded xkbcommon and xkbcommon-x11 Rust bindings |
+| `xkeysym` | MIT OR Apache-2.0 OR Zlib | xui-bind (through smithay-client-toolkit) | A library for working with X11 keysyms |
+| `xml-rs` | MIT | xui-bind (through gl_generator) | An XML library in pure Rust |
+| `xui-canvas` | MIT | xui-bind | Cross-platform software-rendered backend for xui (tiny-skia) |
+| `xui-core` | MIT | xui-bind | Backend-agnostic core of xui: geometry, units, colour, layout, theming and input vocabular |
+| `xui-gpu` | MIT | xui-bind (through xui-canvas) | Shared OpenGL surface seam for xui backends (context handle, frame lifecycle, offscreen re |
+| `yazi` | Apache-2.0 OR MIT | xui-bind (through swash) | DEFLATE/zlib compression and decompression |
+| `zeno` | Apache-2.0 OR MIT | xui-bind (through swash) | High performance, low level 2D path rasterization |
+| `zerocopy` | BSD-2-Clause OR Apache-2.0 OR MIT | xui-bind (through ahash) | Zerocopy makes zero-cost memory manipulation effortless. We write "unsafe" so you don't ha |
+| `zune-core` | MIT OR Apache-2.0 OR Zlib | xui-bind (through zune-jpeg) | Core utilities for image processing in the zune family of crates |
+| `zune-jpeg` | MIT OR Apache-2.0 OR Zlib | xui-bind (through xui-core) | A fast, correct and safe jpeg decoder |

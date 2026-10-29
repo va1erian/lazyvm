@@ -1,0 +1,17 @@
+[package]
+name = "lazyvm-win"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+# Windows-only parts (decisions.md D10): the `lazy.ui` window host on xui's
+# winit backend. Natives depend on it on Windows only, so the musl build
+# never pulls winit in. Same xui revision as `xui-bind` (docs/ui.md).
+[dependencies]
+xui-core = { git = "https://github.com/va1erian/xui", rev = "71dc3b5903ac94dba00466a6d6a00d69251beeab" }
+xui-canvas = { git = "https://github.com/va1erian/xui", rev = "71dc3b5903ac94dba00466a6d6a00d69251beeab", default-features = false, features = ["winit-backend"] }
