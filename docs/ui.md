@@ -268,9 +268,8 @@ As in `lazy.gfx`, the host is picked by `-Dlazy.ui=`:
 `xui-core` and on `xui-canvas` with its default features off, which is the
 offscreen backend alone. The window hosts plug in where D10 puts them:
 `lazyvm-win` (Windows) and `lazyvm-lazyos` (LazyOS). Neither crate exists
-yet; S9-03 and S9-04 create them, or S9-03 keeps the Windows host behind a
-cargo feature of `xui-bind`, as `crates/gfx` does with `desktop`, and says
-why. The Windows host needs `xui-canvas`'s `winit-backend` feature, which
+yet; S9-03 creates `lazyvm-win` and S9-04 brings the UI host into
+`lazyvm-lazyos`. The Windows host needs `xui-canvas`'s `winit-backend` feature, which
 also brings an OpenGL stack (`xui-gpu`, `glutin`, `glow`) and `arboard` (see
 "Size"). Every xui crate must be at the same revision as LazyOS's `xui-app`,
 so one `xui_core` links on LazyOS; bumping it is a change in both repos.

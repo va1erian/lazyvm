@@ -119,8 +119,8 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       process, on the main thread (a second is `IllegalStateException`), with
       DPI, resize, close, the clipboard and the uncaught-exception message
       box ([`ui.md`](ui.md), "When a callback throws"). The message box is
-      one `unsafe` call to `MessageBoxW`; it may live in `crates/lazyvm-win`,
-      which this item creates, with a `// SAFETY:` comment (shared rule 4). Measure the
+      one `unsafe` call to `MessageBoxW`; it lives in `crates/lazyvm-win`,
+      which this item creates for the Windows host, with a `// SAFETY:` comment (shared rule 4). Measure the
       size again with `winit-backend`.
       Check: `samples/counter` runs on Windows; `tools/ui_shot.py` captures a screenshot and checks non-blank pixels;
       a sample whose callback throws and does not catch it shows the error
