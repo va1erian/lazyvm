@@ -42,7 +42,9 @@ pub type Dispatch = Box<dyn FnMut(i32, i32) -> bool>;
 /// What one run cost, for `-Dlazy.ui.stats=true` (docs/ui.md, "Evidence").
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Stats {
-    /// Microseconds spent decoding the tree and mounting the widgets.
+    /// Microseconds from the start of `run` to a built window: decoding,
+    /// opening the window (and on a window host starting its loop), and
+    /// mounting the widgets.
     pub build_us: u64,
     /// Messages handed to Java.
     pub upcalls: u64,
@@ -51,17 +53,19 @@ pub struct Stats {
     pub upcall_max_us: u64,
     /// Widget changes made from Java.
     pub sets: u64,
-    /// Headless only: microseconds for all scripted clicks, layout and paint
-    /// included.
+    /// Headless only: microseconds for all scripted clicks, each with its
+    /// layout and a rendered frame.
     pub clicks_us: u64,
 }
 
 /// winit allows one event loop per process, so `lazy.ui` runs once.
 static RAN: AtomicBool = AtomicBool::new(false);
 
-/// Opens the window `tree` describes and runs it until it closes.
+/// Opens the window `tree` describes and runs it until it closes. `host`
+/// is called only after the once-per-process check, because building a
+/// window backend twice (winit's event loop) panics inside the toolkit.
 pub fn run(
-    host: &Host,
+    host: impl FnOnce() -> Result<Host, String>,
     title: &str,
     size: (u32, u32),
     tree: Tree,
@@ -70,7 +74,7 @@ pub fn run(
     if RAN.swap(true, Ordering::SeqCst) {
         return Err("lazy.ui runs once per process".into());
     }
-    let result = host::run(host, title, size, tree, dispatch);
+    let result = host().and_then(|host| host::run(&host, title, size, tree, dispatch));
     table::clear();
     result
 }

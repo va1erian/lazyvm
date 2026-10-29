@@ -40,28 +40,27 @@ fn prop(vm: &Vm, key: &str) -> Option<String> {
 
 /// `-Dlazy.ui=headless` hides the window; `lazy.ui.dump` and `lazy.ui.clicks`
 /// script it (prototype; S9-02 moves the script to `lazy.internal.ui.Headless`).
-fn host(vm: &Vm) -> VmResult<Host> {
-    if prop(vm, "lazy.ui").as_deref() == Some("headless") {
-        let clicks = prop(vm, "lazy.ui.clicks").and_then(|c| c.parse().ok());
-        let dump = prop(vm, "lazy.ui.dump").map(PathBuf::from);
-        return Ok(Host::Headless(Headless {
-            dump,
-            clicks: clicks.unwrap_or(0),
-        }));
+/// A window host is made later, by `xui_bind::run`, through `desktop`.
+fn headless(vm: &Vm) -> Option<Headless> {
+    if prop(vm, "lazy.ui").as_deref() != Some("headless") {
+        return None;
     }
-    desktop()
+    let clicks = prop(vm, "lazy.ui.clicks").and_then(|c| c.parse().ok());
+    let dump = prop(vm, "lazy.ui.dump").map(PathBuf::from);
+    Some(Headless {
+        dump,
+        clicks: clicks.unwrap_or(0),
+    })
 }
 
 #[cfg(all(windows, feature = "desktop"))]
-fn desktop() -> VmResult<Host> {
+fn desktop() -> Result<Host, String> {
     Ok(Host::Desktop(lazyvm_win::ui_backend()))
 }
 
 #[cfg(not(all(windows, feature = "desktop")))]
-fn desktop() -> VmResult<Host> {
-    Err(state(
-        "no window host in this build; use -Dlazy.ui=headless".into(),
-    ))
+fn desktop() -> Result<Host, String> {
+    Err("no window host in this build; use -Dlazy.ui=headless".into())
 }
 
 /// The op list and its strings, copied off the heap before the loop runs.
@@ -93,7 +92,7 @@ fn run0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         }
     };
     let tree = tree(vm, arg(args, 3)?, arg(args, 4)?)?;
-    let host = host(vm)?;
+    let headless = headless(vm);
     let ui = vm.load_class(UI)?;
     let index = vm.class(ui).find_method("dispatch", "(II)V");
     let dispatch = MethodRef {
@@ -113,8 +112,12 @@ fn run0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
             None => false,
         }
     });
+    let host = move || match headless {
+        Some(script) => Ok(Host::Headless(script)),
+        None => desktop(),
+    };
     let stats = vm
-        .lend(|| xui_bind::run(&host, &title, size, tree, upcall))
+        .lend(|| xui_bind::run(host, &title, size, tree, upcall))
         .map_err(state)?;
     if prop(vm, "lazy.ui.stats").as_deref() == Some("true") {
         print_stats(&stats);

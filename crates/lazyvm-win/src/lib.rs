@@ -1,6 +1,8 @@
 //! Windows-only parts of LazyVM (decisions.md D10). Today: the window
 //! backend `lazy.ui` runs on (docs/ui.md, "Backends").
 
+#![cfg(windows)]
+
 use std::rc::Rc;
 
 use xui_core::backend::Backend;

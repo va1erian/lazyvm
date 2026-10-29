@@ -72,11 +72,12 @@ fn headless(
         if let Some(target) = table::click_target() {
             let r = b.bounds(target);
             let (x, y) = ((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+            // Each click pays for its own frame: the label repaints.
             for _ in 0..clicks {
                 click(&b, window, x, y);
+                b.render(window);
             }
         }
-        // Rendering is part of what a click costs: the label repaints.
         let frame = b.render(window);
         let mut s = stats.get();
         s.clicks_us = start.elapsed().as_micros() as u64;

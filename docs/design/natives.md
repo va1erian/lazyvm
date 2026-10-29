@@ -221,6 +221,13 @@ and again in Rust.
   `-Dlazy.ui.clicks=<n>` clicks the first listened-to button `n` times and
   `-Dlazy.ui.dump=<file>` writes the last frame as a binary PPM.
   `-Dlazy.ui.stats=true` prints the build time, upcalls and changes on stderr.
+- The op list is the tree in pre-order; every node starts with its opcode
+  and the registry id Java gave it (ids are unique; `strings` indexes are
+  into the `strings` array; lengths are 0 to 32768; at most 16 levels):
+  `1 id padding gap n` (column) or `2 id padding gap n` (row), then its `n`
+  children; `3 id text` (label); `4 id text click` (button, `click` 1 when
+  Java listens). The root is a column or row, and nothing may follow it.
+  `Ui.dispatch` receives event kind 1 for a click.
 - `static native void setText0(int id, String text)`: a label's or button's
   text; `IllegalStateException` for an id that names no mounted widget.
 

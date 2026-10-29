@@ -371,6 +371,57 @@ code.
 5. **The offscreen backend cannot run modal windows, timers, wakes or
    resizes.** The headless driver works around timers and wakes in the
    binding; modal dialogs and resizes need xui support to be tested headless.
+6. **`WinitBackend` must run on the main thread** and offers no way to set
+   winit's `any_thread` (which `lazy.gfx` uses). Found by the spike: the VM
+   ran Java on a spawned thread, and the window panicked at start. The
+   launcher now runs the VM on the main thread on Windows instead.
+7. **`winit-backend` links `opengl32.dll` at load time** (through glutin),
+   which cost every program, UI or not, ~60 ms of GPU driver start-up. The
+   launcher delay-loads it; a feature without the GL path would be better.
+8. **`WinitBackend::new` panics** when the loop cannot be built (a second
+   time, or off the main thread). A fallible constructor would let the
+   binding report an exception rather than rely on checking first.
+
+## Spike results (S9-02 prototype, 2026-10-29)
+
+`samples/counter` built as a Windows executable on the code in this note:
+`crates/xui-bind`, `crates/lazyvm-win`, `lazy.ui` in `lazyrt` and the natives
+in `crates/natives/src/lazy_ui.rs`. Release builds on one Windows 11 machine
+at 125 % scale, with numbers reproduced by a second, independent run.
+
+| Measure | Result |
+|---|---|
+| Size, no `lazy.ui` (`--no-default-features --features desktop`) | 1,628,252 B (41 %) |
+| Size, headless `lazy.ui` only | 2,698,481 B (67 %) |
+| Size, full UI with the winit host (default) | 2,999,806 B (75 %) |
+| Size, musl with the headless UI | 2,995,159 B (75 %) |
+| A trivial `Hello`, warm start, no UI / full UI build | ~16 ms / ~16 ms |
+| Counter: launch to visible window | 24 to 29 ms |
+| Counter: `Ui.run` to built window (`build`) | 39 to 48 ms |
+| Java per click (dispatch, lambda, string concat, `setText0`) | ~8 us; the first click ~0.55 ms (class loading) |
+| Headless click with its layout and a rendered frame | ~77 us, of which ~8 us is Java |
+| Idle CPU over 2 s; 100 hovers; 100 resizes | 0 to 31 ms (timer granularity 15.6 ms); zero upcalls for hovers and resizes |
+| Working set | ~19 MiB steady, 51 MiB peak at start (font discovery) |
+
+What it says:
+
+- **The interpreter is not the bottleneck.** Building the window costs one
+  native call, and a click is ~10 % Java; the rest is xui's layout and
+  software painting. Hover, resize and idle run no bytecode.
+- **Size is the constraint.** The UI adds ~1.37 MB gzipped (tiny-skia,
+  cosmic-text, winit, an OpenGL stack and the clipboard), leaving ~1 MB of
+  the 4 MB budget. Gap 2 (no GL, smaller text) is the first lever; the
+  80 % warning line is ~200 KB away.
+- **Two launcher changes were needed** (gaps 6 and 7): the VM keeps the main
+  thread on Windows (its 256 MiB stack is reserved by the linker), and
+  `opengl32.dll` is delay-loaded.
+- **The lend.** xui's `App` is `'static`, so the natives cannot hand it
+  `&mut Vm`. `vm::interp::lend` parks the borrow in a thread-local for the
+  length of the loop and takes it out for each upcall; it is the VM's first
+  `unsafe` block.
+- Not covered by the spike: LazyOS, the error message box, `Panel.set` and
+  id generations, the `lazy.gfx` exclusivity check, and pixel goldens. The
+  `THIRD_PARTY.md` rows for xui's tree are generated and need curating.
 
 ## Not in the first version
 
