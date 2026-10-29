@@ -7,10 +7,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * What an idle matcher holds, in a small heap: a matcher whose deep match threw keeps nothing of
- * it, so a large array fits afterwards and the matcher works again; and a hundred thousand live
- * matchers after one match each fit, with a thousand that each ran 300 iterations with a
- * lookahead.
+ * What an idle matcher holds, in a small heap: matchers whose deep matches() and find() threw
+ * keep nothing of them, so a large array fits afterwards and the matchers work again; and a
+ * hundred thousand live matchers after one find() each fit, with a thousand that each ran 300
+ * iterations with a lookahead.
  */
 public class RegexMatcherMemory {
     /** "ab" repeated, that throws when the char at `bomb` is read. */
@@ -54,16 +54,24 @@ public class RegexMatcherMemory {
         } catch (IllegalStateException e) {
             System.out.println("deep match threw: " + e.getMessage());
         }
+        Matcher deepFind = Pattern.compile("(?:(a)b)*c").matcher(new Bomb(300000, 299999));
+        try {
+            System.out.println("deep find " + deepFind.find());
+        } catch (IllegalStateException e) {
+            System.out.println("deep find threw: " + e.getMessage());
+        }
         int[] big = new int[7 << 20];
         System.out.println("then an array of " + big.length * 4 / (1 << 20) + " MB");
         big = null;
         deep.reset("abab");
         System.out.println("the matcher again: " + deep.matches() + " " + deep.start(1) + ":" + deep.end(1));
+        deepFind.reset("ababc");
+        System.out.println("the find matcher again: " + deepFind.find() + " " + deepFind.start() + ":" + deepFind.end());
         List<Matcher> live = new ArrayList<Matcher>();
         Pattern small = Pattern.compile("a?b?c");
         for (int i = 0; i < 100000; i++) {
             Matcher m = small.matcher("abc");
-            if (!m.matches()) {
+            if (!m.find()) {
                 System.out.println("no match at " + i);
             }
             live.add(m);

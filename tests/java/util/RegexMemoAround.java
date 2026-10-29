@@ -48,6 +48,11 @@ public class RegexMemoAround {
         row("(?:a|a*)*b(?=c)", rep("a", 16) + "b", 0);
         long millis = (System.nanoTime() - start) / 1000000;
         System.out.println(millis < 30000 ? "fast" : "slow " + millis + " ms");
+        System.out.println("== a greedy loop whose body captures, so it is not a flat loop (the oracle needs seconds)");
+        start = System.nanoTime();
+        row("(?:(a)|aa)*c", rep("a", 40), 0);
+        millis = (System.nanoTime() - start) / 1000000;
+        System.out.println(millis < 30000 ? "fast" : "slow " + millis + " ms");
         System.out.println("== after 21000 failing starts, so the memo is on");
         String junk = rep("z", 21000);
         String[] patterns = {

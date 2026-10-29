@@ -2,6 +2,9 @@
 #(?:a|a*)*b(?=c) len20: hitEnd=true requireEnd=false
 #(?:a|a*)*b(?=c) len17: hitEnd=true requireEnd=false
 fast
+== a greedy loop whose body captures, so it is not a flat loop (the oracle needs seconds)
+#(?:(a)|aa)*c len40: hitEnd=true requireEnd=false
+fast
 == after 21000 failing starts, so the memo is on
 #(?:a|a*)*b(?=c) len21026: [14,22] hitEnd=true requireEnd=false
 #(?:a|a*)*b(?!c) len21026: [0,13] [23,26] hitEnd=true requireEnd=false

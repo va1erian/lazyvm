@@ -1,5 +1,7 @@
 deep match threw: text read at 299999
+deep find threw: text read at 299999
 then an array of 28 MB
 the matcher again: true 2:3
+the find matcher again: true 0:5
 live matchers 101000
 done
