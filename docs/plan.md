@@ -424,9 +424,11 @@ platform completions into `CompletableFuture`.
       and cancellation reaching the platform operation. It runs on `mio` on
       both platforms (on LazyOS through the Linux ABI's epoll); S10-02 swaps
       its LazyOS park for the one `wait` over `WAIT_CALLS`, endpoints and the
-      epoll `WAIT_FD`, when Messenger calls join the loop.
-      Files: `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/Reactor.java`, `crates/platform/src/reactor.rs`, `crates/natives/src/lazy_async.rs`.
-      Check: `tests/lazy/async/Timers`, `Cancel`, `ExecutorOrder` (both); no polling: `tests/lazy/async/Idle` asserts the reactor thread's CPU time stays under 1% over an idle 2 s.
+      epoll `WAIT_FD`, when Messenger calls join the loop. It adds `mio`
+      (MIT): recorded in `THIRD_PARTY.md`, with the `tools/size.py` delta in
+      the PR.
+      Files: `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/{Reactor,LoopFuture}.java`, `crates/platform/src/reactor.rs`, `crates/natives/src/lazy_async.rs`.
+      Check: `tests/lazy/async/Timers`, `Cancel`, `ExecutorOrder` (both); no polling: `tests/lazy/async/Idle` asserts the reactor thread's CPU time over an idle 2 s is at most two ticks of the platform's thread clock (both); `python tools/licenses.py`; `python tools/size.py`.
 
 Gate: `tests/lazy/async/Pipeline` (1000 chained timer stages fanned in with
 `allOf`) passes on both platforms.
@@ -447,11 +449,15 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
         `Connection.read`, `readAll`, `write` and `close` returning stages;
         `Tcp.listen(host, port, onAccept)` delivering connections to a
         handler; backpressure by not reading; cancelling a stage closes the
-        socket. IPv6 is checked on Windows only until LazyOS has `AF_INET6`.
+        socket; a 30 s limit per connect attempt. LazyOS has no IPv6 and no
+        loopback yet, so tests that need them run on Windows only.
       - Failures complete the stage exceptionally with an `IOException`;
         `lazy.net` adds no `java.net` types.
-      Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/net.rs`, `crates/natives/src/lazy_async.rs`.
-      Check: `cargo test -p platform net`; `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead` (both; LazyOS through `tools/lazyos_test.py --net` with the image's networking switch); `Ipv6Loopback` (Windows).
+      - `tools/lazyos_test.py --net`: boots with LazyOS's networking switch
+        and its host peers (`tools/net/hostpeers.py`), and passes their
+        addresses to the tests.
+      Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/net.rs`, `crates/natives/src/lazy_async.rs`, `tools/lazyos_test.py`.
+      Check: `cargo test -p platform net`; on Windows `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `Ipv6Loopback`; on LazyOS (`tools/lazyos_test.py --net`) `tests/lazy/net/HostEcho`, `HostInbound`, `SocketQuota`.
       Needs: S6-06.
 
 Gate: `samples/tcpget` sends a hand-written HTTP/1.0 `GET` over `lazy.net` to a
