@@ -399,8 +399,9 @@ Hand-written goldens (`lazy.*`, D9). "Both" means Windows and LazyOS.
 - S6-06, both: `tests/lazy/async/Timers` (delays given out of order fire in
   time order; a zero delay runs after the call returns; delays set from
   `main` wake a reactor parked on a later timer, which on LazyOS also proves
-  the shared `eventfd`), `Cancel` (a cancelled delay never runs, and
-  `complete` on one withdraws it), `ExecutorOrder` (tasks run in the order
+  the shared `eventfd`), `Cancel` (a cancelled delay never runs, `complete` on one withdraws
+  it, and each `cancel` or `complete` from outside reaches its `LoopFuture`
+  override exactly once, which checks S6-05's no-self-call rule), `ExecutorOrder` (tasks run in the order
   given, on one thread, and a throwing task does not stop the loop), `Idle`
   (the reactor's CPU time over an idle 2 s is at most two ticks of the
   platform's thread clock, read by `Reactor.cpuNanos`, a test-only native:

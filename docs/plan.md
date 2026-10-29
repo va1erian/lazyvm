@@ -420,7 +420,7 @@ platform completions into `CompletableFuture`.
       `cancel`, `obtrude*`) never call one another virtually; internal
       completion goes through private helpers, so S6-06's subclass can
       override them ([`async.md`](async.md), "Inside").
-      Check: `tests/java/concurrent/CompletableFutures`, including a subclass that counts calls to its overrides.
+      Check: `tests/java/concurrent/CompletableFutures`. (The rule is checked through S6-06's `LoopFuture` in `tests/lazy/async/Cancel`: a `java.*` golden would record the oracle's own internal calls.)
 - [ ] S6-06 `lazy.async.Loop` as [`async.md`](async.md) designs it: the
       reactor thread of [`decisions.md`](decisions.md) D8, `Loop.executor()`
       and timers (`Loop.delay(time, unit)` returning `CompletionStage<Void>`),
