@@ -178,7 +178,10 @@ out until an app asks; each costs binary size.
   the process's only winit loop, and xui's message dialog lives inside an
   existing window. So the Windows host shows a system message box (Win32
   `MessageBoxW`, through the `windows-sys` crate winit already brings), from
-  the VM's uncaught-exception path. On LazyOS, S9-04 decides between an xui
+  the VM's uncaught-exception path. That call is `unsafe`, so it lives in
+  `crates/lazyvm-win` as one minimal block with a `// SAFETY:` comment, the
+  exception to shared rule 4 that S9-03 names; `THIRD_PARTY.md`'s row for
+  `windows-sys` then lists that crate as a direct user. On LazyOS, S9-04 decides between an xui
   window on a fresh `LazyOSBackend` (xuid has no one-loop rule) and the
   system's own notification. The text is built from Rust values only, so a
   broken app cannot break the report.
