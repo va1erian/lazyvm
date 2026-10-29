@@ -87,7 +87,7 @@ final class LocaleTags {
         variant.append(v);
     }
 
-    /** Singleton extensions; a repeated or empty one ends the tag. */
+    /** Singleton extensions; an empty one ends the tag, a repeated one is skipped. */
     private void readExtensions() {
         while (at < tags.size()) {
             String s = tags.get(at);
@@ -100,11 +100,14 @@ final class LocaleTags {
             while (j < tags.size() && isAlnum(tags.get(j), 2, 8)) {
                 values.add(lower(tags.get(j++)));
             }
-            if (values.isEmpty() || extensions.containsKey(key)) {
+            if (values.isEmpty()) {
                 at = tags.size();
                 return;
             }
-            extensions.put(key, key == 'u' ? canonicalUnicode(values) : join(values, 0, values.size(), "-"));
+            // A repeated singleton and its subtags are skipped; the first one stays.
+            if (!extensions.containsKey(key)) {
+                extensions.put(key, key == 'u' ? canonicalUnicode(values) : join(values, 0, values.size(), "-"));
+            }
             at = j;
         }
     }

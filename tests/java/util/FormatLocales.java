@@ -9,7 +9,7 @@ public class FormatLocales {
         "it-CH", "es-ES", "es-MX", "es-AR", "pt-PT", "pt-BR", "nl-NL", "nl-BE", "ru-RU", "pl-PL", "ja-JP",
         "zh-CN", "zh-TW", "ko-KR", "sv-SE", "da-DK", "fi-FI", "nb-NO", "no-NO", "cs-CZ", "uk-UA", "ar-SA",
         "he-IL", "el-GR", "hu-HU", "ro-RO", "id-ID", "vi-VN", "bg-BG", "ca-ES", "sr-RS", "und", "xx-YY", "de-XX",
-        "sr-Latn-RS", "sr-Latn-ME", "sr-Latn-BA", "sr-Latn", "sr-Cyrl-RS", "sr-Latn-XX", "de-Latn-DE",
+        "nn", "nn-NO", "nb", "de-Latn-CH", "fr-Latn-CH", "sr-Latn-RS", "sr-Latn-ME", "sr-Latn-BA", "sr-Latn", "sr-Cyrl-RS", "sr-Latn-XX", "de-Latn-DE",
     };
 
     static String esc(String s) {

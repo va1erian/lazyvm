@@ -99,21 +99,9 @@ fn environment(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
     ret_ref(Some(array))
 }
 
-/// The property map's key for a Java string, exact for lone surrogates: those
-/// (and U+10FFFF, the escape marker) become the marker and a code, so two
-/// distinct strings never share a key.
 fn property_key(vm: &Vm, v: Value) -> VmResult<String> {
-    const MARK: char = '\u{10FFFF}';
     let r = v.reference()?.ok_or_else(VmError::npe)?;
-    let mut key = String::new();
-    for c in char::decode_utf16(vm.string_utf16(r)?) {
-        match c {
-            Ok(MARK) => key.push_str("\u{10FFFF}m"),
-            Ok(c) => key.push(c),
-            Err(e) => key.push_str(&format!("\u{10FFFF}x{:04x}", e.unpaired_surrogate())),
-        }
-    }
-    Ok(key)
+    Ok(vm::wtf::property_key(&vm.string_utf16(r)?))
 }
 
 fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

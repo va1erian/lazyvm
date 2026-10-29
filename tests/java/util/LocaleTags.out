@@ -142,6 +142,15 @@
 <de-und> [und] und||| tag=und ext=[] x=null u=null ca=null uk=[] ua=[] hash=-840790219
 <und-und> [und] und||| tag=und ext=[] x=null u=null ca=null uk=[] ua=[] hash=-840790219
 <de-und-und> [und] und||| tag=und ext=[] x=null u=null ca=null uk=[] ua=[] hash=-840790219
+<en-a-bb-a-cc-b-dd> [en__#a-bb-b-dd] en||| tag=en-a-bb-b-dd ext=[a, b] x=null u=null ca=null uk=[] ua=[] hash=1598470011
+<en-a-bb-a-cc-x-pp> [en__#a-bb-x-pp] en||| tag=en-a-bb-x-pp ext=[a, x] x=pp u=null ca=null uk=[] ua=[] hash=1599124929
+<en-u-ca-u-nu-b-cc> [en__#b-cc-u-ca] en||| tag=en-b-cc-u-ca ext=[b, u] x=null u=ca ca= uk=[ca] ua=[] hash=548491567
+<en-i-kk-i-kk-r-pp> [en__#i-kk-r-pp] en||| tag=en-i-kk-r-pp ext=[i, r] x=null u=null ca=null uk=[] ua=[] hash=-303619437
+<en-a-bb-a-b-cc> [en__#a-bb] en||| tag=en-a-bb ext=[a] x=null u=null ca=null uk=[] ua=[] hash=99453851
+<en-a-bb-a-x-pp> [en__#a-bb] en||| tag=en-a-bb ext=[a] x=null u=null ca=null uk=[] ua=[] hash=99453851
+<und-a-bb-x-foo> [] ||| tag=und-a-bb-x-foo ext=[a, x] x=foo u=null ca=null uk=[] ua=[] hash=-139700720
+<und-x-foo> [] ||| tag=x-foo ext=[x] x=foo u=null ca=null uk=[] ua=[] hash=112264689
+<und-u-ca-gregory> [] ||| tag=und-u-ca-gregory ext=[u] x=null u=ca-gregory ca=gregory uk=[ca] ua=[] hash=-1439185166
 <ABC-def> [def] def||| tag=def ext=[] x=null u=null ca=null uk=[] ua=[] hash=-1335737893
 <en-US-U-CA-x-A> [en_US_#u-ca-x-a] en||US| tag=en-US-u-ca-x-a ext=[u, x] x=a u=ca ca= uk=[ca] ua=[] hash=1903974764
 <en-t-m0-und> [en__#t-m0-und] en||| tag=en-t-m0-und ext=[t] x=null u=null ca=null uk=[] ua=[] hash=519756365

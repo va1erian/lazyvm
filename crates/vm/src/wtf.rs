@@ -130,6 +130,23 @@ fn form(b: &[u8]) -> Option<(u32, usize)> {
     (cp >= min && cp <= 0x10FFFF).then_some((cp, n))
 }
 
+/// The system property map's key for a Java string, the one way keys are built (the
+/// natives and the launcher's -D both use it). A lone surrogate, and U+10FFFF, which
+/// serves as the escape marker, become the marker plus a code, so two distinct strings
+/// never share a key.
+pub fn property_key(units: &[u16]) -> String {
+    const MARK: char = '\u{10FFFF}';
+    let mut key = String::new();
+    for c in char::decode_utf16(units.iter().copied()) {
+        match c {
+            Ok(MARK) => key.push_str("\u{10FFFF}m"),
+            Ok(c) => key.push(c),
+            Err(e) => key.push_str(&format!("\u{10FFFF}x{:04x}", e.unpaired_surrogate())),
+        }
+    }
+    key
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,5 +223,16 @@ mod tests {
             decode(&[0x61, 0xFF, 0xC0, 0x80]),
             vec![0x61, 0xFFFD, 0xFFFD, 0xFFFD]
         );
+    }
+
+    #[test]
+    fn property_keys_are_exact() {
+        let key = |s: &str| property_key(&s.encode_utf16().collect::<Vec<_>>());
+        assert_eq!(key("java.home"), "java.home");
+        assert_ne!(key("k\u{10FFFF}"), key("k"));
+        // The marker's own spelling cannot be forged with a lone surrogate or plain text.
+        assert_ne!(key("\u{10FFFF}xd800"), property_key(&[0xD800]));
+        assert_ne!(property_key(&[0xD800]), property_key(&[0xDBFF]));
+        assert_ne!(key("\u{10FFFF}"), key("\u{10FFFF}m"));
     }
 }

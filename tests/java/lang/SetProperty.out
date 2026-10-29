@@ -13,6 +13,7 @@ true
 true true true true
 ab
 a b null
+lone spelled mark null
 pair b
 java.security.InvalidParameterException null
 java.security.InvalidParameterException: m

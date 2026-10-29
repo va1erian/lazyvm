@@ -57,6 +57,12 @@ fn print_version() {
     eprintln!("LazyVM (build {v}, interpreted mode, runs Java 8 bytecode)");
 }
 
+/// Stores a system property under the same key the `System` natives look it up by.
+fn set_property(vm: &mut Vm, key: &str, value: Vec<u16>) {
+    let units: Vec<u16> = key.encode_utf16().collect();
+    vm.properties.insert(vm::wtf::property_key(&units), value);
+}
+
 fn run(mut launch: Launch) -> ExitCode {
     if launch.show_version {
         print_version();
@@ -82,13 +88,12 @@ fn run(mut launch: Launch) -> ExitCode {
     let mut vm = Vm::new(classpath, launch.options.clone());
     natives::register_all(&mut vm);
     for (k, v) in platform::default_properties() {
-        vm.properties.insert(k, vm::wtf::to_units(&v));
+        set_property(&mut vm, &k, vm::wtf::to_units(&v));
     }
     let joined = std::env::join_paths(&user_classpath).unwrap_or_default();
-    vm.properties
-        .insert("java.class.path".into(), vm::wtf::to_units(&joined));
+    set_property(&mut vm, "java.class.path", vm::wtf::to_units(&joined));
     for (k, v) in &launch.properties {
-        vm.properties.insert(k.clone(), v.encode_utf16().collect());
+        set_property(&mut vm, k, v.encode_utf16().collect());
     }
     if let Err(e) = vm.boot() {
         eprintln!("lazyvm: cannot start: the class library is missing or broken ({e})");

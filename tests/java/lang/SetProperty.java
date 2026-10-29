@@ -49,6 +49,12 @@ public class SetProperty {
         System.out.println(System.getProperty("\ud800") + System.getProperty("\udbff"));
         System.out.println(System.clearProperty("\ud800") + " " + System.getProperty("\udbff") + " "
                 + System.getProperty("\ud800"));
+        // U+10FFFF is the VM's key escape; spelling a lone surrogate's escape out is still another key.
+        System.setProperty("\ud800", "lone");
+        System.setProperty("\udbff\udfffxd800", "spelled");
+        System.setProperty("\udbff\udfff", "mark");
+        System.out.println(System.getProperty("\ud800") + " " + System.getProperty("\udbff\udfffxd800") + " "
+                + System.getProperty("\udbff\udfff") + " " + System.getProperty("\udbff\udfffm"));
         System.setProperty("\udbff\udc00", "pair");
         System.out.println(System.getProperty("\udbff\udc00") + " " + System.getProperty("\udbff"));
         try {
