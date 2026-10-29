@@ -4,6 +4,9 @@ package java.util;
 final class LocaleSymbols {
     static final LocaleSymbols ROOT = new LocaleSymbols('.', ',');
 
+    /** The last lookup, as one immutable pair: Formatter asks for every number it prints. */
+    private static volatile Object[] last = {null, ROOT};
+
     final char decimal;
     final char grouping;
 
@@ -20,6 +23,16 @@ final class LocaleSymbols {
         if (l == null) {
             return ROOT;
         }
+        Object[] seen = last;
+        if (l.equals(seen[0])) {
+            return (LocaleSymbols) seen[1];
+        }
+        LocaleSymbols found = lookup(l);
+        last = new Object[] {l, found};
+        return found;
+    }
+
+    private static LocaleSymbols lookup(Locale l) {
         String lang = l.getLanguage();
         if (lang.equals("nb") || lang.equals("nn")) {
             lang = "no"; // Norwegian shares one set of symbols

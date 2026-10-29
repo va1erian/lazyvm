@@ -17,9 +17,16 @@ public class Environment {
         final Map<String, String> m = System.getenv();
         System.out.println(m instanceof java.io.Serializable && !(m instanceof java.util.HashMap));
         // LazyOS may hand the program no environment, so presence itself is not printed.
-        boolean has = System.getenv("PATH") != null;
-        System.out.println(has == (m.get("PATH") != null));
-        System.out.println(has == m.containsKey("PATH"));
+        // The map is case-exact, and Windows may spell the variable "Path", so use its own name.
+        String pathKey = "PATH";
+        for (String k : m.keySet()) {
+            if (k.equalsIgnoreCase("PATH")) {
+                pathKey = k;
+            }
+        }
+        boolean has = System.getenv(pathKey) != null;
+        System.out.println(has == (m.get(pathKey) != null));
+        System.out.println(has == m.containsKey(pathKey));
         System.out.println(has == (m.size() > 0) || !has);
         System.out.println(System.getenv("") + " " + System.getenv("no=such") + " " + m.get(""));
         System.out.println(m == System.getenv());
