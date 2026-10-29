@@ -14,6 +14,8 @@ public final class Ui {
     private static Widget[] registry = new Widget[64];
     private static int count;
     private static boolean ran;
+    /** Set by the first callback: from then on, run0 has linked. */
+    private static boolean dispatched;
 
     private Ui() {}
 
@@ -60,7 +62,9 @@ public final class Ui {
         try {
             run0(window.title, window.width, window.height, out.ops(), out.strings.toArray());
         } catch (UnsatisfiedLinkError e) {
-            // The plain lazyvm binary leaves xui out (docs/ui.md, "Size").
+            // The plain lazyvm binary leaves xui out (docs/ui.md, "Size"); a
+            // callback's own link error is rethrown as it was thrown.
+            if (dispatched) throw e;
             throw new IllegalStateException("lazy.ui needs the lazyvm-ui launcher", e);
         }
     }
@@ -77,6 +81,7 @@ public final class Ui {
 
     /** The one upcall: the VM calls it for each widget message. */
     private static void dispatch(int id, int kind) {
+        dispatched = true;
         if (id > 0 && id <= count) registry[id].fire(kind);
     }
 
