@@ -1,0 +1,25 @@
+[package]
+name = "natives-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+# The `lazy.ui` natives (docs/ui.md), kept out of `natives` so the plain
+# `lazyvm` binary never links xui: only `launcher-ui` depends on this crate.
+[dependencies]
+vm = { path = "../vm" }
+natives = { path = "../natives", default-features = false }
+xui-bind = { path = "../xui-bind" }
+
+# The window host; Windows only, so a musl `lazyvm-ui` is headless.
+[target.'cfg(windows)'.dependencies]
+lazyvm-win = { path = "../lazyvm-win", optional = true }
+
+[features]
+default = ["desktop"]
+desktop = ["dep:lazyvm-win"]

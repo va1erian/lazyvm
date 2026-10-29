@@ -103,33 +103,50 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       retained model (build once, change widgets directly, one upcall per
       message) over a re-rendering `render()`. The note lists the xui gaps
       found so far ("xui rehauled", [`decisions.md`](decisions.md) D4); each
-      is filed as an issue on the xui repo once S9-02 confirms it in code.
+      is filed as an issue on the xui repo once code confirms it (the S9-02
+      spike confirmed five; [`ui.md`](ui.md), "xui gaps").
       Check: the note is reviewed by the owner before S9-02 starts.
-- [ ] S9-02 `xui-bind` crate and natives, behind a `ui` cargo feature: the
-      run loop with its one upcall (`Ui.dispatch`), the mount op list, the
-      widget registry, `set0`/`get0`, `Label`, `Button`, the arrangements and
-      `Panel`, on xui's offscreen backend driven by `lazy.internal.ui.Headless`. Measure the binary size with and without the
-      feature first ([`ui.md`](ui.md), "Size").
+- [x] S9-02s (spike, ahead of S9-02) `samples/counter` as a Windows
+      executable, to measure size and speed ([`ui.md`](ui.md), "Spike
+      results"): `crates/xui-bind` (op list, widget table, loop, headless
+      host), `crates/lazyvm-win` (the winit host), `crates/natives-ui`, the
+      VM lent to callbacks (`vm::interp::lend`), and `lazy.ui`'s `Ui`,
+      `Window`, `Layout`, `Label` and `Button`. `lazy.ui` ships as a second
+      binary, `lazyvm-ui` (`crates/launcher-ui`); `lazyvm` links no xui. On
+      Windows the VM runs on the main thread and `opengl32.dll` is
+      delay-loaded (ui.md gaps 6 and 7).
+      Check: `samples/counter` headless with 1000 scripted clicks and
+      `-Dlazy.ui.stats=true` (one upcall per click); a real window driven
+      from outside (clicks, hovers, resizes, zero upcalls for the last two),
+      with screenshots; `tools/size.py` for both binaries on Windows and
+      musl; all figures reproduced by an independent run (PR #27).
+- [ ] S9-02 Finish the binding on the spike: `set0`/`get0`, `Panel` and
+      `Panel.set` with generation-tagged ids, the `lazy.gfx` exclusivity
+      check, `lazy.internal.ui.Headless` (scripted input and a manual clock)
+      in place of the spike's `-Dlazy.ui.clicks`, and the `THIRD_PARTY.md`
+      rows for xui's tree curated.
       Check: `tests/lazy/ui/Counter` headless on both platforms, comparing a
       pixel checksum golden; `tests/lazy/ui/IdleCost` (hover and scroll a
       hundred times, zero upcalls); `tests/lazy/ui/StaleId` (a message queued
       for a widget a `Panel.set` destroyed does not fire its successor); `tests/lazy/ui/CallbackThrows`
       (`Ui.run` rethrows, the program exits nonzero, no dialog headless);
-      `tools/size.py` with and without the feature, in the PR.
-- [ ] S9-03 Windows window host via the xui `winit-backend`: one `Ui.run` per
-      process, on the main thread (a second is `IllegalStateException`), with
-      DPI, resize, close, the clipboard and the uncaught-exception message
-      box ([`ui.md`](ui.md), "When a callback throws"). The message box is
-      one `unsafe` call to `MessageBoxW`; it lives in `crates/lazyvm-win`,
-      which this item creates for the Windows host, with a `// SAFETY:` comment (shared rule 4). Measure the
-      size again with `winit-backend`.
-      Check: `samples/counter` runs on Windows; `tools/ui_shot.py` captures a screenshot and checks non-blank pixels;
+      `tools/size.py` for `lazyvm` and `lazyvm-ui`, in the PR.
+- [ ] S9-03 Windows window host via the xui `winit-backend` in
+      `crates/lazyvm-win` (from the spike, which also moved the VM to the
+      main thread and delay-loads `opengl32.dll`): DPI, resize, close, the
+      clipboard and the uncaught-exception message box ([`ui.md`](ui.md),
+      "When a callback throws"). The message box is one `unsafe` call to
+      `MessageBoxW` in `crates/lazyvm-win`, with a `// SAFETY:` comment
+      (shared rule 4).
+      Check: `samples/counter` runs on Windows under `lazyvm-ui`; `tools/ui_shot.py` captures a screenshot and checks non-blank pixels;
       a sample whose callback throws and does not catch it shows the error
       message box (screenshot in the PR), and one that catches it shows none;
       `tools/ui_shot.py --resize 100` resizes the window from outside and the
-      `-Dlazy.ui.stats=true` line shows zero upcalls; `tools/size.py`, in the PR.
-- [ ] S9-04 LazyOS window host via xuid (`xui-app`'s `LazyOSBackend`, from
-      `crates/lazyvm-lazyos`), with input routing and the trace markers
+      `-Dlazy.ui.stats=true` line shows zero upcalls; `tools/size.py --exe` on `lazyvm-ui`, in the PR.
+- [ ] S9-04 LazyOS window host for the musl `lazyvm-ui`, via xuid
+      (`xui-app`'s `LazyOSBackend`, from `crates/lazyvm-lazyos`, the font
+      registered from a system file: [`ui.md`](ui.md), "Size"), with input
+      routing and the trace markers
       `LAZYVM:UI:UP:PASS`.
       Needs: LOS-02.
       Check: LazyOS `tools/screenshot/qemu_shot.py` on the `--lazyvm-ui` demo plus `pngstats.py --min-nonblack 0.01`.
@@ -326,7 +343,8 @@ These land in the LazyOS repo. Read its `AGENTS.md` and
 - [ ] LOS-01 Test hook: a `LAZYOS_LAZYVM` build switch that embeds a staged
       directory (the musl `lazyvm`, `lazyrt.jar`, the tests) and a `run_demo.py
       --lazyvm-test` mode that runs the suite and prints `LAZYVM:TEST:<name>:PASS|FAIL`.
-- [ ] LOS-02 A display grant and launcher entry for `lazyvm` UI apps (like any
-      xui app), plus a `--lazyvm-ui` demo.
+- [ ] LOS-02 The musl `lazyvm-ui` binary staged beside `lazyvm`, a display
+      grant and launcher entry for `lazyvm-ui` apps (like any xui app), plus
+      a `--lazyvm-ui` demo.
 - [ ] LOS-03 The `midlc` Java backend (S10-01).
 - [ ] LOS-04 The core package, MIME type and app packaging (S10-05).

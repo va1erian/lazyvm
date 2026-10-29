@@ -48,13 +48,16 @@ pub fn register_all(vm: &mut Vm) {
     reflect_access::register(vm);
 }
 
-fn arg(args: &[Value], i: usize) -> VmResult<Value> {
+// The argument helpers below are shared with the other natives crates
+// (`natives-ui`), so every native reads its arguments one way.
+
+pub fn arg(args: &[Value], i: usize) -> VmResult<Value> {
     args.get(i)
         .copied()
         .ok_or_else(|| VmError::Internal(format!("native argument {i} missing")))
 }
 
-fn int(args: &[Value], i: usize) -> VmResult<i32> {
+pub fn int(args: &[Value], i: usize) -> VmResult<i32> {
     arg(args, i)?.int()
 }
 
@@ -71,7 +74,7 @@ fn float(args: &[Value], i: usize) -> VmResult<f32> {
 }
 
 /// A reference argument that must not be null.
-fn obj(args: &[Value], i: usize) -> VmResult<Ref> {
+pub fn obj(args: &[Value], i: usize) -> VmResult<Ref> {
     arg(args, i)?.reference()?.ok_or_else(VmError::npe)
 }
 
@@ -91,6 +94,6 @@ fn ret_ref(r: Option<Ref>) -> VmResult<Option<Value>> {
     Ok(Some(Value::Ref(r)))
 }
 
-fn ret_void() -> VmResult<Option<Value>> {
+pub fn ret_void() -> VmResult<Option<Value>> {
     Ok(None)
 }

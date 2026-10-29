@@ -1,7 +1,8 @@
 # `lazy.ui`: Java bindings for xui (design)
 
 Status: S9-01 in [`plan-2.md`](plan-2.md), reviewed by the owner (decisions
-at the end). Nothing here is built yet. It was written against xui at
+at the end). The S9-02 spike built the core of it for `samples/counter`
+("Spike results"); S9-02 to S9-06 build the rest. It was written against xui at
 `71dc3b5903ac94dba00466a6d6a00d69251beeab`, the revision LazyOS's `xui-app`
 pins, after reading its README, `docs/architecture.md`, `docs/widgets.md`,
 `docs/forms.md`, `docs/headless-screenshots.md`, `xui-core`'s `Backend`, `Ui`
@@ -264,6 +265,7 @@ As in `lazy.gfx`, the host is picked by `-Dlazy.ui=`:
 | (unset) | LazyOS | `xui-app`'s `LazyOSBackend` over xuid, from `crates/lazyvm-lazyos`, since `xui-app` is GPL (S9-04, needs LOS-02) |
 | `headless` | both | `xui-canvas`'s `OffscreenBackend`, driven by `lazy.internal.ui.Headless` |
 
+Only `lazyvm-ui` links any of this ("Size").
 `crates/xui-bind` (MIT OR Apache-2.0, like the other VM crates) depends on
 `xui-core` and on `xui-canvas` with its default features off, which is the
 offscreen backend alone. The window hosts plug in where D10 puts them:
@@ -340,18 +342,23 @@ Fonts count too:
 
 So:
 
-- The UI sits behind a `ui` cargo feature, like `lazy.gfx`'s `desktop`, so a
-  VM can be built without it.
-- S9-02's PR measures `tools/size.py` with and without the feature on both
-  platforms before any widget work, and stops for the owner if it passes
-  80 % of the budget. S9-03 measures again with `winit-backend`.
+- **The UI is a second binary.** `lazyvm` has no `lazy.ui` and links no
+  xui; `lazyvm-ui` (`crates/launcher-ui`) is the same launcher plus the
+  `lazy.ui` natives (`crates/natives-ui`). They are separate crates rather
+  than a cargo feature, so a workspace build cannot unify xui into
+  `lazyvm`. Under `lazyvm`, `Ui.run` throws `IllegalStateException` naming
+  `lazyvm-ui`. Both binaries share `lazyrt.jar` (the `lazy.ui` classes cost
+  it a few KB).
+- `tools/size.py` checks both against D14, on Windows and musl, in CI. A
+  PR that adds widgets says what `lazyvm-ui` costs, and stops for the owner
+  past 80 % of the budget.
 - Only the widgets apps use are bound. xui's optional crates (rich text, the
   code editor, web views, forms, scripts) stay out.
 
 ## xui gaps found so far
 
-To be filed on `va1erian/xui` once S9-02 or the item named confirms each in
-code.
+To be filed on `va1erian/xui` once code confirms each. The S9-02 spike
+confirmed 2 (the size), 5, 6, 7 and 8; the others wait for the item named.
 
 1. **No way to pump the loop from outside.** `Backend::run` blocks until
    quit. A `pump(timeout)` step would let `lazy.gfx`'s program-owned loop
@@ -371,6 +378,58 @@ code.
 5. **The offscreen backend cannot run modal windows, timers, wakes or
    resizes.** The headless driver works around timers and wakes in the
    binding; modal dialogs and resizes need xui support to be tested headless.
+6. **`WinitBackend` must run on the main thread** and offers no way to set
+   winit's `any_thread` (which `lazy.gfx` uses). Found by the spike: the VM
+   ran Java on a spawned thread, and the window panicked at start. The
+   launcher now runs the VM on the main thread on Windows instead.
+7. **`winit-backend` links `opengl32.dll` at load time** (through glutin),
+   which cost every program, UI or not, ~60 ms of GPU driver start-up. The
+   launcher delay-loads it; a feature without the GL path would be better.
+8. **`WinitBackend::new` panics** when the loop cannot be built (a second
+   time, or off the main thread). A fallible constructor would let the
+   binding report an exception rather than rely on checking first.
+
+## Spike results (S9-02 prototype, 2026-10-29)
+
+`samples/counter` built as a Windows executable on the code in this note:
+`crates/xui-bind`, `crates/lazyvm-win`, `lazy.ui` in `lazyrt` and the natives
+in `crates/natives/src/lazy_ui.rs`. Release builds on one Windows 11 machine
+at 125 % scale, with numbers reproduced by a second, independent run.
+
+| Measure | Result |
+|---|---|
+| Size, `lazyvm` (no xui), Windows / musl | 1,628,323 B (41 %) / 1,612,661 B (40 %) |
+| Size, a headless-only UI build, Windows | 2,698,481 B (67 %) |
+| Size, `lazyvm-ui` with the winit host, Windows | 3,001,273 B (75 %) |
+| Size, `lazyvm-ui` (headless until S9-04), musl | 2,994,088 B (75 %) |
+| A trivial `Hello`, warm start, `lazyvm` / `lazyvm-ui` | ~16 ms / ~16 ms |
+| Counter: launch to the window shown, still empty | 24 to 29 ms |
+| Counter: `run0` to mounted widgets (`build`, event loop included) | 39 to 48 ms |
+| Counter: launch to widgets on screen (estimate: VM start ~16 ms + `build`) | ~55 to 65 ms |
+| Java per click (dispatch, lambda, string concat, `setText0`) | ~8 us; the first click ~0.55 ms (class loading) |
+| Headless click with its layout and a rendered frame | ~77 us, of which ~8 us is Java |
+| Idle CPU over 2 s; 100 hovers; 100 resizes | 0 to 31 ms (timer granularity 15.6 ms); zero upcalls for hovers and resizes |
+| Working set | ~19 MiB steady, 51 MiB peak at start (font discovery) |
+
+What it says:
+
+- **The interpreter is not the bottleneck.** Building the window costs one
+  native call, and a click is ~10 % Java; the rest is xui's layout and
+  software painting. Hover, resize and idle run no bytecode.
+- **Size is the constraint.** The UI adds ~1.37 MB gzipped (tiny-skia,
+  cosmic-text, winit, an OpenGL stack and the clipboard), leaving ~1 MB of
+  the 4 MB budget. Gap 2 (no GL, smaller text) is the first lever; the
+  80 % warning line is ~200 KB away.
+- **Two launcher changes were needed** (gaps 6 and 7): the VM keeps the main
+  thread on Windows (its 256 MiB stack is reserved by the linker), and
+  `opengl32.dll` is delay-loaded.
+- **The lend.** xui's `App` is `'static`, so the natives cannot hand it
+  `&mut Vm`. `vm::interp::lend` parks the borrow in a thread-local for the
+  length of the loop and takes it out for each upcall; it is the VM's first
+  `unsafe` block.
+- Not covered by the spike: LazyOS, the error message box, `Panel.set` and
+  id generations, the `lazy.gfx` exclusivity check, and pixel goldens. The
+  `THIRD_PARTY.md` rows for xui's tree are generated and need curating.
 
 ## Not in the first version
 

@@ -105,6 +105,7 @@ python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
 python tools/launcher_test.py          # -jar, manifests and jar errors
 python tools/size.py                   # binary + lazyrt.jar under the 4 MB budget (D14)
+cargo build --release -p launcher-ui && python tools/size.py --exe target/release/lazyvm-ui.exe   # the lazy.ui binary too
 python tools/lazyos_test.py --lazyos <LazyOS checkout>   # the suite inside LazyOS; slow, before each PR
 cargo build -p launcher --target x86_64-unknown-linux-musl
 ```
@@ -132,6 +133,7 @@ changed, and which gates ran locally.
 
 ```bash
 cargo build --workspace
+cargo build -p launcher-ui             # lazyvm-ui: the VM with lazy.ui (docs/ui.md); lazyvm has none
 cargo test --workspace
 python tools/lazyrt.py                 # dist/lazyrt.jar
 python tools/test.py --filter <area>   # differential suite on lazyvm

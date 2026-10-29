@@ -224,9 +224,12 @@ lazyvm/
                         on mio; on both systems)
   crates/gfx            lazy.gfx pixel windows: headless, and the Windows
                         host on winit + softbuffer (S9-00, docs/gfx.md)
+  crates/xui-bind       lazy.ui on xui: the op list, the widgets, the loop (S9)
+  crates/natives-ui     the lazy.ui natives, linked only by lazyvm-ui
   crates/lazyvm-win     Windows-only parts: xui winit window host (S9)
   crates/lazyvm-lazyos  LazyOS-only parts: Messenger, xuid (GPL-3.0-or-later, S9)
-  crates/launcher       the `lazyvm` / `java` command line
+  crates/launcher       the `lazyvm` / `java` command line (a lib and its bin)
+  crates/launcher-ui    `lazyvm-ui`: the same launcher plus lazy.ui (S9)
   java/lazyrt           the java.* class library (Java source)
   java/lazy-api         the lazy.* API (Java source)
   tests/java            differential and lazy.* tests with .out goldens
@@ -301,7 +304,8 @@ The VM stays small: on every platform, the release binary with its debug info
 stripped and gzipped (-9), plus `lazyrt.jar` as built (already deflated), is
 under 4,000,000 bytes. `tools/size.py` measures it and fails above the budget,
 and CI runs it for the Windows binary and for the static musl binary LazyOS
-runs. The budget is the owner's choice (October 2026, with the sum near 1.4 MB
+runs. Both launchers are held to it: `lazyvm`, and `lazyvm-ui`, which adds
+`lazy.ui` and xui (docs/ui.md, "Size"). The budget is the owner's choice (October 2026, with the sum near 1.4 MB
 at the end of S5).
 
 - **Over budget** is a failing gate like any other: shrink something (dead
