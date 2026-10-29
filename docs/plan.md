@@ -416,7 +416,11 @@ platform completions into `CompletableFuture`.
 - [ ] S6-05 `CompletableFuture` and `CompletionStage`: every method in the
       Javadoc, the async variants on `ForkJoinPool.commonPool()` or a given
       executor, `exceptionally`, `handle`, `allOf`/`anyOf`, and cancellation.
-      Check: `tests/java/concurrent/CompletableFutures`.
+      The public completion methods (`complete`, `completeExceptionally`,
+      `cancel`, `obtrude*`) never call one another virtually; internal
+      completion goes through private helpers, so S6-06's subclass can
+      override them ([`async.md`](async.md), "Inside").
+      Check: `tests/java/concurrent/CompletableFutures`, including a subclass that counts calls to its overrides.
 - [ ] S6-06 `lazy.async.Loop` as [`async.md`](async.md) designs it: the
       reactor thread of [`decisions.md`](decisions.md) D8, `Loop.executor()`
       and timers (`Loop.delay(time, unit)` returning `CompletionStage<Void>`),

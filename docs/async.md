@@ -244,7 +244,7 @@ the VM exits, as files do (`design/files.md`).
 ```
 
 - **The reactor** is a native thread that never runs bytecode and makes every
-  socket system call. It owns a `mio::Poll`, the sockets (in a numbered
+  socket system call. It creates, on itself after it starts, a `mio::Poll`, the sockets (in a numbered
   handle table, like `platform::files`), a min-heap of timers, and a queue of
   requests the natives push and wake it for (`mio::Waker`). It parks in
   `Poll::poll` with the next timer as its timeout, so an idle loop uses no
@@ -280,24 +280,28 @@ that overrides `cancel`, `complete`, `completeExceptionally`,
 - Operation ids come from a 64-bit counter and are never reused. One table
   maps ids to their futures, under the same lock as `pending`.
 - Whoever removes the id from the table settles it: the dispatcher on a
-  completion, or an override called from outside. `cancel`, `complete` and
-  `completeExceptionally` on a future that is already done, or whose id is
-  gone, do nothing and return false; `obtrudeValue` and `obtrudeException`
-  then simply force the result through `super`, as `CompletableFuture`
-  defines.
+  completion, or an override called from outside. On a future that is
+  already done, the overrides keep `CompletableFuture`'s contract by
+  delegating to `super` (so a second `cancel` returns true, `complete`
+  returns false, and `obtrude*` force the result); while the id is gone but
+  the future is not yet done, `cancel`, `complete` and
+  `completeExceptionally` return false.
 - An override that wins calls `Reactor.cancel(id)`, completes the future
   through `super`, and subtracts from `pending` only after that returns, so
   work its handlers start is counted first. The dispatcher completes through
   `super` too.
 - A completion whose id is gone still carries what the reactor made, and
   the dispatcher releases all of it: it closes a connected, accepted or
-  listening socket and drops read bytes, so a cancel that races a success
-  leaks nothing. `Reactor.cancel` of an id the reactor has already finished
-  does nothing.
+  listening socket, so a cancel that races a success leaks nothing. For a
+  `read`, `readAll` or `write` it aborts the connection (and frees the read
+  slot), since the bytes are lost or were sent after all; either way the
+  cancel's promise, an aborted connection, holds whoever won.
+  `Reactor.cancel` of an id the reactor has already finished does nothing.
 
 S6-05's `CompletableFuture` must not call its own public completion methods
+(`complete`, `completeExceptionally`, `cancel`, `obtrude*`) from one another
 through virtual dispatch, or these overrides would run for its internal
-completions too.
+completions too; the S6-05 item says so.
 
 The natives are in `lazy.internal.Reactor`, used by `lazy.async` and
 `lazy.net` only: each request (`connect`, `listen`, `accept`, `read`,
