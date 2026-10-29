@@ -26,6 +26,50 @@ required before S10's packages can install third-party jars and before S12-S13 r
 
 Gate: `tools/test.py` with `-Xverify:all` (the default from now on) passes on both platforms.
 
+## S11. Streams, `java.time`, logging, JDWP
+
+Goal: the library items real apps use, a debugger, and the interpreter's
+speed, before `lazy.ui` and LazyOS packaging.
+
+S11 runs right after S8, ahead of S9 and S10, and keeps its number. By
+then S4, S6 and S8 have finished the interpreter, so S11-05 tunes the
+final one. Checks the verifier has proven may be dropped only where
+verification cannot be turned off; malformed code is still an error,
+never a panic.
+
+- [ ] S11-01 `java.util.stream`: all stream types and collectors, sequential
+      only (`parallel()` is accepted and ignored).
+      Check: `tests/java/stream/*`.
+- [ ] S11-02 `java.time` subset ([`decisions.md`](decisions.md) D6) and the
+      `%t` conversions of `Formatter`.
+      Check: `tests/java/time/*` (fixed clocks only).
+- [ ] S11-03 `java.util.logging` minimal.
+      Check: `tests/java/util/Logging`.
+- [ ] S11-04 JDWP over a socket (`-agentlib:jdwp=transport=dt_socket,…`):
+      breakpoints, stepping, stack frames, locals, and evaluate-free variable
+      views, enough for IntelliJ's debugger.
+      Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
+- [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
+      inline caches only if a benchmark proves a 20% win. The suite is our
+      own code, shaped like what games run: a sprite blit loop, a noise and
+      flood-fill kernel like world generation, calls and field access, and
+      `String` case mapping. Case mapping gets an ASCII fast path that also
+      covers the `Locale` overloads (every locale but tr, az and lt), since
+      games call it every tick. The Minicraft Plus port (GPL-3.0,
+      `va1erian/minicraft-plus-revived-lz`, branch `lazyvm-port`) is an
+      outside measure the owner runs with its `lazyvm/scripts/*.keys` and
+      `-Dminicraft.lazyvm.stats=true`; no game code or game numbers go into
+      the repo. Its frame time includes the port's own drawing loops and
+      `lazy.gfx`, so its frame rate is not the interpreter's alone.
+      Files: `bench/`, `tools/bench.py`, `crates/vm/src/interp`,
+      `java/lazyrt/src/java/lang/StringCase.java`.
+      Check: `tools/bench.py` before and after on both platforms, in the PR;
+      `tests/java/lang/CaseMapping` and `StringCaseLocale`, with ASCII
+      strings under tr, az and lt added and blessed.
+
+Gate: `tools/test.py` passes on both platforms, and `tools/bench.py` shows
+no regression against the S8 baseline.
+
 ## S9. `lazy.ui` on xui
 
 Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or Swing.
@@ -113,24 +157,6 @@ Goal: Java apps are first-class LazyOS apps. They talk Messenger with
 
 Gate: `samples/healthwatch` subscribes to `system/health/*`, shows it in a
 `lazy.ui` list and posts a notification on errors, on LazyOS.
-
-## S11. Streams, `java.time`, logging, JDWP
-
-- [ ] S11-01 `java.util.stream`: all stream types and collectors, sequential
-      only (`parallel()` is accepted and ignored).
-      Check: `tests/java/stream/*`.
-- [ ] S11-02 `java.time` subset ([`decisions.md`](decisions.md) D6) and the
-      `%t` conversions of `Formatter`.
-      Check: `tests/java/time/*` (fixed clocks only).
-- [ ] S11-03 `java.util.logging` minimal.
-      Check: `tests/java/util/Logging`.
-- [ ] S11-04 JDWP over a socket (`-agentlib:jdwp=transport=dt_socket,…`):
-      breakpoints, stepping, stack frames, locals, and evaluate-free variable
-      views, enough for IntelliJ's debugger.
-      Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
-- [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
-      inline caches only if a benchmark proves a 20% win.
-      Check: `tools/bench.py` before and after, in the PR.
 
 ## S12. Explore: AWT on xui
 
