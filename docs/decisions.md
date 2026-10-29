@@ -151,9 +151,11 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
 
 - `lazy.async`: the event loop. `Loop` owns a reactor thread that waits on
   the platform (LazyOS: one `wait` naming `WAIT_CALLS`, endpoints and a
-  `WAIT_FD` epoll descriptor for sockets; Windows: `mio`). Completions are
-  handed to an `Executor` the caller chooses (default: the loop's executor;
-  in UI code: `Ui.executor()`), and every async API returns
+  `WAIT_FD` epoll descriptor for sockets, from S10-02; Windows, and LazyOS
+  until then: `mio`, see [`async.md`](async.md)). Completions arrive on
+  the loop's executor (a stage the program settles itself, by `cancel` for
+  example, completes on the program's thread), and code moves to another one (in UI code,
+  `Ui.executor()`) with the standard `*Async` methods; every async API returns
   `CompletionStage<T>`. Cancelling the `CompletableFuture` cancels the
   underlying operation (`msg_cancel`, socket close).
 - `lazy.net`: async sockets returning `CompletionStage` (TCP in S7; TLS and
@@ -218,7 +220,8 @@ lazyvm/
   crates/vm             interpreter, heap, GC, threads, class loading
   crates/natives        native methods of lazyrt and lazy.*
   crates/platform       the Platform trait and StdPlatform (files, console,
-                        clock, sockets through Rust std, on both systems)
+                        clock through Rust std; sockets and the reactor
+                        on mio; on both systems)
   crates/gfx            lazy.gfx pixel windows: headless, and the Windows
                         host on winit + softbuffer (S9-00, docs/gfx.md)
   crates/lazyvm-win     Windows-only parts: xui winit window host (S9)

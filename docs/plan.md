@@ -416,17 +416,23 @@ platform completions into `CompletableFuture`.
 - [ ] S6-05 `CompletableFuture` and `CompletionStage`: every method in the
       Javadoc, the async variants on `ForkJoinPool.commonPool()` or a given
       executor, `exceptionally`, `handle`, `allOf`/`anyOf`, and cancellation.
-      Check: `tests/java/concurrent/CompletableFutures`.
-- [ ] S6-06 `lazy.async.Loop`: the reactor thread described in
-      [`decisions.md`](decisions.md) D8, `Loop.submit`, timers
-      (`Loop.delay(Duration)` returning `CompletionStage<Void>`), and the rule
-      that completions run on the chosen `Executor`, never on the reactor
-      thread. On LazyOS it is one `wait` over `WAIT_CALLS`, endpoints and an
-      epoll `WAIT_FD` (read LazyOS `docs/architecture/call-completion.md` and
-      `endpoint-fd.md` first); on Windows it is `mio`. Cancellation reaches
-      the platform operation.
-      Files: `java/lazy-api/src/lazy/async/*.java`, `crates/platform/src/reactor.rs`, `crates/lazyvm-*/src/reactor.rs`.
-      Check: `tests/lazy/async/Timers`, `Cancel` (both); no polling: a test asserts the reactor thread's CPU time stays under 1% over an idle 2 s.
+      The public completion methods (`complete`, `completeExceptionally`,
+      `cancel`, `obtrude*`) never call one another virtually; internal
+      completion goes through private helpers, so S6-06's subclass can
+      override them ([`async.md`](async.md), "Inside").
+      Check: `tests/java/concurrent/CompletableFutures`. (The rule is checked through S6-06's `LoopFuture` in `tests/lazy/async/Cancel`: a `java.*` golden would record the oracle's own internal calls.)
+- [ ] S6-06 `lazy.async.Loop` as [`async.md`](async.md) designs it: the
+      reactor thread of [`decisions.md`](decisions.md) D8, `Loop.executor()`
+      and timers (`Loop.delay(time, unit)` returning `CompletionStage<Void>`),
+      with completions on the loop's executor, never on the reactor thread,
+      and cancellation reaching the platform operation. It runs on `mio` on
+      both platforms (on LazyOS through the Linux ABI's epoll); S10-02 swaps
+      its LazyOS park for the one `wait` over `WAIT_CALLS`, endpoints and the
+      epoll `WAIT_FD`, when Messenger calls join the loop. It adds `mio`
+      (MIT): recorded in `THIRD_PARTY.md`, with the `tools/size.py` delta in
+      the PR.
+      Files: `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/{Reactor,LoopFuture}.java`, `crates/platform/src/reactor.rs`, `crates/natives/src/lazy_async.rs`.
+      Check: `tests/lazy/async/Timers`, `Cancel`, `ExecutorOrder` (both); no polling: `tests/lazy/async/Idle` asserts the reactor thread's CPU time over an idle 2 s is at most two ticks of the platform's thread clock (both); `python tools/licenses.py`; `python tools/size.py`.
 
 Gate: `tests/lazy/async/Pipeline` (1000 chained timer stages fanned in with
 `allOf`) passes on both platforms.
@@ -438,18 +444,25 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
 `java.nio.channels`, UDP, TLS and HTTP are deferred to S15 in
 [`plan-2.md`](plan-2.md), which builds on this item's platform layer.
 
-- [ ] S7-01 `lazy.net` over platform TCP sockets.
+- [ ] S7-01 `lazy.net` over platform TCP sockets, as [`async.md`](async.md)
+      designs it.
       - Platform: non-blocking TCP, IPv4 and IPv6, registered with the S6-06
         reactor; DNS through the platform resolver (on LazyOS, through `netd`
         via the Linux ABI). This is the one socket layer; S15 reuses it.
-      - API: `TcpClient.connect(host, port)` → `CompletionStage<Connection>`;
-        `Connection.read`, `write` and `close` returning stages;
-        `TcpServer.listen` delivering connections to a handler; backpressure
-        by not reading; cancelling a stage closes the socket.
+      - API: `Tcp.connect(host, port)` → `CompletionStage<Connection>`;
+        `Connection.read`, `readAll`, `write` and `close` returning stages;
+        `Tcp.listen(host, port, onAccept)` delivering connections to a
+        handler; backpressure by not reading; cancelling a stage closes the
+        socket; a 30 s limit per connect attempt. LazyOS has no IPv6 and no
+        loopback yet, so tests that need them run on Windows only.
       - Failures complete the stage exceptionally with an `IOException`;
         `lazy.net` adds no `java.net` types.
-      Files: `java/lazy-api/src/lazy/net/*.java`, `crates/platform/src/net.rs`, `crates/lazyvm-*/src/net.rs`.
-      Check: `cargo test -p lazyvm-win sockets`; `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused` (both; LazyOS through `tools/lazyos_test.py --net` with the image's networking switch).
+      - `tools/lazyos_test.py --net`: boots with LazyOS's networking switch
+        and its host peers (`tools/net/hostpeers.py`), adds the `hostfwd`
+        rule into the guest's listening port, and passes the addresses to
+        the tests ([`async.md`](async.md), "Files").
+      Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/net.rs`, `crates/natives/src/lazy_async.rs`, `tools/lazyos_test.py`.
+      Check: `cargo test -p platform net`; on Windows `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `Ipv6Loopback`; on LazyOS (`tools/lazyos_test.py --net`) `tests/lazy/net/HostEcho`, `HostInbound`.
       Needs: S6-06.
 
 Gate: `samples/tcpget` sends a hand-written HTTP/1.0 `GET` over `lazy.net` to a
