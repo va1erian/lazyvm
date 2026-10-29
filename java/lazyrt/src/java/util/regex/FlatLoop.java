@@ -13,9 +13,10 @@ package java.util.regex;
 final class FlatLoop extends Node {
     // Frame layout, in ints: the loop position, the iterations done, the start of the
     // iteration that led here, the phase, the group values to restore when the frame is
-    // dropped, the enumerator (branch, resume flag), then positions and repeat counts.
+    // dropped, the enumerator (branch, resume flag), whether the state's failure is to be
+    // remembered and the event before it (see LoopMemo.enter), then positions and repeat counts.
     private static final int POS = 0, DONE = 1, LAST = 2, PHASE = 3, OLD_START = 4, OLD_END = 5;
-    private static final int BRANCH = 6, RESUME = 7, DATA = 8;
+    private static final int BRANCH = 6, RESUME = 7, TRACKED = 8, BEFORE = 9, DATA = 10;
     // LEFT and DROP: the rest of the pattern failed after the loop left at this frame, which
     // is then dropped (after LEFT, remembered as failed).
     private static final int ENTER = 0, ITERATE = 1, LEAVE = 2, EXIT_ONLY = 3, LEFT = 4, DROP = 5;
@@ -125,9 +126,14 @@ final class FlatLoop extends Node {
                         st[f + PHASE] = EXIT_ONLY;
                         break;
                     }
-                    if (memoizable && m.memo.step() && m.memo.failed(id, c, slots, i)) {
-                        st[f + PHASE] = DROP;
-                        break;
+                    st[f + TRACKED] = 0;
+                    if (memoizable && m.memo.step()) {
+                        if (m.memo.skip(m, id, c, slots, i)) {
+                            st[f + PHASE] = DROP;
+                            break;
+                        }
+                        st[f + TRACKED] = 1;
+                        st[f + BEFORE] = m.memo.enter(m);
                     }
                     st[f + PHASE] = ITERATE;
                     if (lazy && !required) {
@@ -150,8 +156,8 @@ final class FlatLoop extends Node {
                     }
                     break;
                 case LEFT:
-                    if (memoizable && m.memo.active()) {
-                        m.memo.fail(id, c, slots, i);
+                    if (st[f + TRACKED] != 0) {
+                        m.memo.failed(m, id, c, slots, i, st[f + BEFORE]);
                     }
                     st[f + PHASE] = DROP;
                     break;

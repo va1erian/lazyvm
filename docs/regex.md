@@ -423,13 +423,18 @@ a pattern nor the number of iterations is bounded by the VM's 4096-frame limit
   literals, classes, line breaks, groups, alternation, loops, lookarounds,
   atomic groups, possessive repeats and anchors other than `\G`, with no
   capture that outlives a failed path; one back reference, `\G` or such a
-  capture turns it off for the whole pattern. The one visible
-  effect of a skipped state is where a failed search leaves the end of the
-  previous match, which a later `usePattern(\G)` could read; that is why `\G` in
-  the pattern turns the memo off, and why this one case is not covered.
+  capture turns it off for the whole pattern. A failed state also remembers
+  the last event its paths recorded, and skipping it records that event again,
+  so even where a failed search leaves the end of the previous match (which the
+  next `find()` and `\G` start from) is unchanged: with the memo switched on
+  from the first step and with it never on, 27500 fuzz cases give the same
+  output. Before S5-09 a skipped state could move that end, so a `find()` after
+  a failed `matches()` could find what the oracle does not. A table holds at
+  most 2097152 states per loop (counts times positions); beyond that the memo
+  does not remember.
   It applies to loops that sit inside no other loop, lookaround or atomic
-  group, in
-  patterns without back references anywhere (also after the loop) and without
+  group, in patterns without back references anywhere (also after the loop)
+  and without
   a capturing group inside a lookaround or atomic group or a possessive repeat
   of a group (those keep their capture when a path fails, so which paths were
   tried would show in the groups). The class comment of `LoopMemo` lists what

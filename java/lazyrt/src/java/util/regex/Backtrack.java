@@ -28,7 +28,7 @@ final class Backtrack {
     /** Where a scope frame keeps the scope that was open before it (Node.Scope restores it). */
     static final int OUTER = 7;
 
-    /** Frames kept between attempts; a deeper stack is let go when the next attempt starts. */
+    /** Frames kept between attempts; a deeper stack is let go when its attempt ends. */
     private static final int KEPT = 1 << 14;
 
     private Node[] owners = new Node[64];
@@ -36,34 +36,49 @@ final class Backtrack {
     int[] data = new int[64 << SHIFT];
     /** One object per frame, made the first time a frame carries one (see FlatLoop). */
     private Object[] refs;
+    /** The frames below this index may still hold an object in refs. */
+    private int refsTop;
     private int frames;
     /** The frame of the innermost open scope, or -1. */
     int scope;
 
     /** Matches from `node` at i, with an empty stack; true when the match reached Node.Accept. */
     boolean run(Matcher m, Node node, int i) {
-        if (owners.length > KEPT) {
-            // A deep match grew the stack; a matcher that lives on should not hold on to it.
-            owners = new Node[64];
-            data = new int[64 << SHIFT];
-            refs = null;
-        }
         frames = 0;
         scope = -1;
         while (true) {
             i = node.go(m, i);
             while (i < 0) {
                 if (i == DONE) {
+                    release();
                     return true;
                 }
                 int f = frames - 1;
                 if (f < 0) {
+                    release();
                     return false;
                 }
                 frames = f;
                 i = owners[f].back(m, f << SHIFT);
             }
             node = m.cont;
+        }
+    }
+
+    /**
+     * Lets go of what the attempt left behind, which the recursive engine dropped with its Java
+     * frames: the loop states frames still point to, and a stack a deep match grew, so that a
+     * matcher that lives on does not keep them.
+     */
+    private void release() {
+        if (owners.length > KEPT) {
+            owners = new Node[64];
+            data = new int[64 << SHIFT];
+            refs = null;
+            refsTop = 0;
+        }
+        for (; refsTop > 0; refsTop--) {
+            refs[refsTop - 1] = null;
         }
     }
 
@@ -117,6 +132,9 @@ final class Backtrack {
             refs = bigger;
         }
         refs[frames - 1] = o;
+        if (frames > refsTop) {
+            refsTop = frames;
+        }
     }
 
     /** The object of the frame just popped for a back call, released from the stack. */
@@ -127,6 +145,10 @@ final class Backtrack {
     }
 
     private void grow() {
+        if (frames > (Integer.MAX_VALUE >> SHIFT) / 2) {
+            // The ints of twice as many frames would not fit in one array.
+            throw new OutOfMemoryError("Regex backtracking stack");
+        }
         int size = frames * 2;
         Node[] biggerOwners = new Node[size];
         int[] biggerData = new int[size << SHIFT];

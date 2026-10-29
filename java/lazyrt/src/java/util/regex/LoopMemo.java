@@ -32,35 +32,44 @@ package java.util.regex;
  * loops that sit inside no other loop are marked, and no loop inside a lookaround or atomic
  * group, whose body ends somewhere else (a lookbehind's where it was entered). The check runs
  * on the whole tree, so a node after the loop counts.
- * <li>\G reads the end of the previous match, which the end-of-attempt events (Matcher.iterationEnd) move, so it would make a
- * skipped state show.
+ * <li>\G reads the end of the previous match, which a later search reads from the events of
+ * this one, so it is left out to keep the argument simple.
  * <li>hitEnd and requireEnd only ever turn on during a search, and the first visit of a state
  * already turned on what a revisit would, so skipping it changes neither.
+ * <li>The events of an attempt (Matcher.iterationEnd, where a failed search leaves the end of the
+ * previous match, which the next find() and \G start from) are decided by the state too: a
+ * failed state remembers the last event its paths recorded, and a skip records it again. A state
+ * marks its entry with {@link #enter} (NO_EVENT, "nothing since"), so on failure the last event
+ * is simply what Matcher.iterationEnd holds, and NO_EVENT means the value before the entry.
  * </ul>
- * What is left to differ is the position at which a failed attempt leaves
- * Matcher.iterationEnd, which only a failed pathological search can show, and then only to a
- * \G in another pattern installed with usePattern (documented in docs/regex.md).
+ * So a skipped state changes nothing a caller can see.
  *
  * <p>{@link #prepare} marks the loops that qualify. Nothing is remembered, or even allocated,
  * until a search has taken {@link #AFTER} loop steps, so ordinary matches pay for a counter only.
  */
 final class LoopMemo {
     static final int AFTER = 20000;
-    /** Largest table, in bits, one loop may use; a bigger one is not worth the memory. */
-    private static final long LIMIT_BITS = 1L << 26;
+    /** Largest table, in states, one loop may use; a bigger one is not worth the memory. */
+    private static final long LIMIT = 1L << 21;
+    /** Matcher.iterationEnd while nothing has been recorded since a state was entered. */
+    private static final int NO_EVENT = -2;
 
     private int work;
     private int lo;
     private int span;
-    private long[][] bits;
+    /**
+     * Per loop, per state: 0 when not known to fail, 1 when it failed without recording an event,
+     * else the position of the last event its paths recorded, plus 2.
+     */
+    private int[][] states;
 
     void reset(int regionStart, int regionEnd, int loops) {
         work = 0;
         lo = regionStart;
         span = regionEnd - regionStart + 1;
-        bits = null;
+        states = null;
         if (loops > 0) {
-            bits = new long[loops][];
+            states = new int[loops][];
         }
     }
 
@@ -69,36 +78,48 @@ final class LoopMemo {
         return ++work > AFTER;
     }
 
-    /** True once the search has done enough steps to remember failures (without counting one). */
-    boolean active() {
-        return work > AFTER;
-    }
-
-    /** True when the state (loop, iterations done, position) is known to fail. */
-    boolean failed(int loop, int count, int slots, int pos) {
-        long[] table = bits == null ? null : bits[loop];
+    /**
+     * When the state (loop, iterations done, position) is known to fail, records the event its
+     * paths left, as running them would, and returns true.
+     */
+    boolean skip(Matcher m, int loop, int count, int slots, int pos) {
+        int[] table = states == null ? null : states[loop];
         if (table == null || pos < lo || pos >= lo + span) {
             return false;
         }
-        long bit = bit(count, slots, pos);
-        return (table[(int) (bit >> 6)] & (1L << (bit & 63))) != 0;
+        int known = table[index(count, slots, pos)];
+        if (known > 1) {
+            m.iterationEnd = known - 2;
+        }
+        return known != 0;
     }
 
-    void fail(int loop, int count, int slots, int pos) {
-        if (bits == null || pos < lo || pos >= lo + span || (long) slots * span > LIMIT_BITS) {
+    /** Marks the entry of a state whose failure is to be remembered; returns what to pass to failed. */
+    int enter(Matcher m) {
+        int before = m.iterationEnd;
+        m.iterationEnd = NO_EVENT;
+        return before;
+    }
+
+    /** The state entered with `before` (see enter) failed: remembers it with its last event. */
+    void failed(Matcher m, int loop, int count, int slots, int pos, int before) {
+        int last = m.iterationEnd;
+        if (last == NO_EVENT) {
+            m.iterationEnd = before;
+        }
+        if (states == null || pos < lo || pos >= lo + span || (long) slots * span > LIMIT) {
             return;
         }
-        long[] table = bits[loop];
+        int[] table = states[loop];
         if (table == null) {
-            table = new long[(int) (((long) slots * span + 63) >> 6)];
-            bits[loop] = table;
+            table = new int[slots * span];
+            states[loop] = table;
         }
-        long bit = bit(count, slots, pos);
-        table[(int) (bit >> 6)] |= 1L << (bit & 63);
+        table[index(count, slots, pos)] = last == NO_EVENT ? 1 : last + 2;
     }
 
-    private long bit(int count, int slots, int pos) {
-        return (long) (count < slots ? count : slots - 1) * span + (pos - lo);
+    private int index(int count, int slots, int pos) {
+        return (count < slots ? count : slots - 1) * span + (pos - lo);
     }
 
     /** The slot count for a loop: counts below the minimum differ, counts beyond it do not. */

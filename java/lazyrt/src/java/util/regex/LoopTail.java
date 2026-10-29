@@ -8,10 +8,10 @@ package java.util.regex;
 final class LoopTail extends Node {
     // A frame holds what the loop tried, ITERATED or LEFT (plus MEMO when the state's failure
     // is to be remembered), then the iteration start to restore after ITERATED or the
-    // position after LEFT. The rest is in the loop's counters again when the frame is
-    // resumed, because every frame pushed after it has been undone: the count is one more
-    // than at the decision after ITERATED (and the iteration start is the position), the
-    // same after LEFT.
+    // position after LEFT, then the event before the state (see LoopMemo.enter). The rest is
+    // in the loop's counters again when the frame is resumed, because every frame pushed
+    // after it has been undone: the count is one more than at the decision after ITERATED
+    // (and the iteration start is the position), the same after LEFT.
     private static final int ITERATED = 0, LEFT = 1, MEMO = 2;
 
     private final int id;
@@ -43,21 +43,24 @@ final class LoopTail extends Node {
             m.iterationEnd = i;
         }
         int memo = 0;
+        int before = 0;
         if (memoizable && m.memo.step()) {
-            if (m.memo.failed(id, c, slots, i)) {
+            if (m.memo.skip(m, id, c, slots, i)) {
                 return FAIL;
             }
             memo = MEMO;
+            before = m.memo.enter(m);
         }
         if (lazy && c >= minCount) {
-            return leave(m, i, memo);
+            return leave(m, i, memo, before);
         }
-        return iterate(m, c, i, memo);
+        return iterate(m, c, i, memo, before);
     }
 
     int back(Matcher m, int at) {
         int[] d = m.stack.data;
         int memo = d[at] & MEMO;
+        int before = d[at + 2];
         int c = m.loopCount[id];
         int i;
         if ((d[at] & LEFT) == 0) {
@@ -66,26 +69,27 @@ final class LoopTail extends Node {
             m.loopCount[id] = c;
             m.loopStart[id] = d[at + 1];
             if (!lazy && c >= minCount) {
-                return leave(m, i, memo);
+                return leave(m, i, memo, before);
             }
         } else {
             i = d[at + 1];
             if (lazy) {
-                return iterate(m, c, i, memo);
+                return iterate(m, c, i, memo, before);
             }
         }
-        return failed(m, c, i, memo);
+        return failed(m, c, i, memo, before);
     }
 
     /** Runs the body once more when the count allows; a greedy loop leaves otherwise. */
-    private int iterate(Matcher m, int c, int i, int memo) {
+    private int iterate(Matcher m, int c, int i, int memo, int before) {
         if (c >= minCount && c >= maxCount) {
-            return lazy ? failed(m, c, i, memo) : leave(m, i, memo);
+            return lazy ? failed(m, c, i, memo, before) : leave(m, i, memo, before);
         }
         int at = m.stack.push(this);
         int[] d = m.stack.data;
         d[at] = ITERATED | memo;
         d[at + 1] = m.loopStart[id];
+        d[at + 2] = before;
         m.loopCount[id] = c + 1;
         m.loopStart[id] = i;
         m.cont = head;
@@ -96,20 +100,21 @@ final class LoopTail extends Node {
      * Leaves the loop at i. For a greedy loop that was the last option, so a frame is only
      * needed to remember the failure.
      */
-    private int leave(Matcher m, int i, int memo) {
+    private int leave(Matcher m, int i, int memo, int before) {
         if (lazy || memo != 0) {
             int at = m.stack.push(this);
             int[] d = m.stack.data;
             d[at] = LEFT | memo;
             d[at + 1] = i;
+            d[at + 2] = before;
         }
         m.cont = next;
         return i;
     }
 
-    private int failed(Matcher m, int c, int i, int memo) {
+    private int failed(Matcher m, int c, int i, int memo, int before) {
         if (memo != 0) {
-            m.memo.fail(id, c, slots, i);
+            m.memo.failed(m, id, c, slots, i, before);
         }
         return FAIL;
     }

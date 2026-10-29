@@ -17,4 +17,10 @@ fast
 #(?:a|aa)*(?>b)c len21026: [14,23] hitEnd=true requireEnd=false
 #((?:a|aa)*)(b)(?=c) len21026: [14,22 14:21 21:22] hitEnd=true requireEnd=false
 #(?:a|aa)*(?=(?:a|aa)*b)a*b len21026: [0,13] [14,22] [23,26] hitEnd=true requireEnd=false
+== a failed matches() long enough for the memo, then find() from where it left off
+#(?:[ab]+?.)*?c: matches false, find no, then \G at 42
+#(?:[ab]+?.)*?(?=a)?c: matches false, find no, then \G at 42
+#(?:[ab]+?.)*?(?=c)c: matches false, find no, then \G at 42
+#(?:[ab]+?.)*?(?>c): matches false, find no, then \G at 42
+#[ ]*((?:(?>[ab]?.)|.?+[ab]{0,2}?){2,}|[ab]*){2,}c++: matches false, find no, then \G at 8
 done

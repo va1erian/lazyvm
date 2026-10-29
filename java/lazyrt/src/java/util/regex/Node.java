@@ -195,7 +195,8 @@ abstract class Node {
             int k = d[at];
             int i = d[at + 1];
             if (k + 1 < branches.length) {
-                m.stack.data[m.stack.push(this)] = k + 1;
+                int again = m.stack.push(this);
+                m.stack.data[again] = k + 1;
             }
             m.cont = branches[k];
             return i;

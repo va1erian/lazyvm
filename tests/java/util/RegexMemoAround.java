@@ -69,6 +69,25 @@ public class RegexMemoAround {
         for (String re : patterns) {
             row(re, junk + rep("a", 12) + "bd" + rep("a", 7) + "bc" + "aab", junk.length());
         }
+        System.out.println("== a failed matches() long enough for the memo, then find() from where it left off");
+        String text = "baaaaaababacacacabacaaaaabaaacaababaaaacbb";
+        afterFailure("(?:[ab]+?.)*?c", text);
+        afterFailure("(?:[ab]+?.)*?(?=a)?c", text);
+        afterFailure("(?:[ab]+?.)*?(?=c)c", text);
+        afterFailure("(?:[ab]+?.)*?(?>c)", text);
+        afterFailure("[ ]*((?:(?>[ab]?.)|.?+[ab]{0,2}?){2,}|[ab]*){2,}c++", "aaaAAaacba");
         System.out.println("done");
+    }
+
+    /** matches(), then find() and a \G search, which start where the failed matches() left off. */
+    static void afterFailure(String re, String text) {
+        Matcher m = Pattern.compile(re).matcher(text);
+        StringBuilder sb = new StringBuilder("#" + re + ": matches " + m.matches());
+        sb.append(", find ").append(m.find() ? m.start() + "," + m.end() : "no");
+        m.reset();
+        m.matches();
+        m.usePattern(Pattern.compile("\\G"));
+        sb.append(", then \\G at ").append(m.find() ? String.valueOf(m.start()) : "none");
+        System.out.println(sb);
     }
 }
