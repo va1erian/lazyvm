@@ -37,7 +37,7 @@ fn state(msg: String) -> VmError {
 }
 
 fn prop(vm: &Vm, key: &str) -> Option<String> {
-    vm.properties.get(key).map(|v| String::from_utf16_lossy(v))
+    vm.property_text(key)
 }
 
 /// `-Dlazy.ui=headless` hides the window; `lazy.ui.dump` and `lazy.ui.clicks`

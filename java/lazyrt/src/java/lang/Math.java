@@ -10,6 +10,16 @@ public final class Math {
     private Math() {
     }
 
+    private static java.util.Random randomGenerator;
+
+    /** One shared generator, made on first use. */
+    public static synchronized double random() {
+        if (randomGenerator == null) {
+            randomGenerator = new java.util.Random();
+        }
+        return randomGenerator.nextDouble();
+    }
+
     public static double sin(double a) {
         return StrictMath.sin(a);
     }

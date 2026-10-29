@@ -24,9 +24,14 @@ pub type Extra = &'static [fn(&mut Vm)];
 
 /// The whole command line: parse, run the VM, flush, exit.
 pub fn main(extra: Extra) -> ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    // Arguments are kept as UTF-16 units: a Windows command line may hold unpaired
+    // surrogates, which `std::env::args` would panic on and which Java must see intact.
+    let args: Vec<options::Arg> = std::env::args_os()
+        .skip(1)
+        .map(|a| platform::wtf::to_units(&a))
+        .collect();
     let launch = match options::parse(&args) {
-        Ok(Command::Run(launch)) => launch,
+        Ok(Command::Run(launch)) => *launch,
         Ok(Command::Version) => {
             print_version();
             return ExitCode::SUCCESS;
@@ -84,15 +89,15 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
     if launch.show_version {
         print_version();
     }
-    // `java.class.path` is what the user gave: the jar alone under -jar.
-    let user_classpath = match &launch.jar {
-        Some(jar) => vec![jar.clone()],
-        None => launch.classpath.clone(),
+    // `java.class.path` is what the user gave, empty entries included: the jar alone under -jar.
+    let classpath_text = match &launch.jar {
+        Some(jar) => vm::wtf::to_units(jar.as_os_str()),
+        None => launch.classpath_text.clone(),
     };
     if let Some(jar) = &launch.jar {
         match jarfile::resolve(jar) {
             Ok(j) => {
-                launch.main_class = Some(j.main_class);
+                launch.main_class = Some(j.main_class.encode_utf16().collect());
                 launch.classpath = j.classpath;
             }
             Err(msg) => {
@@ -108,26 +113,37 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
         register(&mut vm);
     }
     for (k, v) in platform::default_properties() {
-        vm.properties.insert(k, vm::wtf::to_units(&v));
+        let name: Vec<u16> = k.encode_utf16().collect();
+        vm.set_property(&name, vm::wtf::to_units(&v));
     }
-    let joined = std::env::join_paths(&user_classpath).unwrap_or_default();
-    vm.properties
-        .insert("java.class.path".into(), vm::wtf::to_units(&joined));
     for (k, v) in &launch.properties {
-        vm.properties.insert(k.clone(), v.encode_utf16().collect());
+        vm.set_property(k, v.clone());
     }
+    // Whichever of -cp and -Djava.class.path came last decided the class path (as with the
+    // oracle); the property says what was loaded from, and -jar replaces both.
+    let name: Vec<u16> = "java.class.path".encode_utf16().collect();
+    vm.set_property(&name, classpath_text);
     if let Err(e) = vm.boot() {
         eprintln!("lazyvm: cannot start: the class library is missing or broken ({e})");
         eprintln!("  boot class path: {:?}", launch.boot_classpath);
         return ExitCode::from(1);
     }
     let main_class = launch.main_class.clone().unwrap_or_default();
-    let result = run_main(&mut vm, &main_class, &launch.args);
+    let result = match String::from_utf16(&main_class) {
+        Ok(name) => run_main(&mut vm, &name, &launch.args),
+        // Class names are well-formed text, so a name with an unpaired surrogate names no
+        // class; looking up its lossy spelling could find a different one.
+        Err(_) => {
+            let shown = String::from_utf16_lossy(&main_class);
+            eprintln!("Error: Could not find or load main class {shown}");
+            Err(VmError::Exit(1))
+        }
+    };
     finish(&mut vm, result)
 }
 
 /// Loads the main class and calls `public static void main(String[])`.
-fn run_main(vm: &mut Vm, main_class: &str, args: &[String]) -> Result<(), VmError> {
+fn run_main(vm: &mut Vm, main_class: &str, args: &[options::Arg]) -> Result<(), VmError> {
     let internal = main_class.replace('.', "/");
     let class = match vm.load_class(&internal) {
         Ok(c) => c,
@@ -154,7 +170,7 @@ fn run_main(vm: &mut Vm, main_class: &str, args: &[String]) -> Result<(), VmErro
     let len = i32::try_from(args.len()).map_err(|_| VmError::OutOfMemory)?;
     let array = vm.new_array_of("Ljava/lang/String;", len)?;
     for (i, a) in args.iter().enumerate() {
-        let s = vm.new_string(a)?;
+        let s = vm.new_string_utf16(a)?;
         vm.heap
             .array_mut(array)?
             .store(i, Value::Ref(Some(s)), false)?;

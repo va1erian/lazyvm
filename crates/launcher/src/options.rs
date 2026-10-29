@@ -1,6 +1,9 @@
 //! Command line parsing, compatible with what `java` and IntelliJ pass.
 
+use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
+
+use platform::wtf;
 
 use vm::Options;
 
@@ -38,63 +41,81 @@ const IGNORED_PREFIXES: &[&str] = &[
 
 #[derive(Debug)]
 pub enum Command {
-    Run(Launch),
+    Run(Box<Launch>),
     Version,
     Help,
 }
 
+/// A command-line argument as UTF-16 units, so a Windows argument with an unpaired
+/// surrogate (or a Unix one with odd bytes, read as WTF-8) reaches Java unchanged.
+pub type Arg = Vec<u16>;
+
 #[derive(Debug)]
 pub struct Launch {
+    /// Where classes are loaded from, one entry per element of `classpath_text`.
     pub classpath: Vec<PathBuf>,
+    /// The `java.class.path` value as the user gave it, empty entries included.
+    pub classpath_text: Arg,
     pub boot_classpath: Vec<PathBuf>,
-    pub properties: Vec<(String, String)>,
+    /// `-D` properties, name and value, in order.
+    pub properties: Vec<(Arg, Arg)>,
     pub options: Options,
-    /// The class to run, or `None` with `-jar` (the manifest names it).
-    pub main_class: Option<String>,
+    /// The class to run, as given, or `None` with `-jar` (the manifest names it).
+    pub main_class: Option<Arg>,
     /// `-jar <file>`: the jar is the whole application class path.
     pub jar: Option<PathBuf>,
-    pub args: Vec<String>,
+    pub args: Vec<Arg>,
     /// `-showversion`: print the version, then run.
     pub show_version: bool,
 }
 
-pub fn parse(args: &[String]) -> Result<Command, String> {
-    let mut classpath: Option<Vec<PathBuf>> = None;
+fn text(a: &[u16]) -> String {
+    String::from_utf16_lossy(a)
+}
+
+fn os(a: &[u16]) -> OsString {
+    wtf::from_units(a)
+}
+
+pub fn parse(args: &[Arg]) -> Result<Command, String> {
+    // `-cp` and `-Djava.class.path` set the same thing; the last one given wins.
+    let mut classpath: Option<Arg> = None;
     let mut boot: Option<Vec<PathBuf>> = None;
     let mut properties = Vec::new();
     let mut options = Options::default();
     let mut show_version = false;
     let mut i = 0;
     while i < args.len() {
-        let a = args[i].as_str();
+        let a = text(&args[i]);
+        let a = a.as_str();
         if !a.starts_with('-') {
-            let cp = classpath.unwrap_or_else(default_classpath);
+            let classpath_text = classpath.unwrap_or_else(default_classpath);
             let boot = boot
                 .or_else(default_boot)
                 .ok_or("cannot find lazyrt: pass -Xbootclasspath:<dir>")?;
-            return Ok(Command::Run(Launch {
-                classpath: cp,
+            return Ok(Command::Run(Box::new(Launch {
+                classpath: split_classpath(&os(&classpath_text)),
+                classpath_text,
                 boot_classpath: boot,
                 properties,
                 options,
-                main_class: Some(a.to_owned()),
+                main_class: Some(args[i].clone()),
                 jar: None,
                 args: args[i + 1..].to_vec(),
                 show_version,
-            }));
+            })));
         }
         match a {
             "-cp" | "-classpath" | "--class-path" => {
                 i += 1;
-                let v = args.get(i).ok_or(format!("{a} needs a value"))?;
-                classpath = Some(split_path(v));
+                classpath = Some(args.get(i).ok_or(format!("{a} needs a value"))?.clone());
             }
             "-version" | "--version" => return Ok(Command::Version),
             "-showversion" => show_version = true,
             // IDEs probe a JDK with this; LazyVM's properties need a VM, so
             // only the version is reported.
             _ if a.starts_with("-XshowSettings") => {}
-            "-help" | "-h" | "--help" | "-?" => return Ok(Command::Help),
+            "-help" | "-h" | "-?" | "--help" => return Ok(Command::Help),
             "-verbose:class" => options.verbose_class = true,
             // Package and class filters (`-ea:pkg...`) enable all application assertions.
             _ if a == "-ea" || a.starts_with("-ea:") || a.starts_with("-enableassertions") => {
@@ -106,24 +127,30 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
                 let boot = boot
                     .or_else(default_boot)
                     .ok_or("cannot find lazyrt: pass -Xbootclasspath:<path>")?;
-                return Ok(Command::Run(Launch {
+                return Ok(Command::Run(Box::new(Launch {
                     classpath: Vec::new(),
+                    classpath_text: Vec::new(),
                     boot_classpath: boot,
                     properties,
                     options,
                     main_class: None,
-                    jar: Some(PathBuf::from(jar)),
+                    jar: Some(PathBuf::from(os(jar))),
                     args: args[i + 2..].to_vec(),
                     show_version,
-                }));
+                })));
             }
             _ if a.starts_with("-Xbootclasspath:") => {
-                boot = Some(split_path(&a["-Xbootclasspath:".len()..]))
+                boot = Some(split_path(&os(&args[i][16..])));
             }
             _ if IGNORED_PREFIXES.iter().any(|p| a.starts_with(p)) => {}
             _ if a.starts_with("-D") => {
-                let (k, v) = a[2..].split_once('=').unwrap_or((&a[2..], ""));
-                properties.push((k.to_owned(), v.to_owned()));
+                let rest = &args[i][2..];
+                let eq = rest.iter().position(|&u| u == u16::from(b'='));
+                let (k, v) = eq.map_or((rest, &[][..]), |e| (&rest[..e], &rest[e + 1..]));
+                if k == "java.class.path".encode_utf16().collect::<Vec<_>>() {
+                    classpath = Some(v.to_vec());
+                }
+                properties.push((k.to_vec(), v.to_vec()));
             }
             _ if a.starts_with("-Xmx") => options.heap_limit = parse_size(&a[4..])?,
             _ if a.starts_with("-Xss") => {
@@ -138,16 +165,31 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     Err("no main class given".into())
 }
 
-fn split_path(s: &str) -> Vec<PathBuf> {
+/// The boot class path: empty entries are dropped.
+fn split_path(s: &OsStr) -> Vec<PathBuf> {
     std::env::split_paths(s)
         .filter(|p| !p.as_os_str().is_empty())
         .collect()
 }
 
-fn default_classpath() -> Vec<PathBuf> {
+/// The application class path: an empty entry (or an empty value) is the current directory.
+fn split_classpath(s: &OsStr) -> Vec<PathBuf> {
+    // An empty value splits into one empty entry, so it needs no case of its own.
+    std::env::split_paths(s)
+        .map(|p| {
+            if p.as_os_str().is_empty() {
+                PathBuf::from(".")
+            } else {
+                p
+            }
+        })
+        .collect()
+}
+
+fn default_classpath() -> Arg {
     match std::env::var_os("CLASSPATH") {
-        Some(cp) => std::env::split_paths(&cp).collect(),
-        None => vec![PathBuf::from(".")],
+        Some(cp) => wtf::to_units(&cp),
+        None => vec![u16::from(b'.')],
     }
 }
 
@@ -188,8 +230,12 @@ fn parse_size(s: &str) -> Result<usize, String> {
 mod tests {
     use super::*;
 
-    fn strings(a: &[&str]) -> Vec<String> {
-        a.iter().map(|s| s.to_string()).collect()
+    fn strings(a: &[&str]) -> Vec<Arg> {
+        a.iter().map(|s| s.encode_utf16().collect()).collect()
+    }
+
+    fn units(s: &str) -> Arg {
+        s.encode_utf16().collect()
     }
 
     #[test]
@@ -209,9 +255,9 @@ mod tests {
         let Ok(Command::Run(l)) = parse(&args) else {
             panic!("should parse")
         };
-        assert_eq!(l.main_class.as_deref(), Some("app.Main"));
-        assert_eq!(l.args, ["x", "-y"]);
-        assert_eq!(l.properties, [("k".to_string(), "v".to_string())]);
+        assert_eq!(l.main_class, Some(units("app.Main")));
+        assert_eq!(l.args, [units("x"), units("-y")]);
+        assert_eq!(l.properties, [(units("k"), units("v"))]);
         assert_eq!(l.options.heap_limit, 64 << 20);
     }
 

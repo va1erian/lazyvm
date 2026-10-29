@@ -44,7 +44,7 @@ fn state(msg: String) -> VmError {
 
 /// `-Dlazy.gfx=headless` hides windows; `-Dlazy.gfx.dump=<file>` keeps the last frame.
 fn backend(vm: &Vm) -> Backend {
-    let prop = |k: &str| vm.properties.get(k).map(|v| String::from_utf16_lossy(v));
+    let prop = |k: &str| vm.property_text(k);
     match prop("lazy.gfx").as_deref() {
         Some("headless") => Backend::Headless(prop("lazy.gfx.dump").map(PathBuf::from)),
         _ => Backend::Desktop,

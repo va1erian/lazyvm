@@ -5,6 +5,7 @@
 //! get their own crates in S9 (docs/decisions.md D10).
 
 pub mod files;
+pub mod wtf;
 
 use std::ffi::OsString;
 use std::io::{self, Read, Write};
@@ -107,6 +108,12 @@ pub fn default_properties() -> Vec<(String, OsString)> {
         ("path.separator", if windows { ";" } else { ":" }),
         ("line.separator", if windows { "\r\n" } else { "\n" }),
         ("file.encoding", "UTF-8"),
+        // The default locale is en-US whatever the OS is set to, so output is the same on every
+        // machine; -D overrides these (Locale.getDefault).
+        ("user.language", "en"),
+        ("user.country", "US"),
+        ("user.variant", ""),
+        ("user.script", ""),
     ]
     .into_iter()
     .map(|(k, v)| (k.to_owned(), OsString::from(v)))
@@ -116,6 +123,21 @@ pub fn default_properties() -> Vec<(String, OsString)> {
         ("java.io.tmpdir".to_owned(), tmp),
     ])
     .collect()
+}
+
+/// The process environment as (name, value) pairs in UTF-16, for `System.getenv`.
+/// LazyOS passes whatever environment its launcher gave the process (possibly
+/// none), through the same `std` call. Windows drive variables such as `=C:`
+/// are ordinary entries whose names start with '='.
+pub fn environment() -> Vec<(Vec<u16>, Vec<u16>)> {
+    std::env::vars_os()
+        .map(|(name, value)| (wtf::to_units(&name), wtf::to_units(&value)))
+        .collect()
+}
+
+/// Whether environment variable names compare ignoring case (Windows).
+pub fn environment_ignores_case() -> bool {
+    cfg!(windows)
 }
 
 /// 64 bits that differ on every call and in every run, for `new Random()`

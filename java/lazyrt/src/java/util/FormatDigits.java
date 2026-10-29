@@ -79,15 +79,15 @@ final class FormatDigits {
     }
 
     /** The `%e` layout of the value with `prec` fraction digits, without sign. */
-    String scientific(int prec, boolean alt, boolean upper) {
+    String scientific(int prec, boolean alt, boolean upper, char dot) {
         int[] exp = new int[1];
         char[] d = roundSignificant(prec + 1, exp);
         StringBuilder sb = new StringBuilder();
         sb.append(d[0]);
         if (prec > 0) {
-            sb.append('.').append(d, 1, prec);
+            sb.append(dot).append(d, 1, prec);
         } else if (alt) {
-            sb.append('.');
+            sb.append(dot);
         }
         sb.append(upper ? 'E' : 'e').append(exp[0] < 0 ? '-' : '+');
         int mag = Math.abs(exp[0]);
@@ -98,7 +98,7 @@ final class FormatDigits {
     }
 
     /** The `%f` layout with `prec` fraction digits, without sign. */
-    String fixed(int prec, boolean group, boolean alt) {
+    String fixed(int prec, boolean group, boolean alt, LocaleSymbols sym) {
         int intLen = Math.max(point, 1);
         int total = intLen + prec;
         char[] r = new char[total];
@@ -110,27 +110,27 @@ final class FormatDigits {
             char[] bigger = new char[total + 1];
             Arrays.fill(bigger, '0');
             bigger[0] = '1';
-            return layout(bigger, intLen + 1, group, alt);
+            return layout(bigger, intLen + 1, group, alt, sym);
         }
-        return layout(r, intLen, group, alt);
+        return layout(r, intLen, group, alt, sym);
     }
 
     private char digitAt(int i) {
         return i >= 0 && i < digits.length ? digits[i] : '0';
     }
 
-    private static String layout(char[] r, int intLen, boolean group, boolean alt) {
+    private static String layout(char[] r, int intLen, boolean group, boolean alt, LocaleSymbols sym) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < intLen; i++) {
             if (group && i > 0 && (intLen - i) % 3 == 0) {
-                sb.append(',');
+                sb.append(sym.grouping);
             }
             sb.append(r[i]);
         }
         if (r.length > intLen) {
-            sb.append('.').append(r, intLen, r.length - intLen);
+            sb.append(sym.decimal).append(r, intLen, r.length - intLen);
         } else if (alt) {
-            sb.append('.');
+            sb.append(sym.decimal);
         }
         return sb.toString();
     }

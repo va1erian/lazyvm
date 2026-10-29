@@ -7,8 +7,8 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 
 /**
- * printf-style formatting. Numbers always use en-US conventions ('.' decimal,
- * ',' grouping) whatever the locale; date/time conversions (%t) are not
+ * printf-style formatting. Numbers use the locale's decimal and grouping characters
+ * (LocaleSymbols) and ASCII digits; date/time conversions (%t) are not
  * supported yet (S11) and BigInteger/BigDecimal do not exist.
  */
 public final class Formatter implements Closeable, Flushable {
@@ -17,11 +17,11 @@ public final class Formatter implements Closeable, Flushable {
     private IOException lastException;
 
     public Formatter() {
-        this(new StringBuilder(), Locale.getDefault());
+        this(new StringBuilder(), Locale.getDefault(Locale.Category.FORMAT));
     }
 
     public Formatter(Appendable a) {
-        this(a, Locale.getDefault());
+        this(a, Locale.getDefault(Locale.Category.FORMAT));
     }
 
     public Formatter(Locale l) {
@@ -34,11 +34,11 @@ public final class Formatter implements Closeable, Flushable {
     }
 
     public Formatter(PrintStream ps) {
-        this(Objects.requireNonNull(ps), Locale.getDefault());
+        this(Objects.requireNonNull(ps), Locale.getDefault(Locale.Category.FORMAT));
     }
 
     public Formatter(OutputStream os) {
-        this(new PrintStream(os), Locale.getDefault());
+        this(new PrintStream(os), Locale.getDefault(Locale.Category.FORMAT));
     }
 
     private void ensureOpen() {
@@ -120,7 +120,7 @@ public final class Formatter implements Closeable, Flushable {
                 if (at < 0 || (args != null && at > args.length - 1)) {
                     throw new MissingFormatArgumentException(s.toString());
                 }
-                print(s, args == null ? null : args[at]);
+                print(s, args == null ? null : args[at], l);
             }
         }
         return this;
@@ -169,7 +169,7 @@ public final class Formatter implements Closeable, Flushable {
         emit(s.justify(s.upper ? text.toUpperCase() : text));
     }
 
-    private void print(FormatSpec s, Object arg) {
+    private void print(FormatSpec s, Object arg, Locale l) {
         if (s.dateTime) {
             if (arg != null) {
                 throw new IllegalFormatConversionException(s.lower(), arg.getClass());
@@ -191,19 +191,20 @@ public final class Formatter implements Closeable, Flushable {
                 printChar(s, arg);
                 break;
             case 'd': case 'o': case 'x': case 'X':
-                printNumber(s, arg, false);
+                printNumber(s, arg, false, l);
                 break;
             default:
-                printNumber(s, arg, true);
+                printNumber(s, arg, true, l);
                 break;
         }
     }
 
-    private void printNumber(FormatSpec s, Object arg, boolean floating) {
+    private void printNumber(FormatSpec s, Object arg, boolean floating, Locale l) {
         if (arg == null) {
             emitText(s, "null");
         } else {
-            emit(floating ? FormatNumbers.floating(s, arg) : FormatNumbers.integer(s, arg));
+            LocaleSymbols sym = LocaleSymbols.of(l);
+            emit(floating ? FormatNumbers.floating(s, arg, sym) : FormatNumbers.integer(s, arg, sym));
         }
     }
 

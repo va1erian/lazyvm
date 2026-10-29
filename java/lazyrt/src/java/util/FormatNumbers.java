@@ -31,7 +31,7 @@ final class FormatNumbers {
     }
 
     /** Formats a Byte, Short, Integer or Long; any other type is a conversion error. */
-    static String integer(FormatSpec s, Object arg) {
+    static String integer(FormatSpec s, Object arg, LocaleSymbols sym) {
         long v;
         long mask;
         if (arg instanceof Byte) {
@@ -50,7 +50,7 @@ final class FormatNumbers {
             throw new IllegalFormatConversionException(s.lower(), arg.getClass());
         }
         if (s.conv == 'd') {
-            return decimal(s, v);
+            return decimal(s, v, sym);
         }
         s.rejectFlags(FormatSpec.PAREN, FormatSpec.PLUS, FormatSpec.SPACE);
         boolean hex = s.conv != 'o';
@@ -59,23 +59,23 @@ final class FormatNumbers {
         return assemble(s, false, prefix, digits);
     }
 
-    private static String decimal(FormatSpec s, long v) {
+    private static String decimal(FormatSpec s, long v, LocaleSymbols sym) {
         String digits = Long.toString(v);
         boolean neg = v < 0;
         if (neg) {
             digits = digits.substring(1);
         }
         if (s.has(FormatSpec.GROUP)) {
-            digits = group(digits);
+            digits = group(digits, sym.grouping);
         }
         return assemble(s, neg, "", digits);
     }
 
-    private static String group(String digits) {
+    private static String group(String digits, char separator) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < digits.length(); i++) {
             if (i > 0 && (digits.length() - i) % 3 == 0) {
-                sb.append(',');
+                sb.append(separator);
             }
             sb.append(digits.charAt(i));
         }
@@ -83,7 +83,7 @@ final class FormatNumbers {
     }
 
     /** Formats a Float or Double (a float is first widened to double, digits and all). */
-    static String floating(FormatSpec s, Object arg) {
+    static String floating(FormatSpec s, Object arg, LocaleSymbols sym) {
         double v;
         if (arg instanceof Double) {
             v = ((Double) arg).doubleValue();
@@ -103,7 +103,7 @@ final class FormatNumbers {
         if (s.conv == 'a' || s.conv == 'A') {
             return hexFloat(s, neg, mag);
         }
-        return assemble(s, neg, "", decimalBody(s, mag));
+        return assemble(s, neg, "", decimalBody(s, mag, sym));
     }
 
     /** `%a`: zero padding ignores the sign and the extra zeros of a large precision. */
@@ -131,27 +131,27 @@ final class FormatNumbers {
         return s.has(FormatSpec.SPACE) ? " " + text : text;
     }
 
-    private static String decimalBody(FormatSpec s, double mag) {
+    private static String decimalBody(FormatSpec s, double mag, LocaleSymbols sym) {
         FormatDigits d = new FormatDigits(mag);
         boolean group = s.has(FormatSpec.GROUP);
         boolean alt = s.has(FormatSpec.ALT);
         int prec = s.precision == -1 ? 6 : s.precision;
         switch (s.conv) {
             case 'e': case 'E':
-                return d.scientific(prec, alt, s.upper);
+                return d.scientific(prec, alt, s.upper, sym.decimal);
             case 'f':
-                return d.fixed(prec, group, alt);
+                return d.fixed(prec, group, alt, sym);
             default:
                 break;
         }
         int sig = prec == 0 ? 1 : prec;
         if (d.isZero()) {
-            return d.fixed(sig - 1, group, false);
+            return d.fixed(sig - 1, group, false, sym);
         }
         int x = d.exponentAfterRounding(sig);
         if (x >= -4 && x < sig) {
-            return d.fixed(sig - (x + 1), group, false);
+            return d.fixed(sig - (x + 1), group, false, sym);
         }
-        return d.scientific(sig - 1, false, s.upper);
+        return d.scientific(sig - 1, false, s.upper, sym.decimal);
     }
 }

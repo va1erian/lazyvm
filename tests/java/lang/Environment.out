@@ -1,0 +1,25 @@
+true
+true
+true
+true
+null null null
+true
+getenv(null) java.lang.NullPointerException
+get(null) java.lang.NullPointerException
+containsKey(null) java.lang.NullPointerException
+get(1) java.lang.ClassCastException
+put java.lang.UnsupportedOperationException
+remove java.lang.UnsupportedOperationException
+clear java.lang.UnsupportedOperationException
+keySet.remove java.lang.UnsupportedOperationException
+setValue java.lang.UnsupportedOperationException
+false false null null
+containsValue(null) java.lang.NullPointerException
+containsValue(1) java.lang.ClassCastException
+containsValue(nope) ok
+true
+true
+true
+true
+true
+true
