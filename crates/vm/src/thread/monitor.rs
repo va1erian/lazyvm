@@ -9,23 +9,48 @@
 //!
 //! All of it is guarded by the VM lock: a blocked thread parks outside the
 //! VM, and whoever changes what it waits for unparks it.
+//!
+//! Fairness: a releasing thread usually just frees the monitor and wakes the
+//! entrants, which then compete (cheap when the owner is about to block).
+//! But the owner keeps the VM after `monitorexit`, so a thread looping on a
+//! lock would re-enter before any woken entrant runs, forever. So once the
+//! oldest entrant has waited `HANDOFF_AFTER`, the release hands it the
+//! monitor directly instead (docs/design/threads.md).
 
 use std::collections::{HashMap, VecDeque};
+use std::time::{Duration, Instant};
 
 use super::{Blocked, deadline_after};
 use crate::value::Ref;
 use crate::{Vm, VmError, VmResult};
 
+/// How long the oldest entrant may wait before a release hands it the
+/// monitor: one time slice of the VM lock.
+const HANDOFF_AFTER: Duration = Duration::from_millis(5);
+
+/// A thread blocked entering a monitor.
+struct Entrant {
+    thread: usize,
+    /// The entry count it will hold (more than 1 after a `wait`).
+    count: u32,
+    since: Instant,
+}
+
 /// The threads blocked on one monitor.
 #[derive(Default)]
 pub(crate) struct Waits {
-    /// Threads blocked entering.
-    entrants: Vec<usize>,
+    /// Threads blocked entering, oldest first.
+    entrants: Vec<Entrant>,
     /// Threads in `wait`, oldest first.
     waiters: VecDeque<usize>,
 }
 
 pub(crate) type Monitors = HashMap<Ref, Waits>;
+
+/// Thread index `t` as a `LockWord` owner (0 means unowned).
+fn owner_id(t: usize) -> u32 {
+    u32::try_from(t).map_or(u32::MAX, |c| c.saturating_add(1))
+}
 
 /// No message, as on Java 8.
 fn not_owner() -> VmError {
@@ -35,7 +60,7 @@ fn not_owner() -> VmError {
 impl Vm {
     /// The running thread as a `LockWord` owner.
     fn lock_owner(&self) -> u32 {
-        u32::try_from(self.current).map_or(u32::MAX, |c| c.saturating_add(1))
+        owner_id(self.current)
     }
 
     /// Enters `obj`'s monitor, blocking while another thread owns it.
@@ -47,6 +72,7 @@ impl Vm {
     /// takes back what it released).
     fn monitor_acquire(&mut self, obj: Ref, count: u32) -> VmResult<()> {
         let me = self.lock_owner();
+        let mut queued = false;
         loop {
             let lock = self.heap.lock_word(obj)?;
             if lock.owner == 0 {
@@ -56,16 +82,28 @@ impl Vm {
                 return Ok(());
             }
             if lock.owner == me {
+                if queued {
+                    // A release handed the monitor over, with `count` set.
+                    return Ok(());
+                }
                 lock.count = lock
                     .count
                     .checked_add(count)
                     .ok_or_else(|| VmError::Internal("monitor entered 2^32 times".into()))?;
                 return Ok(());
             }
-            let current = self.current;
-            let waits = self.monitors.entry(obj).or_default();
-            if !waits.entrants.contains(&current) {
-                waits.entrants.push(current);
+            if !queued {
+                let thread = self.current;
+                self.monitors
+                    .entry(obj)
+                    .or_default()
+                    .entrants
+                    .push(Entrant {
+                        thread,
+                        count,
+                        since: Instant::now(),
+                    });
+                queued = true;
             }
             self.park(Blocked::Monitor, None);
         }
@@ -78,7 +116,7 @@ impl Vm {
         }
         let me = self.current;
         if let Some(w) = self.monitors.get_mut(&obj) {
-            w.entrants.retain(|&t| t != me);
+            w.entrants.retain(|e| e.thread != me);
             if w.entrants.is_empty() && w.waiters.is_empty() {
                 self.monitors.remove(&obj);
             }
@@ -96,20 +134,39 @@ impl Vm {
         lock.count -= 1;
         if lock.count == 0 {
             lock.owner = 0;
-            self.wake_entrants(obj);
+            self.wake_entrants(obj)?;
         }
         Ok(())
     }
 
-    fn wake_entrants(&self, obj: Ref) {
+    /// After the monitor became unowned: hands it to the oldest entrant if
+    /// that one has waited long enough, otherwise wakes every entrant.
+    fn wake_entrants(&mut self, obj: Ref) -> VmResult<()> {
         if self.monitors.is_empty() {
-            return;
+            return Ok(());
         }
-        if let Some(w) = self.monitors.get(&obj) {
-            for &t in &w.entrants {
-                self.threads.unpark(t);
+        let Some(w) = self.monitors.get_mut(&obj) else {
+            return Ok(());
+        };
+        let starved = w
+            .entrants
+            .first()
+            .is_some_and(|e| e.since.elapsed() >= HANDOFF_AFTER);
+        if starved {
+            let e = w.entrants.remove(0);
+            if w.entrants.is_empty() && w.waiters.is_empty() {
+                self.monitors.remove(&obj);
             }
+            let lock = self.heap.lock_word(obj)?;
+            lock.owner = owner_id(e.thread);
+            lock.count = e.count;
+            self.threads.unpark(e.thread);
+            return Ok(());
         }
+        for e in &w.entrants {
+            self.threads.unpark(e.thread);
+        }
+        Ok(())
     }
 
     /// The entry count if the running thread owns `obj`'s monitor.
@@ -142,7 +199,7 @@ impl Vm {
         let lock = self.heap.lock_word(obj)?;
         lock.owner = 0;
         lock.count = 0;
-        self.wake_entrants(obj);
+        self.wake_entrants(obj)?;
         let deadline = (millis != 0).then(|| deadline_after(millis)).flatten();
         let blocked = if millis == 0 {
             Blocked::Waiting

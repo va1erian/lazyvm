@@ -74,12 +74,25 @@ impl Vm {
         Ok(obj)
     }
 
-    /// Records the method's monitor on the frame just pushed.
-    pub(super) fn hold_method_lock(&mut self, lock: Option<Ref>) -> VmResult<()> {
-        if lock.is_some() {
-            self.top()?.method_lock = lock;
+    /// Locks a `synchronized` method's monitor for the frame just pushed
+    /// for `m`. The frame's locals root the receiver while this thread
+    /// waits; if locking fails, the frame goes again.
+    #[inline]
+    pub(super) fn lock_pushed_frame(&mut self, m: MethodRef) -> VmResult<()> {
+        if self.method(m).access & classfile::ACC_SYNCHRONIZED == 0 {
+            return Ok(());
         }
-        Ok(())
+        let receiver = self.top()?.locals.first().copied().unwrap_or(Value::NULL);
+        match self.lock_synchronized(m, &[receiver]) {
+            Ok(obj) => {
+                self.top()?.method_lock = Some(obj);
+                Ok(())
+            }
+            Err(e) => {
+                self.pop_frame();
+                Err(e)
+            }
+        }
     }
 
     /// Gives back a method monitor taken for a call that did not run.

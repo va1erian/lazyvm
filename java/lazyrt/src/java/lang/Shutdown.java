@@ -45,7 +45,9 @@ final class Shutdown {
     /**
      * The VM's shutdown after the last non-daemon thread: the hooks, unless
      * a System.exit is already under way, in which case this thread waits
-     * for it to end the VM.
+     * for it to end the VM. An exception from starting a hook (one that
+     * already ran) ends the sequence; the VM then exits quietly with main's
+     * status, as Java 8 does (observed).
      */
     static void runHooks() {
         Thread[] list = begin();
@@ -55,14 +57,21 @@ final class Shutdown {
         run(list);
     }
 
-    /** System.exit: the hooks, then the end. Any later caller blocks forever. */
+    /**
+     * System.exit: the hooks, then the end with `status`, even if a hook
+     * could not be started (observed on Java 8). Any later caller blocks
+     * forever.
+     */
     static void exit(int status) {
         Thread[] list = begin();
         if (list == null) {
             blockForever();
         }
-        run(list);
-        VM.exit(status);
+        try {
+            run(list);
+        } finally {
+            VM.exit(status);
+        }
     }
 
     /** The hooks to run if this is the first shutdown, or null. */
@@ -77,7 +86,7 @@ final class Shutdown {
 
     /**
      * Starts every hook, then waits for all of them. A hook that cannot start
-     * (it already ran) ends the sequence with its exception, as on Java 8.
+     * (it already ran) throws out of here; the callers say what follows.
      */
     private static void run(Thread[] list) {
         for (Thread hook : list) {

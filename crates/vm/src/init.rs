@@ -21,10 +21,11 @@ impl Vm {
                 // Step 4: a recursive request by the initializing thread.
                 InitState::Initialized => return Ok(()),
                 InitState::Initializing(t) if t == me => return Ok(()),
-                // Step 2: wait for the other thread, then look again.
+                // Step 2: wait for the other thread, then look again. Java 8
+                // reports such a thread as RUNNABLE (observed), hence `No`.
                 InitState::Initializing(_) => {
                     self.threads.init_waiters.push(me);
-                    self.park(Blocked::Waiting, None);
+                    self.park(Blocked::No, None);
                 }
                 // Step 5.
                 InitState::Failed => {

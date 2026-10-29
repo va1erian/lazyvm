@@ -55,9 +55,20 @@ monitors it holds.
 
 **Rooting rule (extends D5):** a `Ref` held in Rust across `blocking`, or
 across anything that may call into Java or block, must be rooted
-(`with_root`, a frame, or the call's own arguments). A blocked thread holds no
+(`with_root`, a frame, or the call's own arguments). Where a call may block
+before it runs, the arguments must already be rooted: `Vm::invoke` puts them
+on `roots` first, the interpreter leaves a native's arguments on the caller's
+operand stack, and a `synchronized` Java method is locked only after its frame
+is pushed, so its locals hold them while it waits. A blocked thread holds no
 raw heap pointer: references are slot indices, and `blocking`'s closure has
 no access to the VM.
+
+Two roots are, today, implied by others: a parked thread's `roots` entries
+are also the arguments in the frames its calls pushed (javac never
+overwrites a constructor's `this`), and every object in `Vm::monitors` is
+also on a blocked thread's stack or in its locals. They stay as roots
+because nothing in the VM promises that, and bytecode that overwrites its
+argument locals could break it.
 
 ## Lock order
 
@@ -84,8 +95,10 @@ Java monitors are not OS locks: a thread blocked on one has released the VM.
   joiners). The VM then drops the entry.
 - `join` is Java: `wait` on the thread object while it is alive.
 - A started thread's stack is 64 MiB (`THREAD_STACK_BYTES`), a quarter of the
-  main thread's, so it may nest a quarter of `Options::max_nesting` calls
-  from Rust into Java.
+  main thread's, with the same `Options::max_nesting` (1024) for calls from
+  Rust into Java: one such call was measured at under 8 KiB of stack, so
+  1000-deep reflective recursion works on a started thread too
+  (`DeepThread`).
 - The main thread is entry 0. Its `Thread` object is made the first time
   Java asks for it (`currentThread`), so a program that never does pays
   nothing.
@@ -108,8 +121,11 @@ main thread's handler (exit status 1), the launcher calls
 `Vm::shutdown_after_main`: `exitByVm` for the main thread, a wait until no
 other non-daemon thread is alive, then `Shutdown.runHooks` if the program
 loaded `Shutdown` (no hooks, no cost). The hooks are started as threads and
-joined. `System.exit` runs the hooks on the calling thread, then halts;
-`Runtime.halt` halts at once. Halting is `VmError::Exit`: on the main thread
+joined. `System.exit` runs the hooks on the calling thread, then halts with
+its status, even when a hook cannot be started (one that already ran);
+after `main`, such a hook ends the hook sequence and the VM exits quietly
+with main's status. Both are what Java 8 does. A `System.exit` while the
+hooks run blocks forever. `Runtime.halt` halts at once. Halting is `VmError::Exit`: on the main thread
 it unwinds to the launcher; on another thread `exit_process` flushes the
 console and ends the process from there, while that thread holds the VM so
 no bytecode runs elsewhere. Daemon threads simply end with the process.
@@ -127,8 +143,19 @@ monitor get an entry in `Vm::monitors`, listing its entrants and wait set.
   with monitors still entered by `monitorenter` throws the same (rule 1).
   Popping a frame by an exception releases what it holds.
 - A `synchronized` method locks its receiver, or the class's `Class` for a
-  static method, before the frame is pushed (natives too), and releases it
-  when the frame is popped.
+  static method, once its frame is pushed (a native: before the call, its
+  arguments still on the caller's stack), and releases it when the frame is
+  popped.
+- **Fairness.** A release normally frees the monitor and wakes the entrants
+  to compete. That alone starves them: the releasing thread keeps the VM, so
+  a thread looping on `synchronized` re-enters before a woken entrant ever
+  runs, and when it finally yields at a safepoint it usually owns the
+  monitor again (3 threads looping on one lock got 12912, 1 and 1 turns in
+  1.5 s). So once the oldest entrant has waited 5 ms (one slice of the VM
+  lock), the release hands it the monitor directly, with the count it asked
+  for. Handing over at every release would be fairer still but would switch
+  threads at every `monitorexit`; the 5 ms rule keeps the uncontended and
+  briefly contended cases cheap and bounds the wait (`Fairness`).
 - `wait` releases the monitor fully, waits for a `notify`, an interrupt or
   the timeout, then takes the monitor back with its old count. A thread that
   was both notified and interrupted returns normally with the interrupt
@@ -143,7 +170,9 @@ lock per class; the VM lock plays that part. A thread that finds another
 thread initializing the class parks until some initialization finishes, then
 looks again; the initializing thread itself proceeds (a recursive request).
 A failure leaves the class erroneous, and every later use throws
-`NoClassDefFoundError: Could not initialize class ...`.
+`NoClassDefFoundError: Could not initialize class ...`. A thread waiting for
+another thread's initializer reports `RUNNABLE`, before and after an
+interrupt, as Java 8 does (`ClinitState`); the wait is not interruptible.
 
 ## Cost on one thread
 

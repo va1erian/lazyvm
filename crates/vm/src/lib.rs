@@ -99,8 +99,6 @@ pub struct Vm {
     pub(crate) frame_slots: usize,
     /// Current nesting of `invoke` from Rust.
     pub(crate) nesting: u32,
-    /// This thread's bound on `nesting`, which depends on its stack.
-    pub(crate) nesting_limit: u32,
     /// The VM lock, shared by every thread (`thread::Gil`).
     pub(crate) gil: Arc<thread::Gil>,
     /// Every live Java thread.
@@ -135,7 +133,6 @@ impl Vm {
         heap: heap::Heap,
         gil: Arc<thread::Gil>,
     ) -> Vm {
-        let nesting_limit = options.max_nesting;
         Vm {
             classes: Vec::new(),
             by_name: HashMap::new(),
@@ -155,7 +152,6 @@ impl Vm {
             creating_exception: 0,
             frame_slots: 0,
             nesting: 0,
-            nesting_limit,
             gil,
             threads: thread::Threads::default(),
             current: 0,

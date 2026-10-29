@@ -26,7 +26,7 @@ pub enum Blocked {
     No,
     /// Entering a monitor another thread owns.
     Monitor,
-    /// `wait()` or a class another thread is initializing.
+    /// `wait()`, or `join`.
     Waiting,
     /// `sleep` or a timed `wait`.
     TimedWaiting,
@@ -39,7 +39,6 @@ pub(crate) struct ThreadState {
     roots: Vec<Ref>,
     frame_slots: usize,
     nesting: u32,
-    nesting_limit: u32,
     creating_exception: u32,
     loading: Vec<Arc<str>>,
 }
@@ -152,7 +151,6 @@ impl Vm {
             roots: std::mem::take(&mut self.roots),
             frame_slots: self.frame_slots,
             nesting: self.nesting,
-            nesting_limit: self.nesting_limit,
             creating_exception: self.creating_exception,
             loading: std::mem::take(&mut self.loading),
         };
@@ -170,7 +168,6 @@ impl Vm {
         self.roots = s.roots;
         self.frame_slots = s.frame_slots;
         self.nesting = s.nesting;
-        self.nesting_limit = s.nesting_limit;
         self.creating_exception = s.creating_exception;
         self.loading = s.loading;
     }

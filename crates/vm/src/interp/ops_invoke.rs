@@ -190,13 +190,9 @@ impl Vm {
             f.pc = f.next_pc;
             return Ok(Flow::Poll);
         }
-        let lock = self.lock_for_call(m, &args)?;
         self.top()?.stack.truncate(at);
-        if let Err(e) = self.push_frame(m, &args) {
-            self.drop_method_lock(lock);
-            return Err(e);
-        }
-        self.hold_method_lock(lock)?;
+        self.push_frame(m, &args)?;
+        self.lock_pushed_frame(m)?;
         Ok(Flow::Poll)
     }
 }

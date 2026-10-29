@@ -1,0 +1,4 @@
+waiting for <clinit>: RUNNABLE
+after interrupt: RUNNABLE
+initializer thread read 1
+waiter read 1, interrupted true

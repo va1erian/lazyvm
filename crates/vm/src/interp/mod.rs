@@ -65,16 +65,12 @@ impl Vm {
             return result;
         }
         // Each nested run uses Rust stack; bound it like Java frames.
-        if self.nesting >= self.nesting_limit + self.headroom(OVERFLOW_NESTING) as u32 {
+        if self.nesting >= self.options.max_nesting + self.headroom(OVERFLOW_NESTING) as u32 {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let base = self.frames.len();
-        let lock = self.lock_for_call(m, args)?;
-        if let Err(e) = self.push_frame(m, args) {
-            self.drop_method_lock(lock);
-            return Err(e);
-        }
-        self.hold_method_lock(lock)?;
+        self.push_frame(m, args)?;
+        self.lock_pushed_frame(m)?;
         self.nesting += 1;
         let result = self.run(base);
         self.nesting -= 1;

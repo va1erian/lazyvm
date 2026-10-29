@@ -7,13 +7,10 @@ use super::{Blocked, Gil, ThreadEntry, ThreadState};
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
-/// Stack reserved for a started thread. The launcher gives the main thread
-/// more; nested calls from Rust into Java are bounded to match (see
-/// `THREAD_NESTING_SHARE`).
+/// Stack reserved for a started thread. A nested call from Rust into Java
+/// was measured at under 8 KiB of stack, so `Options::max_nesting` (1024)
+/// fits with a wide margin, as on the launcher's bigger main thread.
 pub const THREAD_STACK_BYTES: usize = 64 << 20;
-/// A started thread may nest this fraction (1/n) of `Options::max_nesting`,
-/// as its stack is a quarter of the main thread's.
-const THREAD_NESTING_SHARE: u32 = 4;
 /// The `sysexits.h` status for an internal VM failure, as the launcher uses.
 const EXIT_INTERNAL: i32 = 70;
 
@@ -23,12 +20,8 @@ impl Vm {
     /// `Thread.start`: runs `t.run()` on a new OS thread. The Java side has
     /// already checked that `t` was never started.
     pub fn start_thread(&mut self, t: Ref, daemon: bool) -> VmResult<()> {
-        let state = ThreadState {
-            nesting_limit: self.options.max_nesting / THREAD_NESTING_SHARE,
-            ..ThreadState::default()
-        };
         let mut entry = ThreadEntry::new(Some(t), daemon);
-        entry.state = Some(state);
+        entry.state = Some(ThreadState::default());
         let me = self.threads.insert(entry);
         let gil = Arc::clone(&self.gil);
         let spawned = std::thread::Builder::new()
