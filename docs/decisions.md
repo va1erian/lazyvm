@@ -68,7 +68,7 @@ decision marked **(proposed)** is not in force until the owner confirms it.
   compile against the real JDK's API) into `dist/lazyrt.jar`.
 - **Fake JDK home:** `tools/sdk.py` lays out `dist/lazyvm-sdk/` with
   `bin/java.exe` (the LazyVM launcher), `jre/lib/rt.jar` (= `lazyrt.jar`),
-  `lib/lazy-api.jar`, `release` (`JAVA_VERSION="1.8.0"`) and `src.zip` (our
+  `lib/lazyrt.jar`, `release` (`JAVA_VERSION="1.8.0"`) and `src.zip` (our
   sources, for IDE navigation). It is registered once in IntelliJ as an SDK,
   so completion shows only APIs that exist and the Run button starts LazyVM.
   The launcher accepts `-cp`/`-classpath`, `-jar`, `-D`, `-X…` sizing and the
@@ -229,19 +229,20 @@ lazyvm/
   crates/xui-bind       lazy.ui on xui: the op list, the widgets, the loop (S9)
   crates/natives-ui     the lazy.ui natives, linked only by lazyvm-ui
   crates/lazyvm-win     Windows-only parts: xui winit window host (S9)
-  crates/lazyvm-lazyos  LazyOS-only parts: Messenger, xuid (GPL-3.0-or-later, S9)
+  crates/lazyvm-lazyos  LazyOS-only parts: Messenger, xuid (GPL-3.0-or-later;
+                        not created yet)
   crates/launcher       the `lazyvm` / `java` command line (a lib and its bin)
   crates/launcher-ui    `lazyvm-ui`: the same launcher plus lazy.ui (S9)
   java/lazyrt           the java.* class library (Java source)
-  java/lazy-api         the lazy.* API (Java source)
+  java/lazy-api         the lazy.* API (Java source; not created yet, so
+                        lazy.* lives in java/lazyrt beside lazy.internal)
   tests/java            differential and lazy.* tests with .out goldens
   templates/app         IntelliJ / Gradle starter app
   tools                 javac.py, sdk.py, golden.py, test.py, licenses.py, ...
   docs                  plan.md, plan-2.md, decisions.md, design notes per stage
 ```
 
-The default branch is `main` (the scaffold is on `master` and gets renamed in
-S0).
+The default branch is `main`.
 
 ## D11. Work items
 

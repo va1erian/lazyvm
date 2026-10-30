@@ -396,7 +396,7 @@ a new row). S6-06 records them in
 
 Hand-written goldens (`lazy.*`, D9). "Both" means Windows and LazyOS.
 
-- S6-06, both: `tests/lazy/async/Timers` (delays given out of order fire in
+- S6-06, both: `tests/java/lazy/async/Timers` (delays given out of order fire in
   time order; a zero delay runs after the call returns; delays set from
   `main` wake a reactor parked on a later timer, which on LazyOS also proves
   the shared `eventfd`), `Cancel` (a cancelled delay never runs, `complete` on one withdraws
@@ -408,13 +408,13 @@ Hand-written goldens (`lazy.*`, D9). "Both" means Windows and LazyOS.
   `GetThreadTimes` on Windows, the reactor itself calling
   `getrusage(RUSAGE_THREAD)` on LazyOS, whose `clock_gettime` has no
   thread clock), and the S6 gate `Pipeline`.
-- S7-01, Windows: `tests/lazy/net/AsyncEcho` (listen on port 0, connect,
+- S7-01, Windows: `tests/java/lazy/net/AsyncEcho` (listen on port 0, connect,
   echo, close both ends; each next `read` is started inside the previous
   one's handler), `ManyClients` (500 at once), `ConnectRefused` (a
   port whose listener was just closed), `Backpressure` (a peer that writes 8
   MiB to a reader that waits still completes, with bounded heap),
   `CancelRead`, `ReadTimeout` (the pattern above), `Ipv6Loopback`.
-- S7-01, LazyOS (`--net`): `tests/lazy/net/HostEcho` (connect to the host
+- S7-01, LazyOS (`--net`): `tests/java/lazy/net/HostEcho` (connect to the host
   echo server, echo 1 MiB, close), `HostInbound` (listen on `0.0.0.0:47773`,
   print `listening`, and serve the host's client). Both use literal
   addresses; name resolution on LazyOS is shown by the S7 gate, which
