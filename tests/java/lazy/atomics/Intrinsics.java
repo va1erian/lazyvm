@@ -184,6 +184,55 @@ public class Intrinsics {
         attempt("ref slot past the end", () -> Atomics.compareAndSetRef(t, dropped, null, "x"));
     }
 
+    /**
+     * A class initializer that points a Field at an Object field while the
+     * native waits for it: the value must still be judged by the String field
+     * the native settled on.
+     */
+    static Field moving;
+
+    static void repoint(Class<?> c) {
+        try {
+            Field slot = Field.class.getDeclaredField("slot");
+            slot.setAccessible(true);
+            slot.setInt(moving, slot.getInt(c.getDeclaredField("anything")));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static class SwapTarget {
+        static volatile String text = "kept";
+        static volatile Object anything;
+
+        static {
+            repoint(SwapTarget.class);
+        }
+    }
+
+    static class CasTarget {
+        static volatile String text = "kept";
+        static volatile Object anything;
+
+        static {
+            repoint(CasTarget.class);
+        }
+    }
+
+    static void changedDuringInitialization() throws Exception {
+        moving = f(SwapTarget.class, "text");
+        attempt("repointed swap", () -> Atomics.getAndSetRef(null, moving, Integer.valueOf(7)));
+        attempt("repointed swap left", () -> SwapTarget.text + " " + SwapTarget.anything);
+        moving = f(CasTarget.class, "text");
+        attempt("repointed cas", () -> Atomics.compareAndSetRef(null, moving, "kept", Integer.valueOf(7)));
+        attempt("repointed cas left", () -> CasTarget.text + " " + CasTarget.anything);
+    }
+
+    /** Calls whose arguments have the wrong class: see tools/crafted/CraftedAtomics.java. */
+    static void craftedCalls() throws Exception {
+        Class.forName("lazy.atomics.CraftedAtomics").getMethod("run").invoke(null);
+    }
+
     static Class<?> whoCalled() {
         return Atomics.callerClass();
     }
@@ -229,6 +278,8 @@ public class Intrinsics {
         referenceValues();
         arrays();
         forged();
+        changedDuringInitialization();
+        craftedCalls();
         callers();
         threads();
     }

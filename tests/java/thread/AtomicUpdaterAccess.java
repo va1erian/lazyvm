@@ -72,6 +72,64 @@ public class AtomicUpdaterAccess extends UpdaterTargets {
         }
     }
 
+    /** Not a subclass of anything it tries: protected fields are refused like the rest. */
+    static class Stranger {
+        static final String[] FIELDS = {"publicStatic", "protectedField", "protectedStatic", "packageField",
+            "packageStatic", "privateField", "privateStatic"};
+
+        static void reach(String what, Class<?> c) {
+            for (String f : FIELDS) {
+                attempt(what + " " + f, () -> AtomicIntegerFieldUpdater.newUpdater(c, f));
+            }
+            attempt(what + " visible", () -> AtomicIntegerFieldUpdater.newUpdater(c, "visible"));
+        }
+
+        static void all() {
+            attempt("stranger protected", () -> AtomicIntegerFieldUpdater.newUpdater(UpdaterTargets.class, "protectedField"));
+            attempt("stranger protected static",
+                    () -> AtomicIntegerFieldUpdater.newUpdater(UpdaterTargets.class, "protectedStatic"));
+            attempt("stranger protected long", () -> AtomicLongFieldUpdater.newUpdater(UpdaterTargets.class, "protectedLong"));
+            attempt("stranger protected ref",
+                    () -> AtomicReferenceFieldUpdater.newUpdater(UpdaterTargets.class, Object.class, "protectedRef"));
+            attempt("stranger public static", () -> AtomicIntegerFieldUpdater.newUpdater(UpdaterTargets.class, "publicStatic"));
+            attempt("stranger package static", () -> AtomicIntegerFieldUpdater.newUpdater(UpdaterTargets.class, "packageStatic"));
+            attempt("stranger private static", () -> AtomicIntegerFieldUpdater.newUpdater(UpdaterTargets.class, "privateStatic"));
+            reach("public nested", UpdaterTargets.Unrelated.class);
+            reach("package nested", UpdaterTargets.hiddenClass());
+            reach("protected nested", UpdaterTargets.protectedClass());
+            reach("private nested", UpdaterTargets.privateClass());
+            reach("package top level", UpdaterTargets.topHiddenClass());
+        }
+    }
+
+    /** Which check of a reference updater comes first when both would fail. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    static void referenceCheckOrder() {
+        AtomicReferenceFieldUpdater strings =
+                AtomicReferenceFieldUpdater.newUpdater(UpdaterTargets.class, String.class, "protectedString");
+        Object wrongValue = Integer.valueOf(1);
+        UpdaterTargets base = new UpdaterTargets();
+        attempt("order set", () -> {
+            strings.set(base, wrongValue);
+            return null;
+        });
+        attempt("order lazySet", () -> {
+            strings.lazySet(base, wrongValue);
+            return null;
+        });
+        attempt("order cas", () -> strings.compareAndSet(base, null, wrongValue));
+        attempt("order weak", () -> strings.weakCompareAndSet(base, null, wrongValue));
+        attempt("order getAndSet", () -> strings.getAndSet(base, wrongValue));
+        attempt("order null receiver", () -> {
+            strings.set(null, wrongValue);
+            return null;
+        });
+        attempt("order good receiver", () -> {
+            strings.set(new AtomicUpdaterAccess(), wrongValue);
+            return null;
+        });
+    }
+
     static void kinds() {
         attempt("own private", () -> AtomicIntegerFieldUpdater.newUpdater(AtomicUpdaterAccess.class, "ownPrivate"));
         attempt("nested private from outer",
@@ -184,6 +242,8 @@ public class AtomicUpdaterAccess extends UpdaterTargets {
         kinds();
         otherPackage();
         protectedRule();
+        referenceCheckOrder();
+        Stranger.all();
         callers();
     }
 }

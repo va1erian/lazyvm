@@ -1,0 +1,178 @@
+-- LongAdder
+  [add]
+  [increment]
+  [add]
+  [decrement]
+  [add]
+  [sum]
+toString = 1001
+  [sum]
+sum = 1001
+  [longValue]
+  [sum]
+longValue = 1001
+  [intValue]
+  [sum]
+intValue = 1001
+  [floatValue]
+  [sum]
+floatValue = 1001.0
+  [doubleValue]
+  [sum]
+doubleValue = 1001.0
+  [intValue]
+  [sum]
+shortValue = 1001
+  [intValue]
+  [sum]
+byteValue = -23
+  [sumThenReset]
+sumThenReset = 1
+  [reset]
+-- DoubleAdder
+  [add]
+  [sum]
+toString = 1001.0
+  [sum]
+sum = 1001.0
+  [longValue]
+  [sum]
+longValue = 1001
+  [intValue]
+  [sum]
+intValue = 1001
+  [floatValue]
+  [sum]
+floatValue = 1001.0
+  [doubleValue]
+  [sum]
+doubleValue = 1001.0
+  [intValue]
+  [sum]
+shortValue = 1001
+  [sumThenReset]
+sumThenReset = 1.0
+  [reset]
+-- LongAccumulator
+  [accumulate]
+  [get]
+toString = 1001
+  [get]
+get = 1001
+  [longValue]
+  [get]
+longValue = 1001
+  [intValue]
+  [get]
+intValue = 1001
+  [floatValue]
+  [get]
+floatValue = 1001.0
+  [doubleValue]
+  [get]
+doubleValue = 1001.0
+  [intValue]
+  [get]
+shortValue = 1001
+  [getThenReset]
+getThenReset = 1
+  [reset]
+-- DoubleAccumulator
+  [accumulate]
+  [get]
+toString = 1001.0
+  [get]
+get = 1001.0
+  [longValue]
+  [get]
+longValue = 1001
+  [intValue]
+  [get]
+intValue = 1001
+  [floatValue]
+  [get]
+floatValue = 1001.0
+  [doubleValue]
+  [get]
+doubleValue = 1001.0
+  [intValue]
+  [get]
+shortValue = 1001
+  [getThenReset]
+getThenReset = 1.0
+  [reset]
+-- AtomicStampedReference
+  [getReference]
+getReference = a
+  [getStamp]
+getStamp = 1
+  [get]
+get = a
+  [compareAndSet]
+compareAndSet = true
+  [weakCompareAndSet]
+  [compareAndSet]
+weakCompareAndSet = true
+  [set]
+  [attemptStamp]
+attemptStamp = true
+-- AtomicMarkableReference
+  [getReference]
+getReference = a
+  [isMarked]
+isMarked = true
+  [get]
+get = a
+  [compareAndSet]
+compareAndSet = true
+  [weakCompareAndSet]
+  [compareAndSet]
+weakCompareAndSet = true
+  [set]
+  [attemptMark]
+attemptMark = true
+-- AtomicInteger
+  [intValue]
+intValue = 0
+  [longValue]
+longValue = 0
+  [floatValue]
+floatValue = 0.0
+  [doubleValue]
+doubleValue = 0.0
+  [intValue]
+shortValue = 0
+  [intValue]
+byteValue = 0
+  [toString]
+toString = 0
+-- AtomicLong
+  [intValue]
+intValue = 0
+  [longValue]
+longValue = 0
+  [floatValue]
+floatValue = 0.0
+  [doubleValue]
+doubleValue = 0.0
+  [intValue]
+shortValue = 0
+  [intValue]
+byteValue = 0
+  [toString]
+toString = 0
+-- others
+incrementAndGet = 1
+decrementAndGet = 0
+getAndAdd = 0
+  [addAndGet]
+addAndGet = 1004
+accumulateAndGet = 6
+toString = [6]
+compareAndSet = true
+  [weak]
+weak = true
+  [toString]
+toString = false
+  [toString]
+reference = null

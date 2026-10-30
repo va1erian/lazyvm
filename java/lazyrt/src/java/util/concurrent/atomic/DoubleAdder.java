@@ -24,7 +24,7 @@ public class DoubleAdder extends Number implements java.io.Serializable {
     }
 
     public String toString() {
-        return total.toString();
+        return Double.toString(sum());
     }
 
     public double doubleValue() {
