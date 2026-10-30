@@ -1,30 +1,50 @@
 package java.util.concurrent;
 
-import java.util.ArrayList;
-
-/** An entry on a pending stage's list: a dependent step, or a thread blocked reading the stage. */
+/**
+ * An entry on a pending stage's list: a dependent step, or a thread blocked reading the stage. The
+ * list is linked through its entries, so that one can leave from any place at no cost: an
+ * {@code *Either} step leaves the other source's list, in whatever order the sources settle. All
+ * of this is under {@link CompletableFuture#LOCK}, and an entry is on one list at a time.
+ */
 abstract class StageLink {
+    /** The stage whose list this is on: not always a source, as a firing moves lists. */
+    private CompletableFuture<?> list;
+    private StageLink older;
+    private StageLink newer;
+
     /**
-     * Called when one of the stages it is on has settled. Returns the stage this settled, whose own
-     * list the caller then has to fire, or null.
+     * Called when one of the stages it is on has settled. Returns the stage whose list the caller
+     * has to go on with, as this settled it or found it settled, or null.
      */
     abstract CompletableFuture<?> fire();
 
-    /**
-     * Fires a link and everything settled by it, on an explicit stack: a chain of stages must not
-     * cost a frame per stage (docs/design/concurrent.md, "Order, counts, depth"). Lists of stages
-     * settled here move onto the stack whole, last entry first, so they run first attached first
-     * and each subtree ends before the next sibling.
-     */
-    static void fireTree(StageLink first) {
-        ArrayList<StageLink> stack = null;
-        StageLink link = first;
-        while (link != null) {
-            CompletableFuture<?> settled = link.fire();
-            if (settled != null) {
-                stack = settled.moveLinksOnto(stack);
-            }
-            link = stack == null || stack.isEmpty() ? null : stack.remove(stack.size() - 1);
+    final void addTo(CompletableFuture<?> stage) {
+        list = stage;
+        older = stage.newestLink;
+        if (older != null) {
+            older.newer = this;
         }
+        stage.newestLink = this;
+        stage.linkCount++;
+    }
+
+    /** Leaves the list of {@code stage}; false if this is not on it. */
+    final boolean removeFrom(CompletableFuture<?> stage) {
+        if (list != stage) {
+            return false;
+        }
+        if (older != null) {
+            older.newer = newer;
+        }
+        if (newer != null) {
+            newer.older = older;
+        } else {
+            stage.newestLink = older;
+        }
+        stage.linkCount--;
+        list = null;
+        older = null;
+        newer = null;
+        return true;
     }
 }

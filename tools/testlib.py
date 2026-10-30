@@ -136,7 +136,11 @@ def run(cmd: list[str], test: Test, classpath: Path = TESTS_CLASSES) -> str:
         done = subprocess.run([*cmd, *test.vm_args, "-cp", str(classpath),
                                test.main_class, *test.args],
                               capture_output=True, timeout=test.timeout)
-    except subprocess.TimeoutExpired:
-        return f"{TIMEOUT_MARK} after {test.timeout} s ---\n"
+    except subprocess.TimeoutExpired as e:
+        # The mark comes first: golden.py refuses any result that starts with it. What the run had
+        # printed shows how far it got.
+        partial = transcript((e.stdout or b"").decode("utf-8", "replace"),
+                             (e.stderr or b"").decode("utf-8", "replace"), 0)
+        return f"{TIMEOUT_MARK} after {test.timeout} s ---\n{partial}"
     return transcript(done.stdout.decode("utf-8", "replace"),
                       done.stderr.decode("utf-8", "replace"), done.returncode)

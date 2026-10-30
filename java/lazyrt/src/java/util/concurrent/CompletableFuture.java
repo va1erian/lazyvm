@@ -1,6 +1,5 @@
 package java.util.concurrent;
 
-import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -28,24 +27,11 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     static final Object LOCK = new Object();
 
     volatile StageOutcome outcome;
-    private ArrayList<StageLink> links;
+    /** The list of what waits: see {@link StageLink}. Read and changed under {@link #LOCK}. */
+    StageLink newestLink;
+    int linkCount;
 
     public CompletableFuture() {
-    }
-
-    final void addLink(StageLink link) {
-        if (links == null) {
-            links = new ArrayList<>(2);
-        }
-        links.add(link);
-    }
-
-    final void removeLink(StageLink link) {
-        synchronized (LOCK) {
-            if (links != null) {
-                links.remove(link);
-            }
-        }
     }
 
     /** First settlement only; the caller then fires the list. */
@@ -63,41 +49,41 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
      * Fires what the list still holds, last attached first, leaving the rest counted. Any
      * completion call comes here, won or not, and so does a released reader, so a thread blocked
      * in a callback does not hold up the others ("reader last").
+     *
+     * <p>What a firing settles has its list moved here, in front, first attached on top. No frame
+     * per stage, and everything still to fire stays where any visitor of this stage finds it.
      */
     final void fireLinks() {
         for (;;) {
             StageLink last;
             synchronized (LOCK) {
-                if (links == null || links.isEmpty()) {
+                last = newestLink;
+                if (last == null) {
                     return;
                 }
-                last = links.remove(links.size() - 1);
+                last.removeFrom(this);
             }
-            StageLink.fireTree(last);
+            try {
+                CompletableFuture<?> settled = last.fire();
+                if (settled != null && settled != this) {
+                    settled.moveLinksOnto(this);
+                }
+            } catch (StackOverflowError e) {
+                synchronized (LOCK) {
+                    last.addTo(this);
+                }
+                throw e;
+            }
         }
     }
 
-    final void fireLinksIfSettled() {
-        if (outcome != null) {
-            fireLinks();
-        }
-    }
-
-    /** Empties a stage settled during a firing onto {@code stack}, first attached on top. */
-    final ArrayList<StageLink> moveLinksOnto(ArrayList<StageLink> stack) {
-        ArrayList<StageLink> moved;
+    private void moveLinksOnto(CompletableFuture<?> root) {
         synchronized (LOCK) {
-            moved = links;
-            links = null;
+            for (StageLink link = newestLink; link != null; link = newestLink) {
+                link.removeFrom(this);
+                link.addTo(root);
+            }
         }
-        if (moved == null) {
-            return stack;
-        }
-        ArrayList<StageLink> onto = stack == null ? new ArrayList<>() : stack;
-        for (int i = moved.size() - 1; i >= 0; i--) {
-            onto.add(moved.get(i));
-        }
-        return onto;
     }
 
     private boolean completeWith(StageOutcome o) {
@@ -107,7 +93,10 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     private void obtrudeWith(StageOutcome o) {
-        outcome = o;
+        // Under the lock: an attach that saw no outcome must have its entry on the list before this.
+        synchronized (LOCK) {
+            outcome = o;
+        }
         fireLinks();
     }
 
@@ -196,7 +185,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
             if (outcome != null) {
                 return outcome;
             }
-            addLink(reader);
+            reader.addTo(this);
         }
         try {
             ForkJoinPool.managedBlock(reader);
@@ -205,7 +194,9 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
         }
         StageOutcome o = outcome;
         if (o == null) {
-            removeLink(reader);
+            synchronized (LOCK) {
+                reader.removeFrom(this);
+            }
             return null;
         }
         if (reader.interrupted) {
@@ -284,7 +275,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
 
     public int getNumberOfDependents() {
         synchronized (LOCK) {
-            return links == null ? 0 : links.size();
+            return linkCount;
         }
     }
 

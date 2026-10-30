@@ -53,6 +53,9 @@ the label of a line of its golden. Change the rule and that line should change.
 | `CompletableFutureShapes` | the shape of `allOf` and `anyOf`, subclasses, how rarer outcomes read, long chains of every kind |
 | `CompletableFutureReaders` | threads blocked in `get` and `join`: counts, release, interrupts, pool workers, races |
 | `CompletableFutureNoCommonEdges` | a common pool below parallelism two, named as an executor |
+| `CompletableFutureRoots` | what a firing has left and who can reach it, what a task does with each source, wide fans, running out of stack in a firing |
+| `CompletableFutureInterface` | every `CompletionStage` method called through the interface type |
+| `ConcurrentLeftovers` | `LinkedBlockingDeque.offer(e, t, u)` and `KeySetView.forEach(Consumer)`, which no other test reached |
 | `Contention` | totals under threads: exclusion, permits, no lost or repeated element |
 | `LockEdges` | locks: check order, who wakes whom, read holds around `await`, the read limit in a queue |
 | `SynchronizerEdges` | latch, barrier, exchanger, semaphore, random: check order, a running action, wake chains, wide ranges |
@@ -1008,7 +1011,7 @@ happens to behave the same way, so `CompletableFutureShapes` pins it too ("subcl
   also holds the reader ("reader attached before waits its turn"); below a firing the order is first attached first ("below a firing,
   reader in first-attached order", "below a firing, reader after a holder").
 - A released reader goes on with what the list still holds, on its own thread, before it returns ("reader attached last goes first and
-  helps", "timed reader helps too"). A reader that finds the future settled when it arrives does neither ("late reader of a settled stage
+  helps", "timed reader helps too"). It then races the completer for the next entry, so those lines say that it ran a callback and not which. A reader that finds the future settled when it arrives does neither ("late reader of a settled stage
   does not help"), and nor do reads inside a callback ("inside join", "inside get" in `CompletableFutureEdges`).
 - `cancel` answers from the outcome after it has fired what the list held ("lost cancel answers after firing"). The public reads do
   not ask one another ("public reads do not ask one another").
@@ -1149,8 +1152,18 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   dependents last attached first ("task end, source then own", "task helps other first ..."), also when the task did not run its function
   because the stage was settled before ("task of a settled target still helps"). So does an async dependent attached to a settled source
   that settles at once, by a skip or a rejection ("inside async rejected", "inside async both rejected", "inside async skipped on failure"),
-  though not one merely handed over ("inside async queued"). Below a firing the list has moved, so there is nothing to help ("task below a
-  firing"). A rejection during a firing does not help: the dependent's own dependents go as a deeper level ("rejected in a firing, no helping").
+  though not one merely handed over ("inside async queued"). Below a firing the source's list has moved to the root, so a task has nothing to help
+  there ("task below a firing"). A task of a compose left waiting for its inner stage has not ended, and helps nobody (`CompletableFutureRoots`: "task
+  of a compose left pending does not help"). A rejection during a firing does not help: the dependent's own dependents go as a deeper level ("rejected in a firing, no helping").
+- **The root keeps it all** (`CompletableFutureRoots`). What a firing settles has its list moved onto the stage that firing started at, in front
+  of what is there, first attached on top, so a blocked callback holds up nobody who can visit the root. Each call that fires ("visit s.complete",
+  "visit s.completeExceptionally", "visit s.cancel", "visit s.obtrudeValue", "visit s.obtrudeException"), an async dependent settled at once and
+  the task of one run at once ("visit s async rejected", "visit s async direct") take the blocked firing's next entry, on their own thread. Attaching,
+  reading, a queued task and any call on the stage below do not ("visit none", "visit mid.complete", "visit s.thenRun", "visit s.join" and the like; "two
+  levels below, a visit to the root"). This is the one way down, and it costs no frame per stage.
+- **A step found settled.** A step fired with its target already settled goes on with the target's list, inside that firing ("step finds its target
+  settled, in the target's own firing"), also on a second firing through another list while it is not yet run ("handed over, then found again
+  through the other list"). Once a task has settled its target its entries do nothing more ("task's ended entry found again does nothing").
 - **Levels, more of them.** A stage settled by a rejection, a skip, a function that threw or a compose whose inner stage is done is settled
   as part of a firing, so first attached first ("level rejected", "level skip", "level whenComplete throws", "level compose, inner done"). A
   compose that ran as a task is settled by a task ("level compose task, inner done"). Attaching to a dependent from inside its own function
@@ -1162,14 +1175,25 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   still counts (`CompletableFutureEdges`: "settled dependent stays counted"), though "cancelled dependent" in `CompletableFutureOrder` only
   asserts `>= 0`.
 - The count during a firing: a stage settled by a call or a task falls one by one as its list fires ("count falls while firing"); a stage
-  settled inside a firing reads 0 at once, as its list has moved ("count below is 0 at once"). A dependent attached inside runs at once and is
+  settled inside a firing reads 0 at once, as its list has moved ("count below is 0 at once"), and the root's count holds it instead
+  (`CompletableFutureRoots`: "visit none", "root's list under what moved onto it"). A dependent attached inside runs at once and is
   never counted ("attached inside never counts").
 - An `*Either` step leaves the other source's list when it is done with, not before: after its function, or its task, or a rejection, and
   also if the dependent had been settled directly ("either leaves the other source", "either, other side settled first", "either leaves after
   its function", "either task leaves when it runs", "either rejected leaves", "either with a settled dependent leaves too"), and a dependent
   settled directly on a `*Both` step stays ("both with a settled dependent stays"). One of two sources settled when attaching: `*Both` joins
   the other, `*Either` nothing ("both settled on one side joins the other", "either settled at attach joins nothing"). The same future as both
-  sources counts once ("self sources count once").
+  sources counts once ("self sources count once"). A task deals with its sources in turn, as a task's end above: it leaves those already settled, then
+  fires the other source or leaves it if pending, then the same for the receiver. So what the other source fires still counts the step on a pending
+  receiver, but not on a pending other source (`CompletableFutureRoots`: "task end, either, receiver pending, through the other", "task end, either, other
+  pending, through the receiver", "task end, either, seen from the executor", "task run from a sibling"); a rejection leaves at once ("rejected, either,
+  leaves at once"). A `*Both` step settled without a task, by its function or a skip, leaves the source it did not fire through, which is settled by then
+  ("both, the second settled inside a task's end ...").
+- Leaving costs nothing wherever the entry is: lists are linked through their entries, and 20000 `*Either` steps on two lists or against one shutdown
+  future, in any order, and `anyOf` of one future 20000 times, are linear (`CompletableFutureRoots`: "wide either, settled by the receiver", "wide either,
+  settled by the other", "many requests against one shutdown, shuffled", "anyOf of one future, many times"; quadratic, these run out the test's time).
+- Out of stack inside a firing: the error reaches the caller of `complete`, and the entry being fired goes back on the list, to be run by the next visitor
+  (`CompletableFutureRoots`: "out of stack in a firing, then a visit"). A function that overflows is only that function's failure.
 - Long chains of stages linked by the API do not exhaust the stack: 20000 chained `thenApply` and `thenCompose`, and a fan of 5000
   dependents, settle on the default thread stack ("deep chain", "deep compose", "wide fan"). A failure passing through 20000 stages
   stays a single `CompletionException` over `X` ("deep failure"). One native or Java frame per stage will not pass this, since
@@ -1247,9 +1271,11 @@ being kept. Neither was: both are now what the oracle does.
   not, by the owner rule at the top of its section, which goes further than the oracle: a subclass overriding `isCancelled` sees a difference, and no test holds it.
 - **`CompletableFuture`, what is left**: the class of a task handed to an executor (on the oracle it is a `ForkJoinTask`; here it is not, and it
   is only promised to be a `Runnable` marked `AsynchronousCompletionTask`). How deep user recursion through the API goes: a callback completing
-  the next future, a `thenCompose` over done stages, or a chain with a direct executor costs about 10 frames per level, so LazyVM's 4094 frames end
-  at about 400 levels where the oracle's 22523 reach further (`StackOverflowError` is caught as any callback's failure, and stages may stay
-  pending). The order in which readers wake when nothing holds them.
+  the next future, a `thenCompose` over done stages, or a chain with a direct executor costs about 5 to 9 frames per level, so LazyVM's 4094 frames end
+  at about 450 levels (800 with a direct executor) where the oracle's 22523 reach further (`StackOverflowError` is caught as any callback's failure, and
+  stages may stay pending). The order in which readers wake when nothing holds them, and who of a reader and a completer takes the next entry.
+- **`CompletableFuture`, a race and no golden**: an obtrude racing an attach must not lose the dependent, so the write of the outcome is under the lock
+  as a first settlement's is. A race has no stable line to bless. It is only checked by a probe, on the order of 2 million attaches with none lost.
 - **Not tested at all**: serialization of these classes; `ConcurrentHashMap` recursive updates; `ThreadPoolExecutor.finalize`;
   the `Spliterator` and stream members listed as deferred below.
 - **Out of scope for S6-04**: `AbstractQueuedSynchronizer`, `AbstractQueuedLongSynchronizer`, `AbstractOwnableSynchronizer`,
