@@ -178,14 +178,26 @@ interrupt, as Java 8 does (`ClinitState`); the wait is not interruptible.
 
 Before threads, `monitorenter` was a null check. Now the interpreter polls at
 branches and calls, frames carry their monitors, and `synchronized` does real
-work. Measured for S6-01/02 (CPU time, best of 3, Windows): the heavy
-existing tests (`CaseMapping`, `CharacterTables`, `GcChurn`, `RegexDepth`,
-`RegexMemoStarts`, `ScannerLong`) were 0.3% to 1.4% slower in a quiet
-run, and 4% to 6% slower in a later, busier session, where the same build
-pair also differed by 4%: the machine's state matters as much as the change.
-The monitor handoff and locking after the frame push added about 1%,
-measured side by side. A loop doing nothing but `synchronized` blocks and
-`synchronized` calls is about 5% slower.
+work. Against main at efd9986 (CPU time, best of 5, the two builds run
+interleaved, Windows), the branch is slower on one thread by:
+
+| Test | main | branch | cost |
+|---|---|---|---|
+| `CharacterTables` | 10.70 s | 11.42 s | +6.7% |
+| `GcChurn` | 9.47 s | 10.00 s | +5.6% |
+| `ScannerLong` | 7.44 s | 7.88 s | +5.9% |
+| `RegexDepth` | 11.81 s | 12.84 s | +8.7% |
+| `RegexMemoStarts` | 13.98 s | 15.08 s | +7.8% |
+| `CaseMapping` | 49.09 s | 52.33 s | +6.6% |
+
+An earlier, quieter session measured 0.3% to 1.4% for nearly the same code,
+so the figure moves with the machine's state; these are the numbers to beat.
+Experiments to locate it: dropping the safepoint poll, or the `synchronized`
+checks on the call and return path, each won back under 2 points; a larger
+heap slot alone (main with 8 more bytes per slot) cost nothing; an inlined
+fast path for class initialization changed nothing. The rest is not
+located yet (the interpreter loop's code layout is a suspect). A loop doing
+nothing but `synchronized` blocks and calls is about 5% slower again on top.
 
 ## For S6-03 to S6-06
 
