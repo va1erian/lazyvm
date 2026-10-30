@@ -18,4 +18,7 @@ unwrap_used = "warn"
 
 [profile.release]
 debug = 1
+# One unit: with the default 16, how the interpreter's code is split shifts
+# with unrelated changes, and timing with it (docs/design/threads.md).
+codegen-units = 1
 panic = "unwind"

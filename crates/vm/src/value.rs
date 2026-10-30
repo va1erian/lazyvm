@@ -40,41 +40,44 @@ impl Value {
         matches!(self, Value::Long(_) | Value::Double(_))
     }
 
+    #[inline]
     pub fn int(self) -> Result<i32, VmError> {
         match self {
             Value::Int(v) => Ok(v),
-            other => Err(VmError::verify(format!("expected int, found {other:?}"))),
+            other => Err(wrong_type("int", other)),
         }
     }
 
+    #[inline]
     pub fn long(self) -> Result<i64, VmError> {
         match self {
             Value::Long(v) => Ok(v),
-            other => Err(VmError::verify(format!("expected long, found {other:?}"))),
+            other => Err(wrong_type("long", other)),
         }
     }
 
+    #[inline]
     pub fn float(self) -> Result<f32, VmError> {
         match self {
             Value::Float(v) => Ok(v),
-            other => Err(VmError::verify(format!("expected float, found {other:?}"))),
+            other => Err(wrong_type("float", other)),
         }
     }
 
+    #[inline]
     pub fn double(self) -> Result<f64, VmError> {
         match self {
             Value::Double(v) => Ok(v),
-            other => Err(VmError::verify(format!("expected double, found {other:?}"))),
+            other => Err(wrong_type("double", other)),
         }
     }
 
     /// A reference, possibly null.
+    #[inline]
     pub fn reference(self) -> Result<Option<Ref>, VmError> {
         match self {
             Value::Ref(r) => Ok(r),
-            other => Err(VmError::verify(format!(
-                "expected reference, found {other:?}"
-            ))),
+            other => Err(wrong_type("reference", other)),
         }
     }
 
@@ -93,4 +96,10 @@ pub fn default_for(descriptor: &str) -> Value {
         Some(b'L' | b'[') => Value::NULL,
         _ => Value::Int(0),
     }
+}
+
+/// Kept out of line so the typed reads stay small enough to inline.
+#[cold]
+fn wrong_type(expected: &str, found: Value) -> VmError {
+    VmError::verify(format!("expected {expected}, found {found:?}"))
 }

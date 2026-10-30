@@ -3,6 +3,10 @@
 //!
 //! Each frame lists the monitors it holds (`Frame::monitors`). Popping a
 //! frame, normally or by an exception, releases what is left on it.
+//!
+//! A call or return that holds no lock only tests a flag, so those tests stay
+//! inline and the locking is kept out of line: inlining the locking here pushed
+//! unrelated code out of the dispatch loop (docs/design/threads.md).
 
 use super::Flow;
 use crate::class::MethodRef;
@@ -51,7 +55,7 @@ impl Vm {
     /// The object a call to `m` must lock: `None` unless `m` is
     /// `synchronized`; then the receiver, or the class's mirror for a
     /// static method. `args` must be rooted (they are the call's arguments).
-    #[inline]
+    #[inline(always)]
     pub(super) fn lock_for_call(&mut self, m: MethodRef, args: &[Value]) -> VmResult<Option<Ref>> {
         if self.method(m).access & classfile::ACC_SYNCHRONIZED == 0 {
             return Ok(None);
@@ -77,11 +81,16 @@ impl Vm {
     /// Locks a `synchronized` method's monitor for the frame just pushed
     /// for `m`. The frame's locals root the receiver while this thread
     /// waits; if locking fails, the frame goes again.
-    #[inline]
+    #[inline(always)]
     pub(super) fn lock_pushed_frame(&mut self, m: MethodRef) -> VmResult<()> {
         if self.method(m).access & classfile::ACC_SYNCHRONIZED == 0 {
             return Ok(());
         }
+        self.lock_frame_method(m)
+    }
+
+    #[cold]
+    fn lock_frame_method(&mut self, m: MethodRef) -> VmResult<()> {
         let receiver = self.top()?.locals.first().copied().unwrap_or(Value::NULL);
         match self.lock_synchronized(m, &[receiver]) {
             Ok(obj) => {
@@ -104,6 +113,7 @@ impl Vm {
 
     /// Rule 1 at a return instruction: every monitor the method entered
     /// with `monitorenter` must have been exited.
+    #[inline(always)]
     pub(super) fn check_balanced(&mut self) -> VmResult<()> {
         if !self.top()?.monitors.is_empty() {
             return Err(imse());
@@ -112,6 +122,7 @@ impl Vm {
     }
 
     /// Releases the monitors of a frame being popped, newest first.
+    #[cold]
     pub(super) fn release_frame_monitors(&mut self, f: &super::Frame) {
         for &obj in f.monitors.iter().rev().chain(&f.method_lock) {
             let _ = self.monitor_exit(obj);
