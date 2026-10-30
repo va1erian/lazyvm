@@ -26,10 +26,11 @@ public class PoolPins {
         x.setCorePoolSize(0);
         show("setCorePoolSize wakes idle workers", () -> until(() -> x.getPoolSize() == 0));
         x.shutdown();
-        ThreadPoolExecutor y = new ThreadPoolExecutor(3, 3, 1, TimeUnit.HOURS, new LinkedBlockingQueue<>());
-        y.prestartAllCoreThreads();
-        until(() -> y.getActiveCount() == 0);
-        y.setCorePoolSize(1);
+        ThreadPoolExecutor y = new ThreadPoolExecutor(1, 3, 1, TimeUnit.HOURS, new SynchronousQueue<>());
+        CountDownLatch three = new CountDownLatch(3);
+        for (int i = 0; i < 3; i++) y.execute(three::countDown);
+        three.await();
+        until(() -> y.getActiveCount() == 0 && y.getPoolSize() == 3);
         y.setMaximumPoolSize(1);
         show("setMaximumPoolSize wakes idle workers", () -> until(() -> y.getPoolSize() == 1));
         y.shutdown();

@@ -347,12 +347,12 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     public boolean tryUnfork() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return (w != null ? w.core : ForkJoinPool.shared.core).unfork(w, this);
+        return (w != null ? w.core : ForkJoinPool.shared.core).queues.unforkNewest(w, this);
     }
 
     public static int getQueuedTaskCount() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.localCount(w) : 0;
+        return w != null ? w.core.queues.ownCount(w) : 0;
     }
 
     public static int getSurplusQueuedTaskCount() {
@@ -368,17 +368,17 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     protected static ForkJoinTask<?> peekNextLocalTask() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.nextLocal(w, false) : null;
+        return w != null ? w.core.queues.nextLocal(w, false) : null;
     }
 
     protected static ForkJoinTask<?> pollNextLocalTask() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.nextLocal(w, true) : null;
+        return w != null ? w.core.queues.nextLocal(w, true) : null;
     }
 
     protected static ForkJoinTask<?> pollTask() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.pollAny(w) : null;
+        return w != null ? w.core.queues.pollAny(w) : null;
     }
 
     public final short getForkJoinTaskTag() {

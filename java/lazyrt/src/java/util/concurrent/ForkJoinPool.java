@@ -205,28 +205,28 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     public long getStealCount() {
-        return core.steals();
+        return core.queues.stealCount();
     }
 
     public long getQueuedTaskCount() {
-        return core.queuedTasks();
+        return core.queues.localTaskCount();
     }
 
     public int getQueuedSubmissionCount() {
-        return core.queuedSubmissions();
+        return core.queues.submissionCount();
     }
 
     public boolean hasQueuedSubmissions() {
-        return core.queuedSubmissions() > 0;
+        return core.queues.submissionCount() > 0;
     }
 
     protected ForkJoinTask<?> pollSubmission() {
-        return core.pollSubmission();
+        return core.queues.takeSubmission();
     }
 
     protected int drainTasksTo(Collection<? super ForkJoinTask<?>> c) {
         int n = 0;
-        for (ForkJoinTask<?> t = core.pollForeign(); t != null; t = core.pollForeign()) {
+        for (ForkJoinTask<?> t = core.queues.pollForeign(); t != null; t = core.queues.pollForeign()) {
             c.add(t);
             n++;
         }

@@ -6,12 +6,13 @@ import java.util.List;
 
 /**
  * Every queued task of one pool: a plain deque per worker and a list of submissions, plus the table
- * of workers by index. All of it is guarded by the {@link ForkJoinCore}'s monitor, so every method
- * here expects that monitor held. A running count of the deques' tasks spares looking through all
+ * of workers by index. All of it is guarded by the {@link ForkJoinCore}'s monitor, which the core's
+ * calls already hold and the last group of methods here takes for other callers. A running count of the deques' tasks spares looking through all
  * workers to learn whether any is queued, which a pool with thousands of blocked workers would pay
  * on every take.
  */
 final class ForkJoinQueues {
+    private final Object monitor;
     private final boolean asyncMode;
     private final ArrayDeque<ForkJoinTask<?>> submissions = new ArrayDeque<ForkJoinTask<?>>();
     /** By pool index; a slot is empty once its worker ended. */
@@ -22,7 +23,8 @@ final class ForkJoinQueues {
     private int localTasks;
     private long steals;
 
-    ForkJoinQueues(boolean asyncMode) {
+    ForkJoinQueues(Object monitor, boolean asyncMode) {
+        this.monitor = monitor;
         this.asyncMode = asyncMode;
     }
 
@@ -146,11 +148,75 @@ final class ForkJoinQueues {
         return submissions.size();
     }
 
-    ForkJoinTask<?> pollSubmission() {
-        return submissions.pollFirst();
-    }
-
     long steals() {
         return steals;
+    }
+
+    // For callers outside the core, so these take the monitor.
+
+    ForkJoinTask<?> pollForeign() {
+        synchronized (monitor) {
+            return takeForeign(null);
+        }
+    }
+
+    boolean unforkNewest(ForkJoinWorkerThread w, ForkJoinTask<?> t) {
+        synchronized (monitor) {
+            return unfork(w, t);
+        }
+    }
+
+    int ownCount(ForkJoinWorkerThread w) {
+        synchronized (monitor) {
+            return w.local.size();
+        }
+    }
+
+    ForkJoinTask<?> nextLocal(ForkJoinWorkerThread w, boolean remove) {
+        synchronized (monitor) {
+            return remove ? ownNext(w) : peekOwnNext(w);
+        }
+    }
+
+    ForkJoinTask<?> pollAny(ForkJoinWorkerThread w) {
+        synchronized (monitor) {
+            ForkJoinTask<?> t = ownNext(w);
+            return t != null ? t : takeForeign(w);
+        }
+    }
+
+    long stealCount() {
+        synchronized (monitor) {
+            return steals;
+        }
+    }
+
+    long localTaskCount() {
+        synchronized (monitor) {
+            return localTasks;
+        }
+    }
+
+    int submissionCount() {
+        synchronized (monitor) {
+            return submissions.size();
+        }
+    }
+
+    ForkJoinTask<?> takeSubmission() {
+        synchronized (monitor) {
+            return submissions.pollFirst();
+        }
+    }
+
+    /** Outside the monitor, as {@code cancel} is the user's to override. One that throws stops no other. */
+    static void cancelAll(List<ForkJoinTask<?>> tasks) {
+        for (ForkJoinTask<?> t : tasks) {
+            try {
+                t.cancel(false);
+            } catch (Throwable theOthersMustStillBeCancelled) {
+                continue;
+            }
+        }
     }
 }

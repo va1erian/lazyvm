@@ -209,7 +209,7 @@ public class ForkJoinLimits {
         });
         show("fork left on a stand-in", f::get);
         x.shutdown();
-        // Once the blocked one is back the stand-in does not take more plain tasks beside it.
+        // Once all is quiet, the idle workers are held to the target again.
         ForkJoinPool y = new ForkJoinPool(1);
         CountDownLatch in = new CountDownLatch(1), rel = new CountDownLatch(1);
         AtomicInteger cur = new AtomicInteger(), max = new AtomicInteger();
@@ -225,6 +225,23 @@ public class ForkJoinLimits {
         for (ForkJoinTask<?> f2 : many) f2.join();
         show("plain tasks at once after a stand-in", max::get);
         y.shutdown();
+        // A stand-in that ends its task with the other back and busy still takes what is queued.
+        ForkJoinPool z = new ForkJoinPool(1);
+        CountDownLatch aIn = new CountDownLatch(1), aRel = new CountDownLatch(1), aBack = new CountDownLatch(1), standing = new CountDownLatch(1), standRel = new CountDownLatch(1), aEnd = new CountDownLatch(1);
+        ForkJoinTask<?> a = z.submit(() -> { aIn.countDown(); managedAwait(aRel); aBack.countDown(); awaitQuietly(aEnd); });
+        aIn.await();
+        ForkJoinTask<?> stand = z.submit(() -> { standing.countDown(); awaitQuietly(standRel); });
+        standing.await();
+        aRel.countDown();
+        aBack.await();
+        AtomicBoolean ran = new AtomicBoolean();
+        ForkJoinTask<?> queued = z.submit(() -> ran.set(true));
+        standRel.countDown();
+        stand.join();
+        show("queue served above the target", () -> { queued.get(15, TimeUnit.SECONDS); return ran.get() + " other still running=" + !a.isDone(); });
+        aEnd.countDown();
+        a.join();
+        z.shutdown();
     }
 
     /** Tasks that can only finish together, however they wait. */

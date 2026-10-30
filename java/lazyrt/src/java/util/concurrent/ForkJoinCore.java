@@ -34,7 +34,7 @@ final class ForkJoinCore {
     private final ForkJoinPool pool;
     private final int parallelism;
     private final String workerPrefix;
-    private final ForkJoinQueues queues;
+    final ForkJoinQueues queues;
 
     private final ArrayDeque<ForkJoinWorkerThread> idle = new ArrayDeque<ForkJoinWorkerThread>();
     /** Workers counted from the start of their thread. Past a failed start they are gone again. */
@@ -58,7 +58,7 @@ final class ForkJoinCore {
         this.pool = pool;
         this.parallelism = parallelism;
         this.workerPrefix = workerPrefix;
-        this.queues = new ForkJoinQueues(asyncMode);
+        this.queues = new ForkJoinQueues(this, asyncMode);
     }
 
     void pushExternal(ForkJoinTask<?> task) {
@@ -129,7 +129,8 @@ final class ForkJoinCore {
         } finally {
             synchronized (this) {
                 reserved--;
-                if (w != null && !started) {
+                // A thread the factory started itself makes start throw, and is a worker all the same.
+                if (w != null && !started && w.getState() == Thread.State.NEW) {
                     forget(w);
                 }
                 maybeFinish();
@@ -187,7 +188,7 @@ final class ForkJoinCore {
             spawn = !stop && began && (killed || queues.anyQueued()) && signal();
             maybeFinish();
         }
-        cancelAll(dropped);
+        ForkJoinQueues.cancelAll(dropped);
         if (spawn) {
             createWorker();
         }
@@ -236,8 +237,8 @@ final class ForkJoinCore {
     }
 
     /**
-     * The monitor is held. A worker's own tasks are always its to run, even above the target after
-     * a blocked worker came back: nobody else may get to them. Only then does it stay out of the way.
+     * The monitor is held. A worker that just finished something goes on, even above the target after
+     * a blocked worker came back: only an idle one is held to the target ("queue served above the target").
      */
     private ForkJoinTask<?> look(ForkJoinWorkerThread w) {
         ForkJoinTask<?> t = queues.ownNext(w);
@@ -245,7 +246,7 @@ final class ForkJoinCore {
             return t;
         }
         if (!w.parked) {
-            return running() - 1 < parallelism ? queues.takeForeign(w) : null;
+            return queues.takeForeign(w);
         }
         if (scout != w) {
             return null;
@@ -274,7 +275,7 @@ final class ForkJoinCore {
         return false;
     }
 
-    /** A short wait for a monitor is part of being busy, and a joiner whose task is done just has not got back. */
+    /** A short wait for a monitor is part of being busy, and a joiner whose task is done is on its way back. */
     private static boolean mayBeBusy(ForkJoinWorkerThread w) {
         Thread.State state = w.getState();
         ForkJoinTask<?> awaited = w.awaited;
@@ -376,10 +377,6 @@ final class ForkJoinCore {
         }
     }
 
-    synchronized ForkJoinTask<?> pollForeign() {
-        return queues.takeForeign(null);
-    }
-
     void beginBlock() {
         boolean spawn;
         synchronized (this) {
@@ -395,25 +392,8 @@ final class ForkJoinCore {
         blocked--;
     }
 
-    synchronized boolean unfork(ForkJoinWorkerThread w, ForkJoinTask<?> t) {
-        return queues.unfork(w, t);
-    }
-
-    synchronized int localCount(ForkJoinWorkerThread w) {
-        return w.local.size();
-    }
-
     synchronized int surplus(ForkJoinWorkerThread w) {
         return Math.max(0, w.local.size() - idle.size());
-    }
-
-    synchronized ForkJoinTask<?> nextLocal(ForkJoinWorkerThread w, boolean remove) {
-        return remove ? queues.ownNext(w) : queues.peekOwnNext(w);
-    }
-
-    synchronized ForkJoinTask<?> pollAny(ForkJoinWorkerThread w) {
-        ForkJoinTask<?> t = queues.ownNext(w);
-        return t != null ? t : queues.takeForeign(w);
     }
 
     synchronized int poolSize() {
@@ -431,22 +411,6 @@ final class ForkJoinCore {
     /** A scout still in place has queued work it is about to start on. */
     synchronized boolean isQuiescent() {
         return live + reserved == idle.size() && (scout == null || !queues.anyQueued());
-    }
-
-    synchronized long steals() {
-        return queues.steals();
-    }
-
-    synchronized long queuedTasks() {
-        return queues.localTasks();
-    }
-
-    synchronized int queuedSubmissions() {
-        return queues.submissions();
-    }
-
-    synchronized ForkJoinTask<?> pollSubmission() {
-        return queues.pollSubmission();
     }
 
     /** The bracket of the pool's {@code toString}. */
@@ -484,21 +448,10 @@ final class ForkJoinCore {
             beginTermination();
             maybeFinish();
         }
-        // In this order: a running task that looks finds itself cancelled first ("cancelled first").
-        cancelAll(dropped);
+        // In this order, as on the oracle a running task usually finds itself cancelled first.
+        ForkJoinQueues.cancelAll(dropped);
         for (ForkJoinWorkerThread w : toInterrupt) {
             w.interrupt();
-        }
-    }
-
-    /** Outside the monitor, as {@code cancel} is the user's to override. One that throws stops no other. */
-    private static void cancelAll(List<ForkJoinTask<?>> tasks) {
-        for (ForkJoinTask<?> t : tasks) {
-            try {
-                t.cancel(false);
-            } catch (Throwable theOthersMustStillBeCancelled) {
-                continue;
-            }
         }
     }
 

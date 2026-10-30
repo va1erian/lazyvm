@@ -63,6 +63,8 @@ the label of a line of its golden. Change the rule and that line should change.
 | `ScheduledEdges` | `ScheduledThreadPoolExecutor`: the queue's view, policies changed late, decorated tasks |
 | `ForkJoinEdges` | `invokeAll` order and failures, status corners, `shutdownNow`, a worker dying, `pollTask` and `tryUnfork` |
 | `ForkJoinWorkers` | interrupts in `get` and `join` on a worker, compensation, submission order, deep joins |
+| `ForkJoinLimits` | waiting for quiet, workers that fail to start or die, a stand-in coming back, tasks that wait on each other, deep stacks, failures crossing threads |
+| `PoolPins` | `ThreadPoolExecutor` late resizing and the end of `shutdownNow`, what fixed rate means, huge delays behind an overdue task |
 | `ForkJoinNoWorkers` | a common pool of parallelism 0 |
 | `ConcurrentExceptions` | the package's exception constructors |
 | `ConcurrentMapDefaults` | `ConcurrentMap`'s default methods on a custom map |
@@ -318,6 +320,9 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
 - Sizes: raising the core starts workers only for what is queued ("raise with queued", "raise beyond queue"). A core above the maximum holds
   while busy, and falls to the maximum when idle ("core above max ..."). A worker killed by its task is replaced even with no work, while the pool is
   running ("abrupt replaced ..."), but after `shutdown` only if the queue holds something ("abrupt at shutdown ...").
+- Late changes (`PoolPins`): `setCorePoolSize` and `setMaximumPoolSize` wake idle workers, so a lower size takes effect without new work ("setCorePoolSize wakes idle workers", "setMaximumPoolSize wakes idle
+  workers"). A first task that a worker only reaches after `shutdownNow` sees the interrupt ("first task after a stop"). The pool does not end, nor `terminated()` run, nor `awaitTermination` return, while
+  `shutdownNow` is still emptying the queue ("end waits for the drain").
 
 ### `Executors` (`ExecutorFactories`)
 
@@ -411,7 +416,9 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   A rejection follows the `ThreadPoolExecutor` message; the task's class in it is not
   API, and goldens hide it ("after shutdown").
 - `Long.MAX_VALUE` days does not overflow into the past, and compares after nearer
-  tasks ("huge delay positive", "huge after near").
+  tasks ("huge delay positive", "huge after near"). That holds against a task already overdue too, both when a huge delay is scheduled and when a huge fixed delay is reckoned at the end of a run: the
+  overdue task runs first (`PoolPins`: "huge delay behind an overdue task", "huge period behind an overdue task"). So a huge delay has to leave room for the most overdue task in the queue.
+- Fixed rate counts from the last due time, not the last run: after a slow run it is behind, and runs back to back until it has caught up (`PoolPins`: "fixed rate catches up after a slow run").
 - Returned futures are `RunnableScheduledFuture`s: `isPeriodic` ("periodic flag");
   `getDelay`, `compareTo` ("getDelay", "compare", "compare self"). `getQueue()` shows
   the future itself ("queue elem is future"); cancelled tasks stay there until `purge`
@@ -845,9 +852,21 @@ One script, run on both; rules hold for both unless noted.
   A task's leftover interrupt does reach the next task if one is queued, unlike in `ThreadPoolExecutor`, but not after the worker went idle ("interrupt carried to a queued next task", "no interrupt once idle"). While busy after `shutdown` the word is
   `Shutting down` ("word while busy"). A pool that cannot make a worker keeps its queue after `shutdown` until `shutdownNow` ("null factory ..."). `isQuiescent` looks at workers only: a
   queued task with no worker is quiescent ("null factory queued"). What a factory throws leaves the task queued ("throwing factory queue").
-- A worker dies when an `execute(Runnable)` task fails or `onStart` throws: `onTermination` gets the exception, then the thread's uncaught handler, which is the pool's when it has one, and a
-  new worker follows ("hook log after failure", "threads made", "onStart throws"). Only that form escapes: a `submit` or `execute(ForkJoinTask)` failure stays in the task ("submit failure no
+- A worker dies when an `execute(Runnable)` task fails or `onStart` throws: `onTermination` gets the exception, then the thread's uncaught handler, which is the pool's when it has one
+  ("hook log after failure", "threads made", "onStart throws"). Only that form escapes: a `submit` or `execute(ForkJoinTask)` failure stays in the task ("submit failure no
   handler", "execute(task) failure no handler").
+- After such a death (`ForkJoinLimits`): tasks the killed worker had forked and nobody took are **cancelled**, not run ("killed worker's forks: 2"). A new worker follows even with nothing queued, unless an
+  idle one is there ("killed worker's forks: 0", "killed worker with one idle beside it"), and a queued submission runs ("submission behind a killed worker"). A worker whose `onStart` threw is not replaced, and what is
+  queued waits for the next call that adds work ("onStart failure: gone", "onStart failure: next call").
+- A worker that cannot start (`ForkJoinLimits`). If `start` throws, the throw reaches the caller, the task stays queued, the worker is not counted, and the next call makes another ("start throws: ..."). A subclass constructor that
+  throws looks the same, except that the pool **never terminates**, as a constructed worker that never ran is still expected ("constructor throws: ends").
+- A worker that stood in for a blocked one and finds it back runs what it forked itself, so that work never waits on the other ("fork left on a stand-in"), and goes on to what is queued, above the parallelism for as long as it finds work ("queue served above the target"). Once idle, workers are held to the parallelism again ("plain tasks at once after a stand-in").
+- `helpQuiesce`, and `awaitQuiescence` called from a worker of the same pool, run what is queued and then wait until no other worker is busy, whatever the timeout ("helpQuiesce waits for a busy worker",
+  "awaitQuiescence in worker outlasts its timeout"). A worker blocked in a join or `ManagedBlocker` is not busy ("helpQuiesce ignores a blocked worker"), nor is one also waiting here ("two in helpQuiesce", "two in
+  awaitQuiescence"), but the first to return is busy again, so the second stays until that task ends ("second out of helpQuiesce stays"). Own forks go first, then submissions ("helpQuiesce runs own forks then submissions").
+  A worker of another pool is an outside thread, and times out ("another pool's worker times out").
+- Tasks that can only finish together do finish, up to the parallelism, however they wait: on a latch or by spinning, submitted or forked ("latched on each other at 8", "spinning on each other at 8", "forks latched on
+  each other at 8"). Idle workers end after a while and the pool makes new ones when needed ("idle workers go away", "and come back").
 - The common pool's property (`ForkJoinNoWorkers`): 0 reports parallelism 1 but makes no workers, so a task only runs when an outside thread awaits it, also with a timeout ("common parallelism", "fork
   join", "timed get", "worker thread name"). A negative or malformed value means the default, a value over the limit means the limit. Those last two were checked by hand on both VMs, as a golden there would depend on the machine.
 
@@ -858,10 +877,12 @@ One script, run on both; rules hold for both unless noted.
   list same"); a null array, element or collection throws ("invokeAll null array", "invokeAll null element", "invokeAll
   null collection").
 - A failure seen by the thread that ran it keeps the exception object ("direct invoke, same thread", "direct
-  getException"). `get` wraps in `ExecutionException` ("direct get"). When it failed on another thread, only the class
-  is
-  pinned, because the exception the waiting thread sees may be a different object of the same class ("invoke failure", "submit join failure", "getException
-  type").
+  getException"). `get` wraps in `ExecutionException` ("direct get").
+- **Failures crossing threads** (`ForkJoinLimits`). Read in `join`, `get` or `getException` on any other thread than the one that threw it, or that called `completeExceptionally`, a failure comes as a new object per read, of the same
+  class, with the original as its cause. Through a public constructor taking `Throwable` if there is one, even when a no-argument one comes first, whose message is then the original's `toString()` ("OnlyCause ...",
+  "CauseFirst ...", "NoArgFirst ..."); else a public no-argument one and `initCause`, so the message is what that constructor gives ("OnlyNoArg ...", also for `Exception`s hidden from the compiler and `Error`s: "Checked ...", "Err ...", "StackOverflowError ...", and "CancellationException ..." for one thrown by the task).
+  The original itself comes when the class is package-private or private ("Hidden ...", "Priv ...", unlike protected: "Prot ..."), when the constructor is not public or takes something narrower ("ProtCtor ...", "NarrowCtor ..."), or when it or `initCause` throws ("CtorThrows ...", "CauseFixed ...").
+  Which thread decides, not whether a pool is involved ("completed here, read here", "completed here, read on a worker", "completed on a worker, read here", "invoked here", "read on another plain thread", "read here again", "forked and joined on one worker", "run by a thief, joined by the forker"). A checked failure wrapped by `completeExceptionally` wraps once more when read elsewhere ("checked completed on a worker, read here").
 - `completeExceptionally(unchecked)` rethrows it as is; a checked one, or the adapter's checked failure, is wrapped in
   `RuntimeException` whose message is the cause's `toString()` ("checked via join", "adapted checked wraps", "checked
   via get"). `completeExceptionally(null)` gives a bare `RuntimeException` ("after null").
@@ -889,7 +910,8 @@ One script, run on both; rules hold for both unless noted.
   interrupted ..."). Outside a pool `join` waits on and sets the flag again after ("join keeps waiting past interrupt", "join flag set after").
 - A worker blocked in `join`, `get` or a `ManagedBlocker` lets a queued task run even at parallelism 1 ("managed compensates", "join compensates"); blocked in a plain latch it does not ("unmanaged no compensation"). Plain tasks never run above the
   parallelism ("runs to parallelism", "never above parallelism").
-- A chain of forks and joins 800 deep works ("deep 800"), though each level costs stack frames and a thread has at most 4094: a joiner stacks only so many tasks on itself, then blocks and lets another worker take over on a new stack.
+- Chains of forks and joins go deep with no overflow, at any parallelism ("deep 800", and in `ForkJoinLimits` "chain 350 with 4 extra frames at 1" to "chain 800 with 0 extra frames at 2"), as does recursion through `invokeAll`, which runs a task in the caller ("invokeAll two deep 1000", "invokeAll many deep 1000"). A thread here has
+  4094 frames where the oracle's has far more, so a worker past half of its frames runs no further task on that stack: it waits, and another worker runs the task on a new stack.
 - `ManagedBlocker`: `isReleasable` true skips `block`; `block` repeats until true ("outside pool blocker", "releasable
   skips block", "inside pool blocker").
 
@@ -1158,12 +1180,17 @@ being kept. Neither was: both are now what the oracle does.
 - **Timing**: anything counted while workers are active: `completed tasks` in a rejection message from a pool still busy (the
   tests print only "rejected" there), the exact number of periodic runs ("no more runs" allows one in flight), and whether a
   periodic task is done after `shutdownNow` when it was running at that moment.
-- **Failures crossing threads**: in `ForkJoinTask`, a failure on another thread may surface as a different object of the same
-  class, whose message may be the original's `toString()`. Tests print only the class. LazyVM rethrows the same object.
+- **The stack trace of a copied failure**. The object, class, message and cause are pinned (see "Failures crossing threads"), the trace is not.
 - **Artefacts of the oracle's fork/join**: `getQueuedTaskCount` right after a join took an old task from the local queue (the oracle leaves a filler in its place and counts it), `getSurplusQueuedTaskCount`'s value, how many
   spare workers exist after a compensation, and how soon `awaitQuiescence` returns right after a submission from outside (the oracle may answer before its first worker is up; here it waits for the work). LazyVM's worker ends after
   2 s idle.
-- **What a dying worker had forked**: on the oracle it is usually lost, and sometimes runs. Here it moves to the submissions and runs, as nothing is gained by losing it.
+- **Cost and thread count of `ForkJoinPool`**: only one thread runs Java at a time here, so more workers cannot go faster, and they are not made while the running ones may still be using the processor. A queued task that the running workers leave alone gets a worker at once when
+  none of them can be running, and otherwise after up to 160 ms. So CPU-bound work runs on fewer threads than the parallelism for a long while (about 8 where the oracle has 23), and tasks that spin on each other start one by one. Neither shows in `getParallelism`, which is exact.
+  How deep a chain goes before a new worker is needed depends on the 4094 frames, so `getPoolSize` during deep joins differs too (a few more than the oracle's two). Deeper than the oracle's stacks allow, chains here still succeed, and that is not pinned either.
+  User recursion that makes no fork, join or `invoke` call still ends at 4094 frames.
+- **Timing in `ForkJoinPool.shutdownNow`**: whether a task spinning on both its cancelled state and the interrupt flag sees the flag set by the time it sees it is cancelled. Mostly not on the oracle, and sometimes yes (about 1 in 5 runs). Both can happen here too: the cancel comes first, then the interrupt.
+- **A dropped `newSingleThreadExecutor`**: the oracle may end the program once a collection finds the executor unreachable and finalizes it, so its exit depends on when the collector runs. LazyVM has no finalization, so such an executor keeps the VM alive until `shutdown`, like any other pool. `ThreadPoolExecutor.finalize` stays as API, and nothing calls it.
+- **Periodic next-due time at a huge period**: the time a periodic task computes for its next run when the period is near `Long.MAX_VALUE` is seen only as a very large `getDelay` and "never again" (hand-checked: one run, and later tasks still run). The exact value is not pinned.
 - **Private class names**: the message of a `ClassCastException` from `getQueue().add(...)` on a scheduled pool, the wrapper's class in a rejection from `invokeAny` or a completion service, and the classes behind `Executors`,
   including the common pool's factory.
 - **An active worker with no task**: a new worker with no first task reads as active until it starts looking for work. Tests wait for `getActiveCount() == 0`.

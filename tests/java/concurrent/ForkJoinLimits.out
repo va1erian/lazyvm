@@ -26,6 +26,7 @@ idle workers go away = true
 and come back = yes
 fork left on a stand-in = true size=2
 plain tasks at once after a stand-in = 1
+queue served above the target = true other still running=true
 latched on each other at 2 = true
 spinning on each other at 2 = 2
 forks latched on each other at 2 = met
