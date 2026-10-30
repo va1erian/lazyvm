@@ -50,6 +50,9 @@ the label of a line of its golden. Change the rule and that line should change.
 | `CompletableFutureNoCommon` | a common pool below parallelism two |
 | `CompletableFutureOrder` | firing order, dependents counts, re-entrancy, deep chains |
 | `Contention` | totals under threads: exclusion, permits, no lost or repeated element |
+| `LockEdges` | locks: check order, who wakes whom, read holds around `await`, the read limit in a queue |
+| `SynchronizerEdges` | latch, barrier, exchanger, semaphore, random: check order, a running action, wake chains, wide ranges |
+| `PhaserEdges` | `Phaser`: forcing, late registration, tiers, a blocked or throwing hook |
 | `ConcurrentExceptions` | the package's exception constructors |
 | `ConcurrentMapDefaults` | `ConcurrentMap`'s default methods on a custom map |
 
@@ -164,6 +167,19 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   `awaitUntil` return false. None needs a waker when the time has passed
   ("awaitNanos negative", "await timed out", "awaitUntil past"). A null `Date` or
   unit throws ("awaitUntil null", "await null unit").
+- Order of the checks on a `Condition` wait: first a null argument, then the flag, then
+  ownership. So a flagged thread that does not hold the lock gets
+  `InterruptedException`, flag cleared, from `await`, `awaitNanos`, the timed `await` and
+  `awaitUntil`; only `awaitUninterruptibly`, which ignores the flag, reports
+  `IllegalMonitorStateException` (`LockEdges`: "await unowned flagged", "awaitNanos unowned
+  flagged", "await time unowned flagged", "awaitUntil unowned flagged", "awaitUninterruptibly
+  unowned flagged", "awaitUntil null flagged").
+- A `Condition` that is not this package's own, passed to `hasWaiters` and the like, gives a
+  different text from a foreign lock's: `IllegalArgumentException: not owner`, lower case. A foreign
+  lock's condition is reported before ownership is looked at (`LockEdges`: "hasWaiters custom
+  condition", "hasWaiters foreign unowned").
+- A thread that already holds the lock re-enters past any queue, fair or not, timed or not
+  (`LockEdges`: "fair timed reentry behind queue", "fair read reentry", "writer reads past its queue").
 
 ### `ReentrantReadWriteLock` (`ReadWriteLocks`)
 
@@ -196,6 +212,14 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   queue queries report writers and readers apart ("queued writers", "queued readers").
 - Write-lock `Condition` misuse follows `Locks`, including `Not owner` ("hasWaiters
   foreign"). `await` restores all write holds ("condition return").
+- `await` by a thread holding both the write lock and read holds gives up the whole lock, the read
+  holds as well: during the wait another thread can take the write lock, and sees a read count of
+  0. When the waiter returns, its write holds and its read holds are all back (`LockEdges`: "await with
+  both holds", "seen during that wait", "both holds back").
+- The read limit also binds a reader that has been queueing. If the count is at 65535 when its
+  turn comes, it gets `Error: Maximum lock count exceeded` from `lock`, `lockInterruptibly` or the timed
+  `tryLock`, leaves the queue, and the next in line is woken and judged the same way (`LockEdges`:
+  "queued lock at the limit", "queued interruptibly at the limit", "queued timed at the limit", "after them").
 
 ### `LockSupport` (`LockSupports`)
 
@@ -584,6 +608,15 @@ One script, run on both; rules hold for both unless noted.
   breaks it too ("broken after flagged").
 - An action's exception propagates to the last arriver and breaks the barrier for the
   others ("action throws", "action broke it", "last runs action", "first sees broken").
+- A barrier found broken reports that before looking at the flag, which stays set
+  (`SynchronizerEdges`: "broken and flagged"). A timeout of zero with the flag set is
+  `InterruptedException` and breaks the barrier ("barrier zero flagged", "broken by that"); a null unit
+  throws first and breaks nothing ("barrier null unit flagged", "not broken by a null unit").
+- While the action runs, `getNumberWaiting`, `isBroken`, `reset` and further `await`s wait for it, in
+  `WAITING` state, deaf to interrupts until then and with no regard to a timeout (`getParties` does
+  not wait). An interrupt during that wait is honoured on arrival: `InterruptedException`, barrier broken
+  (`SynchronizerEdges`: "parties during action", "getNumberWaiting waited", "reset waited",
+  "interrupted while the action runs: still", "late interrupted arrival").
 
 ### `Semaphore` (`Semaphores`)
 
@@ -606,7 +639,9 @@ One script, run on both; rules hold for both unless noted.
 - `Exchanger`: null values pass both ways ("null both ways"), timeout zero throws
   `TimeoutException` when alone ("zero timeout"), and interrupts follow G5 ("flagged",
   "interrupted"). An interrupted `exchange` leaves the exchanger usable ("usable after
-  interrupt").
+  interrupt"). The flag is looked at on entry, whoever is waiting and whatever the timeout, and a partner
+  already waiting stays there (`SynchronizerEdges`: "exchange zero flagged", "exchange flagged, partner
+  waiting", "partner still there").
 - `Phaser` bracket: `[phase = P parties = N arrived = A]`. Constructor: negative parties or
   above 65535: `IllegalArgumentException: Illegal number of parties` ("negative parties",
   "too many parties").
@@ -634,6 +669,22 @@ One script, run on both; rules hold for both unless noted.
   when the root does ("all advanced"); an emptied child leaves its parent without terminating it
   ("emptied child"); termination reaches every child ("terminate from root"). A child of a
   terminated parent is terminated ("register under terminated parent").
+- `forceTermination` only sets the sign bit, so the phase number and that phase's arrivals still
+  show, unlike a termination by advance, where arrivals read 0 (`PhaserEdges`: "forced with an arrival",
+  "forced at phase 2", "last deregister calls hook").
+- A hook that throws leaves the phase unadvanced and fully arrived, for good: arrivals are refused as
+  unregistered, the hook is not called again, `register` and `awaitAdvance` wait until a
+  `forceTermination` releases them (`PhaserEdges`: "after the throw", "arrive after the throw", "hook not
+  called again", "register released by force", "awaitAdvance released by force").
+- A hook runs with nothing held. While it runs, the getters and `toString` answer at once and show the
+  phase fully arrived; every arrival, on the root or an arrived child, is refused as unregistered at once;
+  `bulkRegister(0)`, a wait for another phase and a timed wait's timeout are all unaffected; `register`,
+  empty child or not, and `awaitAdvance` of this phase wait for the advance, as `WAITING`
+  (`PhaserEdges`: every "during hook" and "after hook" line, "child arrive during hook", "child register after
+  hook", "register during empty hook"). `forceTermination` works during a hook and wins over what the
+  hook returns (`PhaserEdges`: "force during hook", "hook ends after force", "hook forces", "hook forces and ends").
+- `register` on a child whose parties have all arrived, with the root still waiting, waits for the
+  advance (`PhaserEdges`: "register on an arrived child waited").
 
 ## `ThreadLocalRandom`, `TimeUnit`
 
@@ -856,8 +907,27 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   LazyVM's frame limit is 4094. This does not cover user code: a chain in which each dependent's function calls `complete` on the
   next future is ordinary recursion, overflows on the oracle too, and is not tested.
 
+## Decisions checked against the oracle
+
+Two questions the Javadoc leaves open, where a simpler answer looked acceptable and was checked before
+being kept. Neither was: both are now what the oracle does.
+
+- **A queued reader at the 65535 limit.** The first idea was to leave it waiting until the count fell. The
+  oracle throws at once, so a queued reader fails like a newcomer ("queued lock at the limit").
+- **A `Phaser` hook under the phaser's monitor.** The first idea was to run it holding the monitor, as
+  calls from inside a hook are unspecified. But calls from *other* threads are observable: under a monitor
+  an arrival during a blocked hook would wait and then succeed, where the oracle refuses it at once, and a
+  `forceTermination` would have to wait for the hook. So it runs with nothing held ("during hook: arrive",
+  "force during hook"). The same check showed that a `CyclicBarrier` action is the opposite case: it does keep
+  the others out, getters included ("getNumberWaiting waited").
+
 ## What is not pinned
 
+- **A non-fair newcomer behind an old queue head** (`Turnstile`: it may overtake a head younger than one VM
+  lock slice, 5 ms, and queues after that). This is how LazyVM keeps a thread looping on a lock from
+  starving the others, and spares a thread switch per critical section, but it is not an oracle rule, and
+  its only visible effect is how evenly turns are shared. Pinning that takes a ratio with a margin, which would
+  be flaky, so no test holds it. `tests/java/thread/Fairness` holds the same rule for monitors only.
 - **Nondeterministic on the oracle**: the first key into an empty `ConcurrentSkipListMap` or `ConcurrentSkipListSet` when it is
   not `Comparable`. Most runs accept it, and some throw `ClassCastException`. The tests do not touch it, and either answer is
   fine for LazyVM.
