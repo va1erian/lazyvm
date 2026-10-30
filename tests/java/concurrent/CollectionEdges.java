@@ -177,6 +177,22 @@ public class CollectionEdges {
             o.remove(8);
             return o + " " + new PriorityBlockingQueue<>(Arrays.asList(5, 3, 8, 1, 9, 2));
         });
+        show("iterator removes that very element", () -> {
+            PriorityBlockingQueue<String> o = new PriorityBlockingQueue<>(2, (x, y) -> 0);
+            String one = new String("same"), two = new String("same");
+            o.add(one);
+            o.add(two);
+            Iterator<String> i = o.iterator();
+            i.next();
+            String held = i.next();
+            i.remove();
+            return o.size() + " " + (o.peek() == one) + " " + (held == two);
+        });
+        LinkedBlockingDeque<String> d = new LinkedBlockingDeque<>();
+        d.add("x");
+        Thread.currentThread().interrupt();
+        show("deque timed poll flagged, element ready", () -> d.pollFirst(0, TimeUnit.SECONDS));
+        show("left in the deque", () -> Thread.currentThread().isInterrupted() + " " + d);
         SynchronousQueue<String> s = new SynchronousQueue<>();
         String[] got = new String[1];
         Thread taker = new Thread(() -> { try { got[0] = s.take(); } catch (InterruptedException e) { got[0] = "interrupted"; } });

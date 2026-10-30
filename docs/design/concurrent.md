@@ -565,7 +565,7 @@ One script, run on both; rules hold for both unless noted.
 - Unlike the two queues above, `takeFirst` with an element ready and `putFirst` with
   room do not look at the flag, which stays set ("takeFirst flagged, element ready",
   "putFirst flagged, room", "flag kept by uninterruptible put"). Timed forms throw when
-  flagged ("timed offerFirst flagged"); so does a `take` that must wait ("interrupted").
+  flagged ("timed offerFirst flagged", `CollectionEdges`: "deque timed poll flagged, element ready"); so does a `take` that must wait ("interrupted").
 - `removeFirstOccurrence`, `removeLastOccurrence`, `remove(Object)`, `contains` with
   null: false ("first null", "last null", "remove null", "contains null").
 - `descendingIterator` is reverse order and supports `remove` ("descending", "removed tail").
@@ -581,7 +581,8 @@ One script, run on both; rules hold for both unless noted.
   stays empty ("first non-comparable", "after failure"). A mismatch throws with the new
   element as `compareTo`'s receiver ("second mismatch").
 - Iterators are snapshots ("iterator is a snapshot") and support `remove` ("iterator
-  remove"). `take`, `poll` and `drainTo` follow priority order ("take order", "drain
+  remove"), which takes out that very element, not an equal one (`CollectionEdges`: "iterator removes
+  that very element"). `take`, `poll` and `drainTo` follow priority order ("take order", "drain
   order"). Ties are unspecified.
 - `DelayQueue`: `peek` and `element` show the head though unexpired ("peek shows
   unexpired head"), `size` counts it ("size counts unexpired"); `poll`, `remove()` and
