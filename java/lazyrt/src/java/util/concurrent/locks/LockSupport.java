@@ -6,7 +6,7 @@ import lazy.internal.Atomics;
 /** The permit lives in the VM's thread table (docs/design/threads.md); the blocker in the Thread. */
 public class LockSupport {
     // A private field of another package's class, so through the same door as the atomics.
-    private static final Field BLOCKER = Atomics.field(Thread.class, "blockedOn");
+    private static final Field BLOCKER = Atomics.field(Thread.class, "parkedFor");
 
     private LockSupport() {
     }

@@ -4,13 +4,15 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Arrivals count down under a lock. A thread waits on the {@link Round} it joined: the round ends
- * when the last party arrives, or broken. The barrier action runs holding the lock, so during it
- * the others wait in WAITING state, the getters too (concurrent.md, "CyclicBarrier").
+ * Arrivals count down under a lock. A blocked arrival is told directly how its round ended, as it
+ * may only get the lock back after later rounds have come and gone. The barrier action runs holding
+ * the lock, so during it the others wait in WAITING state, the getters too (concurrent.md,
+ * "CyclicBarrier").
  */
 public class CyclicBarrier {
-    /** One trip of the barrier; a reset or a completed trip starts a new one. */
-    private static final class Round {
+    private static final class Arrival {
+        Arrival next;
+        boolean over;
         boolean broken;
     }
 
@@ -19,7 +21,9 @@ public class CyclicBarrier {
     private final int parties;
     private final Runnable action;
     private int missing;
-    private Round round = new Round();
+    private boolean broken;
+    /** Those blocked in the current round. */
+    private Arrival blocked;
 
     public CyclicBarrier(int parties, Runnable barrierAction) {
         if (parties <= 0) {
@@ -55,20 +59,23 @@ public class CyclicBarrier {
             throws InterruptedException, BrokenBarrierException, TimeoutException {
         lock.lock();
         try {
-            Round mine = round;
-            if (mine.broken) {
+            if (broken) {
                 throw new BrokenBarrierException();
             }
             if (Thread.interrupted()) {
-                breakRound();
+                endRound(true);
                 throw new InterruptedException();
             }
+            // Before the count moves: running out of memory here must leave the round as it was.
+            Arrival me = missing == 1 ? null : new Arrival();
             int index = --missing;
             if (index == 0) {
                 finishRound();
                 return 0;
             }
-            waitFor(mine, timed, nanos);
+            me.next = blocked;
+            blocked = me;
+            waitFor(me, timed, nanos);
             return index;
         } finally {
             lock.unlock();
@@ -84,15 +91,11 @@ public class CyclicBarrier {
             }
             done = true;
         } finally {
-            if (done) {
-                startRound();
-            } else {
-                breakRound();
-            }
+            endRound(!done);
         }
     }
 
-    private void waitFor(Round mine, boolean timed, long nanos)
+    private void waitFor(Arrival me, boolean timed, long nanos)
             throws InterruptedException, BrokenBarrierException, TimeoutException {
         long left = nanos;
         for (;;) {
@@ -103,34 +106,34 @@ public class CyclicBarrier {
                     left = tripped.awaitNanos(left);
                 }
             } catch (InterruptedException e) {
-                if (mine == round && !mine.broken) {
-                    breakRound();
+                if (!me.over) {
+                    endRound(true);
                     throw e;
                 }
                 // The round was over before the interrupt: it stays pending for what comes next.
                 Thread.currentThread().interrupt();
             }
-            if (mine.broken) {
-                throw new BrokenBarrierException();
-            }
-            if (mine != round) {
+            if (me.over) {
+                if (me.broken) {
+                    throw new BrokenBarrierException();
+                }
                 return;
             }
             if (timed && left <= 0) {
-                breakRound();
+                endRound(true);
                 throw new TimeoutException();
             }
         }
     }
 
-    private void breakRound() {
-        round.broken = true;
-        missing = parties;
-        tripped.signalAll();
-    }
-
-    private void startRound() {
-        round = new Round();
+    /** Tells those blocked how it ended. A broken barrier stays so until {@link #reset}. */
+    private void endRound(boolean asBroken) {
+        for (Arrival a = blocked; a != null; a = a.next) {
+            a.over = true;
+            a.broken = asBroken;
+        }
+        blocked = null;
+        broken = asBroken;
         missing = parties;
         tripped.signalAll();
     }
@@ -138,7 +141,7 @@ public class CyclicBarrier {
     public boolean isBroken() {
         lock.lock();
         try {
-            return round.broken;
+            return broken;
         } finally {
             lock.unlock();
         }
@@ -147,8 +150,8 @@ public class CyclicBarrier {
     public void reset() {
         lock.lock();
         try {
-            breakRound();
-            startRound();
+            endRound(true);
+            broken = false;
         } finally {
             lock.unlock();
         }

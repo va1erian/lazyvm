@@ -15,6 +15,10 @@ import lazy.internal.Turnstile;
 class HeapCore<E> implements Turnstile.Gate {
     final PriorityQueue<E> heap;
     private final Turnstile takers = new Turnstile(false, this, this);
+    /** What the last look at the head saw, for {@link #patience}: a look can run user code. */
+    private long seenDelay;
+    /** A first taker whose look on the way in counts as its first turn at the gate. */
+    private Turnstile.Waiter justLooked;
 
     HeapCore(PriorityQueue<E> heap) {
         this.heap = heap;
@@ -27,19 +31,23 @@ class HeapCore<E> implements Turnstile.Gate {
 
     private E pollReady() {
         E head = heap.peek();
-        return head == null || delayOf(head) > 0 ? null : heap.poll();
+        seenDelay = head == null ? Long.MAX_VALUE : delayOf(head);
+        return seenDelay > 0 ? null : heap.poll();
     }
 
     @SuppressWarnings("unchecked")
     public boolean enter(Turnstile.Waiter w) {
         LinkedCore.Slot<E> s = (LinkedCore.Slot<E>) w;
+        if (justLooked == w) {
+            justLooked = null;
+            return false;
+        }
         s.item = pollReady();
         return s.item != null;
     }
 
     public long patience(Turnstile.Waiter w) {
-        E head = heap.peek();
-        return head == null ? Long.MAX_VALUE : delayOf(head);
+        return seenDelay;
     }
 
     /** The heap only compares from the second element on; concurrent.md rejects a first one too. */
@@ -56,7 +64,10 @@ class HeapCore<E> implements Turnstile.Gate {
             dropLastSlot();
             throw refused;
         }
-        takers.wakeHead();
+        // Behind the head it changes nothing for a sleeper; a shared waiter wakes the next as it goes.
+        if (heap.peek() == e) {
+            takers.wakeHead();
+        }
         return true;
     }
 
@@ -75,20 +86,24 @@ class HeapCore<E> implements Turnstile.Gate {
 
     /** The flag counts even with an element ready (concurrent.md G5). */
     E take(boolean timed, long nanos) throws InterruptedException {
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
         LinkedCore.Slot<E> w;
         synchronized (this) {
+            boolean first = takers.length() == 0;
             if (takers.open()) {
                 E e = pollReady();
                 if (e != null) {
                     return e;
                 }
+            } else if (!heap.isEmpty()) {
+                delayOf(heap.peek());
             }
             w = new LinkedCore.Slot<>(null, true);
             takers.enqueue(w);
+            justLooked = first ? w : null;
         }
         if (takers.pass(w, true, timed, deadline) == Turnstile.INTERRUPTED) {
             throw new InterruptedException();

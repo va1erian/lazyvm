@@ -1,6 +1,5 @@
 package lazy.internal;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.locks.LockSupport;
@@ -17,7 +16,11 @@ import java.util.concurrent.locks.LockSupport;
  * <p>A newcomer in non-fair mode may overtake a queue whose head is younger than one VM lock
  * slice. That spares a thread switch per critical section while a thread loops on a contended
  * lock. Once the head is older, newcomers queue and park, so the VM reaches the head; without this
- * a looping thread that holds the lock at each safepoint starves everyone.
+ * a looping thread that holds the lock at each safepoint starves everyone. Overtaking stays allowed
+ * at any age when the head could not go anyway, and for a wait too short to see the head go.
+ *
+ * <p>Queueing allocates nothing: a waiter is its own list link, so running out of memory can only
+ * stop a thread before it joins, never leave a list half changed.
  */
 public final class Turnstile {
     public static final int ENTERED = 0;
@@ -27,15 +30,24 @@ public final class Turnstile {
     private static final long SLICE_NANOS = 5_000_000L;
 
     /**
-     * Lets the waiter in, updating the owner's state, if it can; the monitor is held. An
-     * {@code Error} from here reaches the waiter's caller, and the waiter leaves the queue.
+     * Lets the waiter in, updating the owner's state, if it can; the monitor is held. Anything
+     * thrown from {@link #enter} reaches the waiter's caller, and the waiter leaves the queue.
      */
     public interface Gate {
         boolean enter(Waiter w);
 
-        /** How long the head may sleep before {@link #enter} could say yes unprompted. */
+        /**
+         * Asked right after {@link #enter} said no: how long the head may sleep before it could say
+         * yes unprompted. It answers from what {@code enter} saw, so it runs no user code and cannot
+         * throw: the waiter is not in a position to leave the queue here.
+         */
         default long patience(Waiter w) {
             return Long.MAX_VALUE;
+        }
+
+        /** Whether {@link #enter} would let this head in now; one that would not holds up no newcomer. */
+        default boolean ready(Waiter w) {
+            return true;
         }
     }
 
@@ -46,14 +58,70 @@ public final class Turnstile {
         /** Its entry may leave room for the next waiter, who is then woken as well. */
         public final boolean shared;
         long since;
+        private Line line;
+        private Waiter before;
+        private Waiter after;
 
         public Waiter(int count, boolean shared) {
             this.count = count;
             this.shared = shared;
         }
+
+        /** The one behind it in its line. */
+        public Waiter next() {
+            return after;
+        }
     }
 
-    private final ArrayDeque<Waiter> queue = new ArrayDeque<>();
+    /** Waiters in arrival order, linked through themselves; a waiter is in one line at a time. */
+    public static final class Line {
+        private Waiter first;
+        private Waiter last;
+        private int size;
+
+        public Waiter first() {
+            return first;
+        }
+
+        public int size() {
+            return size;
+        }
+
+        public boolean holds(Waiter w) {
+            return w.line == this;
+        }
+
+        public void addLast(Waiter w) {
+            w.line = this;
+            w.before = last;
+            if (last == null) {
+                first = w;
+            } else {
+                last.after = w;
+            }
+            last = w;
+            size++;
+        }
+
+        public void remove(Waiter w) {
+            if (w.before == null) {
+                first = w.after;
+            } else {
+                w.before.after = w.after;
+            }
+            if (w.after == null) {
+                last = w.before;
+            } else {
+                w.after.before = w.before;
+            }
+            w.line = null;
+            w.before = null;
+            w.after = null;
+            size--;
+        }
+    }
+
+    private final Line queue = new Line();
     private final Gate gate;
     private final Object monitor;
     public final boolean fair;
@@ -70,10 +138,24 @@ public final class Turnstile {
         this.monitor = monitor;
     }
 
+    /** A deadline for {@link #pass}. Clamped, as a huge negative wait would wrap into the far future. */
+    public static long deadline(long nanos) {
+        return System.nanoTime() + Math.max(nanos, 0);
+    }
+
     /** Whether a newcomer may try the resource instead of queueing. */
     public boolean open() {
-        Waiter head = queue.peekFirst();
-        return head == null || !fair && System.nanoTime() - head.since < SLICE_NANOS;
+        Waiter head = queue.first;
+        return head == null || !fair && (System.nanoTime() - head.since < SLICE_NANOS || !gate.ready(head));
+    }
+
+    /** The same for one that will wait at most this long: the head would not have had its turn by then. */
+    public boolean open(boolean timed, long nanos) {
+        return open() || !fair && timed && nanos < SLICE_NANOS;
+    }
+
+    public Waiter head() {
+        return queue.first;
     }
 
     /** Joins the queue; the monitor is held. Follow with {@link #pass} outside it. */
@@ -85,9 +167,8 @@ public final class Turnstile {
 
     /** To be called after any change that may let the head in; the monitor is held. */
     public void wakeHead() {
-        Waiter head = queue.peekFirst();
-        if (head != null) {
-            LockSupport.unpark(head.thread);
+        if (queue.first != null) {
+            LockSupport.unpark(queue.first.thread);
         }
     }
 
@@ -103,9 +184,7 @@ public final class Turnstile {
             for (;;) {
                 long left;
                 synchronized (monitor) {
-                    if (admit(w)) {
-                        return ENTERED;
-                    }
+                    // The flag first: an interrupted waiter does not ask the gate again.
                     if (Thread.interrupted()) {
                         if (interruptible) {
                             leave(w);
@@ -114,12 +193,15 @@ public final class Turnstile {
                         // Left set, the flag would make every park below return at once.
                         flagged = true;
                     }
+                    if (admit(w)) {
+                        return ENTERED;
+                    }
                     left = deadline - System.nanoTime();
                     if (timed && left <= 0) {
                         leave(w);
                         return TIMED_OUT;
                     }
-                    if (queue.peekFirst() == w) {
+                    if (queue.first == w) {
                         long patience = gate.patience(w);
                         left = timed ? Math.min(left, patience) : patience;
                     } else if (!timed) {
@@ -140,7 +222,7 @@ public final class Turnstile {
     }
 
     private boolean admit(Waiter w) {
-        if (queue.peekFirst() != w) {
+        if (queue.first != w) {
             return false;
         }
         try {
@@ -151,7 +233,7 @@ public final class Turnstile {
             leave(w);
             throw e;
         }
-        queue.pollFirst();
+        queue.remove(w);
         if (w.shared) {
             wakeHead();
         }
@@ -164,7 +246,7 @@ public final class Turnstile {
     }
 
     public int length() {
-        return queue.size();
+        return queue.size;
     }
 
     public boolean contains(Thread t) {
@@ -172,7 +254,7 @@ public final class Turnstile {
             throw new NullPointerException();
         }
         synchronized (monitor) {
-            for (Waiter w : queue) {
+            for (Waiter w = queue.first; w != null; w = w.after) {
                 if (w.thread == t) {
                     return true;
                 }
@@ -181,11 +263,11 @@ public final class Turnstile {
         }
     }
 
-    /** The queued threads whose {@code shared} is one of the two asked for. */
+    /** The queued threads whose {@code shared} is one of the two asked for, latest arrival first. */
     public Collection<Thread> threads(boolean shared, boolean exclusive) {
         ArrayList<Thread> out = new ArrayList<>();
         synchronized (monitor) {
-            for (Waiter w : queue) {
+            for (Waiter w = queue.last; w != null; w = w.before) {
                 if (w.shared ? shared : exclusive) {
                     out.add(w.thread);
                 }

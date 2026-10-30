@@ -27,6 +27,10 @@ getNumberWaiting waited = = 0 flag=false
 isBroken waited = true flag=false
 reset waited = = done flag=false
 late interrupted arrival = ! java.lang.InterruptedException flag=false
+rounds: the last arriver = 0 flag=false
+rounds: the waiter! java.util.concurrent.BrokenBarrierException
+rounds: await in the action java.util.concurrent.TimeoutException, broken true
+rounds: after them = false 0 flag=false
 negative flagged ! java.lang.IllegalArgumentException flag=true
 timed null unit flagged ! java.lang.NullPointerException flag=true
 negative and null unit ! java.lang.IllegalArgumentException flag=true

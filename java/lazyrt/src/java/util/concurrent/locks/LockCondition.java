@@ -1,6 +1,5 @@
 package java.util.concurrent.locks;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -16,7 +15,7 @@ import lazy.internal.Turnstile;
 final class LockCondition implements Condition {
     final LockCore core;
     private final Turnstile turnstile;
-    private final ArrayDeque<Turnstile.Waiter> waiters = new ArrayDeque<>();
+    private final Turnstile.Line waiters = new Turnstile.Line();
 
     LockCondition(LockCore core) {
         this.core = core;
@@ -34,6 +33,7 @@ final class LockCondition implements Condition {
     }
 
     public long awaitNanos(long nanosTimeout) throws InterruptedException {
+        // Not clamped, for the answer alone: the oracle's for a huge negative wait wraps to positive.
         long deadline = System.nanoTime() + nanosTimeout;
         if (block(true, true, nanosTimeout) == Turnstile.INTERRUPTED) {
             throw new InterruptedException();
@@ -46,8 +46,10 @@ final class LockCondition implements Condition {
     }
 
     public boolean awaitUntil(Date deadline) throws InterruptedException {
-        long millis = deadline.getTime() - System.currentTimeMillis();
-        return timedAwait(TimeUnit.MILLISECONDS.toNanos(millis));
+        long at = deadline.getTime();
+        long now = System.currentTimeMillis();
+        // A date far enough in the past would wrap the subtraction into a far future.
+        return timedAwait(at <= now ? 0 : TimeUnit.MILLISECONDS.toNanos(at - now));
     }
 
     private boolean timedAwait(long nanos) throws InterruptedException {
@@ -60,7 +62,7 @@ final class LockCondition implements Condition {
 
     /** The whole wait; the lock is held again on return. ENTERED here means it was signalled. */
     private int block(boolean interruptible, boolean timed, long nanos) {
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         Turnstile.Waiter w;
         // On the oracle the flag comes before the ownership check.
         if (interruptible && Thread.interrupted()) {
@@ -87,7 +89,7 @@ final class LockCondition implements Condition {
         for (;;) {
             long left;
             synchronized (turnstile) {
-                if (!waiters.contains(w)) {
+                if (!waiters.holds(w)) {
                     result = Turnstile.ENTERED;
                     break;
                 }
@@ -125,9 +127,8 @@ final class LockCondition implements Condition {
     public void signal() {
         synchronized (turnstile) {
             core.checkOwner();
-            Turnstile.Waiter w = waiters.pollFirst();
-            if (w != null) {
-                turnstile.enqueue(w);
+            if (waiters.first() != null) {
+                moveToQueue(waiters.first(), Turnstile.ENTERED);
             }
         }
     }
@@ -135,9 +136,8 @@ final class LockCondition implements Condition {
     public void signalAll() {
         synchronized (turnstile) {
             core.checkOwner();
-            Turnstile.Waiter w;
-            while ((w = waiters.pollFirst()) != null) {
-                turnstile.enqueue(w);
+            while (waiters.first() != null) {
+                moveToQueue(waiters.first(), Turnstile.ENTERED);
             }
         }
     }
@@ -149,7 +149,7 @@ final class LockCondition implements Condition {
     Collection<Thread> threads() {
         ArrayList<Thread> out = new ArrayList<>();
         synchronized (turnstile) {
-            for (Turnstile.Waiter w : waiters) {
+            for (Turnstile.Waiter w = waiters.first(); w != null; w = w.next()) {
                 out.add(w.thread);
             }
         }

@@ -17,6 +17,10 @@ public class Semaphore implements java.io.Serializable {
             return take(w.count);
         }
 
+        public boolean ready(Turnstile.Waiter w) {
+            return count >= w.count;
+        }
+
         boolean take(int n) {
             if (count < n) {
                 return false;
@@ -45,10 +49,10 @@ public class Semaphore implements java.io.Serializable {
     }
 
     private int take(int n, boolean interruptible, boolean timed, long nanos) {
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         Turnstile.Waiter w;
         synchronized (turnstile) {
-            if (turnstile.open() && permits.take(n)) {
+            if (turnstile.open(timed, nanos) && permits.take(n)) {
                 return Turnstile.ENTERED;
             }
             w = turnstile.enqueue(new Turnstile.Waiter(n, true));

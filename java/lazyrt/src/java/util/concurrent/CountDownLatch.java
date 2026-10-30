@@ -1,5 +1,7 @@
 package java.util.concurrent;
 
+import lazy.internal.Turnstile;
+
 /** A count on a private monitor: waiters use wait/notifyAll, and nothing else can touch that monitor. */
 public class CountDownLatch {
     private final Object mu = new Object();
@@ -25,7 +27,7 @@ public class CountDownLatch {
     }
 
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = Turnstile.deadline(unit.toNanos(timeout));
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }

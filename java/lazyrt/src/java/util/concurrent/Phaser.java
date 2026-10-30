@@ -1,5 +1,7 @@
 package java.util.concurrent;
 
+import lazy.internal.Turnstile;
+
 /**
  * Every phaser of a tree shares its root's monitor, and the phase lives in the root alone, so all
  * tiers advance in one step. Arrivals are counted per node and only count for the phase they were
@@ -10,7 +12,7 @@ package java.util.concurrent;
  * waits for the phase to change (concurrent.md "Phaser": "hook ..." lines).
  */
 public class Phaser {
-    private static final int MAX_PARTIES = 65535;
+    private static final int PARTY_LIMIT = 65535;
 
     private final Object mu;
     private final Phaser parent;
@@ -21,6 +23,10 @@ public class Phaser {
     private int arrivedIn;
     /** At the root: the hook is running or has thrown, and the phase has not moved on. */
     private boolean inHook;
+    /** At the root: a hook ended it, so the arrivals of the phase before still show. */
+    private boolean endedByHook;
+    /** Its first party is being registered with the parent, which can wait: others wait for that. */
+    private boolean joining;
 
     public Phaser() {
         this(null, 0);
@@ -35,7 +41,7 @@ public class Phaser {
     }
 
     public Phaser(Phaser parent, int parties) {
-        if (parties < 0 || parties > MAX_PARTIES) {
+        if (parties < 0 || parties > PARTY_LIMIT) {
             throw new IllegalArgumentException("Illegal number of parties");
         }
         this.parent = parent;
@@ -63,22 +69,48 @@ public class Phaser {
             if (n == 0 || root.phase < 0) {
                 return root.phase;
             }
-            // A child whose parties have all arrived cannot take a new one in this phase: its
-            // arrival would count twice. And nothing registers during the hook. Javadoc: this may wait.
-            while (root.inHook || parties > 0 && arrivedNow() == parties) {
-                awaitChange(root.phase);
-                if (root.phase < 0) {
-                    return root.phase;
-                }
-            }
-            if (n > MAX_PARTIES - parties) {
+            awaitRoom();
+            if (root.phase >= 0 && n > PARTY_LIMIT - parties) {
                 throw new IllegalStateException("Attempt to register more than 65535 parties for " + this);
             }
-            if (parties == 0 && parent != null) {
-                parent.add(1);
+            if (root.phase >= 0 && parties == 0 && parent != null) {
+                joinParent();
             }
-            parties += n;
+            // Joining may have waited, and a termination does not change the count.
+            if (root.phase >= 0) {
+                parties += n;
+            }
             return root.phase;
+        }
+    }
+
+    /**
+     * Waits, deaf to interrupts, until a registration may go in or the phaser has ended. A child
+     * whose parties have all arrived cannot take a new one in this phase: its arrival would count
+     * twice. And nothing registers during the hook. Javadoc: this may wait.
+     */
+    private void awaitRoom() {
+        boolean flagged = false;
+        while (root.phase >= 0 && (root.inHook || joining || parties > 0 && arrivedNow() == parties)) {
+            try {
+                mu.wait();
+            } catch (InterruptedException e) {
+                flagged = true;
+            }
+        }
+        if (flagged) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** Parties is still 0 during this, and the monitor may be let go: one registers, the others wait. */
+    private void joinParent() {
+        joining = true;
+        try {
+            parent.add(1);
+        } finally {
+            joining = false;
+            mu.notifyAll();
         }
     }
 
@@ -91,31 +123,37 @@ public class Phaser {
     }
 
     public int arriveAndAwaitAdvance() {
-        int now = arrival(false);
-        if (now < 0) {
-            return now;
-        }
-        synchronized (mu) {
-            return awaitChange(now);
-        }
-    }
-
-    private int arrival(boolean leaving) {
         int now;
         synchronized (mu) {
             now = root.phase;
             if (now < 0) {
                 return now;
             }
-            if (parties - arrivedNow() <= 0) {
-                throw new IllegalStateException("Attempted arrival of unregistered party for " + this);
+            if (!count(false, now)) {
+                return awaitChange(now);
             }
-            if (!step(leaving, now)) {
+        }
+        return root.advance(now);
+    }
+
+    private int arrival(boolean leaving) {
+        int now;
+        synchronized (mu) {
+            now = root.phase;
+            if (now < 0 || !count(leaving, now)) {
                 return now;
             }
         }
         root.advance(now);
         return now;
+    }
+
+    /** An arrival or departure of a registered party; true if it was the last the tree waited for. */
+    private boolean count(boolean leaving, int now) {
+        if (parties - arrivedNow() <= 0) {
+            throw new IllegalStateException("Attempted arrival of unregistered party for " + this);
+        }
+        return step(leaving, now);
     }
 
     /** Counts one arrival or departure here and up the tree; true if the whole tree has arrived. */
@@ -137,16 +175,20 @@ public class Phaser {
         return true;
     }
 
-    private void advance(int now) {
+    /** Runs the hook and moves on. The next phase's number is the answer even when the hook ended it. */
+    private int advance(int now) {
         boolean end = onAdvance(now, parties);
         int next = (now + 1) & Integer.MAX_VALUE;
         synchronized (mu) {
             // forceTermination during the hook wins: the phase stays as it left it.
-            if (phase >= 0) {
-                phase = end ? next | Integer.MIN_VALUE : next;
-                inHook = false;
-                mu.notifyAll();
+            if (phase < 0) {
+                return phase;
             }
+            phase = end ? next | Integer.MIN_VALUE : next;
+            endedByHook = end;
+            inHook = false;
+            mu.notifyAll();
+            return next;
         }
     }
 
@@ -189,7 +231,7 @@ public class Phaser {
 
     public int awaitAdvanceInterruptibly(int phase, long timeout, TimeUnit unit)
             throws InterruptedException, TimeoutException {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = Turnstile.deadline(unit.toNanos(timeout));
         if (phase < 0) {
             return phase;
         }
@@ -249,7 +291,8 @@ public class Phaser {
 
     private int arrivedNow() {
         // forceTermination sets only the sign bit: the arrivals of that phase still show.
-        return ((arrivedIn ^ root.phase) & Integer.MAX_VALUE) == 0 ? arrived : 0;
+        int in = root.endedByHook ? arrivedIn + 1 : arrivedIn;
+        return ((in ^ root.phase) & Integer.MAX_VALUE) == 0 ? arrived : 0;
     }
 
     public String toString() {

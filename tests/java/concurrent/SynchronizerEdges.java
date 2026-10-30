@@ -232,11 +232,34 @@ public class SynchronizerEdges {
         show("micros sleep", () -> { TimeUnit.MICROSECONDS.sleep(1500); return "ok"; });
     }
 
+    /**
+     * The action holds the barrier: its reset ends the waiter's round as broken, and the next round
+     * ends as broken too, all before the waiter can run. A later round must not rewrite the first's end.
+     */
+    static void barrierRounds() throws Exception {
+        CyclicBarrier[] b = new CyclicBarrier[1];
+        String[] inAction = new String[2];
+        b[0] = new CyclicBarrier(2, () -> {
+            b[0].reset();
+            try { inAction[0] = "returned " + b[0].await(0, TimeUnit.SECONDS); }
+            catch (Exception e) { inAction[0] = n(e); }
+            inAction[1] = "broken " + b[0].isBroken();
+        });
+        String[] waiter = new String[1];
+        blocked(waiter, () -> b[0].await());
+        show("rounds: the last arriver", () -> b[0].await());
+        until(() -> waiter[0] != null);
+        System.out.println("rounds: the waiter" + waiter[0]);
+        System.out.println("rounds: await in the action " + inAction[0] + ", " + inAction[1]);
+        show("rounds: after them", () -> b[0].isBroken() + " " + b[0].getNumberWaiting());
+    }
+
     public static void main(String[] args) throws Exception {
         latches();
         exchangers();
         barrierOrder();
         barrierAction();
+        barrierRounds();
         semaphores();
         permitChain();
         headLeaves();

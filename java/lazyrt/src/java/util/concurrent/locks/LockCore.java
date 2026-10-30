@@ -44,22 +44,23 @@ final class LockCore implements Turnstile.Gate {
         return true;
     }
 
-    private boolean tryEnter(boolean shared, boolean barge) {
-        return shared ? tryRead(barge) : tryWrite(barge);
+    /** One attempt; {@code overtake} says whether the queue allows it, which a holder never asks. */
+    private boolean tryEnter(boolean shared, boolean overtake) {
+        return shared ? tryRead(overtake) : tryWrite(overtake);
     }
 
-    private boolean tryRead(boolean barge) {
+    private boolean tryRead(boolean overtake) {
         Thread me = Thread.currentThread();
         // A thread holding the lock never queues for more of it, or it would wait for itself.
         boolean mine = owner == me || holdsOf(me) != null;
-        if (!mine && (owner != null || !barge && !turnstile.open())) {
+        if (!mine && (owner != null || !overtake)) {
             return false;
         }
         addRead(me);
         return true;
     }
 
-    private boolean tryWrite(boolean barge) {
+    private boolean tryWrite(boolean overtake) {
         Thread me = Thread.currentThread();
         if (owner == me) {
             if (writeHolds == limit) {
@@ -68,7 +69,7 @@ final class LockCore implements Turnstile.Gate {
             writeHolds++;
             return true;
         }
-        if (owner != null || readHolds != 0 || !barge && !turnstile.open()) {
+        if (owner != null || readHolds != 0 || !overtake) {
             return false;
         }
         owner = me;
@@ -96,11 +97,20 @@ final class LockCore implements Turnstile.Gate {
         readHolds++;
     }
 
+    /** More readers would keep a writer waiting them out from ever going, however young it is. */
+    private boolean mayOvertake(boolean shared, boolean timed, long nanos) {
+        Turnstile.Waiter head = turnstile.head();
+        if (shared && readHolds != 0 && head != null && !head.shared) {
+            return false;
+        }
+        return turnstile.open(timed, nanos);
+    }
+
     private int acquire(boolean shared, boolean interruptible, boolean timed, long nanos) {
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         Turnstile.Waiter w;
         synchronized (turnstile) {
-            if (tryEnter(shared, false)) {
+            if (tryEnter(shared, mayOvertake(shared, timed, nanos))) {
                 return Turnstile.ENTERED;
             }
             w = turnstile.enqueue(new Turnstile.Waiter(1, shared));

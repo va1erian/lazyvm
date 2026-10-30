@@ -1,0 +1,47 @@
+stuck head: acquire = 2
+stuck head: acquire 3 = 0
+stuck head: uninterruptibly = 2
+stuck head: acquire 0 = 3
+stuck head: timed 0 = true 2
+stuck head: timed 200ms = true 2
+stuck head: more than free = false 3
+stuck head, fair: timed = false 3
+stuck head, fair: plain = true 2
+small job past a big one = through
+big job done true 5
+wait list [w0, w1, w2]
+lock queue [q2, q1, q0]
+after signalAll [w2, w1, w0, q2, q1, q0]
+semaphore queue [s2, s1, s0]
+rw queue [x1, r1, x0, r0]
+rw readers [r1, r0]
+rw writers [x1, x0]
+tryLock min nanos = false
+tryLock most negative days = false
+await min = false
+await most negative days = false
+awaitNanos min stays positive = true
+awaitUntil the earliest date = false true
+awaitUntil before 1970 = false
+tryAcquire min = false
+latch min = false
+latch most negative days = false
+phaser min = timed out
+free, old head, timed 0: true
+free, old head, timed 1 ns: true
+fair, queued head, timed 0: false
+write, free, old writer head: true
+read, free, old reader head: true
+semaphore, free, old head, timed 0: true
+timed read past a young writer waiting out readers: 0
+take ready true
+poll null looks 1
+poll 0 null looks 1
+asleep on a far head: looks 1
+one added behind the head: looks 1 0
+a second taker looks too: 2 WAITING
+first, interrupted: InterruptedException
+the second sleeps as head: looks 3 TIMED_WAITING
+added under a taker: looks 1 TIMED_WAITING
+look throws after a sleep: IllegalStateException
+the next taker still goes: took
