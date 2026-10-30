@@ -127,7 +127,7 @@ final class PoolWorkers {
             if (task == null) {
                 end(w, false);
             }
-            while (task != null || (task = nextTask()) != null) {
+            while (task != null || (task = nextTask(w)) != null) {
                 runTask(w, task);
                 task = null;
             }
@@ -180,8 +180,11 @@ final class PoolWorkers {
         }
     }
 
-    /** The next task, or null when this worker should end, which then no longer counts as listed. */
-    private Runnable nextTask() {
+    /**
+     * The next task, or null when this worker should end. It then leaves the list at once, under
+     * the same monitor as the decision, so two workers timing out together cannot both go.
+     */
+    private Runnable nextTask(Worker w) {
         boolean timedOut = false;
         for (;;) {
             boolean empty = queue.isEmpty();
@@ -189,11 +192,10 @@ final class PoolWorkers {
             long wait;
             synchronized (this) {
                 int size = workers.size();
-                if (state >= STOP || state == SHUTDOWN && empty) {
-                    return null;
-                }
                 timed = coreTimesOut || size > core;
-                if (size > max || timedOut && timed && (size > 1 || empty)) {
+                if (state >= STOP || state == SHUTDOWN && empty
+                        || size > max || timedOut && timed && (size > 1 || empty)) {
+                    workers.remove(w);
                     return null;
                 }
                 wait = size > 1 || empty ? keepAliveNanos : Math.max(keepAliveNanos, MIN_LAST_WORKER_WAIT);

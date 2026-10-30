@@ -109,8 +109,9 @@ final class ForkJoinCore {
     /** The user's factory runs outside the monitor. What it throws reaches whoever needed a worker. */
     private void createWorker() {
         boolean started = false;
+        ForkJoinWorkerThread w = null;
         try {
-            ForkJoinWorkerThread w = pool.getFactory().newThread(pool);
+            w = pool.getFactory().newThread(pool);
             if (w != null) {
                 synchronized (this) {
                     w.woken = true;
@@ -123,7 +124,11 @@ final class ForkJoinCore {
                 reserved--;
                 if (!started) {
                     waking--;
+                    if (w != null) {
+                        w.woken = false;
+                    }
                 }
+                maybeFinish();
             }
         }
     }

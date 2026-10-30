@@ -1,0 +1,136 @@
+ctor all bad ! java.lang.IllegalArgumentException
+ctor neg keep null unit ! java.lang.IllegalArgumentException
+ctor null queue null unit ! java.lang.NullPointerException
+setKeep -1 null ! java.lang.IllegalArgumentException
+setKeep 1 null ! java.lang.NullPointerException
+getKeep null ! java.lang.NullPointerException
+setKeep 0 null allowCore ! java.lang.IllegalArgumentException: Core threads must have nonzero keep alive times
+setMax equal core = 1
+remove null = false
+taskCount fresh = 0
+pool numbers apart = 3
+beforeThrows log = [before t active=1 done=0 cur=true]
+beforeThrows uncaught = [w1:java.lang.IllegalStateException: before]
+beforeThrows made = 2
+beforeThrows p = concurrent.ThreadPoolEdges$1@H[Running, pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 1]
+beforeThrows end = terminated size=0 concurrent.ThreadPoolEdges$1@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 1]
+afterThrows log = [before t active=1 done=0 cur=true, task, after t null active=1 done=0]
+afterThrows uncaught = [w1:java.lang.IllegalStateException: after]
+afterThrows made = 2
+afterThrows p = concurrent.ThreadPoolEdges$1@H[Running, pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 1]
+afterThrows end = terminated size=0 concurrent.ThreadPoolEdges$1@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 1]
+bothThrow log = [before t active=1 done=0 cur=true, task, after t java.lang.RuntimeException: task active=1 done=0]
+bothThrow uncaught = [w1:java.lang.IllegalStateException: after]
+bothThrow made = 2
+bothThrow p = concurrent.ThreadPoolEdges$1@H[Running, pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 1]
+bothThrow end = terminated size=0 concurrent.ThreadPoolEdges$1@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 1]
+sneaky log = [before t active=1 done=0 cur=true, task, after t java.io.IOException: io active=1 done=0]
+sneaky uncaught = [w1:java.lang.Error: java.io.IOException: io]
+sneaky made = 2
+sneaky p = concurrent.ThreadPoolEdges$1@H[Running, pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 1]
+sneaky end = terminated size=0 concurrent.ThreadPoolEdges$1@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 1]
+error log = [before t active=1 done=0 cur=true, task, after t java.lang.AssertionError: err active=1 done=0]
+error uncaught = [w1:java.lang.AssertionError: err]
+error made = 2
+error p = concurrent.ThreadPoolEdges$1@H[Running, pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 1]
+error end = terminated size=0 concurrent.ThreadPoolEdges$1@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 1]
+ok log = [before t active=1 done=0 cur=true, task, after t null active=1 done=0]
+ok uncaught = []
+ok made = 1
+ok p = concurrent.ThreadPoolEdges$1@H[Running, pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 1]
+ok end = terminated size=0 concurrent.ThreadPoolEdges$1@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 1]
+hook log (no workers) = [thread=true isTerminated=false isTerminating=true isShutdown=true size=0 s=concurrent.ThreadPoolEdges$2@H[Shutting down, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], await0=false]
+hook once = []
+hook throws in shutdown ! java.lang.IllegalStateException: hook
+after hook throw = concurrent.ThreadPoolEdges$3@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0] true
+after hook throw await = true
+during hook isTerminated = false
+during hook isTerminating = true
+during hook isShutdown = true
+during hook getPoolSize = (blocked)
+during hook getActiveCount = (blocked)
+during hook getLargestPoolSize = (blocked)
+during hook getCompletedTaskCount = (blocked)
+during hook getTaskCount = (blocked)
+during hook toString = (blocked)
+during hook await0 = (blocked)
+during hook shutdown = (blocked)
+during hook shutdownNow = (blocked)
+during hook prestart = false
+during hook setCore = ok
+during hook execute = (blocked)
+during hook getCore = 1
+after blocked hook = true
+hook flag after stop = true
+hook flag from task's own interrupt = true
+size inside factory = 0
+factory throws execute ! java.lang.IllegalStateException: factory
+factory throws state = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0] []
+factory throws prestart ! java.lang.IllegalStateException: factory
+factory throws all ! java.lang.IllegalStateException: factory
+factory throws terminated = true
+factory started thread ! java.lang.IllegalThreadStateException
+started state = 0 0
+null thread sync queue ! java.util.concurrent.RejectedExecutionException: Task s rejected from java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+null thread shutdown = java.util.concurrent.ThreadPoolExecutor@H[Shutting down, pool size = 0, active threads = 0, queued tasks = 1, completed tasks = 0] false
+null thread shutdownNow = [q] java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+factory ignoring runnable = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
+ignoring await = false
+after shutdown prestart = false
+after shutdown setCore = 2
+shutdown no interrupt = false false
+from inside task = [in task flag=false, after shutdown flag=false true, queued list=[never], after now flag=true]
+remove running = false
+remove queued = true
+remove original of submit = false
+remove future = true
+future after remove = false
+not yet = false
+remove cancelled after shutdown = true
+purge nothing = 0
+terminated = true
+size = 2
+idle left at shutdown = 1
+toString shutting = java.util.concurrent.ThreadPoolExecutor@H[Shutting down, pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
+await zero flagged running = false
+flag kept = true
+await neg = false
+await max = true
+finalize = true
+caller ran on main=true
+abort null task ! java.lang.NullPointerException
+abort null pool ! java.lang.NullPointerException
+caller null pool ! java.lang.NullPointerException
+discard nulls = ok
+oldest null pool ! java.lang.NullPointerException
+oldest null task ! java.lang.NullPointerException
+before raise = 1 q4
+raise with queued = 3 q2
+same core = 3
+raise beyond queue = 5
+lowered core = 1
+largest = 5
+core above max size = 3
+core above max reject ! java.util.concurrent.RejectedExecutionException: Task o rejected from java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 3, active threads = 3, queued tasks = 0, completed tasks = 0]
+core above max settles = 1
+grown = 3
+back to core = 1
+core stays = 1
+after allow off = 1
+abrupt replaced core0 = 2 size=1
+abrupt at shutdown core0 = 1
+abrupt at shutdown with queue core0 = 2 2
+abrupt replaced core1 = 2 size=1
+abrupt at shutdown core1 = 1
+abrupt at shutdown with queue core1 = 2 2
+zero keepalive = 0
+no drain = [a, b]
+no drain empty = 0
+offer throws ! java.lang.IllegalStateException: offer
+offer throws state = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+shutdown during offer ! java.util.concurrent.RejectedExecutionException: Task s rejected from java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+shutdown during offer state = java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0] []
+refusing = 2
+refusing third ! java.util.concurrent.RejectedExecutionException: Task t rejected from java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 2, active threads = 2, queued tasks = 0, completed tasks = 0]
+hand added = 0 false 1
+prestart serves it = true

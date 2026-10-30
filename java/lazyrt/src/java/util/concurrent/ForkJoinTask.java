@@ -370,18 +370,22 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         return tag;
     }
 
-    public final synchronized short setForkJoinTaskTag(short tag) {
-        short old = this.tag;
-        this.tag = tag;
-        return old;
+    public final short setForkJoinTaskTag(short tag) {
+        synchronized (this) {
+            short old = this.tag;
+            this.tag = tag;
+            return old;
+        }
     }
 
-    public final synchronized boolean compareAndSetForkJoinTaskTag(short e, short tag) {
-        if (this.tag != e) {
-            return false;
+    public final boolean compareAndSetForkJoinTaskTag(short e, short tag) {
+        synchronized (this) {
+            if (this.tag != e) {
+                return false;
+            }
+            this.tag = tag;
+            return true;
         }
-        this.tag = tag;
-        return true;
     }
 
     public static ForkJoinTask<?> adapt(Runnable runnable) {
