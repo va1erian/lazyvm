@@ -22,6 +22,10 @@ use crate::value::{Ref, Value};
 const HEADER_BYTES: usize = 16;
 /// The first collection happens once this much has been allocated.
 const MIN_GC_BYTES: usize = 4 << 20;
+/// A collection is due at least this much allocation after the last one.
+const MIN_GC_STEP: usize = 64 << 10;
+/// What a handler of `OutOfMemoryError` may allocate past the limit.
+const HANDLER_ROOM: usize = 64 << 10;
 
 #[derive(Debug)]
 pub enum Body {
@@ -67,7 +71,13 @@ pub struct Heap {
     free: Vec<u32>,
     live_bytes: usize,
     limit: usize,
+    /// Where an allocating bytecode fails: the limit, plus `HANDLER_ROOM` from
+    /// an `OutOfMemoryError` until a collection brings the heap under the limit.
+    room: usize,
     next_gc: usize,
+    /// Above zero while the running thread does work the limit must not stop
+    /// (`Vm::past_limit`). It belongs to that thread and moves with its state.
+    pub(crate) past_limit: u32,
     pub collections: u64,
 }
 
@@ -85,7 +95,9 @@ impl Heap {
             free: Vec::new(),
             live_bytes: 0,
             limit,
+            room: limit,
             next_gc: MIN_GC_BYTES.min(limit),
+            past_limit: 0,
             collections: 0,
         }
     }
@@ -105,7 +117,14 @@ impl Heap {
 
     /// Whether allocating `bytes` more would pass the limit.
     pub fn would_exceed(&self, bytes: usize) -> bool {
-        self.live_bytes.saturating_add(bytes) > self.limit
+        self.live_bytes.saturating_add(bytes) > self.room
+    }
+
+    /// An `OutOfMemoryError` is being thrown. Its handler must be able to do a
+    /// little, say report it, though nothing could be freed; the room is one
+    /// fixed amount, so a loop catching the error still ends up with none.
+    pub(crate) fn give_handler_room(&mut self) {
+        self.room = self.limit.saturating_add(HANDLER_ROOM);
     }
 
     /// Allocates an object. Fails with `OutOfMemoryError` only past twice the
@@ -113,7 +132,9 @@ impl Heap {
     /// safe point, while the allocating bytecodes collect first.
     pub fn alloc(&mut self, object: Object) -> Result<Ref, VmError> {
         let bytes = object.bytes();
-        if self.live_bytes.saturating_add(bytes) > self.limit.saturating_mul(2) {
+        if self.live_bytes.saturating_add(bytes) > self.limit.saturating_mul(2)
+            && self.past_limit == 0
+        {
             return Err(VmError::OutOfMemory);
         }
         self.live_bytes += bytes;
@@ -247,7 +268,16 @@ impl Heap {
             }
         }
         self.live_bytes = live;
-        self.next_gc = live.saturating_mul(2).max(MIN_GC_BYTES).min(self.limit);
+        if live < self.limit {
+            self.room = self.limit;
+        }
+        // Live data can be over the limit (`alloc`). The next collection must
+        // still be some way off, or every instruction would run one.
+        self.next_gc = live
+            .saturating_mul(2)
+            .max(MIN_GC_BYTES)
+            .min(self.limit)
+            .max(live.saturating_add(MIN_GC_STEP));
         self.collections += 1;
         (freed, cleared)
     }

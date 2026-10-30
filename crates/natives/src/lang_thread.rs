@@ -22,7 +22,7 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(OBJECT, "wait", "(J)V", wait);
     vm.register_native(THREAD, "sleep", "(J)V", sleep);
     vm.register_native(THREAD, "yield", "()V", |vm, _| {
-        vm.blocking(std::thread::yield_now);
+        vm.yield_thread();
         ret_void()
     });
     vm.register_native(THREAD, "current0", "()Ljava/lang/Thread;", |vm, _| {

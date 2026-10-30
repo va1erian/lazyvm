@@ -39,14 +39,21 @@ impl Vm {
             }
         }
         self.class_mut(class).state = InitState::Initializing(me);
-        let result = self.initialize_steps(class);
+        // The library's own initializers run whatever the heap holds: a class
+        // left erroneous by a passing shortage would be broken for good, and
+        // on the oracle such classes are mostly initialized at startup.
+        let result = if self.class(class).from_boot {
+            self.past_limit(|vm| vm.initialize_steps(class))
+        } else {
+            self.initialize_steps(class)
+        };
         // Steps 10 and 12: record the outcome and wake the waiters.
         self.class_mut(class).state = match result {
             Ok(()) => InitState::Initialized,
             Err(_) => InitState::Failed,
         };
         let mut waiters = std::mem::take(&mut self.threads.init_waiters);
-        self.threads.unpark_all(&mut waiters);
+        self.threads.unpark_all(&self.gil, &mut waiters);
         result
     }
 

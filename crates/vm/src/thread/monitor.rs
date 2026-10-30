@@ -11,7 +11,9 @@
 //! VM, and whoever changes what it waits for unparks it.
 //!
 //! Fairness: a releasing thread usually just frees the monitor and wakes the
-//! entrants, which then compete (cheap when the owner is about to block).
+//! oldest entrant, which competes for it (cheap when the owner is about to
+//! block). That one stays on the list until it gets in, so any later release
+//! wakes it again, and its own release wakes the next.
 //! But the owner keeps the VM after `monitorexit`, so a thread looping on a
 //! lock would re-enter before any woken entrant runs, forever. So once the
 //! oldest entrant has waited `HANDOFF_AFTER`, the release hands it the
@@ -139,8 +141,8 @@ impl Vm {
         Ok(())
     }
 
-    /// After the monitor became unowned: hands it to the oldest entrant if
-    /// that one has waited long enough, otherwise wakes every entrant.
+    /// After the monitor became unowned: wakes the oldest entrant, handing
+    /// it the monitor if it has waited long enough.
     fn wake_entrants(&mut self, obj: Ref) -> VmResult<()> {
         if self.monitors.is_empty() {
             return Ok(());
@@ -148,11 +150,10 @@ impl Vm {
         let Some(w) = self.monitors.get_mut(&obj) else {
             return Ok(());
         };
-        let starved = w
-            .entrants
-            .first()
-            .is_some_and(|e| e.since.elapsed() >= HANDOFF_AFTER);
-        if starved {
+        let Some(oldest) = w.entrants.first() else {
+            return Ok(());
+        };
+        if oldest.since.elapsed() >= HANDOFF_AFTER {
             let e = w.entrants.remove(0);
             if w.entrants.is_empty() && w.waiters.is_empty() {
                 self.monitors.remove(&obj);
@@ -160,12 +161,10 @@ impl Vm {
             let lock = self.heap.lock_word(obj)?;
             lock.owner = owner_id(e.thread);
             lock.count = e.count;
-            self.threads.unpark(e.thread);
+            self.threads.unpark(&self.gil, e.thread);
             return Ok(());
         }
-        for e in &w.entrants {
-            self.threads.unpark(e.thread);
-        }
+        self.threads.unpark(&self.gil, oldest.thread);
         Ok(())
     }
 
@@ -241,7 +240,7 @@ impl Vm {
             if let Some(e) = self.threads.get_mut(t) {
                 e.notified = true;
             }
-            self.threads.unpark(t);
+            self.threads.unpark(&self.gil, t);
         }
         Ok(())
     }

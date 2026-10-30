@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use super::{Blocked, Gil, ThreadEntry, ThreadState};
+use super::{Blocked, Gil, Line, ThreadEntry, ThreadState};
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
@@ -71,7 +71,7 @@ impl Vm {
             *slot = None;
         }
         let mut waiters = std::mem::take(&mut self.threads.exit_waiters);
-        self.threads.unpark_all(&mut waiters);
+        self.threads.unpark_all(&self.gil, &mut waiters);
     }
 
     /// What the main thread does after `main` returns or its uncaught
@@ -139,7 +139,7 @@ fn thread_main(gil: Arc<Gil>, me: usize) {
 }
 
 fn run_thread(gil: Arc<Gil>, me: usize) {
-    let mut vm = gil.acquire();
+    let mut vm = gil.acquire(me, Line::Preempted);
     vm.current = me;
     vm.resume_state(me);
     match vm.run_java_thread() {

@@ -12,7 +12,7 @@ import java.util.concurrent.locks.LockSupport;
  * (turnstile)} sections, or one the owner gives when it has several lines (a queue's takers and
  * putters) over the same state.
  * Nothing is handed over: whoever releases wakes the head, which comes back through the gate when
- * it gets the VM (docs/design/threads.md).
+ * it gets the VM, normally in the same slice of the VM lock (docs/design/threads.md, "Turns").
  *
  * <p>A newcomer in non-fair mode may overtake a queue whose head is younger than one VM lock
  * slice. That spares a thread switch per critical section while a thread loops on a contended
