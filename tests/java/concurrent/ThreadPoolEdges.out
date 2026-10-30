@@ -124,6 +124,8 @@ abrupt replaced core1 = 2 size=1
 abrupt at shutdown core1 = 1
 abrupt at shutdown with queue core1 = 2 2
 zero keepalive = 0
+shorter keep-alive wakes the idle = 0
+interrupt not carried over a transfer queue = false
 no drain = [a, b]
 no drain empty = 0
 offer throws ! java.lang.IllegalStateException: offer

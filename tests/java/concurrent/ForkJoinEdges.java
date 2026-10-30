@@ -369,6 +369,62 @@ public class ForkJoinEdges {
         bad.shutdownNow();
     }
 
+    /** A worker's leftover flag, and what shutdownNow does to a worker blocked in a join. */
+    static void stops() throws Exception {
+        ForkJoinPool one = new ForkJoinPool(1);
+        CountDownLatch g0 = new CountDownLatch(1), e0 = new CountDownLatch(1);
+        one.execute(() -> { e0.countDown(); P4Await(g0); Thread.currentThread().interrupt(); });
+        e0.await();
+        ForkJoinTask<Boolean> next = one.submit(() -> Thread.currentThread().isInterrupted());
+        g0.countDown();
+        show("interrupt carried to a queued next task", next::get);
+        show("no interrupt once idle", () -> {
+            one.submit(() -> Thread.currentThread().interrupt()).get();
+            until(one::isQuiescent);
+            return one.submit(() -> Thread.currentThread().isInterrupted()).get();
+        });
+        one.shutdown();
+        ForkJoinPool p = new ForkJoinPool(1);
+        ForkJoinTask<String> open = new Manual(false);
+        Thread[] w = new Thread[1];
+        ForkJoinTask<String> joiner = p.submit(() -> { w[0] = Thread.currentThread(); return open.join(); });
+        until(() -> w[0] != null && w[0].getState() == Thread.State.WAITING);
+        p.shutdownNow();
+        show("stop with blocked join", () -> p.awaitTermination(20, TimeUnit.SECONDS));
+        show("joiner and awaited cancelled", () -> joiner.isCancelled() + " " + open.isCancelled());
+        ForkJoinPool q = new ForkJoinPool(1);
+        CountDownLatch in = new CountDownLatch(1);
+        List<String> seen = Collections.synchronizedList(new ArrayList<>());
+        ForkJoinTask<?> forker = q.submit(() -> {
+            in.countDown();
+            try { new CountDownLatch(1).await(); } catch (InterruptedException e) { seen.add("interrupted"); }
+            ForkJoinTask<String> f = ForkJoinTask.adapt(() -> "late").fork();
+            seen.add("forked cancelled=" + f.isCancelled());
+            try { seen.add("joined " + f.join()); } catch (CancellationException e) { seen.add("join cancelled"); }
+        });
+        in.await();
+        q.shutdownNow();
+        show("after stop", () -> q.awaitTermination(20, TimeUnit.SECONDS));
+        until(() -> seen.size() == 3);
+        show("fork after stop", () -> seen);
+        ForkJoinPool r = new ForkJoinPool(1);
+        CountDownLatch g = new CountDownLatch(1), e2 = new CountDownLatch(1);
+        ForkJoinTask<String> inside = r.submit(() -> {
+            e2.countDown();
+            g.await();
+            String s = "fork=" + ForkJoinTask.adapt(() -> "f").fork().join();
+            try { s += " submit=" + ForkJoinTask.getPool().submit(() -> "s").join(); } catch (RejectedExecutionException x) { s += " submit rejected"; }
+            return s;
+        });
+        e2.await();
+        r.shutdown();
+        g.countDown();
+        show("inside after shutdown", inside::get);
+        show("after shutdown", () -> r.awaitTermination(20, TimeUnit.SECONDS));
+    }
+
+    static void P4Await(CountDownLatch l) { await(l); }
+
     static void outside() throws Exception {
         show("outside helpQuiesce", () -> { ForkJoinTask.helpQuiesce(); return "ok"; });
         show("outside tryUnfork never forked", () -> ForkJoinTask.adapt(() -> "x").tryUnfork());
@@ -386,6 +442,7 @@ public class ForkJoinEdges {
         workers();
         lifecycle();
         failures();
+        stops();
         outside();
         System.exit(0);
     }

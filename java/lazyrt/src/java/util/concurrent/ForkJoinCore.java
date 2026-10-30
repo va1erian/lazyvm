@@ -68,18 +68,12 @@ final class ForkJoinCore {
     }
 
     void pushLocal(ForkJoinWorkerThread w, ForkJoinTask<?> task) {
-        boolean spawn = false;
-        boolean dropped;
+        boolean spawn;
         synchronized (this) {
-            dropped = stop;
-            if (!dropped) {
-                w.local.addLast(task);
-                spawn = signal();
-            }
+            w.local.addLast(task);
+            spawn = signal();
         }
-        if (dropped) {
-            task.cancel(false);
-        } else if (spawn) {
+        if (spawn) {
             createWorker();
         }
     }
@@ -147,6 +141,7 @@ final class ForkJoinCore {
 
     void deregister(ForkJoinWorkerThread w, int slot) {
         boolean spawn;
+        List<ForkJoinTask<?>> dropped = new ArrayList<ForkJoinTask<?>>();
         synchronized (this) {
             workers.set(slot, null);
             live--;
@@ -154,12 +149,13 @@ final class ForkJoinCore {
                 w.woken = false;
                 waking--;
             }
-            // What it forked and nobody took must not be lost with it.
-            submissions.addAll(w.local);
+            // What it forked and nobody took must not be lost with it, unless the pool is stopping.
+            (stop ? dropped : submissions).addAll(w.local);
             w.local.clear();
             spawn = !stop && anyQueued() && signal();
             maybeFinish();
         }
+        cancelAll(dropped);
         if (spawn) {
             createWorker();
         }
@@ -168,8 +164,6 @@ final class ForkJoinCore {
     void workLoop(ForkJoinWorkerThread w) {
         ForkJoinTask<?> t;
         while ((t = nextForWorker(w)) != null) {
-            // A task's leftover interrupt must not reach the next one.
-            Thread.interrupted();
             w.current = t;
             t.run0();
             w.current = null;
@@ -426,8 +420,8 @@ final class ForkJoinCore {
         maybeFinish();
     }
 
-    /** Ends the pool now; the tasks queued or running, for the caller to cancel. */
-    List<ForkJoinTask<?>> stop() {
+    /** Ends the pool now, cancelling what is queued, running or awaited. */
+    void stop() {
         List<ForkJoinTask<?>> dropped = new ArrayList<ForkJoinTask<?>>();
         synchronized (this) {
             shutdown = true;
@@ -441,13 +435,27 @@ final class ForkJoinCore {
                     if (w.current != null) {
                         dropped.add(w.current);
                     }
+                    if (w.awaited != null) {
+                        dropped.add(w.awaited);
+                    }
                     w.interrupt();
                 }
             }
             beginTermination();
             maybeFinish();
         }
-        return dropped;
+        cancelAll(dropped);
+    }
+
+    /** Outside the monitor, as {@code cancel} is the user's to override. One that throws stops no other. */
+    private static void cancelAll(List<ForkJoinTask<?>> tasks) {
+        for (ForkJoinTask<?> t : tasks) {
+            try {
+                t.cancel(false);
+            } catch (Throwable theOthersMustStillBeCancelled) {
+                continue;
+            }
+        }
     }
 
     /** The monitor is held. */

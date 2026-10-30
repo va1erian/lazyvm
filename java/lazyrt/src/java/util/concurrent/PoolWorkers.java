@@ -57,10 +57,10 @@ final class PoolWorkers {
 
     /** Starts a worker if the state and the limit allow it; false also if the factory gave no thread. */
     boolean addWorker(Runnable first, boolean withinCore) {
-        // After shutdown a worker only comes for what is left in the queue.
         if (state >= TERMINATING) {
             return false;
         }
+        // After shutdown a worker only comes for what is left in the queue.
         boolean noWork = state == SHUTDOWN && (first != null || queue.isEmpty());
         synchronized (this) {
             boolean open = state == RUNNING || state == SHUTDOWN && !noWork;

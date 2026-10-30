@@ -245,13 +245,7 @@ public class ForkJoinPool extends AbstractExecutorService {
 
     public List<Runnable> shutdownNow() {
         if (this != common) {
-            for (ForkJoinTask<?> t : core.stop()) {
-                try {
-                    t.cancel(false);
-                } catch (Throwable theOthersMustStillBeCancelled) {
-                    continue;
-                }
-            }
+            core.stop();
         }
         return Collections.emptyList();
     }

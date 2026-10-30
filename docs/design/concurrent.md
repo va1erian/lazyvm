@@ -836,7 +836,9 @@ One script, run on both; rules hold for both unless noted.
 - `submit`, `execute` and `invoke` from a worker go to the submissions, not its local queue ("submit from worker queued", "execute from worker queued"). Submissions run in
   order on one worker, async or not ("submission order", "async submission order"). A `Runnable` that is also a `ForkJoinTask` goes in as the task ("execute runnable task",
   "submit runnable same").
-- `shutdownNow` cancels what is queued **and what is running**, and interrupts the workers ("queued cancelled", "running saw"). While busy after `shutdown` the word is
+- `shutdownNow` cancels what is queued, **what is running and what a worker is blocked on**, and interrupts the workers ("queued cancelled", "running saw", "stop with blocked join", "joiner and awaited
+  cancelled"). A task a worker forks after that still goes in its queue, and its join runs it ("fork after stop"). After a plain `shutdown` a task can still fork, but `submit` from inside is rejected ("inside after shutdown").
+  A task's leftover interrupt does reach the next task if one is queued, unlike in `ThreadPoolExecutor`, but not after the worker went idle ("interrupt carried to a queued next task", "no interrupt once idle"). While busy after `shutdown` the word is
   `Shutting down` ("word while busy"). A pool that cannot make a worker keeps its queue after `shutdown` until `shutdownNow` ("null factory ..."). `isQuiescent` looks at workers only: a
   queued task with no worker is quiescent ("null factory queued"). What a factory throws leaves the task queued ("throwing factory queue").
 - A worker dies when an `execute(Runnable)` task fails or `onStart` throws: `onTermination` gets the exception, then the thread's uncaught handler, which is the pool's when it has one, and a

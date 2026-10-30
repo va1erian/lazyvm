@@ -399,6 +399,31 @@ public class ThreadPoolEdges {
         zk.shutdown();
     }
 
+    /** Waking a waiter, and a flag a queue would let through to the next task. */
+    static void wakes() throws Exception {
+        ThreadPoolExecutor k = new ThreadPoolExecutor(0, 1, 1, TimeUnit.HOURS, new SynchronousQueue<>());
+        k.prestartAllCoreThreads();
+        k.execute(() -> { });
+        until(() -> k.getCompletedTaskCount() == 1 && k.getActiveCount() == 0);
+        k.setKeepAliveTime(1, TimeUnit.MILLISECONDS);
+        until(() -> k.getPoolSize() == 0);
+        show("shorter keep-alive wakes the idle", k::getPoolSize);
+        k.shutdown();
+        // A transfer queue's take keeps the flag when an element is ready, so the pool must clear it.
+        ThreadPoolExecutor t = new ThreadPoolExecutor(1, 1, 1, TimeUnit.MINUTES, new LinkedTransferQueue<>());
+        CountDownLatch g = new CountDownLatch(1), e = new CountDownLatch(1);
+        boolean[] flag = new boolean[1];
+        t.execute(() -> { e.countDown(); P1Await(g); Thread.currentThread().interrupt(); });
+        e.await();
+        t.execute(() -> flag[0] = Thread.currentThread().isInterrupted());
+        g.countDown();
+        t.shutdown();
+        t.awaitTermination(20, TimeUnit.SECONDS);
+        show("interrupt not carried over a transfer queue", () -> flag[0]);
+    }
+
+    static void P1Await(CountDownLatch l) { await(l); }
+
     /** A queue that refuses to drain and one whose offer throws. */
     static void userQueues() throws Exception {
         BlockingQueue<Runnable> noDrain = new LinkedBlockingQueue<Runnable>() {
@@ -460,6 +485,7 @@ public class ThreadPoolEdges {
         lifecycle();
         policies();
         sizes();
+        wakes();
         userQueues();
         System.exit(0);
     }

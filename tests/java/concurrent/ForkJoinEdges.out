@@ -118,6 +118,14 @@ submit failure no handler = 1
 execute(task) failure no handler = 2
 onStart throws = java.lang.IllegalStateException: start
 onStart throws log = onStart onTermination java.lang.IllegalStateException: start
+interrupt carried to a queued next task = true
+no interrupt once idle = false
+stop with blocked join = true
+joiner and awaited cancelled = true true
+after stop = true
+fork after stop = [interrupted, forked cancelled=false, joined late]
+inside after shutdown = fork=f submit rejected
+after shutdown = true
 outside helpQuiesce = ok
 outside tryUnfork never forked = false
 outside surplus = 0

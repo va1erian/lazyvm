@@ -96,26 +96,26 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         throw new AssertionError();
     }
 
-    /** Lets the caller work on this task if it may; the core to tell about a block, if a worker. */
-    private ForkJoinCore help() {
+    /** Runs this task in the caller, if it is queued and the caller may. */
+    private void help() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
         if (w != null) {
             w.core.helpJoin(w, this);
-            return w.core;
+        } else {
+            ForkJoinPool.common.core.helpOutside(this);
         }
-        ForkJoinPool.common.core.helpOutside(this);
-        return null;
     }
 
     /** Waits for the outcome, with a deadline if {@code timed}. A blocked worker stops counting. */
-    private void block(ForkJoinCore core, boolean timed, long deadline)
-            throws InterruptedException, TimeoutException {
+    private void block(boolean timed, long deadline) throws InterruptedException, TimeoutException {
         if (status != PENDING) {
             return;
         }
+        ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
         try {
-            if (core != null) {
-                core.beginBlock();
+            if (w != null) {
+                w.awaited = this;
+                w.core.beginBlock();
             }
             synchronized (this) {
                 waited = true;
@@ -132,8 +132,9 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
                 }
             }
         } finally {
-            if (core != null) {
-                core.endBlock();
+            if (w != null) {
+                w.awaited = null;
+                w.core.endBlock();
             }
         }
     }
@@ -234,7 +235,8 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         }
         if (status == PENDING) {
             try {
-                block(help(), false, 0);
+                help();
+                block(false, 0);
             } catch (TimeoutException cannotHappen) {
                 throw new AssertionError(cannotHappen);
             }
@@ -255,7 +257,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         }
         while (status == PENDING) {
             try {
-                block(w != null ? w.core : null, true, deadline);
+                block(true, deadline);
             } catch (InterruptedException e) {
                 if (w == null) {
                     throw e;
@@ -281,13 +283,14 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (status != PENDING) {
             return;
         }
-        ForkJoinCore core = help();
+        help();
+        boolean outside = ForkJoinWorkerThread.current() == null;
         boolean flagged = false;
         while (status == PENDING) {
             try {
-                block(core, false, 0);
+                block(false, 0);
             } catch (InterruptedException e) {
-                flagged = core == null;
+                flagged = outside;
             } catch (TimeoutException cannotHappen) {
                 throw new AssertionError(cannotHappen);
             }
