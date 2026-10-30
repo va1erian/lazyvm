@@ -125,10 +125,10 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       check, `lazy.internal.ui.Headless` (scripted input and a manual clock)
       in place of the spike's `-Dlazy.ui.clicks`, and the `THIRD_PARTY.md`
       rows for xui's tree curated.
-      Check: `tests/lazy/ui/Counter` headless on both platforms, comparing a
-      pixel checksum golden; `tests/lazy/ui/IdleCost` (hover and scroll a
-      hundred times, zero upcalls); `tests/lazy/ui/StaleId` (a message queued
-      for a widget a `Panel.set` destroyed does not fire its successor); `tests/lazy/ui/CallbackThrows`
+      Check: `tests/java/lazy/ui/Counter` headless on both platforms, comparing a
+      pixel checksum golden; `tests/java/lazy/ui/IdleCost` (hover and scroll a
+      hundred times, zero upcalls); `tests/java/lazy/ui/StaleId` (a message queued
+      for a widget a `Panel.set` destroyed does not fire its successor); `tests/java/lazy/ui/CallbackThrows`
       (`Ui.run` rethrows, the program exits nonzero, no dialog headless);
       `tools/size.py` for `lazyvm` and `lazyvm-ui`, in the PR.
 - [ ] S9-03 Windows window host via the xui `winit-backend` in
@@ -156,14 +156,14 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       timers run on the headless driver's clock. Modal dialogs and secondary
       windows are checked on the Windows host until xui's offscreen backend
       can run them ([`ui.md`](ui.md), gap 5).
-      Check: `tests/lazy/ui/*` headless goldens; dialog and secondary-window
+      Check: `tests/java/lazy/ui/*` headless goldens; dialog and secondary-window
       screenshots on Windows, in the PR.
 - [ ] S9-06 `Ui.executor()`: other threads hand work to the UI thread
       (a Java-side queue; only a payload-free wake crosses xui's `Proxy`), and
       every other `lazy.ui` call off the UI thread
       throws `IllegalStateException` ([`ui.md`](ui.md), "Threads").
       Needs: S6-01, S6-06.
-      Check: `tests/lazy/ui/Executor` headless (a worker thread submits 100
+      Check: `tests/java/lazy/ui/Executor` headless (a worker thread submits 100
       label updates; the label's final text and the 100 runs, in order, are
       the golden), and `samples/counter` with a worker thread on Windows.
 
@@ -180,7 +180,7 @@ Goal: Java apps are first-class LazyOS apps. They talk Messenger with
       interface, a Java interface whose methods return `CompletionStage<…>`,
       records for the structs, enums, and codecs over the `libmessenger` TLV
       wire, and puts them in `lazy-api-generated.jar`.
-      Check: LazyOS `midlc` tests; `tests/lazy/msg/CodecRoundTrip` against fixtures encoded by the Rust codecs.
+      Check: LazyOS `midlc` tests; `tests/java/lazy/msg/CodecRoundTrip` against fixtures encoded by the Rust codecs.
 - [ ] S10-02 `lazy.msg` runtime: `Messenger.connect(Class<I>)` resolves and
       binds through the registry, calls go through the begin-call / completion
       path (no thread parked per call) on the S6-06 loop: the reactor thread
@@ -190,15 +190,15 @@ Goal: Java apps are first-class LazyOS apps. They talk Messenger with
       `crates/platform` defines and `crates/lazyvm-lazyos` implements
       ([`async.md`](async.md)), `@Deadline`, and errors as
       `MessengerException` with the friendly error text.
-      Check: on LazyOS `tests/lazy/msg/EchoCall` against `os.lazy.echo` (both deadline and peer-death cases).
+      Check: on LazyOS `tests/java/lazy/msg/EchoCall` against `os.lazy.echo` (both deadline and peer-death cases).
 - [ ] S10-03 Topics and services: `@Subscribe` handlers discovered by
       reflection at `Messenger.register(obj)`, QoS, retained values, and
       `@Service` implementations served from the loop with replies from
       completed stages.
-      Check: `tests/lazy/msg/Topics`, `ServeEcho` on LazyOS; the same tests on Windows against the loopback broker.
+      Check: `tests/java/lazy/msg/Topics`, `ServeEcho` on LazyOS; the same tests on Windows against the loopback broker.
 - [ ] S10-04 `lazy.os`: well-known paths, notifications (`os.lazy.notify.v1`),
       the clipboard, `mimed` open-with, and `Trace.pass`.
-      Check: `tests/lazy/os/*` on LazyOS.
+      Check: `tests/java/lazy/os/*` on LazyOS.
 - [ ] S10-05 Packaging (LazyOS repo, LOS-04): the `LAZYOS_LAZYVM` build
       switch, a core package carrying `lazyvm` and `lazyrt.jar`, a `.jar`
       MIME type that opens with LazyVM, and `tools/lazyvm/package.py --jar app.jar
@@ -326,11 +326,11 @@ S7, which ships only the `lazy.net` async TCP API.
       at the LazyOS well-known path, and on Windows from a bundled copy. There
       is no "trust all" switch. Exposed as `lazy.net.Tls.wrap(connection, host)`
       and as `https` in `HttpURLConnection`.
-      Check: `tests/lazy/net/TlsLocal` against a local test server with a test CA (both).
+      Check: `tests/java/lazy/net/TlsLocal` against a local test server with a test CA (both).
 - [ ] S15-05 HTTP: `HttpURLConnection` (HTTP/1.1, chunked, redirects,
       keep-alive) and `lazy.net.Http.get/post` → `CompletionStage<Response>`
       with streaming bodies.
-      Check: `tests/lazy/net/HttpLocal` against `tools/test_http_server.py`; `tests/java/net/HttpUrlConn`.
+      Check: `tests/java/lazy/net/HttpLocal` against `tools/test_http_server.py`; `tests/java/net/HttpUrlConn`.
 
 Gate: `samples/fetch` downloads a page over HTTPS with `lazy.net.Http` and
 prints its status and size on both platforms (manual live run, recorded in the PR).
