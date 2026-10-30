@@ -49,6 +49,10 @@ the label of a line of its golden. Change the rule and that line should change.
 | `CompletableFutureAsync` | async variants, executors, the common pool |
 | `CompletableFutureNoCommon` | a common pool below parallelism two |
 | `CompletableFutureOrder` | firing order, dependents counts, re-entrancy, deep chains |
+| `CompletableFutureEdges` | counts during firing, what a settled stage's unfired list does, what a task reads, at which level a stage fires |
+| `CompletableFutureShapes` | the shape of `allOf` and `anyOf`, subclasses, how rarer outcomes read, long chains of every kind |
+| `CompletableFutureReaders` | threads blocked in `get` and `join`: counts, release, interrupts, pool workers, races |
+| `CompletableFutureNoCommonEdges` | a common pool below parallelism two, named as an executor |
 | `Contention` | totals under threads: exclusion, permits, no lost or repeated element |
 | `LockEdges` | locks: check order, who wakes whom, read holds around `await`, the read limit in a queue |
 | `SynchronizerEdges` | latch, barrier, exchanger, semaphore, random: check order, a running action, wake chains, wide ranges |
@@ -894,7 +898,8 @@ One script, run on both; rules hold for both unless noted.
 **Owner rule (LazyVM design, not oracle behaviour).** `complete`, `completeExceptionally`, `cancel`, `obtrudeValue` and
 `obtrudeException` must never call one another virtually. Each completes through private helpers, because
 `lazy.internal.LoopFuture` (S6-06) overrides them ([`async.md`](../async.md)); if `cancel` called
-`this.completeExceptionally(...)`, the override would swallow the settlement. S6-06's tests pin this, not S6-05's.
+`this.completeExceptionally(...)`, the override would swallow the settlement. S6-06's tests pin this through `LoopFuture`; the oracle
+happens to behave the same way, so `CompletableFutureShapes` pins it too ("subclass, each completion alone": `calls=0`).
 
 ### States and reads (`CompletableFutures`)
 
@@ -932,6 +937,31 @@ One script, run on both; rules hold for both unless noted.
   exception form ("get waiter", "join waiter", "timed waiter on cancel").
 - Dependents created from a subclass are plain `CompletableFuture`s: S6-06 relies on this ("sub dependent class", "sub
   handle class", "sub exceptionally class"). `toCompletableFuture` returns `this` ("toCompletableFuture").
+- A subclass cannot redirect what the class reads for itself: outcomes of a receiver, an `other` or a compose's inner stage are never
+  read through `isDone`, `join`, `get`, `getNow`, `isCompletedExceptionally` or `isCancelled` (`CompletableFutureShapes`: "subclass read
+  through its fields"). `toCompletableFuture` is called on an `other` and on a stage a compose function returned, never on the receiver
+  ("subclass other through toCompletableFuture", "subclass receiver not through toCompletableFuture"). The one exception is `toString` on a
+  pending future, which asks `getNumberOfDependents()` and prints what it answers, 0 as no count at all ("toString asks the count",
+  "toString count 0"); a settled one asks nothing ("toString settled asks nothing").
+- The read table goes by `instanceof`, so subclasses of `CompletionException` and `CancellationException` read like them, and a dependent
+  keeps a `CompletionException` subclass as is ("read SubCE", "read SubCancel", "read dependent of SubCE"). A dependent of a
+  `CompletionException` with no cause gets the same object ("read dependent of NoCause"). `get(t, null)` throws before looking at the flag
+  or the state ("timed null unit keeps the flag"); with the flag set on a pending future it throws `InterruptedException` even with no
+  time left ("timed zero, flagged and pending").
+
+### Readers (`CompletableFutureReaders`)
+
+- A thread blocked in `get`, timed `get` or `join` is on the future's list like a dependent: it counts in `getNumberOfDependents` and
+  `toString` ("reader counts"), and leaves when interrupted or timed out ("interrupted reader leaves the count", "timed out reader leaves
+  the count"). A thread that `join`s through an interrupt stays counted ("join keeps waiting, flag kept").
+- It is released at its place in the firing order, not when the future settles. A dependent attached after it that holds its thread
+  also holds the reader ("reader attached before waits its turn"); below a firing the order is first attached first ("below a firing,
+  reader in first-attached order", "below a firing, reader after a holder").
+- A released reader goes on with what the list still holds, on its own thread, before it returns ("reader attached last goes first and
+  helps", "timed reader helps too"). A reader that finds the future settled when it arrives does neither ("late reader of a settled stage
+  does not help"), and nor do reads inside a callback ("inside join", "inside get" in `CompletableFutureEdges`).
+- A pool worker blocked in any of the three does not hold up the pool, even at parallelism 1 ("worker join, settled by a sibling", "worker
+  get ...", "worker timed get ...").
 
 ### One-source dependents (`CompletableFutureStages`)
 
@@ -959,7 +989,10 @@ each against each source state, with functions that return and that throw. The r
   is treated as a source's ("compose failed", "compose CE", "compose cancelled", "compose pending", "compose pending fails").
 - Callback thread: the caller if the source was already done ("on main"), else the thread that settled the source ("on
   settler").
-- Settling a dependent directly wins over its source, and its function does not run ("complete a dependent early").
+- Settling a dependent directly wins over its source, and its function does not run ("complete a dependent early"), nor is its executor
+  called (`CompletableFutureEdges`: "settled dependent's function is dropped"). A `thenCompose` function returning the dependent itself
+  leaves it pending and counted on itself until it is settled directly (`CompletableFutureShapes`: "compose of the dependent itself").
+- A value that is a `Throwable` is a value ("a value that is a Throwable").
 
 ### Two-source dependents, `allOf`, `anyOf` (`CompletableFutureCombos`)
 
@@ -983,7 +1016,21 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   sources").
 - Null arguments: every method throws `NullPointerException` at the call, on a pending and a done receiver alike. A source
   whose `toCompletableFuture()` returns null also throws at the call for the two-source methods ("pending ...", "done ..."
-  lines, "other toCompletableFuture null", "either toCompletableFuture null").
+  lines, "other toCompletableFuture null", "either toCompletableFuture null"). The function and executor are checked before `other`'s
+  `toCompletableFuture()` is called, and what that call throws reaches the caller (`CompletableFutureShapes`: "null function before
+  other's toCompletableFuture", "thrown by other's toCompletableFuture"). Thrown inside a compose it fails the dependent ("thrown by
+  toCompletableFuture in compose").
+- A two-source step reads its sources when it runs, so an obtrude before then counts, and a failure obtruded away is gone
+  (`CompletableFutureEdges`: "both reads the latest"). When both are settled `*Either` reads the receiver, not the first to settle
+  (`CompletableFutureShapes`: "either a nested settle keeps the receiver").
+- **The shape of `allOf` and `anyOf`** (`CompletableFutureShapes`). Both behave as a balanced binary tree of two-source steps, the left
+  half being the larger one, built left subtree first. Three things show it: a source given twice counts once per pair it is in, and once
+  for the pair of itself ("allOf aa" 1, "allOf aaa" 2, "allOf aaaaa" 3, "anyOf aba" 2 1); a null stops the build where it is, with what was
+  built still attached ("allOf ab.c" 1 1 0, "allOf a.b" 0 0, "anyOf abc." 1 1 0, and a settled source does not save `anyOf` from a later
+  null, "anyOf done then null"); and an obtrude cannot change a pair that has closed ("allOf obtrude, pair closed", "allOf obtrude, pair
+  still open"). `anyOf` leaves the other sides as `*Either` does ("anyOf after first", "anyOf duplicate after another"). In a nested settle,
+  the lower index wins ("anyOf a nested settle keeps the lowest", "anyOf a nested settle, lower index later"). The array is not read after
+  the call ("allOf array changed after").
 
 ### Async variants (`CompletableFutureAsync`, `CompletableFutureNoCommon`)
 
@@ -999,7 +1046,17 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   dependent attached to a done source fails with `CompletionException(rejection)`, and `complete` on a pending source returns
   true with the rejection only in the dependent ("rejecting dependent on done", "rejecting dependent on pending").
 - A failed source skips the executor for dependents that skip their function, and uses it for `handle` and `whenComplete`
-  ("failed source skips executor" prints 2 of 3).
+  ("failed source skips executor" prints 2 of 3). `*BothAsync` skips it too, once both are settled (`CompletableFutureEdges`: "both failed
+  on one side waits, no executor"). `*EitherAsync` does not: the executor is called and the task finds the failure ("either failed uses the
+  executor").
+- The skip is decided when the dependent fires ("async skip decided at firing"); a task reads its sources when it runs ("async reads at run",
+  "async failure at run", "async either reads the receiver first", "async both reads at run").
+- A task does its work once however often the executor runs it ("task runs once", "supply task runs once"), and not at all if the
+  dependent was settled before ("target settled between hand-over and run", "supply settled before its task").
+- An executor that throws anything fails the dependent, once ("executor throws an Error"); after it ran the task, its exception is dropped
+  ("executor runs then throws"), except from `supplyAsync` and `runAsync`, which pass it to the caller ("supply executor runs then throws").
+- A common pool named as the executor, below parallelism 2, also means a new thread per task (`CompletableFutureNoCommonEdges`: "named common
+  ..."). That thread inherits daemon status and priority from the caller and has a default name ("inherits from the caller").
 - A failure inside `supplyAsync`: `get` gives `ExecutionException(E)`, `join` gives `CompletionException(E)`; a
   `CompletionException` thrown there is treated as in the read table ("supply fails get", "supply fails join", "supply throws
   CE").
@@ -1026,16 +1083,44 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   returns to it ("complete another inside"). `complete` from inside its own dependent is false, `getNow` there sees the value
   ("complete self inside", "getNow inside"). A throwing dependent does not stop the others or reach `complete`'s caller
   ("dependent throws, others run").
+- **What a settled stage's list still holds** goes on being fired by whoever comes by. Each of `complete`, `completeExceptionally`,
+  `cancel`, `obtrudeValue` and `obtrudeException` on a settled future, won or not, fires it before returning, also from another thread
+  (`CompletableFutureEdges`: "inside complete" and the like; `CompletableFutureReaders`: "late complete helps"; a callback one level down
+  too, "complete from another stage's firing"). Reads and the count do not ("inside join", "inside getNow", "inside count"), and nor does
+  attaching a sync dependent, whether or not it runs at once ("inside sync thenApply", "inside sync thenCombine", "inside sync throwing").
+  What is fired later sees the current outcome (`CompletableFutureShapes`: "obtrude the source inside a dependent"; "inside obtrudeException").
+- **A task's end** does the same for its sources: the other source first, then the receiver, each if settled, then the stage's own
+  dependents last attached first ("task end, source then own", "task helps other first ..."), also when the task did not run its function
+  because the stage was settled before ("task of a settled target still helps"). So does an async dependent attached to a settled source
+  that settles at once, by a skip or a rejection ("inside async rejected", "inside async both rejected", "inside async skipped on failure"),
+  though not one merely handed over ("inside async queued"). Below a firing the list has moved, so there is nothing to help ("task below a
+  firing"). A rejection during a firing does not help: the dependent's own dependents go as a deeper level ("rejected in a firing, no helping").
+- **Levels, more of them.** A stage settled by a rejection, a skip, a function that threw or a compose whose inner stage is done is settled
+  as part of a firing, so first attached first ("level rejected", "level skip", "level whenComplete throws", "level compose, inner done"). A
+  compose that ran as a task is settled by a task ("level compose task, inner done"). Attaching to a dependent from inside its own function
+  joins its list and takes its level ("level own attach in a function", "level own attach in a task").
 - `getNumberOfDependents`: each attached stage counts 1, on each source for two-source methods ("one", "three", "both counts
   each", "either counts each", "compose counts", "handlers count"); grandchildren do not ("grandchild not counted"); settling
   drops to 0, and later attachments run at once and do not count ("after completion", "attached after done"). A two-source
-  dependent still counts on its unsettled source after the other settled ("both after first"). Whether a cancelled dependent
-  still counts is not pinned ("cancelled dependent" only asserts `>= 0`).
+  dependent still counts on its unsettled source after the other settled ("both after first"). A cancelled or otherwise settled dependent
+  still counts (`CompletableFutureEdges`: "settled dependent stays counted"), though "cancelled dependent" in `CompletableFutureOrder` only
+  asserts `>= 0`.
+- The count during a firing: a stage settled by a call or a task falls one by one as its list fires ("count falls while firing"); a stage
+  settled inside a firing reads 0 at once, as its list has moved ("count below is 0 at once"). A dependent attached inside runs at once and is
+  never counted ("attached inside never counts").
+- An `*Either` step leaves the other source's list when it is done with, not before: after its function, or its task, or a rejection, and
+  also if the dependent had been settled directly ("either leaves the other source", "either, other side settled first", "either leaves after
+  its function", "either task leaves when it runs", "either rejected leaves", "either with a settled dependent leaves too"), and a dependent
+  settled directly on a `*Both` step stays ("both with a settled dependent stays"). One of two sources settled when attaching: `*Both` joins
+  the other, `*Either` nothing ("both settled on one side joins the other", "either settled at attach joins nothing"). The same future as both
+  sources counts once ("self sources count once").
 - Long chains of stages linked by the API do not exhaust the stack: 20000 chained `thenApply` and `thenCompose`, and a fan of 5000
   dependents, settle on the default thread stack ("deep chain", "deep compose", "wide fan"). A failure passing through 20000 stages
   stays a single `CompletionException` over `X` ("deep failure"). One native or Java frame per stage will not pass this, since
   LazyVM's frame limit is 4094. This does not cover user code: a chain in which each dependent's function calls `complete` on the
-  next future is ordinary recursion, overflows on the oracle too, and is not tested.
+  next future is ordinary recursion, overflows on the oracle too, and is not tested. `CompletableFutureShapes` has the other kinds:
+  "deep whenComplete", "deep combine", "deep either", "deep allOf", "deep anyOf", "deep compose, inner pending", "deep relay of relays", "deep
+  cancel", "deep obtrude", "wide either", "wide anyOf".
 
 ## Decisions checked against the oracle
 
@@ -1090,6 +1175,11 @@ being kept. Neither was: both are now what the oracle does.
   following the queue, like the other FIFO queues on the oracle (b, then c).
 - **Different on purpose**: a function given to `ConcurrentHashMap.computeIfAbsent` that updates *other* keys of the same
   map can hang the oracle, depending on bins. Here it works.
+- **`CompletableFuture`, what is left**: the class of a task handed to an executor (on the oracle it is a `ForkJoinTask`; here it is not, and it
+  is only promised to be a `Runnable` marked `AsynchronousCompletionTask`). How deep user recursion through the API goes: a callback completing
+  the next future, a `thenCompose` over done stages, or a chain with a direct executor costs about 10 frames per level, so LazyVM's 4094 frames end
+  at about 400 levels where the oracle's 22523 reach further (`StackOverflowError` is caught as any callback's failure, and stages may stay
+  pending). The order in which readers wake when nothing holds them.
 - **Not tested at all**: serialization of these classes; `ConcurrentHashMap` recursive updates; `ThreadPoolExecutor.finalize`;
   the `Spliterator` and stream members listed as deferred below.
 - **Out of scope for S6-04**: `AbstractQueuedSynchronizer`, `AbstractQueuedLongSynchronizer`, `AbstractOwnableSynchronizer`,

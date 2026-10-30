@@ -1,0 +1,5 @@
+named common, apply = worker=false daemon=false priority=5 group=main name=Thread-N
+named common, supply = worker=false daemon=false priority=5 group=main name=Thread-N
+named common, run = worker=false daemon=false priority=5 group=main name=Thread-N
+inherits from the caller = worker=false daemon=true priority=7 group=main name=Thread-N
+another pool is used as given = true
