@@ -53,6 +53,7 @@ the label of a line of its golden. Change the rule and that line should change.
 | `LockEdges` | locks: check order, who wakes whom, read holds around `await`, the read limit in a queue |
 | `SynchronizerEdges` | latch, barrier, exchanger, semaphore, random: check order, a running action, wake chains, wide ranges |
 | `PhaserEdges` | `Phaser`: forcing, late registration, tiers, a blocked or throwing hook |
+| `CollectionEdges` | the collections: range bounds, view identity, bulk entries, a running compute, what counts as a copy-on-write, hand-off order |
 | `ConcurrentExceptions` | the package's exception constructors |
 | `ConcurrentMapDefaults` | `ConcurrentMap`'s default methods on a custom map |
 
@@ -428,6 +429,18 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   `keySet(v)` returns a view whose `add` inserts `v`; `keySet(null)` throws; the plain
   `keySet()` view has a null `getMappedValue()` and its `add` throws ("keySet add puts
   default", "plain add", "keySet null default").
+- `keySet()`, `values()` and `entrySet()` give one object each per map; `keySet(v)` a new one each
+  time (`CollectionEdges`: "hash views are one each", "keySet(v) is new"). An entry a bulk method
+  passes or returns is read-only, unlike a view iterator's, which writes through even if its key has
+  since left ("bulk entry is read-only", "reduced entry is read-only", "view entry of a removed key
+  writes it back").
+- An iterator goes on seeing the table it started on while the map grows: no key twice, every old
+  key once, and a key removed since is not handed out, beyond the one it already held ("growing map:
+  no repeat, all old keys seen", "removed after growth: at most the one it held").
+- A running `compute` shuts out writers of its own key, as `BLOCKED` threads, but not readers, nor
+  writers or computations of keys in other bins ("writer of that key", "read during compute", "other
+  key during compute", "other compute during compute"). Nothing here looks at the flag ("flag kept by
+  compute").
 
 ### `ConcurrentSkipListMap`, `ConcurrentSkipListSet` (`SkipLists`)
 
@@ -449,6 +462,19 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   range` ("sub of sub beyond", "sub head beyond"). Descending views invert everything
   ("descending ..." lines), and `descendingMap().comparator()` is non-null even with
   natural order ("descending comparator null source").
+- A new bound of a sub-range is checked against the old bound on its own side only, in the map's
+  order: past it is `key out of range`, low bound first. A bound past the far end is then an
+  `inconsistent range`, unless it only touches it, which is an empty map (`CollectionEdges`: "head below
+  the low end", "tail above the high end", "sub above both ends", "head on an excluded low end",
+  "sub reversed inside"). It may sit on an excluded old bound only if it excludes it too ("head
+  inclusive on an excluded high end", "tail exclusive on an excluded low end"). Navigating from
+  outside a range finds its nearest end ("range nav outside", "descending nav"). A conditional write
+  outside a range either is a miss or throws, as with `put`: `replace` throws, `remove(k, v)` is false,
+  `computeIfAbsent` to null is null, `merge` throws ("range write outside", "range conditional
+  outside", "range computes outside", "range merge outside").
+- `keySet`, `navigableKeySet`, `values`, `entrySet` and `descendingMap` give one object each per view;
+  `descendingMap().descendingMap()` is not the map itself ("skip views are one each", "double
+  descending is not the map").
 - `keySet`, `values`, `entrySet` are ordered and write through on removal; none
   supports `add` ("key add", "value add", "entry add"). `keySet()` is a `NavigableSet`
   ("key first" through "key descendingSet").
@@ -493,6 +519,15 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   operation throw `ConcurrentModificationException` ("sub after outer change", "sub
   toString after outer change", "sub iterator after outer change"). Sub-list iterators
   are unmodifiable like the parent's ("sub iterator remove", "sub listIterator set").
+- What counts as a write to the parent, for its sub-lists: `set` of the very same element does not,
+  nor does a remove or add that changes nothing; a `sort` does even if nothing moves, and so does a
+  `clear` of an empty list (`CollectionEdges`: "set of the same element is no write", "failed removes
+  are no write", "failed adds are no write", "same-order sort is a write", "clear of nothing is a
+  write"). On a stale sub-list, `get`, `set` and `remove(int)` check the index before staleness, the other
+  operations staleness first, and `addAll` of nothing just answers false ("sub get far, stale: index first",
+  "sub add far, stale: staleness first", "sub addAll of nothing, stale", "sub addAll at of nothing, stale").
+- A source array of a narrower type does not narrow the list ("array source narrower than the list",
+  "toArray is plain").
 - `CopyOnWriteArraySet` keeps insertion order ("insertion order", "from collection
   order", "forEach", "toArray"), allows null, is unmodifiable through its iterator
   ("iterator remove"), and `equals` is set equality regardless of order, never equal to
@@ -519,7 +554,8 @@ One script, run on both; rules hold for both unless noted.
   ("array bad capacity", "array init too many", "array init null element").
   `LinkedBlockingQueue` defaults to `Integer.MAX_VALUE` capacity ("linked default
   capacity", "linked init capacity").
-- A fair `ArrayBlockingQueue` serves waiting takers FIFO ("fair takers FIFO").
+- A fair `ArrayBlockingQueue` serves waiting takers FIFO ("fair takers FIFO"), and waiting putters
+  too (`CollectionEdges`: "fair putters FIFO").
 
 ### `LinkedBlockingDeque` (`BlockingDeques`)
 
@@ -553,6 +589,12 @@ One script, run on both; rules hold for both unless noted.
   "drain expired only"). `take` waits for the delay ("take waits"), as `TIMED_WAITING`
   when a head exists and as `WAITING` when empty ("taker sleeps until head due", "taker
   waits on empty"). A new earlier head wakes it ("earlier head wakes taker").
+- A source that is a `java.util.PriorityQueue` is treated as a plain collection: unlike a sorted set
+  or another `PriorityBlockingQueue`, its comparator is dropped, and its elements must be naturally
+  ordered (`CollectionEdges`: "blocking queue source keeps its comparator", "java.util.PriorityQueue
+  source: comparator dropped"). One non-`Comparable` element in a source is accepted, since nothing is
+  compared ("one non-comparable source"). A comparator that throws leaves the queue as it was ("comparator
+  that throws, second insert"). The array's layout follows `java.util.PriorityQueue` ("heap layout").
 
 ### `SynchronousQueue`, `LinkedTransferQueue` (`HandoffQueues`)
 
@@ -564,8 +606,10 @@ One script, run on both; rules hold for both unless noted.
   ("containsAll", "containsAll empty").
 - `offer` succeeds only with a waiting taker, `poll` only with a waiting producer ("offer
   alone", "offer to taker", "poll from putter"). `add` alone: `IllegalStateException:
-  Queue full`. Fair mode serves takers FIFO ("fair FIFO"). `offer` and `poll` ignore the
-  flag ("offer flagged", "poll flagged").
+  Queue full`. Fair mode serves takers FIFO ("fair FIFO"), non-fair mode the newest first (`CollectionEdges`:
+  "non-fair: the newest taker first"). `offer` and `poll` ignore the flag ("offer flagged", "poll flagged").
+  `put`, `take` and the timed forms look at it only when nobody is there to meet: with a partner waiting they
+  meet, and keep the flag ("put flagged, a taker waits", "timed poll flagged, a giver waits").
 - `LinkedTransferQueue`: `tryTransfer` is false and leaves nothing without a waiting
   consumer ("tryTransfer none", "left no trace"). A blocked `transfer` element is visible
   to `size`, `peek`, `contains` and `poll`, which ends it ("pending visible", "contains
@@ -575,6 +619,9 @@ One script, run on both; rules hold for both unless noted.
   ignores consumers"), `getWaitingConsumerCount` counts them, and an interrupted one
   leaves ("consumer gone"). `put` and `offer` never block ("put never blocks"). FIFO
   iteration and `toString` ("fifo", "toArray").
+- `LinkedTransferQueue`: a timed `offer` never reads its time unit, but `tryTransfer` does, first, so a null
+  unit leaves nothing behind ("timed offer never reads its unit", "tryTransfer null unit leaves nothing").
+  Each waiting consumer takes one hand-over ("one hand-over per consumer").
 
 ### `ConcurrentLinkedQueue`, `ConcurrentLinkedDeque` (`ConcurrentLinked`)
 
@@ -943,8 +990,16 @@ being kept. Neither was: both are now what the oracle does.
   Tests print only the class.
 - **`invokeAny` with a null behind a quick task**: the first task may finish before the null is reached. Only a null in first place
   is tested.
-- **Order**: `ConcurrentHashMap` iteration, `PriorityBlockingQueue` and `DelayQueue` iterators and ties, non-fair lock and queue
-  hand-off order.
+- **Order**: `ConcurrentHashMap` iteration, `PriorityBlockingQueue` and `DelayQueue` iterators and ties, non-fair lock order, and
+  non-fair queue hand-off order other than `SynchronousQueue`'s.
+- **Unstable on the oracle**: what a blocked `transfer` does when its element is taken out by `remove(Object)` or by
+  an iterator. From run to run it returns, or throws `InterruptedException`, or a timed `tryTransfer` answers false. Here
+  it returns, and answers true, as for any element that left. `clear` and `drainTo` were stable: it returns.
+- **Allowed by weak consistency, and different**: on the oracle, an `ArrayBlockingQueue` iterator stops seeing new
+  elements once elements it had not reached are taken (a, b; `next`; `poll`; `add` c: it hands out only b). Here it goes on
+  following the queue, like the other FIFO queues on the oracle (b, then c).
+- **Different on purpose**: a function given to `ConcurrentHashMap.computeIfAbsent` that updates *other* keys of the same
+  map can hang the oracle, depending on bins. Here it works.
 - **Not tested at all**: serialization of these classes; `ConcurrentHashMap` recursive updates; `ThreadPoolExecutor.finalize`;
   the `Spliterator` and stream members listed as deferred below.
 - **Out of scope for S6-04**: `AbstractQueuedSynchronizer`, `AbstractQueuedLongSynchronizer`, `AbstractOwnableSynchronizer`,

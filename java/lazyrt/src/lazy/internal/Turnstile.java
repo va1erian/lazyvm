@@ -7,8 +7,10 @@ import java.util.concurrent.locks.LockSupport;
 
 /**
  * The queue behind the locks and {@code Semaphore}: blocked threads in arrival order, where only
- * the head may go through its {@link Gate}. Its monitor guards the queue and also the state of
- * whoever uses it, so a user keeps that state in {@code synchronized (turnstile)} sections.
+ * the head may go through its {@link Gate}. One monitor guards the queue and also the state of
+ * whoever uses it: the turnstile's own, so a user keeps that state in {@code synchronized
+ * (turnstile)} sections, or one the owner gives when it has several lines (a queue's takers and
+ * putters) over the same state.
  * Nothing is handed over: whoever releases wakes the head, which comes back through the gate when
  * it gets the VM (docs/design/threads.md).
  *
@@ -30,9 +32,14 @@ public final class Turnstile {
      */
     public interface Gate {
         boolean enter(Waiter w);
+
+        /** How long the head may sleep before {@link #enter} could say yes unprompted. */
+        default long patience(Waiter w) {
+            return Long.MAX_VALUE;
+        }
     }
 
-    public static final class Waiter {
+    public static class Waiter {
         public final Thread thread = Thread.currentThread();
         /** What it asks for: permits, or the hold count to restore. */
         public final int count;
@@ -48,11 +55,19 @@ public final class Turnstile {
 
     private final ArrayDeque<Waiter> queue = new ArrayDeque<>();
     private final Gate gate;
+    private final Object monitor;
     public final boolean fair;
 
     public Turnstile(boolean fair, Gate gate) {
         this.fair = fair;
         this.gate = gate;
+        this.monitor = this;
+    }
+
+    public Turnstile(boolean fair, Gate gate, Object monitor) {
+        this.fair = fair;
+        this.gate = gate;
+        this.monitor = monitor;
     }
 
     /** Whether a newcomer may try the resource instead of queueing. */
@@ -87,7 +102,7 @@ public final class Turnstile {
         try {
             for (;;) {
                 long left;
-                synchronized (this) {
+                synchronized (monitor) {
                     if (admit(w)) {
                         return ENTERED;
                     }
@@ -104,8 +119,14 @@ public final class Turnstile {
                         leave(w);
                         return TIMED_OUT;
                     }
+                    if (queue.peekFirst() == w) {
+                        long patience = gate.patience(w);
+                        left = timed ? Math.min(left, patience) : patience;
+                    } else if (!timed) {
+                        left = Long.MAX_VALUE;
+                    }
                 }
-                if (timed) {
+                if (left != Long.MAX_VALUE) {
                     LockSupport.parkNanos(this, left);
                 } else {
                     LockSupport.park(this);
@@ -126,7 +147,7 @@ public final class Turnstile {
             if (!gate.enter(w)) {
                 return false;
             }
-        } catch (Error e) {
+        } catch (RuntimeException | Error e) {
             leave(w);
             throw e;
         }
@@ -150,7 +171,7 @@ public final class Turnstile {
         if (t == null) {
             throw new NullPointerException();
         }
-        synchronized (this) {
+        synchronized (monitor) {
             for (Waiter w : queue) {
                 if (w.thread == t) {
                     return true;
@@ -163,7 +184,7 @@ public final class Turnstile {
     /** The queued threads whose {@code shared} is one of the two asked for. */
     public Collection<Thread> threads(boolean shared, boolean exclusive) {
         ArrayList<Thread> out = new ArrayList<>();
-        synchronized (this) {
+        synchronized (monitor) {
             for (Waiter w : queue) {
                 if (w.shared ? shared : exclusive) {
                     out.add(w.thread);
