@@ -52,7 +52,8 @@ public class ForkJoinPool extends AbstractExecutorService {
         if (factory == null) {
             throw new NullPointerException();
         }
-        this.parallelism = parallelism;
+        // A common pool set to 0 has no workers but reports 1.
+        this.parallelism = Math.max(parallelism, 1);
         this.factory = factory;
         this.handler = handler;
         this.asyncMode = asyncMode;
@@ -71,7 +72,7 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     private static ForkJoinPool makeCommon() {
-        int parallelism = Runtime.getRuntime().availableProcessors() - 1;
+        int parallelism = -1;
         ForkJoinWorkerThreadFactory factory = defaultForkJoinWorkerThreadFactory;
         Thread.UncaughtExceptionHandler handler = null;
         try {
@@ -90,7 +91,10 @@ public class ForkJoinPool extends AbstractExecutorService {
         } catch (Exception badSettingsAreIgnored) {
             handler = null;
         }
-        parallelism = Math.max(Math.min(parallelism, ForkJoinCore.MAX_WORKERS), 0);
+        if (parallelism < 0) {
+            parallelism = Math.max(Runtime.getRuntime().availableProcessors() - 1, 1);
+        }
+        parallelism = Math.min(parallelism, ForkJoinCore.MAX_WORKERS);
         return new ForkJoinPool(parallelism, factory, handler, false, "ForkJoinPool.commonPool-worker-");
     }
 
@@ -118,7 +122,7 @@ public class ForkJoinPool extends AbstractExecutorService {
             throw new NullPointerException();
         }
         core.pushExternal(task instanceof ForkJoinTask<?> ? (ForkJoinTask<?>) task
-                : new ForkJoinTask.Adapted<Void>(Executors.<Void>callable(task, null), true));
+                : new ForkJoinTask.Adapted<Void>(Executors.<Void>callable(task, null), ForkJoinTask.Adapted.EXECUTED));
     }
 
     public <T> ForkJoinTask<T> submit(ForkJoinTask<T> task) {
@@ -316,10 +320,10 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-        return new ForkJoinTask.Adapted<T>(Executors.callable(runnable, value), false);
+        return new ForkJoinTask.Adapted<T>(Executors.callable(runnable, value), ForkJoinTask.Adapted.RUNNABLE);
     }
 
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
-        return new ForkJoinTask.Adapted<T>(callable, false);
+        return new ForkJoinTask.Adapted<T>(callable, ForkJoinTask.Adapted.CALLABLE);
     }
 }

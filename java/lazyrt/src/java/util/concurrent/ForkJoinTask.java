@@ -103,7 +103,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             w.core.helpJoin(w, this);
             return w.core;
         }
-        ForkJoinPool.common.core.helpExternal(this);
+        ForkJoinPool.common.core.helpOutside(this);
         return null;
     }
 
@@ -138,11 +138,11 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         }
     }
 
+    /** Unlike the longer forms this one leaves the second task be when the first one fails. */
     public static void invokeAll(ForkJoinTask<?> t1, ForkJoinTask<?> t2) {
-        if (t1 == null || t2 == null) {
-            throw new NullPointerException();
-        }
-        invokeAll(new ForkJoinTask<?>[] {t1, t2});
+        t2.fork();
+        t1.invoke();
+        t2.join();
     }
 
     public static void invokeAll(ForkJoinTask<?>... tasks) {
@@ -223,7 +223,12 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         settle(NORMAL, null);
     }
 
+    /** Outside a pool {@code get} is interruptible; in a worker it is a {@code join} that wraps. */
     public final V get() throws InterruptedException, ExecutionException {
+        if (ForkJoinWorkerThread.current() != null) {
+            quietlyJoin();
+            return reportForGet();
+        }
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -244,7 +249,21 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             throw new InterruptedException();
         }
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        block(w != null ? w.core : null, true, deadline);
+        // Only this task itself is run here: helping with others could overrun the deadline.
+        if (w != null) {
+            w.core.runIfQueued(w, this);
+        } else {
+            ForkJoinPool.common.core.helpOutside(this);
+        }
+        while (status == PENDING) {
+            try {
+                block(w != null ? w.core : null, true, deadline);
+            } catch (InterruptedException e) {
+                if (w == null) {
+                    throw e;
+                }
+            }
+        }
         return reportForGet();
     }
 
@@ -259,6 +278,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         throw new ExecutionException(failure);
     }
 
+    /** An interrupt during the wait comes back afterwards, unless this is a worker: it is dropped. */
     public final void quietlyJoin() {
         if (status != PENDING) {
             return;
@@ -269,7 +289,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             try {
                 block(core, false, 0);
             } catch (InterruptedException e) {
-                flagged = true;
+                flagged = core == null;
             } catch (TimeoutException cannotHappen) {
                 throw new AssertionError(cannotHappen);
             }
@@ -297,6 +317,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         synchronized (this) {
             status = PENDING;
             failure = null;
+            tag = 0;
         }
     }
 
@@ -364,29 +385,34 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     }
 
     public static ForkJoinTask<?> adapt(Runnable runnable) {
-        return new Adapted<Object>(Executors.callable(runnable, null), false);
+        return new Adapted<Object>(Executors.callable(runnable, null), Adapted.RUNNABLE);
     }
 
     public static <T> ForkJoinTask<T> adapt(Runnable runnable, T result) {
-        return new Adapted<T>(Executors.callable(runnable, result), false);
+        return new Adapted<T>(Executors.callable(runnable, result), Adapted.RUNNABLE);
     }
 
     public static <T> ForkJoinTask<T> adapt(Callable<? extends T> callable) {
-        return new Adapted<T>(callable, false);
+        return new Adapted<T>(callable, Adapted.CALLABLE);
     }
 
-    /** Runs a callable or runnable as a task; {@code escapes} is the {@code execute(Runnable)} form. */
+    /** Runs a callable or runnable as a task. A callable's checked failure goes in wrapped. */
     static final class Adapted<T> extends ForkJoinTask<T> implements RunnableFuture<T> {
+        static final int CALLABLE = 0;
+        static final int RUNNABLE = 1;
+        /** The {@code execute(Runnable)} form, whose failure escapes to the worker. */
+        static final int EXECUTED = 2;
+
         private final Callable<? extends T> callable;
-        private final boolean escapes;
+        private final int form;
         private T result;
 
-        Adapted(Callable<? extends T> callable, boolean escapes) {
+        Adapted(Callable<? extends T> callable, int form) {
             if (callable == null) {
                 throw new NullPointerException();
             }
             this.callable = callable;
-            this.escapes = escapes;
+            this.form = form;
         }
 
         @Override
@@ -407,7 +433,11 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             } catch (RuntimeException | Error e) {
                 throw e;
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                if (form == CALLABLE) {
+                    throw new RuntimeException(e);
+                }
+                ForkJoinTask.<RuntimeException>rethrow(e);
+                return false;
             }
         }
 
@@ -418,7 +448,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
         @Override
         boolean escapes() {
-            return escapes;
+            return form == EXECUTED;
         }
     }
 }

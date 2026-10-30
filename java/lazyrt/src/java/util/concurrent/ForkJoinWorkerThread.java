@@ -11,6 +11,10 @@ public class ForkJoinWorkerThread extends Thread {
     final ArrayDeque<ForkJoinTask<?>> local = new ArrayDeque<ForkJoinTask<?>>();
     private final ForkJoinPool pool;
     private final int index;
+    /** The task its work loop is running, for {@code shutdownNow} to cancel. */
+    volatile ForkJoinTask<?> current;
+    /** How many tasks are stacked on this thread by joins. Only this thread touches it. */
+    int helpDepth;
     /** Parked and listed as idle. */
     volatile boolean parked;
     /** Told to look for work, and not yet arrived. */

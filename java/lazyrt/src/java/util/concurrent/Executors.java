@@ -94,7 +94,7 @@ public class Executors {
         if (callable == null) {
             throw new NullPointerException();
         }
-        return callable;
+        return () -> callable.call();
     }
 
     public static <T> Callable<T> privilegedCallableUsingCurrentClassLoader(Callable<T> callable) {

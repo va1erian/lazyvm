@@ -149,10 +149,10 @@ public abstract class AbstractExecutorService implements ExecutorService {
 
     private <T> boolean executeUntil(List<Future<T>> futures, long deadline) {
         for (Future<T> f : futures) {
+            execute((Runnable) f);
             if (deadline - System.nanoTime() <= 0) {
                 return false;
             }
-            execute((Runnable) f);
         }
         return true;
     }

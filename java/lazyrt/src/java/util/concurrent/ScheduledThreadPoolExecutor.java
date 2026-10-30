@@ -134,9 +134,9 @@ public class ScheduledThreadPoolExecutor extends ThreadPoolExecutor implements S
         }
     }
 
+    /** A task that ends its run after {@code shutdown} just stops, neither done nor cancelled. */
     private void requeue(RunnableScheduledFuture<?> t) {
         if (!mayRun(keepPeriodic)) {
-            t.cancel(false);
             return;
         }
         pool.queue.add(t);

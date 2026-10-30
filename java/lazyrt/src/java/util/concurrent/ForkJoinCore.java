@@ -20,6 +20,11 @@ final class ForkJoinCore {
     static final int MAX_WORKERS = 32767;
     /** Idle workers end after this long; daemons or not, each is an OS thread with a stack. */
     private static final long IDLE_NANOS = 2_000_000_000L;
+    /**
+     * How many tasks a joiner stacks up on itself. Past this it blocks and another worker takes
+     * over on a fresh stack: a thread has at most 4094 frames, and recursive joins may be deep.
+     */
+    private static final int MAX_HELP_DEPTH = 400;
 
     private final ForkJoinPool pool;
     private final int parallelism;
@@ -161,7 +166,9 @@ final class ForkJoinCore {
         while ((t = nextForWorker(w)) != null) {
             // A task's leftover interrupt must not reach the next one.
             Thread.interrupted();
+            w.current = t;
             t.run0();
+            w.current = null;
         }
     }
 
@@ -260,7 +267,7 @@ final class ForkJoinCore {
     }
 
     void helpJoin(ForkJoinWorkerThread w, ForkJoinTask<?> awaited) {
-        while (!awaited.isDone()) {
+        while (!awaited.isDone() && w.helpDepth < MAX_HELP_DEPTH) {
             ForkJoinTask<?> next;
             synchronized (this) {
                 next = removeQueued(w, awaited) ? awaited : ownNext(w);
@@ -268,7 +275,12 @@ final class ForkJoinCore {
             if (next == null) {
                 return;
             }
-            next.run0();
+            w.helpDepth++;
+            try {
+                next.run0();
+            } finally {
+                w.helpDepth--;
+            }
         }
     }
 
@@ -291,14 +303,21 @@ final class ForkJoinCore {
         return submissions.removeFirstOccurrence(t);
     }
 
-    /** Runs the task in the caller if it is still queued here; for outside threads and the common pool. */
-    void helpExternal(ForkJoinTask<?> awaited) {
+    /** Runs the task in the caller if it is still queued here. */
+    void runIfQueued(ForkJoinWorkerThread w, ForkJoinTask<?> t) {
         boolean mine;
         synchronized (this) {
-            mine = removeQueued(null, awaited);
+            mine = removeQueued(w, t);
         }
         if (mine) {
-            awaited.run0();
+            t.run0();
+        }
+    }
+
+    /** With no workers ever (a common pool of parallelism 0), a waiting outside thread must do it. */
+    void helpOutside(ForkJoinTask<?> awaited) {
+        if (parallelism == 0) {
+            runIfQueued(null, awaited);
         }
     }
 
@@ -389,7 +408,7 @@ final class ForkJoinCore {
     }
 
     synchronized boolean isQuiescent() {
-        return live == idle.size() && !anyQueued();
+        return live + reserved == idle.size();
     }
 
     synchronized long steals() {
@@ -421,7 +440,7 @@ final class ForkJoinCore {
         maybeFinish();
     }
 
-    /** Ends the pool now; the tasks still queued, for the caller to cancel. */
+    /** Ends the pool now; the tasks queued or running, for the caller to cancel. */
     List<ForkJoinTask<?>> stop() {
         List<ForkJoinTask<?>> dropped = new ArrayList<ForkJoinTask<?>>();
         synchronized (this) {
@@ -433,6 +452,9 @@ final class ForkJoinCore {
                 if (w != null) {
                     dropped.addAll(w.local);
                     w.local.clear();
+                    if (w.current != null) {
+                        dropped.add(w.current);
+                    }
                     w.interrupt();
                 }
             }

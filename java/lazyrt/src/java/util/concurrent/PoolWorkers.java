@@ -58,6 +58,9 @@ final class PoolWorkers {
     /** Starts a worker if the state and the limit allow it; false also if the factory gave no thread. */
     boolean addWorker(Runnable first, boolean withinCore) {
         // After shutdown a worker only comes for what is left in the queue.
+        if (state >= TERMINATING) {
+            return false;
+        }
         boolean noWork = state == SHUTDOWN && (first != null || queue.isEmpty());
         synchronized (this) {
             boolean open = state == RUNNING || state == SHUTDOWN && !noWork;
@@ -91,12 +94,17 @@ final class PoolWorkers {
             starting--;
             workers.add(w);
             largest = Math.max(largest, workers.size());
+            // Busy until it looks for work itself, so an interrupt meant for idle ones cannot find
+            // it on its way there and stay set through its task or the terminated hook.
+            w.busy = true;
+            busy++;
         }
         try {
             w.thread.start();
         } catch (RuntimeException | Error e) {
             synchronized (this) {
                 workers.remove(w);
+                busy--;
                 starting++;
             }
             throw e;
@@ -116,6 +124,9 @@ final class PoolWorkers {
         try {
             Runnable task = w.first;
             w.first = null;
+            if (task == null) {
+                end(w, false);
+            }
             while (task != null || (task = nextTask()) != null) {
                 runTask(w, task);
                 task = null;
@@ -133,20 +144,26 @@ final class PoolWorkers {
             Throwable thrown = null;
             try {
                 task.run();
-            } catch (Throwable t) {
+            } catch (RuntimeException | Error t) {
                 thrown = t;
                 throw t;
+            } catch (Throwable t) {
+                // Only code hiding a checked exception gets here.
+                thrown = t;
+                throw new Error(t);
             } finally {
                 owner.afterExecute(task, thrown);
             }
         } finally {
-            end(w);
+            end(w, true);
         }
     }
 
     private synchronized void begin(Worker w) {
-        w.busy = true;
-        busy++;
+        if (!w.busy) {
+            w.busy = true;
+            busy++;
+        }
         // A task sees the interrupt of a stop, and none left over from before.
         if (state >= STOP) {
             Thread.currentThread().interrupt();
@@ -155,10 +172,12 @@ final class PoolWorkers {
         }
     }
 
-    private synchronized void end(Worker w) {
+    private synchronized void end(Worker w, boolean ranTask) {
         w.busy = false;
         busy--;
-        completed++;
+        if (ranTask) {
+            completed++;
+        }
     }
 
     /** The next task, or null when this worker should end, which then no longer counts as listed. */
@@ -251,11 +270,10 @@ final class PoolWorkers {
                 return;
             }
             state = TERMINATING;
-        }
-        try {
-            owner.terminated();
-        } finally {
-            synchronized (this) {
+            // Under the monitor: while the hook runs, other threads wait to read the pool's counts.
+            try {
+                owner.terminated();
+            } finally {
                 state = TERMINATED;
                 notifyAll();
             }
@@ -298,6 +316,10 @@ final class PoolWorkers {
     }
 
     void setCore(int corePoolSize) {
+        if (state >= TERMINATING) {
+            core = corePoolSize;
+            return;
+        }
         int raised;
         synchronized (this) {
             raised = corePoolSize - core;
