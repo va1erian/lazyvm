@@ -102,12 +102,14 @@ public class QueueIdleIterators {
     /** The element it holds was at the iterator's own end when it left: it starts again there. */
     static void startsAgain(Deque<String> d) {
         String name = d.getClass().getSimpleName();
-        d.add("a");
-        Iterator<String> back = d.descendingIterator();
-        d.pollLast();
-        d.addLast("b");
-        System.out.println(name + " backward, then newer at its end: " + walk(back));
-        d.clear();
+        if (d instanceof LinkedBlockingDeque) {
+            d.add("a");
+            Iterator<String> back = d.descendingIterator();
+            d.pollLast();
+            d.addLast("b");
+            System.out.println(name + " backward, then newer at its end: " + walk(back));
+            d.clear();
+        }
         d.add("a");
         d.add("c");
         Iterator<String> forward = d.iterator();

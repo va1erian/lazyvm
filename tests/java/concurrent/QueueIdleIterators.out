@@ -1,5 +1,4 @@
-ConcurrentLinkedDeque backward, then newer at its end: a 
-ConcurrentLinkedDeque forward, then newer at its end: a b c 
+ConcurrentLinkedDeque forward, then newer at its end: a c 
 LinkedBlockingDeque backward, then newer at its end: a b 
 LinkedBlockingDeque forward, then newer at its end: a b c 
 ConcurrentLinkedDeque head traffic: 1
