@@ -77,12 +77,6 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
         }
     }
 
-    final void fireLinksIfSettled() {
-        if (outcome != null) {
-            fireLinks();
-        }
-    }
-
     private void moveLinksOnto(CompletableFuture<?> root) {
         synchronized (LOCK) {
             for (StageLink link = newestLink; link != null; link = newestLink) {

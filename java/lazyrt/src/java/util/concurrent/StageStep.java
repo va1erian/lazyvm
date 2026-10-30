@@ -83,7 +83,7 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
         if (fire() != null && executor != null) {
             // Settled without a task, by a skip or a rejection: as a task's end does, go on with what
             // the sources have left to fire.
-            helpSources();
+            endOnSources();
         }
     }
 
@@ -196,13 +196,6 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
                 leave(source);
             }
         }
-    }
-
-    private void helpSources() {
-        if (second != null) {
-            second.fireLinksIfSettled();
-        }
-        first.fireLinksIfSettled();
     }
 
     /** A step found with its target settled: only the {@code either} steps leave. */
