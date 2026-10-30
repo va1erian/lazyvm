@@ -1,8 +1,13 @@
-//! Class initialization (JVMS 5.5), single-threaded until S6.
+//! Class initialization (JVMS 5.5).
+//!
+//! The VM lock stands in for each class's initialization lock: the state
+//! is only read and changed while holding the VM, and a thread that finds
+//! another thread initializing the class parks until that one is done.
 
 use classfile::Constant;
 
 use crate::class::{ClassId, InitState};
+use crate::thread::Blocked;
 use crate::value::Value;
 use crate::{Vm, VmError, VmResult};
 
@@ -10,28 +15,39 @@ impl Vm {
     /// Initializes `class` if it is not already initialized or being
     /// initialized by this thread. May run Java code (`<clinit>`).
     pub fn initialize(&mut self, class: ClassId) -> VmResult<()> {
-        match self.class(class).state {
-            InitState::Initialized | InitState::Initializing => return Ok(()),
-            InitState::Failed => {
-                let msg = format!(
-                    "Could not initialize class {}",
-                    self.class(class).java_name()
-                );
-                return Err(VmError::exception("java/lang/NoClassDefFoundError", msg));
+        let me = self.current;
+        loop {
+            match self.class(class).state {
+                // Step 4: a recursive request by the initializing thread.
+                InitState::Initialized => return Ok(()),
+                InitState::Initializing(t) if t == me => return Ok(()),
+                // Step 2: wait for the other thread, then look again. Java 8
+                // reports such a thread as RUNNABLE (observed), hence `No`.
+                InitState::Initializing(_) => {
+                    self.threads.init_waiters.push(me);
+                    self.park(Blocked::No, None);
+                }
+                // Step 5.
+                InitState::Failed => {
+                    let msg = format!(
+                        "Could not initialize class {}",
+                        self.class(class).java_name()
+                    );
+                    return Err(VmError::exception("java/lang/NoClassDefFoundError", msg));
+                }
+                InitState::Linked => break,
             }
-            InitState::Linked => {}
         }
-        self.class_mut(class).state = InitState::Initializing;
-        match self.initialize_steps(class) {
-            Ok(()) => {
-                self.class_mut(class).state = InitState::Initialized;
-                Ok(())
-            }
-            Err(e) => {
-                self.class_mut(class).state = InitState::Failed;
-                Err(e)
-            }
-        }
+        self.class_mut(class).state = InitState::Initializing(me);
+        let result = self.initialize_steps(class);
+        // Steps 10 and 12: record the outcome and wake the waiters.
+        self.class_mut(class).state = match result {
+            Ok(()) => InitState::Initialized,
+            Err(_) => InitState::Failed,
+        };
+        let mut waiters = std::mem::take(&mut self.threads.init_waiters);
+        self.threads.unpark_all(&mut waiters);
+        result
     }
 
     fn initialize_steps(&mut self, class: ClassId) -> VmResult<()> {

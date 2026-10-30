@@ -1,0 +1,19 @@
+initially false
+isInterrupted keeps it: true true
+interrupted clears it: true false
+pending interrupt stops sleep: sleep interrupted, now false
+pending interrupt stops wait: null, now false
+still holds the lock: true
+short sleeps return
+sleep: sleep interrupted, flag false
+interrupted waiter is blocked on the lock: BLOCKED
+wait: null, flag false, owns lock true
+join: null, sleeper alive true
+sleeper interrupted last
+busy loop saw the flag: true
+unstarted: false
+terminated: false
+contender: BLOCKED
+got the lock at last
+after: TERMINATED
+timed wait returned on its own: true

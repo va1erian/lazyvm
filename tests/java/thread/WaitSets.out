@@ -1,0 +1,7 @@
+notify plus interrupt: one normal return true, first waiter saw the interrupt true
+after a timeout, notify reaches the other waiter: true
+after an interrupt, notify reaches the other waiter: true (interrupted 1)
+wait() let the blocked thread in: true
+pending interrupt: wait threw keeping the monitor true
+notifyAll woke every waiter: true
+join returned only at the end: true

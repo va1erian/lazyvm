@@ -1,9 +1,10 @@
-//! `java.lang.Object` and `java.lang.String.intern`.
+//! `java.lang.Object` and `java.lang.String.intern`; the monitor methods
+//! are in `lang_thread`.
 
 use vm::heap::{Body, Object};
 use vm::{Value, Vm, VmError, VmResult};
 
-use crate::{long, obj, ret_int, ret_ref, ret_void};
+use crate::{obj, ret_int, ret_ref};
 
 const OBJECT: &str = "java/lang/Object";
 
@@ -11,9 +12,6 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(OBJECT, "getClass", "()Ljava/lang/Class;", get_class);
     vm.register_native(OBJECT, "hashCode", "()I", hash_code);
     vm.register_native(OBJECT, "clone", "()Ljava/lang/Object;", clone);
-    vm.register_native(OBJECT, "notify", "()V", notify);
-    vm.register_native(OBJECT, "notifyAll", "()V", notify);
-    vm.register_native(OBJECT, "wait", "(J)V", wait);
     vm.register_native("java/lang/String", "intern", "()Ljava/lang/String;", intern);
 }
 
@@ -51,32 +49,6 @@ fn clone(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         Body::Array(a) => Body::Array(a.duplicate()),
     };
     ret_ref(Some(vm.heap.alloc(Object { class, body })?))
-}
-
-/// Until threads exist (S6) nobody can be waiting, so notify is a no-op.
-fn notify(_vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    obj(args, 0)?;
-    ret_void()
-}
-
-/// With one thread, `wait(0)` could never return; a timed wait just sleeps.
-fn wait(_vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    obj(args, 0)?;
-    let millis = long(args, 1)?;
-    if millis < 0 {
-        return Err(VmError::exception(
-            "java/lang/IllegalArgumentException",
-            "timeout value is negative",
-        ));
-    }
-    if millis == 0 {
-        return Err(VmError::exception(
-            "java/lang/IllegalMonitorStateException",
-            "wait() with no other thread would block forever (threads arrive in S6)",
-        ));
-    }
-    std::thread::sleep(std::time::Duration::from_millis(millis as u64));
-    ret_void()
 }
 
 fn intern(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

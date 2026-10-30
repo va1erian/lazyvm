@@ -21,6 +21,11 @@ pub struct Frame {
     pub next_pc: usize,
     pub locals: Box<[Value]>,
     pub stack: Vec<Value>,
+    /// Monitors entered by `monitorenter` and not yet exited, oldest
+    /// first. Released when the frame is popped (JVMS 2.11.10).
+    pub monitors: Vec<Ref>,
+    /// The monitor of a `synchronized` method, released on return.
+    pub method_lock: Option<Ref>,
 }
 
 impl Frame {
@@ -53,7 +58,25 @@ impl Frame {
             next_pc: 0,
             locals,
             stack,
+            monitors: Vec::new(),
+            method_lock: None,
         })
+    }
+
+    /// The references in locals and on the stack, and the objects whose
+    /// monitors the frame holds, for the collector.
+    pub fn roots(&self, out: &mut Vec<Ref>) {
+        let refs = self
+            .locals
+            .iter()
+            .chain(&self.stack)
+            .filter_map(|v| match v {
+                Value::Ref(Some(r)) => Some(*r),
+                _ => None,
+            });
+        out.extend(refs);
+        out.extend(self.monitors.iter().copied());
+        out.extend(self.method_lock);
     }
 
     pub fn push(&mut self, v: Value) -> VmResult<()> {

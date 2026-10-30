@@ -15,6 +15,7 @@ pub mod native;
 mod objects;
 mod properties;
 mod strings;
+pub mod thread;
 mod throw;
 pub mod value;
 pub use platform::wtf;
@@ -99,16 +100,46 @@ pub struct Vm {
     pub(crate) frame_slots: usize,
     /// Current nesting of `invoke` from Rust.
     pub(crate) nesting: u32,
+    /// The VM lock, shared by every thread (`thread::Gil`).
+    pub(crate) gil: Arc<thread::Gil>,
+    /// Every live Java thread.
+    pub(crate) threads: thread::Threads,
+    /// The index in `threads` of the thread holding the VM.
+    pub(crate) current: usize,
+    pub(crate) monitors: thread::Monitors,
 }
 
 impl Vm {
+    /// A VM held by the calling OS thread, which becomes its main thread.
     pub fn new(classpath: ClassPath, options: Options) -> Vm {
+        let heap = heap::Heap::new(options.heap_limit);
+        let mut vm = Vm::build(classpath, options, heap, thread::Gil::new());
+        vm.threads = thread::Threads::with_main();
+        vm
+    }
+
+    /// What a thread leaves in its `&mut Vm` while another thread holds
+    /// the real one (`Vm::blocking`): empty, and never used.
+    pub(crate) fn placeholder(gil: Arc<thread::Gil>) -> Vm {
+        let empty = ClassPath {
+            boot: Vec::new(),
+            app: Vec::new(),
+        };
+        Vm::build(empty, Options::default(), heap::Heap::new(0), gil)
+    }
+
+    fn build(
+        classpath: ClassPath,
+        options: Options,
+        heap: heap::Heap,
+        gil: Arc<thread::Gil>,
+    ) -> Vm {
         Vm {
             classes: Vec::new(),
             by_name: HashMap::new(),
             loading: Vec::new(),
             classpath,
-            heap: heap::Heap::new(options.heap_limit),
+            heap,
             frames: Vec::new(),
             roots: Vec::new(),
             interned: HashMap::new(),
@@ -122,6 +153,10 @@ impl Vm {
             creating_exception: 0,
             frame_slots: 0,
             nesting: 0,
+            gil,
+            threads: thread::Threads::default(),
+            current: 0,
+            monitors: thread::Monitors::default(),
         }
     }
 

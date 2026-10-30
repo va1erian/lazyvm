@@ -17,6 +17,7 @@ mod lang_class;
 mod lang_object;
 mod lang_string_case;
 mod lang_system;
+mod lang_thread;
 mod lang_throwable;
 mod lazy_gfx;
 mod lazy_gfx_draw;
@@ -34,6 +35,7 @@ pub fn register_all(vm: &mut Vm) {
     lang_object::register(vm);
     lang_class::register(vm);
     lang_system::register(vm);
+    lang_thread::register(vm);
     lang_throwable::register(vm);
     math::register(vm);
     floats::register(vm);

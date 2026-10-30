@@ -38,11 +38,12 @@ pub enum ClassKind {
     Primitive(u8),
 }
 
-/// JVMS 5.5 initialization states, single-threaded until S6.
+/// JVMS 5.5 initialization states.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InitState {
     Linked,
-    Initializing,
+    /// Being initialized by the thread with this index (`Vm::threads`).
+    Initializing(usize),
     Initialized,
     Failed,
 }

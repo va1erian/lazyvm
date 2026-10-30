@@ -10,6 +10,7 @@ const MAX_SWITCH_ENTRIES: i64 = 65536;
 impl Vm {
     pub(super) fn op_branch(&mut self, op: u8) -> VmResult<Flow> {
         let f = self.top()?;
+        let start = f.pc;
         match op {
             0x99..=0x9e => {
                 let v = f.pop_int()?;
@@ -45,7 +46,12 @@ impl Vm {
             }
             _ => return Err(VmError::verify(format!("op_branch cannot run {op:#04x}"))),
         }
-        Ok(Flow::Next)
+        // A backward branch is a safepoint, so every loop has one.
+        Ok(if f.pc <= start {
+            Flow::Poll
+        } else {
+            Flow::Next
+        })
     }
 }
 

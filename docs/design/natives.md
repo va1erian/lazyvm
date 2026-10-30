@@ -44,6 +44,7 @@ The VM calls these Java methods from natives, by name and descriptor.
 - `protected native Object clone() throws CloneNotSupportedException` (arrays and `Cloneable`; shallow)
 - `public final native void notify()`, `public final native void notifyAll()`
 - `public final native void wait(long timeout) throws InterruptedException`
+  (monitors: [`threads.md`](threads.md))
 
 ### `java.lang.Class`
 - `public native String getName()` (binary name with dots; arrays as `[I`, `[Ljava.lang.String;`)
@@ -144,8 +145,25 @@ it on 20,000 random strings; `CaseMapping` repeats the check on the VM.
 like the oracle.
 
 ### `java.lang.Thread`
+See [`threads.md`](threads.md).
 - `public static native void sleep(long millis) throws InterruptedException`
-  (until S6 `currentThread()` is plain Java returning one main thread)
+  (flushes stdout first, as before S6)
+- `public static native void yield()`, `public static native boolean holdsLock(Object obj)`
+- `private static native Thread current0()`: the running thread's `Thread`,
+  null on the main thread until `attach0` gave it one
+- `private static native void attach0(Thread t)`: the main thread's `Thread`,
+  made lazily by `currentThread()`
+- `private native void start0(boolean daemon)`: a new OS thread that calls
+  `runByVm`
+- `private native void interrupt0()`, `private native boolean isInterrupted0(boolean clear)`
+- `private native int state0()`: 0 runnable, 1 blocked on a monitor, 2
+  waiting, 3 timed waiting, -1 not alive
+
+The VM calls two private methods of `Thread` by name: `runByVm()` on a started
+thread (run, the uncaught exception handler, then `exitByVm`), and
+`exitByVm()` for the main thread after `main`. It calls
+`java.lang.Shutdown.runHooks()` after the last non-daemon thread, if that
+class was loaded.
 
 ### `lazy.internal.VM`
 - `public static native String getProperty(String key)` (null when unset)

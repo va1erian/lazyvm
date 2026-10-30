@@ -1,0 +1,10 @@
+thread 0: checksum 315720000
+thread 1: checksum 315720000
+thread 2: checksum 315720000
+thread 3: checksum 315720000
+thread 4: checksum 315720000
+thread 5: checksum 315720000
+thread 6: checksum 315720000
+thread 7: checksum 315720000
+main collected while workers ran: true
+weak probe cleared: true

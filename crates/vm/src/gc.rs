@@ -45,9 +45,10 @@ impl Vm {
             }));
         };
         for f in &self.frames {
-            refs(&f.locals, &mut roots);
-            refs(&f.stack, &mut roots);
+            f.roots(&mut roots);
         }
+        self.threads.roots(&mut roots);
+        self.monitor_roots(&mut roots);
         for c in &self.classes {
             refs(&c.statics, &mut roots);
             roots.extend(c.mirror);

@@ -1,0 +1,4 @@
+main returns
+hook one calls exit
+hook two still ran
+--- exit 7 ---

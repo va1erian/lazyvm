@@ -12,6 +12,7 @@ mod ops_branch;
 mod ops_invoke;
 mod ops_math;
 mod ops_object;
+mod sync;
 
 pub use frame::Frame;
 pub use lend::with_lent;
@@ -23,6 +24,8 @@ use crate::{Vm, VmError, VmResult};
 /// What an instruction did to control flow.
 pub(crate) enum Flow {
     Next,
+    /// Next, after a safepoint: a backward branch or a call was taken.
+    Poll,
     Return(Option<Value>),
 }
 
@@ -58,7 +61,10 @@ impl Vm {
         }
         if method.is_native() {
             let f = self.native_for(m)?;
-            return f(self, args);
+            let lock = self.lock_for_call(m, args)?;
+            let result = f(self, args);
+            self.drop_method_lock(lock);
+            return result;
         }
         // Each nested run uses Rust stack; bound it like Java frames.
         if self.nesting >= self.options.max_nesting + self.headroom(OVERFLOW_NESTING) as u32 {
@@ -66,6 +72,7 @@ impl Vm {
         }
         let base = self.frames.len();
         self.push_frame(m, args)?;
+        self.lock_pushed_frame(m)?;
         self.nesting += 1;
         let result = self.run(base);
         self.nesting -= 1;
@@ -111,6 +118,9 @@ impl Vm {
     pub(crate) fn pop_frame(&mut self) {
         if let Some(f) = self.frames.pop() {
             self.frame_slots -= f.locals.len() + usize::from(f.code.max_stack);
+            if !f.monitors.is_empty() || f.method_lock.is_some() {
+                self.release_frame_monitors(&f);
+            }
         }
     }
 
@@ -135,13 +145,20 @@ impl Vm {
             }
             let outcome = match self.step() {
                 Ok(Flow::Next) => continue,
-                Ok(Flow::Return(v)) => {
-                    self.pop_frame();
-                    if self.frames.len() <= base {
-                        return Ok(v);
-                    }
-                    self.resume_caller(v)
+                Ok(Flow::Poll) => {
+                    self.safepoint();
+                    continue;
                 }
+                Ok(Flow::Return(v)) => match self.check_balanced() {
+                    Err(e) => Err(e),
+                    Ok(()) => {
+                        self.pop_frame();
+                        if self.frames.len() <= base {
+                            return Ok(v);
+                        }
+                        self.resume_caller(v)
+                    }
+                },
                 Err(e) => Err(e),
             };
             if let Err(e) = outcome {
@@ -239,7 +256,8 @@ impl Vm {
             0x00..=0x11 | 0x15..=0x2d | 0x36..=0x4e | 0x57..=0x5f | 0x84 | 0xc4 => {
                 self.op_basic(op)
             }
-            0x12..=0x14 | 0xb2..=0xb5 | 0xbb..=0xc3 | 0xc5 => self.op_object(op),
+            0x12..=0x14 | 0xb2..=0xb5 | 0xbb..=0xc1 | 0xc5 => self.op_object(op),
+            0xc2 | 0xc3 => self.op_monitor(op),
             0x2e..=0x35 | 0x4f..=0x56 => self.op_array(op),
             0x60..=0x83 | 0x85..=0x98 => self.op_math(op),
             0x99..=0xb1 | 0xc6..=0xc9 => self.op_branch(op),

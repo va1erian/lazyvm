@@ -48,7 +48,18 @@ impl Object {
 struct Slot {
     generation: u32,
     marked: bool,
+    lock: LockWord,
     object: Option<Object>,
+}
+
+/// The owner of an object's monitor, kept with the object so an
+/// uncontended `synchronized` touches nothing else (`crate::thread`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct LockWord {
+    /// The owning thread's index plus one; 0 when unowned.
+    pub owner: u32,
+    /// Entries by the owner.
+    pub count: u32,
 }
 
 pub struct Heap {
@@ -66,6 +77,7 @@ impl Heap {
         let dummy = Slot {
             generation: 0,
             marked: false,
+            lock: LockWord::default(),
             object: None,
         };
         Heap {
@@ -114,6 +126,7 @@ impl Heap {
         self.slots.push(Slot {
             generation: 0,
             marked: false,
+            lock: LockWord::default(),
             object: Some(object),
         });
         Ok(make_ref(index, 0))
@@ -137,6 +150,19 @@ impl Heap {
                 object: Some(o),
                 ..
             }) if *generation == r.generation => Ok(o),
+            _ => Err(VmError::Internal(format!("stale reference {r:?}"))),
+        }
+    }
+
+    /// The monitor word of a live object.
+    pub fn lock_word(&mut self, r: Ref) -> Result<&mut LockWord, VmError> {
+        match self.slots.get_mut(r.index() as usize) {
+            Some(Slot {
+                generation,
+                lock,
+                object: Some(_),
+                ..
+            }) if *generation == r.generation => Ok(lock),
             _ => Err(VmError::Internal(format!("stale reference {r:?}"))),
         }
     }
@@ -215,6 +241,7 @@ impl Heap {
                 live += slot.object.as_ref().map_or(0, Object::bytes);
             } else if slot.object.take().is_some() {
                 slot.generation = slot.generation.wrapping_add(1);
+                slot.lock = LockWord::default();
                 self.free.push(index as u32);
                 freed += 1;
             }

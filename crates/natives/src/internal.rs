@@ -1,10 +1,10 @@
-//! `lazy.internal.VM`, the console streams and `Thread.sleep`.
+//! `lazy.internal.VM` and the console streams.
 
 use platform::Stream;
 use vm::heap::Array;
 use vm::{Value, Vm, VmError, VmResult};
 
-use crate::{arg, int, long, obj, ret_bool, ret_int, ret_ref, ret_void};
+use crate::{arg, int, obj, ret_bool, ret_int, ret_ref, ret_void};
 
 const VM_CLASS: &str = "lazy/internal/VM";
 const OUT: &str = "lazy/internal/ConsoleOutputStream";
@@ -82,7 +82,6 @@ pub fn register(vm: &mut Vm) {
     });
     vm.register_native(IN, "read0", "(I[BII)I", read0);
     vm.register_native(IN, "available0", "(I)I", |_, _| ret_int(0));
-    vm.register_native("java/lang/Thread", "sleep", "(J)V", sleep);
 }
 
 /// The environment as name, value, name, value... in one String[].
@@ -188,7 +187,11 @@ fn read0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         return ret_int(0);
     }
     let mut buf = vec![0u8; r.len()];
-    let n = platform::read(stream, &mut buf).map_err(io_error)?;
+    // Input can take forever, so other threads run meanwhile. `array` is
+    // an argument, rooted on the caller's stack.
+    let n = vm
+        .blocking(|| platform::read(stream, &mut buf))
+        .map_err(io_error)?;
     if n == 0 {
         return ret_int(-1);
     }
@@ -198,17 +201,4 @@ fn read0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         }
     }
     ret_int(n as i32)
-}
-
-fn sleep(_vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let millis = long(args, 0)?;
-    if millis < 0 {
-        return Err(VmError::exception(
-            "java/lang/IllegalArgumentException",
-            "timeout value is negative",
-        ));
-    }
-    platform::flush(Stream::Out).map_err(io_error)?;
-    std::thread::sleep(std::time::Duration::from_millis(millis as u64));
-    ret_void()
 }

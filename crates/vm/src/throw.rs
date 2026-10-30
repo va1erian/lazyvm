@@ -102,12 +102,22 @@ impl Vm {
                 break;
             }
         }
-        Ok(frames
+        let mut out: Vec<TraceFrame> = frames
             .map(|f| TraceFrame {
                 method: f.method,
                 pc: f.pc,
             })
-            .collect())
+            .collect();
+        // A started thread's outermost frame is the VM's entry into Java
+        // (`Thread.runByVm`), which a trace does not show: `run` is the base.
+        if out.last().is_some_and(|f| self.is_thread_entry(f.method)) {
+            out.pop();
+        }
+        Ok(out)
+    }
+
+    fn is_thread_entry(&self, m: MethodRef) -> bool {
+        &*self.method(m).name == "runByVm" && &*self.class(m.class).name == "java/lang/Thread"
     }
 
     /// The `(class, method, file, line)` of a recorded frame, for

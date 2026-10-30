@@ -40,7 +40,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S3 | Class path, jars, launcher, IntelliJ | in progress |
 | S4 | Language completeness: lambdas, annotations, reflection | in progress |
 | S5 | Core library | in progress |
-| S6 | Threads, concurrency, `CompletionStage`, the event loop | not started |
+| S6 | Threads, concurrency, `CompletionStage`, the event loop | in progress |
 | S7 | `lazy.net` async TCP | not started |
 | S8 | Verifier and hardening | not started |
 | S11 | Streams, `java.time`, logging, JDWP | not started |
@@ -395,15 +395,19 @@ prints the top 20 with `printf`) matches the oracle on both platforms.
 Goal: real threads, `java.util.concurrent`, and `lazy.async` delivering
 platform completions into `CompletableFuture`.
 
-- [ ] S6-01 Threads: `Thread` on OS threads, safepoints, a stop-the-world GC
+- [x] S6-01 Threads: `Thread` on OS threads, safepoints, a stop-the-world GC
       handshake, `Thread.sleep`/`join`/`interrupt`/`yield`, daemon threads, the
       uncaught exception handler, `ThreadLocal`, and VM exit when the last
       non-daemon thread ends.
       Check: `tests/java/thread/StartJoin`, `Interrupts`, `GcUnderThreads` (8 threads allocating while GC runs, 1000 iterations).
-- [ ] S6-02 Monitors: `synchronized`, `wait`/`notify`/`notifyAll`, and
+- [x] S6-02 Monitors: `synchronized`, `wait`/`notify`/`notifyAll`, and
       `IllegalMonitorStateException`; class initialization made thread-safe
       (JVMS 5.5 locking procedure).
       Check: `tests/java/thread/ProducerConsumer`, `ClinitRace`.
+      Done with S6-01 (docs/design/threads.md): also `Runtime.addShutdownHook`,
+      `removeShutdownHook` and `halt` (`ShutdownHooks`, `ShutdownExit`,
+      `ShutdownExitInHook`, `ShutdownUncaught`, `ShutdownHalt`), and
+      `TimeoutLimits`; each thread test passed 50 runs in a row on Windows.
 - [ ] S6-03 The Java memory model at the VM level: `volatile` fields and
       `Unsafe`-free atomics through VM intrinsics (`lazy.internal.Atomics`)
       used by `java.util.concurrent.atomic`.
