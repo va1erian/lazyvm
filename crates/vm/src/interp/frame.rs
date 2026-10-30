@@ -2,6 +2,10 @@
 //!
 //! Every access is checked. Until the verifier lands (S8), malformed
 //! bytecode surfaces as `VerifyError` from these checks instead of a panic.
+//!
+//! The accessors dispatch uses are `#[inline]`: left to its heuristics, the
+//! compiler dropped them from the loop after unrelated changes
+//! (docs/design/threads.md, "Cost on one thread").
 
 use std::sync::Arc;
 
@@ -79,6 +83,7 @@ impl Frame {
         out.extend(self.method_lock);
     }
 
+    #[inline]
     pub fn push(&mut self, v: Value) -> VmResult<()> {
         if self.stack.len() >= usize::from(self.code.max_stack) {
             return Err(VmError::verify("operand stack overflow"));
@@ -87,12 +92,14 @@ impl Frame {
         Ok(())
     }
 
+    #[inline]
     pub fn pop(&mut self) -> VmResult<Value> {
         self.stack
             .pop()
             .ok_or_else(|| VmError::verify("operand stack underflow"))
     }
 
+    #[inline]
     pub fn pop_int(&mut self) -> VmResult<i32> {
         self.pop()?.int()
     }
@@ -109,11 +116,13 @@ impl Frame {
         self.pop()?.double()
     }
 
+    #[inline]
     pub fn pop_ref(&mut self) -> VmResult<Option<Ref>> {
         self.pop()?.reference()
     }
 
     /// A non-null reference, or `NullPointerException`.
+    #[inline]
     pub fn pop_nonnull(&mut self) -> VmResult<Ref> {
         self.pop_ref()?.ok_or_else(VmError::npe)
     }
@@ -127,6 +136,7 @@ impl Frame {
             .ok_or_else(|| VmError::verify("operand stack underflow"))
     }
 
+    #[inline]
     pub fn local(&self, i: usize) -> VmResult<Value> {
         self.locals
             .get(i)
@@ -151,6 +161,7 @@ impl Frame {
         Ok(())
     }
 
+    #[inline]
     pub fn u1(&self, offset: usize) -> VmResult<u8> {
         self.code
             .bytecode
@@ -159,10 +170,12 @@ impl Frame {
             .ok_or_else(|| VmError::verify("instruction runs past the end of the code"))
     }
 
+    #[inline]
     pub fn u2(&self, offset: usize) -> VmResult<u16> {
         Ok(u16::from_be_bytes([self.u1(offset)?, self.u1(offset + 1)?]))
     }
 
+    #[inline]
     pub fn i2(&self, offset: usize) -> VmResult<i16> {
         Ok(self.u2(offset)? as i16)
     }

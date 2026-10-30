@@ -36,8 +36,8 @@ Rust: no new `unsafe` block was needed.
 
 ### Safepoints and time slices
 
-The interpreter polls at every backward branch and every call (`Flow::Poll`
-in `interp/mod.rs`): one relaxed atomic load. A thread that has waited a whole
+The interpreter polls at every backward branch and every call (`Vm::safepoint`,
+called from `op_branch` and `call`): one relaxed atomic load. A thread that has waited a whole
 slice (5 ms) for the VM sets the flag, and the holder yields at its next poll.
 Yielding at every poll whenever anyone waits was tried first and spent all
 the time handing over (8 allocating threads made almost no progress), so the
@@ -176,28 +176,78 @@ interrupt, as Java 8 does (`ClinitState`); the wait is not interruptible.
 
 ## Cost on one thread
 
-Before threads, `monitorenter` was a null check. Now the interpreter polls at
-branches and calls, frames carry their monitors, and `synchronized` does real
-work. Against main at efd9986 (CPU time, best of 5, the two builds run
-interleaved, Windows), the branch is slower on one thread by:
+Threads add little work on one thread: a relaxed load at back-branches and
+calls, a test of the method's `synchronized` flag on a call, a test of the
+frame's monitors on a return, a larger `Frame`, and a real `synchronized`.
+S6-01/02 nevertheless made one thread 2.5% to 5.3% slower, and almost none of
+that was this work. Most of it was the compiler's response to it, and the fix
+(branch `perf-s6-single-thread`) removes it.
 
-| Test | main | branch | cost |
+CPU time, best of 5, all builds interleaved in one run, pinned to one P-core
+(logical CPU 12) at high priority, Windows release builds. "S6" is be48d6e,
+"fixed" is that with the changes below, and both are against efd9986. Other
+sessions' builds and tests were running on the machine throughout; runs of
+one build usually stayed within 2% to 3%, with the odd slower outlier, which
+best-of discards:
+
+| Test | main | S6 | fixed |
 |---|---|---|---|
-| `CharacterTables` | 10.70 s | 11.42 s | +6.7% |
-| `GcChurn` | 9.47 s | 10.00 s | +5.6% |
-| `ScannerLong` | 7.44 s | 7.88 s | +5.9% |
-| `RegexDepth` | 11.81 s | 12.84 s | +8.7% |
-| `RegexMemoStarts` | 13.98 s | 15.08 s | +7.8% |
-| `CaseMapping` | 49.09 s | 52.33 s | +6.6% |
+| `ScannerLong` | 6.38 s | +4.2% | -0.7% |
+| `RegexDepth` | 9.23 s | +2.5% | -2.4% |
+| `RegexMemoStarts` | 11.28 s | +4.4% | -0.6% |
+| `CharacterTables` | 9.09 s | +3.8% | -2.4% |
+| `GcChurn` | 7.89 s | +3.6% | -1.6% |
+| `CaseMapping` | 35.66 s | +5.3% | +0.4% |
 
-An earlier, quieter session measured 0.3% to 1.4% for nearly the same code,
-so the figure moves with the machine's state; these are the numbers to beat.
-Experiments to locate it: dropping the safepoint poll, or the `synchronized`
-checks on the call and return path, each won back under 2 points; a larger
-heap slot alone (main with 8 more bytes per slot) cost nothing; an inlined
-fast path for class initialization changed nothing. The rest is not
-located yet (the interpreter loop's code layout is a suspect). A loop doing
-nothing but `synchronized` blocks and calls is about 5% slower again on top.
+Part of "fixed" is the release profile's one codegen unit, which speeds up
+main too: against main built the same way, fixed is -1.4% to +1.2%, so the
+threads cost itself is within the noise. By median, fixed against main built
+the same way is -1.9% to +2.6% (the worst is `CaseMapping`).
+
+### The cause
+
+Callgrind counts on the Linux build, which do not depend on the machine's
+load, showed the cost was real instructions: +4.06% on `ScannerLong`, +6.28%
+on `CharacterTables`, +3.55% on `RegexDepth`.
+
+- **Inlining tipped over.** Bisecting a tenth-size `ScannerLong` on
+  instructions gave +0.72% at bf9616e and +4.18% at 875a147, whose only
+  change on the hot path moved a `synchronized` check into `lock_pushed_frame`.
+  That function stayed out of line, and the same build's dispatch loop lost
+  `op_array`, `Frame::push`, `Frame::u1` and `current_class`, on paths with no
+  connection to it: 13M calls to `push` became 20M.
+- **`Flow::Poll`.** A third result the loop tested after every instruction,
+  though only branches and calls ever return it. Polling where the safepoint
+  is, in `op_branch` and `call`, returns `Flow` to two variants and takes 0.8%
+  of the instructions off the short `ScannerLong`.
+- **Code splitting.** The rest did not show as instructions. With instructions
+  level with main (+0.04%), `CharacterTables` still took 3.5% longer on Linux
+  and 5% on Windows. Block alignment forced on (`-align-all-nofallthru-blocks=6`)
+  brought that to +2.1%, and one codegen unit to 0.0%. With the default 16
+  units, the split of the interpreter between them moves with unrelated changes.
+
+Not the cause: the class library (`ScannerLong` on the new VM with main's
+`lazyrt` costs the same), and, measured before this work, the 8 bytes per heap
+slot.
+
+### The fix
+
+- Hot checks are `#[inline(always)]` and their slow paths `#[cold]` functions
+  (`lock_pushed_frame`, `lock_for_call`, `check_balanced`, `safepoint`).
+- `Frame`'s dispatch accessors, `pop_frame`, `branch_if` and `current_class`
+  are `#[inline]`, so the loop's shape stops depending on the inliner's budget.
+- `Flow::Poll` is gone.
+- `codegen-units = 1` in the release profile: smaller too (`lazyvm.exe` 1.78 MB
+  to 1.66 MB), for about 2 s more build.
+
+### Measuring it next time
+
+Timing here shifts with core type (E-cores are 20% slower) and load, which is
+why an earlier session saw 0.3% to 1.4% for nearly the same code. Pin to a
+P-core, interleave the builds, and check instructions with callgrind on the
+static Linux build. Instructions and time can disagree, as above, so one does
+not replace the other. A loop doing only `synchronized` blocks and calls was
+about 5% slower again; that was measured before this fix, not since.
 
 ## For S6-03 to S6-06
 

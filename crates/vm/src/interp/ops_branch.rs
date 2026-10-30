@@ -47,11 +47,10 @@ impl Vm {
             _ => return Err(VmError::verify(format!("op_branch cannot run {op:#04x}"))),
         }
         // A backward branch is a safepoint, so every loop has one.
-        Ok(if f.pc <= start {
-            Flow::Poll
-        } else {
-            Flow::Next
-        })
+        if f.pc <= start {
+            self.safepoint();
+        }
+        Ok(Flow::Next)
     }
 }
 
@@ -68,6 +67,7 @@ fn cond(which: u8, o: std::cmp::Ordering) -> bool {
     }
 }
 
+#[inline]
 fn branch_if(f: &mut Frame, taken: bool) -> VmResult<()> {
     if taken {
         let off = i32::from(f.i2(1)?);
