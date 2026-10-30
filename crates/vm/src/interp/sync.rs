@@ -4,8 +4,8 @@
 //! Each frame lists the monitors it holds (`Frame::monitors`). Popping a
 //! frame, normally or by an exception, releases what is left on it.
 //!
-//! Each call and return only tests a flag, so those tests are forced inline
-//! and the locking is kept out of line: inlining the locking here pushed
+//! A call or return that holds no lock only tests a flag, so those tests stay
+//! inline and the locking is kept out of line: inlining the locking here pushed
 //! unrelated code out of the dispatch loop (docs/design/threads.md).
 
 use super::Flow;

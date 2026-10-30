@@ -212,11 +212,12 @@ load, showed the cost was real instructions: +4.06% on `ScannerLong`, +6.28%
 on `CharacterTables`, +3.55% on `RegexDepth`.
 
 - **Inlining tipped over.** Bisecting a tenth-size `ScannerLong` on
-  instructions gave +0.72% at bf9616e and +4.18% at 875a147, whose only
-  change on the hot path moved a `synchronized` check into `lock_pushed_frame`.
-  That function stayed out of line, and the same build's dispatch loop lost
-  `op_array`, `Frame::push`, `Frame::u1` and `current_class`, on paths with no
-  connection to it: 13M calls to `push` became 20M.
+  instructions, over the commits squashed into be48d6e, gave +0.72% at bf9616e
+  and +4.18% at 875a147, whose only change on the hot path moved a
+  `synchronized` check into `lock_pushed_frame`. That function stayed out of
+  line, and the same build's dispatch loop lost `op_array`, `Frame::push`,
+  `Frame::u1` and `current_class`, on paths with no connection to it: 13M calls
+  to `push` became 20M.
 - **`Flow::Poll`.** A third result the loop tested after every instruction,
   though only branches and calls ever return it. Polling where the safepoint
   is, in `op_branch` and `call`, returns `Flow` to two variants and takes 0.8%
