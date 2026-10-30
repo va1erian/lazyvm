@@ -37,8 +37,9 @@ Rust: no new `unsafe` block was needed.
 ### Safepoints and time slices
 
 The interpreter polls at every backward branch and every call (`Vm::safepoint`,
-called from `op_branch` and `call`): one relaxed atomic load. A thread that has waited a whole
-slice (5 ms) for the VM sets the flag, and the holder yields at its next poll.
+called from `op_branch` and `call`): one relaxed atomic load. A thread that has
+waited a whole slice (5 ms) for the VM sets the flag, and the holder yields at
+its next poll.
 Yielding at every poll whenever anyone waits was tried first and spent all
 the time handing over (8 allocating threads made almost no progress), so the
 slice gives each holder at least 5 ms, like a classic interpreter lock.
@@ -179,9 +180,9 @@ interrupt, as Java 8 does (`ClinitState`); the wait is not interruptible.
 Threads add little work on one thread: a relaxed load at back-branches and
 calls, a test of the method's `synchronized` flag on a call, a test of the
 frame's monitors on a return, a larger `Frame`, and a real `synchronized`.
-S6-01/02 nevertheless made one thread 2.5% to 5.3% slower, and almost none of
-that was this work. Most of it was the compiler's response to it, and the fix
-(branch `perf-s6-single-thread`) removes it.
+S6-01/02 nevertheless made one thread 3.4% to 5.7% slower, and almost none of
+that was this work. Most of it was the compiler's response to it, and that is
+now removed.
 
 CPU time, best of 5, all builds interleaved in one run, pinned to one P-core
 (logical CPU 12) at high priority, Windows release builds. "S6" is be48d6e,
@@ -192,17 +193,17 @@ best-of discards:
 
 | Test | main | S6 | fixed |
 |---|---|---|---|
-| `ScannerLong` | 6.38 s | +4.2% | -0.7% |
-| `RegexDepth` | 9.23 s | +2.5% | -2.4% |
-| `RegexMemoStarts` | 11.28 s | +4.4% | -0.6% |
-| `CharacterTables` | 9.09 s | +3.8% | -2.4% |
-| `GcChurn` | 7.89 s | +3.6% | -1.6% |
-| `CaseMapping` | 35.66 s | +5.3% | +0.4% |
+| `ScannerLong` | 6.47 s | +3.4% | -4.3% |
+| `RegexDepth` | 9.16 s | +5.1% | -3.2% |
+| `RegexMemoStarts` | 10.50 s | +5.7% | -1.9% |
+| `CharacterTables` | 9.00 s | +5.4% | -1.4% |
+| `GcChurn` | 7.84 s | +4.4% | -0.6% |
+| `CaseMapping` | 35.91 s | +3.9% | -1.4% |
 
 Part of "fixed" is the release profile's one codegen unit, which speeds up
-main too: against main built the same way, fixed is -1.4% to +1.2%, so the
-threads cost itself is within the noise. By median, fixed against main built
-the same way is -1.9% to +2.6% (the worst is `CaseMapping`).
+main too: against main built the same way, fixed is -3.6% to +0.7% (by median,
+-2.7% to -0.4%). So the threads cost itself is gone from these tests, and
+inlining more of the loop than main did more than pays for it.
 
 ### The cause
 
@@ -232,10 +233,12 @@ slot.
 
 ### The fix
 
-- Hot checks are `#[inline(always)]` and their slow paths `#[cold]` functions
-  (`lock_pushed_frame`, `lock_for_call`, `check_balanced`, `safepoint`).
-- `Frame`'s dispatch accessors, `pop_frame`, `branch_if` and `current_class`
-  are `#[inline]`, so the loop's shape stops depending on the inliner's budget.
+- The flag tests on calls and returns are `#[inline(always)]`
+  (`lock_pushed_frame`, `lock_for_call`, `check_balanced`), with the locking in
+  `#[cold]` functions. `safepoint` is `#[inline]` with a `#[cold]` yield.
+- `Frame`'s dispatch accessors, `Value`'s typed reads, `pop_frame`, `branch_if`
+  and `current_class` are `#[inline]`. These are hints: they make the loop much
+  less sensitive to the inliner's budget, but nothing enforces the result.
 - `Flow::Poll` is gone.
 - `codegen-units = 1` in the release profile: smaller too (`lazyvm.exe` 1.78 MB
   to 1.66 MB), for about 2 s more build.
@@ -246,8 +249,11 @@ Timing here shifts with core type (E-cores are 20% slower) and load, which is
 why an earlier session saw 0.3% to 1.4% for nearly the same code. Pin to a
 P-core, interleave the builds, and check instructions with callgrind on the
 static Linux build. Instructions and time can disagree, as above, so one does
-not replace the other. A loop doing only `synchronized` blocks and calls was
-about 5% slower again; that was measured before this fix, not since.
+not replace the other.
+
+Monitors themselves do cost something: a loop doing nothing but `synchronized`
+methods and blocks (80M entries) is 9.9% slower than main, where a monitor was
+a null check, and it was 14.9% before this fix.
 
 ## For S6-03 to S6-06
 

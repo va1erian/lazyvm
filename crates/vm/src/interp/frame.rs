@@ -104,14 +104,17 @@ impl Frame {
         self.pop()?.int()
     }
 
+    #[inline]
     pub fn pop_long(&mut self) -> VmResult<i64> {
         self.pop()?.long()
     }
 
+    #[inline]
     pub fn pop_float(&mut self) -> VmResult<f32> {
         self.pop()?.float()
     }
 
+    #[inline]
     pub fn pop_double(&mut self) -> VmResult<f64> {
         self.pop()?.double()
     }
