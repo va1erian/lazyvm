@@ -20,7 +20,6 @@ tryLock min nanos = false
 tryLock most negative days = false
 await min = false
 await most negative days = false
-awaitNanos min stays positive = true
 awaitUntil the earliest date = false true
 awaitUntil before 1970 = false
 tryAcquire min = false

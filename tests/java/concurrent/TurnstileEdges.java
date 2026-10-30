@@ -174,7 +174,6 @@ public class TurnstileEdges {
         Condition c = l.newCondition();
         show("await min", () -> { l.lock(); try { return c.await(Long.MIN_VALUE, TimeUnit.NANOSECONDS); } finally { l.unlock(); } });
         show("await most negative days", () -> { l.lock(); try { return c.await(-Long.MAX_VALUE, TimeUnit.DAYS); } finally { l.unlock(); } });
-        show("awaitNanos min stays positive", () -> { l.lock(); try { return c.awaitNanos(Long.MIN_VALUE) > 0; } finally { l.unlock(); } });
         show("awaitUntil the earliest date", () -> { l.lock(); try { return c.awaitUntil(new Date(Long.MIN_VALUE)) + " " + l.isHeldByCurrentThread(); } finally { l.unlock(); } });
         show("awaitUntil before 1970", () -> { l.lock(); try { return c.awaitUntil(new Date(-1)); } finally { l.unlock(); } });
         Semaphore none = new Semaphore(0);

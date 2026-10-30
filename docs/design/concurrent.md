@@ -219,7 +219,7 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   say false, down to `Long.MIN_VALUE` and `new Date(Long.MIN_VALUE)` (`TurnstileEdges`: "tryLock min nanos",
   "tryLock most negative days", "await min", "await most negative days", "awaitUntil the earliest date",
   "awaitUntil before 1970"). The one oddity: `awaitNanos(Long.MIN_VALUE)` returns a positive number, the
-  subtraction having wrapped ("awaitNanos min stays positive").
+  subtraction having wrapped (not pinned: with a clock too coarse to move during the call, as under LazyOS, the subtraction does not wrap and the answer stays negative).
 - Running out of heap as a thread joins a lock's queue costs nobody else: those queued all get through and the
   lock works afterwards (`QueueMemory`: "floor 16", "floor 64", "floor 256").
 

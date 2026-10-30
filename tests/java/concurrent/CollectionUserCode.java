@@ -42,7 +42,11 @@ public class CollectionUserCode {
         final boolean stops;
         Ranked(int v, boolean stops) { this.v = v; this.stops = stops; }
         @Override public int hashCode() { return 42; }
-        @Override public boolean equals(Object o) { return o instanceof Ranked && ((Ranked) o).v == v; }
+        // Stops here too: a long bin may meet the key it searches for before any compareTo.
+        @Override public boolean equals(Object o) {
+            if (stops) pause();
+            return o instanceof Ranked && ((Ranked) o).v == v;
+        }
         @Override public int compareTo(Ranked o) {
             if (stops) pause();
             return Integer.compare(v, o.v);
