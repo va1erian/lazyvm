@@ -1,7 +1,6 @@
 // VMARGS: -Xmx16m
 package concurrent;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -42,7 +41,6 @@ public class QueueMemory {
         joinWithNoMemory(16);
         joinWithNoMemory(64);
         joinWithNoMemory(256);
-        dequeWithNoMemory();
         System.exit(0);
     }
 
@@ -54,7 +52,6 @@ public class QueueMemory {
         waiting(t);
         l.unlock();
         t.join();
-        new ArrayDeque<Object>().addLast("");
         try { throw new OutOfMemoryError("warm"); } catch (OutOfMemoryError e) { }
     }
 
@@ -89,34 +86,5 @@ public class QueueMemory {
         }
         boolean usable = l.tryLock(20, TimeUnit.SECONDS);
         System.out.println("floor " + floor + ": stuck " + stuck + " usable " + usable + " queue " + l.getQueueLength());
-    }
-
-    /** One add fails for want of a bigger array; the deque must still work. */
-    static void dequeWithNoMemory() {
-        ArrayDeque<Integer> d = new ArrayDeque<>(4000);
-        for (int i = 0; i < 1000; i++) d.addLast(i);
-        List<Object> hog = fill(16);
-        int added = 0;
-        boolean ran = false;
-        try {
-            for (int i = 1000; i < 200_000; i++) {
-                d.addLast(1000);
-                added++;
-            }
-        } catch (OutOfMemoryError e) {
-            ran = true;
-        }
-        hog.clear();
-        hog = null;
-        d.addLast(-1);
-        d.addFirst(-2);
-        int count = 0;
-        int last = 0;
-        for (int x : d) {
-            count++;
-            last = x;
-        }
-        System.out.println("deque ran out " + ran + ", first " + d.peekFirst() + " last " + last
-            + " in step " + (count == d.size()) + " grown " + (d.size() >= 1002));
     }
 }

@@ -57,6 +57,9 @@ the label of a line of its golden. Change the rule and that line should change.
 | `LockEdges` | locks: check order, who wakes whom, read holds around `await`, the read limit in a queue |
 | `SynchronizerEdges` | latch, barrier, exchanger, semaphore, random: check order, a running action, wake chains, wide ranges |
 | `PhaserEdges` | `Phaser`: forcing, late registration, tiers, a blocked or throwing hook |
+| `PhaserEnds` | `Phaser`: registering through waiting tiers, how a hook's ending reads, what the last arriver gets |
+| `TurnstileEdges` | who may pass a queue, the order queue queries read in, timeouts at the far ends of time, how often a `Delayed` is asked |
+| `QueueMemory` | the heap runs out as a thread joins a lock's queue |
 | `CollectionEdges` | the collections: range bounds, view identity, bulk entries, a running compute, what counts as a copy-on-write, hand-off order |
 | `ThreadPoolEdges` | `ThreadPoolExecutor`: hooks that throw, the `terminated` hook, odd factories and queues, late resizing |
 | `FutureEdges` | `FutureTask` re-entrancy, `invokeAll`/`invokeAny` check and failure order, `ExecutorCompletionService` delivery, `Executors` |
@@ -191,6 +194,21 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   condition", "hasWaiters foreign unowned").
 - A thread that already holds the lock re-enters past any queue, fair or not, timed or not
   (`LockEdges`: "fair timed reentry behind queue", "fair read reentry", "writer reads past its queue").
+- `getQueuedThreads` lists the latest arrival first, `getWaitingThreads` the earliest first. A `signalAll`
+  puts the waiters behind those already queued, so they read first (`TurnstileEdges`: "wait list", "lock queue",
+  "after signalAll"). So do the queries of `Semaphore` and of the read-write lock, its reader and writer
+  lists too ("semaphore queue", "rw queue", "rw readers", "rw writers").
+- A non-fair timed attempt with no time to speak of (0, or 1 ns) gets a free lock even with a head queued,
+  long ago or not; a fair one does not (`TurnstileEdges`: "free, old head, timed 0", "free, old head, timed 1
+  ns", "fair, queued head, timed 0", "write, free, old writer head", "read, free, old reader head"). The head may
+  win that race on any VM, so those lines say only that it worked at least once in a few tries.
+- Timeouts at the far negative end answer at once, as any other past time: `tryLock`, `await` and `awaitUntil`
+  say false, down to `Long.MIN_VALUE` and `new Date(Long.MIN_VALUE)` (`TurnstileEdges`: "tryLock min nanos",
+  "tryLock most negative days", "await min", "await most negative days", "awaitUntil the earliest date",
+  "awaitUntil before 1970"). The one oddity: `awaitNanos(Long.MIN_VALUE)` returns a positive number, the
+  subtraction having wrapped ("awaitNanos min stays positive").
+- Running out of heap as a thread joins a lock's queue costs nobody else: those queued all get through and the
+  lock works afterwards (`QueueMemory`: "floor 16", "floor 64", "floor 256").
 
 ### `ReentrantReadWriteLock` (`ReadWriteLocks`)
 
@@ -218,6 +236,8 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   order"). With a writer queued, a timed read `tryLock(0, ...)` fails while the
   plain `tryLock()` barges and succeeds ("fair timed read behind writer", "barging
   read tryLock").
+- Non-fair mode: under read holds, a reader does not pass a writer at the head of the queue, however
+  briefly it has been there (`TurnstileEdges`: "timed read past a young writer waiting out readers").
 - `toString` does not reflect the queue ("toString queued"). `getOwner` is the
   writer only, null under read holds ("owner", "owner under read"). The protected
   queue queries report writers and readers apart ("queued writers", "queued readers").
@@ -225,8 +245,9 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   foreign"). `await` restores all write holds ("condition return").
 - `await` by a thread holding both the write lock and read holds gives up the whole lock, the read
   holds as well: during the wait another thread can take the write lock, and sees a read count of
-  0. When the waiter returns, its write holds and its read holds are all back (`LockEdges`: "await with
-  both holds", "seen during that wait", "both holds back").
+  0. When the waiter returns, its write holds are back, and so are its read holds if no other reader came in
+  meanwhile (`LockEdges`: "await with both holds", "seen during that wait", "both holds back"; if one did, see
+  "What is not pinned").
 - The read limit also binds a reader that has been queueing. If the count is at 65535 when its
   turn comes, it gets `Error: Maximum lock count exceeded` from `lock`, `lockInterruptibly` or the timed
   `tryLock`, leaves the queue, and the next in line is woken and judged the same way (`LockEdges`:
@@ -657,6 +678,12 @@ One script, run on both; rules hold for both unless noted.
   compared ("one non-comparable source"). A comparator that throws leaves the queue as it was ("comparator
   that throws, second insert"). The array's layout follows `java.util.PriorityQueue` ("heap layout").
 
+- A `Delayed` head is asked once per look: once on the way into `take` or `poll`, also by a taker that then queues behind
+  another, and then once each time the first taker wakes for a reason other than an interrupt. An insert that does not change
+  the head wakes nobody (`TurnstileEdges`: "poll", "poll 0", "asleep on a far head", "one added behind the head", "a second
+  taker looks too", "the second sleeps as head", "added under a taker"). A `getDelay` that throws reaches that taker alone, and
+  the next taker goes on (`TurnstileEdges`: "look throws after a sleep", "the next taker still goes").
+
 ### `SynchronousQueue`, `LinkedTransferQueue` (`HandoffQueues`)
 
 - `SynchronousQueue` looks empty always: `toString` `[]`, `size` 0, `peek` null,
@@ -725,6 +752,10 @@ One script, run on both; rules hold for both unless noted.
   not wait). An interrupt during that wait is honoured on arrival: `InterruptedException`, barrier broken
   (`SynchronizerEdges`: "parties during action", "getNumberWaiting waited", "reset waited",
   "interrupted while the action runs: still", "late interrupted arrival").
+- A waiter's fate is that of its own round, whatever later rounds do before it gets to run: an action that calls
+  `reset` and then lets the next round break too leaves the waiter with `BrokenBarrierException`, and its own end
+  mends the barrier (`SynchronizerEdges`: "rounds: the waiter", "rounds: the last arriver", "rounds: await in the
+  action", "rounds: after them").
 
 ### `Semaphore` (`Semaphores`)
 
@@ -741,6 +772,12 @@ One script, run on both; rules hold for both unless noted.
   those behind ("head served", "head needs 2: those behind it wait", "fair order"). Timed
   `tryAcquire(0, ...)` respects the queue; plain `tryAcquire()` barges ("fair timed respects
   the queue", "fair tryAcquire barges").
+- Non-fair mode: a head needing more permits than available holds up nobody new. However long it has
+  waited, a newcomer takes what is free through any `acquire` or timed `tryAcquire`, and only one
+  asking too much joins the queue (`TurnstileEdges`: every "stuck head" line, "small job past a big one", "big job done").
+  With permits enough for the head, a timed 0 still takes them first (`TurnstileEdges`: "semaphore, free, old head, timed 0").
+- A timeout of `Long.MIN_VALUE` answers false at once (`TurnstileEdges`: "tryAcquire min"), as does the
+  latch's timed `await` ("latch min", "latch most negative days"), and the phaser's times out ("phaser min").
 
 ### `Exchanger`, `Phaser` (`ExchangersAndPhasers`)
 
@@ -778,8 +815,17 @@ One script, run on both; rules hold for both unless noted.
   ("emptied child"); termination reaches every child ("terminate from root"). A child of a
   terminated parent is terminated ("register under terminated parent").
 - `forceTermination` only sets the sign bit, so the phase number and that phase's arrivals still
-  show, unlike a termination by advance, where arrivals read 0 (`PhaserEdges`: "forced with an arrival",
-  "forced at phase 2", "last deregister calls hook").
+  show (`PhaserEdges`: "forced with an arrival", "forced at phase 2").
+- A termination by the hook moves the phase number on, and the arrivals that led to it go on showing, in each
+  tier: everyone registered reads as arrived and the unarrived count is 0, in the getters and the bracket. A
+  party that left is simply gone. An empty child reads 0, as does one created afterwards, whose parties all read
+  as unarrived (`PhaserEnds`: "hook ended", "hook ended, one left", "hook ended, none left" and `PhaserEdges`: "last
+  deregister calls hook"; `PhaserEnds`: "new child after it", "empty child", "root of two", "child of two", "other child",
+  "forced after", "ended at 1").
+- `arriveAndAwaitAdvance` by the last arriver answers with the next phase's number, positive, even when its hook
+  terminated the phaser; those it released, and any later call, get the negative phase. If the hook forced termination,
+  the last arriver gets that phase, whatever the hook returned (`PhaserEnds`: "last arriver gets", "the one before gets",
+  "afterwards", "on a child", "hook forces", "hook forces and ends", "hook goes on").
 - A hook that throws leaves the phase unadvanced and fully arrived, for good: arrivals are refused as
   unregistered, the hook is not called again, `register` and `awaitAdvance` wait until a
   `forceTermination` releases them (`PhaserEdges`: "after the throw", "arrive after the throw", "hook not
@@ -793,6 +839,10 @@ One script, run on both; rules hold for both unless noted.
   hook returns (`PhaserEdges`: "force during hook", "hook ends after force", "hook forces", "hook forces and ends").
 - `register` on a child whose parties have all arrived, with the root still waiting, waits for the
   advance (`PhaserEdges`: "register on an arrived child waited").
+- Registering at once from two threads on an empty child, when its parent has to wait, registers one party with
+  the parent, and all tiers can then advance (`PhaserEnds`: "registered r", "registered m", "registered c", "advanced r",
+  "advanced m", "advanced c"). A termination during that wait leaves the count of the empty child, and of the parent, as
+  it was (`PhaserEnds`: "ended while waiting to register", "leaf", "mid").
 
 ## `ThreadLocalRandom`, `TimeUnit`
 
@@ -1144,11 +1194,23 @@ being kept. Neither was: both are now what the oracle does.
 
 ## What is not pinned
 
-- **A non-fair newcomer behind an old queue head** (`Turnstile`: it may overtake a head younger than one VM
-  lock slice, 5 ms, and queues after that). This is how LazyVM keeps a thread looping on a lock from
-  starving the others, and spares a thread switch per critical section, but it is not an oracle rule, and
-  its only visible effect is how evenly turns are shared. Pinning that takes a ratio with a margin, which would
-  be flaky, so no test holds it. `tests/java/thread/Fairness` holds the same rule for monitors only.
+- **A non-fair newcomer behind an old queue head that could go** (`Turnstile`: it may overtake a head younger than one
+  VM lock slice, 5 ms, and queues after that, unless it will wait less than a slice, or the head could not go anyway:
+  those are in `TurnstileEdges`). This is how LazyVM keeps a thread looping on a lock from starving the others, and
+  spares a thread switch per critical section, but it is not an oracle rule. Its visible effects: how evenly turns are
+  shared, which takes a ratio with a margin to pin, and that a `tryLock` or `tryAcquire` with a wait of 5 ms or more can
+  time out behind a just-woken head that keeps the resource for longer, where the oracle usually got there first. No test
+  holds these. `tests/java/thread/Fairness` holds the same rule for monitors only.
+- **A timed read on a free lock with a just-woken writer at the head**: on the oracle it goes either way from run to run (true twice
+  and false once in one run of three). Here it goes through.
+- **Read holds after a `Condition` wait when another reader came in during it**: on the oracle the waiter's own read hold count reads
+  0 from then on, while the read lock count goes on counting it. Here its count reads 1, which adds up. Different on purpose.
+- **Two registrations on an empty child, parent waiting**: the second reads `BLOCKED` on the oracle, `WAITING` here, the rule at the top of this page.
+- **`signalAll` with no heap at all**: on the oracle it can throw `OutOfMemoryError` and leave waiters behind. Here it allocates nothing and works.
+- **An `ArrayDeque` add with no heap for a bigger array**: on the oracle the deque is broken afterwards (the elements go, `size` reads as if it had none). Here the add
+  throws and changes nothing (`tests/java/lazy/internal/DequeMemory`, whose golden is hand-written). Different on purpose.
+- **How often a `Delayed` is asked around a timed wake-up**: once per wake here, and usually on the oracle too, but a park may return early, so
+  only counts with no timer in them are pinned (see `PriorityBlockingQueue`, `DelayQueue`).
 - **Nondeterministic on the oracle**: the first key into an empty `ConcurrentSkipListMap` or `ConcurrentSkipListSet` when it is
   not `Comparable`. Most runs accept it, and some throw `ClassCastException`. The tests do not touch it, and either answer is
   fine for LazyVM.
