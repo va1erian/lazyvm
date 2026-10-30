@@ -231,11 +231,72 @@ public class HandoffQueues {
         show("consumer gone", q::getWaitingConsumerCount);
     }
 
+    /** A timed offer that was met says so, whichever of the two came first, or a retry would deliver twice. */
+    static void timedOfferMet(boolean fair) throws Exception {
+        String mode = fair ? "fair" : "non-fair";
+        SynchronousQueue<String> q = new SynchronousQueue<>(fair);
+        Object[] answer = new Object[1];
+        Thread giver = new Thread(() -> {
+            try {
+                answer[0] = q.offer("x", 30, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                answer[0] = n(e);
+            }
+        });
+        giver.start();
+        until(() -> parked(giver));
+        show(mode + ": take from a waiting timed offer", q::take);
+        giver.join();
+        show(mode + ": that offer answers", () -> answer[0]);
+        Object[] got = new Object[1];
+        Thread taker = new Thread(() -> {
+            try {
+                got[0] = q.take();
+            } catch (InterruptedException e) {
+                got[0] = n(e);
+            }
+        });
+        taker.start();
+        until(() -> parked(taker));
+        show(mode + ": timed offer to a waiting taker", () -> q.offer("y", 30, TimeUnit.SECONDS));
+        taker.join();
+        show(mode + ": that taker got", () -> got[0]);
+        Thread giver2 = new Thread(() -> {
+            try {
+                answer[0] = q.offer("z", 30, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                answer[0] = n(e);
+            }
+        });
+        giver2.start();
+        until(() -> parked(giver2));
+        show(mode + ": plain poll from a waiting timed offer", q::poll);
+        giver2.join();
+        show(mode + ": and that offer answers", () -> answer[0]);
+        show(mode + ": nothing was left behind", q::poll);
+    }
+
+    /** A sender taking back its own element owes itself no wake-up: a later park still parks. */
+    static void noPermitLeft() throws Exception {
+        LinkedTransferQueue<String> q = new LinkedTransferQueue<>();
+        show("timed tryTransfer alone", () -> q.tryTransfer("a", 1, TimeUnit.MILLISECONDS));
+        show("no permit left by the timeout", HandoffQueues::parkWaits);
+    }
+
+    static boolean parkWaits() {
+        long start = System.nanoTime();
+        java.util.concurrent.locks.LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(300));
+        return System.nanoTime() - start >= TimeUnit.MILLISECONDS.toNanos(200);
+    }
+
     public static void main(String[] args) throws Exception {
         SynchronousQueue<String> q = new SynchronousQueue<>();
         syncShape(q);
         syncFlow(q);
         fair();
         transfer();
+        timedOfferMet(false);
+        timedOfferMet(true);
+        noPermitLeft();
     }
 }

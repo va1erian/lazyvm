@@ -64,6 +64,9 @@ the label of a line of its golden. Change the rule and that line should change.
 | `TurnstileEdges` | who may pass a queue, the order queue queries read in, timeouts at the far ends of time, how often a `Delayed` is asked |
 | `QueueMemory` | the heap runs out as a thread joins a lock's queue |
 | `CollectionEdges` | the collections: range bounds, view identity, bulk entries, a running compute, what counts as a copy-on-write, hand-off order |
+| `CollectionUserCode` | a key's `equals` or `compareTo` that blocks: who can still run, and that a search still stands when its write comes |
+| `LongBins` | `ConcurrentHashMap` with many keys of one hash: cost, every kind of key, growth, iterators, a `compareTo` that throws |
+| `QueueIdleIterators` | an idle iterator keeps nothing that passes through the queue; the weak iterator's promise under random changes |
 | `ThreadPoolEdges` | `ThreadPoolExecutor`: hooks that throw, the `terminated` hook, odd factories and queues, late resizing |
 | `FutureEdges` | `FutureTask` re-entrancy, `invokeAll`/`invokeAny` check and failure order, `ExecutorCompletionService` delivery, `Executors` |
 | `ScheduledEdges` | `ScheduledThreadPoolExecutor`: the queue's view, policies changed late, decorated tasks |
@@ -151,6 +154,11 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   keeping only those after it. Each class has a line ("drain refused midway",
   `BoundedQueues` also "drain into failing"). `SynchronousQueue` with nobody waiting
   moves nothing ("drain nothing to a refusing sink").
+- **G8, a sink that uses the queue** (`CollectionEdges`). A sink feeding the queue it drains: `LinkedBlockingQueue`,
+  `ArrayBlockingQueue`, `LinkedBlockingDeque` and `PriorityBlockingQueue` move at most what was there at the start, so it
+  ends; `LinkedTransferQueue` and `DelayQueue` keep going up to `maxElements`, for ever if that is `Integer.MAX_VALUE` ("drain
+  into a sink feeding ..."). A sink that takes from a `LinkedBlockingQueue` still gets each element once, and each counts
+  ("drain into a sink that takes from the queue").
 
 ## Locks
 
@@ -532,6 +540,18 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   present, and answers what the compute produced ("computeIfAbsent of a present key waits for its compute", "and
   answers what it computed"). Nothing here looks at the flag ("flag kept by
   compute").
+- A capacity allocates nothing: any capacity up to `Integer.MAX_VALUE` is accepted, and reads, misses and `clear` on such a map work
+  (`CollectionEdges`: "capacity ... costs nothing yet", "cleared").
+- A key's `equals` and `compareTo` and a value's `equals` may block without stopping writers of other bins, nor readers (`CollectionUserCode`:
+  "map put, equals stopped, write to another bin" and its neighbours, "long bin ..."; "write while another writer waits for this thread's lock" is the
+  shape of a lock order inside user classes). What a search found still stands when its write comes, or it searches again ("put against put of the same
+  key in one bin", "remove against remove of the same key", "put against a remove of the key it was comparing with", "long bin: ...").
+- Many keys of one hash and one class declaring `Comparable` of itself, `String` included, cost a logarithm each, not a walk (`LongBins`: the "many: ..."
+  lines fail on time alone: 20000 keys that a list would take minutes over, against the runner's 60 s). Other colliding keys may cost a walk, and answer the
+  same: ties, no order, an order on another class, a mix (`LongBins`: "ties: ...", "no order: ...", "order on another class: ...", "mixed: ...", "strings of one
+  hash: ..."). A table that grows keeps them all ("growth: ..."). Iterators, entries and `clear` behave as for short bins ("entry writes through in a long bin",
+  "iterator remove in a long bin", "after clear"). In a long bin a `compareTo` that throws reaches the caller and changes nothing ("put of a new key, compareTo
+  throws", "get of an absent key, compareTo throws", "remove of an absent key, compareTo throws", "after the throws").
 
 ### `ConcurrentSkipListMap`, `ConcurrentSkipListSet` (`SkipLists`)
 
@@ -617,6 +637,12 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   write"). On a stale sub-list, `get`, `set` and `remove(int)` check the index before staleness, the other
   operations staleness first, and `addAll` of nothing just answers false ("sub get far, stale: index first",
   "sub add far, stale: staleness first", "sub addAll of nothing, stale", "sub addAll at of nothing, stale").
+- `set` of the very same element through a sub-list is no write either: its siblings stay valid; of an equal but different element it is
+  (`CollectionEdges`: "sub set of the very element", "its sibling stays valid", "sub set of an equal element", "its sibling goes stale").
+- `addIfAbsent`, `remove(Object)` and a sub-list's `remove(Object)` run the argument's `equals` with no lock: another writer can run meanwhile, and the answer is
+  then for the list as it now is (`CollectionUserCode`: "list addIfAbsent, equals stopped, add", "list addIfAbsent, equals stopped, the same key added", "list remove,
+  equals stopped, add", "list remove, equals stopped, that element removed", "set add, equals stopped, add"; a sub-list goes stale: "sub-list remove, equals stopped,
+  parent written"). `addAllAbsent`, `removeIf`, `sort` and `replaceAll` keep other writers out while they run user code, as on the oracle.
 - A source array of a narrower type does not narrow the list ("array source narrower than the list",
   "toArray is plain").
 - `CopyOnWriteArraySet` keeps insertion order ("insertion order", "from collection
@@ -708,6 +734,8 @@ One script, run on both; rules hold for both unless noted.
   "non-fair: the newest taker first"). `offer` and `poll` ignore the flag ("offer flagged", "poll flagged").
   `put`, `take` and the timed forms look at it only when nobody is there to meet: with a partner waiting they
   meet, and keep the flag ("put flagged, a taker waits", "timed poll flagged, a giver waits").
+  A timed `offer` that was met answers true, in both modes, whichever came first and whether by `take` or `poll` ("... take from a waiting timed
+  offer", "... that offer answers", "... timed offer to a waiting taker", "... plain poll from a waiting timed offer", "... and that offer answers").
 - `LinkedTransferQueue`: `tryTransfer` is false and leaves nothing without a waiting
   consumer ("tryTransfer none", "left no trace"). A blocked `transfer` element is visible
   to `size`, `peek`, `contains` and `poll`, which ends it ("pending visible", "contains
@@ -720,6 +748,8 @@ One script, run on both; rules hold for both unless noted.
 - `LinkedTransferQueue`: a timed `offer` never reads its time unit, but `tryTransfer` does, first, so a null
   unit leaves nothing behind ("timed offer never reads its unit", "tryTransfer null unit leaves nothing").
   Each waiting consumer takes one hand-over ("one hand-over per consumer").
+- `LinkedTransferQueue`: a timed `tryTransfer` that runs out takes its element back and leaves no permit on the thread: a later park waits
+  ("no permit left by the timeout").
 
 ### `ConcurrentLinkedQueue`, `ConcurrentLinkedDeque` (`ConcurrentLinked`)
 
@@ -734,6 +764,14 @@ One script, run on both; rules hold for both unless noted.
   descending iterator support `remove` ("iterator remove", "descending remove").
 - Thread totals are exact, no element lost or repeated ("polled total", "deque size",
   "deque total").
+
+### What the linked queues share (`CollectionUserCode`, `QueueIdleIterators`)
+
+- `ConcurrentLinkedQueue`, `ConcurrentLinkedDeque` and `LinkedTransferQueue` go on working while the argument of `contains` or `remove(Object)` sits in its
+  `equals` ("... contains, equals stopped, offer", "... remove, equals stopped, poll"). If the element it was looking for has left by then, `remove` answers false
+  ("... remove, equals stopped, that element polled", "... remove of the second, equals stopped at the first, removed by another").
+- An iterator left idle does not keep what passes through the queue after it, whether at the head, the tail or in the middle: each of those "traffic" lines runs out
+  of memory otherwise. Under any mix of changes it hands out nothing twice and every element that stayed ("broken promises").
 
 ## Synchronizers
 
@@ -1284,7 +1322,8 @@ being kept. Neither was: both are now what the oracle does.
   Tests print only the class.
 - **`invokeAny` with a null behind a quick task**: the first task may finish before the null is reached. Only a null in first place
   is tested.
-- **Order**: `ConcurrentHashMap` iteration, `PriorityBlockingQueue` and `DelayQueue` iterators and ties, non-fair lock order, and
+- **Order**: `ConcurrentHashMap` iteration (the table's spreading of hash codes was chosen so that bins come in the oracle's order, as observed on a random-keys probe, but the order inside a bin and the
+  first table of a small capacity differ), `PriorityBlockingQueue` and `DelayQueue` iterators and ties, non-fair lock order, and
   non-fair queue hand-off order other than `SynchronousQueue`'s.
 - **Unstable on the oracle**: what a blocked `transfer` does when its element is taken out by `remove(Object)` or by
   an iterator. From run to run it returns, or throws `InterruptedException`, or a timed `tryTransfer` answers false. Here
@@ -1303,6 +1342,21 @@ being kept. Neither was: both are now what the oracle does.
   stages may stay pending). The order in which readers wake when nothing holds them, and who of a reader and a completer takes the next entry.
 - **`CompletableFuture`, a race and no golden**: an obtrude racing an attach must not lose the dependent, so the write of the outcome is under the lock
   as a first settlement's is. A race has no stable line to bless. It is only checked by a probe, on the order of 2 million attaches with none lost.
+- **A monitor over the whole collection, and user code.** `ConcurrentSkipListMap` and `ConcurrentSkipListSet` are a `TreeMap` under one monitor, and call `compareTo` or the
+  comparator holding it, so if one thread holds lock L and calls the map while another's comparator waits for L, both stay there, where the oracle goes on. Comparators and keys
+  of these two classes must not block. The same holds for the sink of a `drainTo` on the linked and priority queues: on the oracle an `offer` still runs while `add` of a `LinkedBlockingQueue` or
+  `LinkedTransferQueue` sink is stopped; here it waits. And for `PriorityBlockingQueue`'s `contains`, `remove(Object)`, which the oracle shuts out too. No test holds these.
+- **Less blocking than the oracle, on purpose.** While one `ConcurrentHashMap` writer sits in a key's `equals`, a writer of the same bin runs here, where the oracle
+  blocks it; only the end state is pinned ("put against put ..."). While a `LinkedBlockingQueue`, `ArrayBlockingQueue` or `LinkedBlockingDeque` runs `equals` for `contains` or `remove(Object)`, other calls
+  run here, and wait on the oracle. A search that lost to a write runs `equals` again, so a key may see more calls than on the oracle.
+- **Long bins, the details**: which insertion turns a bin into a tree, and the number of `compareTo` calls (the oracle grows a small table first, here a bin of 8 turns at once). So the
+  insertion that sees a throwing `compareTo` differs: on both the key is then in the map and the exception reaches the caller, but the oracle's size does not count it. A key class whose `compareTo` orders two
+  keys that `equals` calls the same may store that key twice once its bin is long. Whether a search of a present key reaches a throwing `compareTo` before it finds the key. A long bin's iteration order.
+- **Allowed by weak consistency, and different**: a `ConcurrentLinkedDeque` or `LinkedBlockingDeque` iterator whose element has left, with changes at both ends since. It never repeats an element or misses one that stayed
+  ("broken promises"), but it can differ from the oracle in which newer elements it hands out. An iterator goes on from where its element stood, or starts again at its own end if that element had nothing behind it when it left (`QueueIdleIterators`: "... then newer at its end"); the oracle also starts again if everything behind it left later, and a `ConcurrentLinkedDeque` there depends on the deque's history (going backward: a; `pollLast`; `addLast` b hands out only a; going forward, a, c; `pollFirst`; `addFirst` b hands out a, c on a new deque and a, b, c on a used one), so only `LinkedBlockingDeque` is pinned. Here both go on to the newer element.
+- **Allowed by weak consistency, and different**: `ConcurrentHashMap` bulk operations, `replaceAll` included, may go on to a key an earlier callback removed, since a walk holds its next pair (`replaceAll` with a function removing
+  the other of two keys ends with 0 keys here, 1 on the oracle). `contains` of a linked queue may answer true for an element that left while `equals` was stopped, for the same reason.
+- **A stray permit on the oracle**: a `transfer` called with the flag set leaves a permit on the oracle, so the next park returns at once. Here it does not, and no test holds it.
 - **Not tested at all**: serialization of these classes; `ConcurrentHashMap` recursive updates; `ThreadPoolExecutor.finalize`;
   the `Spliterator` and stream members listed as deferred below.
 - **Out of scope for S6-04**: `AbstractQueuedSynchronizer`, `AbstractQueuedLongSynchronizer`, `AbstractOwnableSynchronizer`,

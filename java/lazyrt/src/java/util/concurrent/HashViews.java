@@ -104,7 +104,7 @@ abstract class HashViews<K, V, E> extends AbstractCollection<E> {
         return true;
     }
 
-    static final class KeyWalk<K, V> extends HashCore.Walk<K, V, K> {
+    static final class KeyWalk<K, V> extends HashWalk<K, V, K> {
         KeyWalk(HashCore<K, V> core) {
             super(core);
         }
@@ -115,7 +115,7 @@ abstract class HashViews<K, V, E> extends AbstractCollection<E> {
         }
     }
 
-    static final class ValueWalk<K, V> extends HashCore.Walk<K, V, V> {
+    static final class ValueWalk<K, V> extends HashWalk<K, V, V> {
         ValueWalk(HashCore<K, V> core) {
             super(core);
         }
@@ -126,7 +126,7 @@ abstract class HashViews<K, V, E> extends AbstractCollection<E> {
         }
     }
 
-    static final class EntryWalk<K, V> extends HashCore.Walk<K, V, Map.Entry<K, V>> {
+    static final class EntryWalk<K, V> extends HashWalk<K, V, Map.Entry<K, V>> {
         private final ConcurrentHashMap<K, V> map;
 
         EntryWalk(ConcurrentHashMap<K, V> map, HashCore<K, V> core) {

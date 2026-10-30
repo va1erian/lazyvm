@@ -80,7 +80,10 @@ final class CopyOnWriteSubList<E> extends AbstractList<E> {
             checkIndex(index);
             check();
             E old = (E) seen[offset + index];
-            replace(index, 1, new Object[] {element});
+            // The same element is no write: the parent's array and every sibling stay valid.
+            if (old != element) {
+                replace(index, 1, new Object[] {element});
+            }
             return old;
         }
     }
@@ -148,15 +151,27 @@ final class CopyOnWriteSubList<E> extends AbstractList<E> {
         }
     }
 
+    /** The argument's {@code equals} is user code, so it runs on what was seen, with {@code mu} free. */
     public boolean remove(Object o) {
-        synchronized (mu) {
-            check();
-            int at = CopyOnWriteArrayList.indexIn(o, seen, offset, offset + size);
+        for (;;) {
+            Object[] a;
+            int to;
+            synchronized (mu) {
+                check();
+                a = seen;
+                to = offset + size;
+            }
+            int at = CopyOnWriteArrayList.indexIn(o, a, offset, to);
             if (at < 0) {
                 return false;
             }
-            replace(at - offset, 1, NOTHING);
-            return true;
+            synchronized (mu) {
+                check();
+                if (seen == a) {
+                    replace(at - offset, 1, NOTHING);
+                    return true;
+                }
+            }
         }
     }
 

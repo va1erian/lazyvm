@@ -13,14 +13,18 @@ import lazy.internal.Turnstile;
  * A plain monitor because these calls are short and this VM runs one thread at a time: it costs
  * about a fortieth of a {@code ReentrantLock}.
  *
- * <p>A removed node has a null item and keeps its links, which is all a weak iterator needs:
- * walking them back leads to the nearest node still in the list, or off the end.
+ * <p>A removed node has a null item and links to nothing but itself, so whatever an idle iterator
+ * holds keeps nothing else alive. A self link says it had a neighbour on that side when it left, a null
+ * that it was at that end. Every node has a place, rising from head to tail and never reused: an
+ * iterator whose node has left finds the first node still in the list beyond that place, or, if nothing
+ * was behind that node, starts again at its own end, where only newer elements can be.
  */
 final class LinkedCore<E> {
     static final class Node<E> {
         E item;
         Node<E> prev;
         Node<E> next;
+        long place;
         /** A thread blocked until this element leaves the list ({@code LinkedTransferQueue}). */
         Thread sender;
 
@@ -45,6 +49,8 @@ final class LinkedCore<E> {
     private Node<E> head;
     private Node<E> tail;
     private int size;
+    private long frontPlace;
+    private long backPlace;
     /** Null for the queues that never block. */
     private final Turnstile takers;
     private final Turnstile putters;
@@ -84,6 +90,7 @@ final class LinkedCore<E> {
 
     private Node<E> link(E e, boolean front) {
         Node<E> n = new Node<>(e);
+        n.place = front ? --frontPlace : ++backPlace;
         if (head == null) {
             head = n;
             tail = n;
@@ -116,6 +123,8 @@ final class LinkedCore<E> {
         } else {
             n.next.prev = n.prev;
         }
+        n.prev = n.prev == null ? null : n;
+        n.next = n.next == null ? null : n;
         size--;
         if (putters != null) {
             putters.wakeHead();
@@ -227,27 +236,28 @@ final class LinkedCore<E> {
         return n == null ? null : n.item;
     }
 
-    synchronized boolean contains(Object o) {
-        return o != null && find(o, true) != null;
-    }
-
-    private Node<E> find(Object o, boolean fromHead) {
-        for (Node<E> n = fromHead ? head : tail; n != null; n = fromHead ? n.next : n.prev) {
-            if (o.equals(n.item)) {
-                return n;
+    /** The argument's {@code equals} is user code, so it runs with the monitor free, one step at a time. */
+    boolean contains(Object o) {
+        if (o != null) {
+            for (Walk w = new Walk(false); w.hasNext();) {
+                if (o.equals(w.next())) {
+                    return true;
+                }
             }
         }
-        return null;
+        return false;
     }
 
-    /** The first or last occurrence leaves; a null is never there. */
-    synchronized boolean remove(Object o, boolean fromHead) {
-        Node<E> n = o == null ? null : find(o, fromHead);
-        if (n == null) {
-            return false;
+    /** The first or last occurrence leaves; a null is never there. One that left meanwhile does not count. */
+    boolean remove(Object o, boolean fromHead) {
+        if (o != null) {
+            for (Walk w = new Walk(!fromHead); w.hasNext();) {
+                if (o.equals(w.next()) && w.drop()) {
+                    return true;
+                }
+            }
         }
-        unlink(n);
-        return true;
+        return false;
     }
 
     synchronized void clear() {
@@ -264,15 +274,22 @@ final class LinkedCore<E> {
         return out;
     }
 
-    /** Concurrent.md G8. A refused element stays unless {@code lossy}. */
+    /**
+     * Concurrent.md G8. A refused element stays unless {@code lossy}. Otherwise only what is there at
+     * the start can move, so a sink feeding this queue ends; a sink may also take the element itself.
+     */
     synchronized int drainTo(Collection<? super E> c, int max, boolean lossy) {
+        int limit = lossy ? max : Math.min(max, size);
         int moved = 0;
-        while (moved < max && head != null) {
+        while (moved < limit && head != null) {
             if (lossy) {
                 c.add(unlink(head));
             } else {
-                c.add(head.item);
-                unlink(head);
+                Node<E> n = head;
+                c.add(n.item);
+                if (n.item != null) {
+                    unlink(n);
+                }
             }
             moved++;
         }
@@ -322,11 +339,11 @@ final class LinkedCore<E> {
                     return true;
                 }
                 if (Thread.interrupted()) {
-                    unlink(n);
+                    withdraw(n);
                     throw new InterruptedException();
                 }
                 if (timed && left <= 0) {
-                    unlink(n);
+                    withdraw(n);
                     return false;
                 }
             }
@@ -336,6 +353,12 @@ final class LinkedCore<E> {
                 LockSupport.park(this);
             }
         }
+    }
+
+    /** The sender itself takes it back: nobody has to wake it, and a permit would stay behind. */
+    private void withdraw(Node<E> n) {
+        n.sender = null;
+        unlink(n);
     }
 
     Iterator<E> iterator(boolean descending) {
@@ -374,16 +397,19 @@ final class LinkedCore<E> {
             }
         }
 
-        /** The node after {@code n}: if {@code n} has left, after its nearest predecessor still in. */
+        /** The node after {@code n}; if {@code n} has left, see the class comment. */
         private Node<E> after(Node<E> n) {
-            Node<E> anchor = n;
-            while (anchor != null && anchor.item == null) {
-                anchor = back ? anchor.next : anchor.prev;
+            if (n.item != null) {
+                return back ? n.prev : n.next;
             }
-            if (anchor == null) {
-                return back ? tail : head;
+            Node<E> p = back ? tail : head;
+            if ((back ? n.next : n.prev) == null) {
+                return p;
             }
-            return back ? anchor.prev : anchor.next;
+            while (p != null && (back ? p.place >= n.place : p.place <= n.place)) {
+                p = back ? p.prev : p.next;
+            }
+            return p;
         }
 
         public void remove() {
@@ -391,10 +417,19 @@ final class LinkedCore<E> {
                 if (last == null) {
                     throw new IllegalStateException();
                 }
-                if (last.item != null) {
-                    unlink(last);
-                }
+                drop();
                 last = null;
+            }
+        }
+
+        /** Takes out the element last handed out; false if it has already left. */
+        boolean drop() {
+            synchronized (LinkedCore.this) {
+                if (last.item == null) {
+                    return false;
+                }
+                unlink(last);
+                return true;
             }
         }
     }

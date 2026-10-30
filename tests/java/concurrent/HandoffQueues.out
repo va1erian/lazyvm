@@ -106,3 +106,19 @@ element empty ! java.util.NoSuchElementException
 take flagged ! java.lang.InterruptedException
 interrupted consumer = take java.lang.InterruptedException
 consumer gone = 0
+non-fair: take from a waiting timed offer = x
+non-fair: that offer answers = true
+non-fair: timed offer to a waiting taker = true
+non-fair: that taker got = y
+non-fair: plain poll from a waiting timed offer = z
+non-fair: and that offer answers = true
+non-fair: nothing was left behind = null
+fair: take from a waiting timed offer = x
+fair: that offer answers = true
+fair: timed offer to a waiting taker = true
+fair: that taker got = y
+fair: plain poll from a waiting timed offer = z
+fair: and that offer answers = true
+fair: nothing was left behind = null
+timed tryTransfer alone = false
+no permit left by the timeout = true

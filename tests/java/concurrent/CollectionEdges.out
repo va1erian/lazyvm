@@ -1,3 +1,40 @@
+drain into a sink feeding LinkedBlockingQueue 2 = moved 2 left 3
+drain into a sink feeding ArrayBlockingQueue 2 = moved 2 left 3
+drain into a sink feeding LinkedBlockingDeque 2 = moved 2 left 3
+drain into a sink feeding PriorityBlockingQueue 2 = moved 2 left 3
+drain into a sink feeding LinkedTransferQueue 2 = moved 2 left 3
+drain into a sink feeding DelayQueue 2 = moved 2 left 3
+drain into a sink feeding LinkedBlockingQueue 3 = moved 3 left 3
+drain into a sink feeding ArrayBlockingQueue 3 = moved 3 left 3
+drain into a sink feeding LinkedBlockingDeque 3 = moved 3 left 3
+drain into a sink feeding PriorityBlockingQueue 3 = moved 3 left 3
+drain into a sink feeding LinkedTransferQueue 3 = moved 3 left 3
+drain into a sink feeding DelayQueue 3 = moved 3 left 3
+drain into a sink feeding LinkedBlockingQueue 5 = moved 3 left 3
+drain into a sink feeding ArrayBlockingQueue 5 = moved 3 left 3
+drain into a sink feeding LinkedBlockingDeque 5 = moved 3 left 3
+drain into a sink feeding PriorityBlockingQueue 5 = moved 3 left 3
+drain into a sink feeding LinkedTransferQueue 5 = moved 5 left 3
+drain into a sink feeding DelayQueue 5 = moved 5 left 3
+drain into a sink feeding LinkedBlockingQueue 2147483647 = moved 3 left 3
+drain into a sink feeding ArrayBlockingQueue 2147483647 = moved 3 left 3
+drain into a sink feeding LinkedBlockingDeque 2147483647 = moved 3 left 3
+drain into a sink feeding PriorityBlockingQueue 2147483647 = moved 3 left 3
+drain into a sink feeding LinkedTransferQueue 2147483647 = java.lang.IllegalStateException: sink full moved 1001 left 2
+drain into a sink feeding DelayQueue 2147483647 = java.lang.IllegalStateException: sink full moved 1001 left 3
+drain into a sink that takes from the queue = 4 [1, 2, 3, 4] left []
+sub set of the very element = 2
+its sibling stays valid = [3, 4, 5]
+as does the sub-list = [1, 2, 3]
+sub set of an equal element = 2
+its sibling goes stale ! java.util.ConcurrentModificationException
+the sub-list stays valid = [1, 2, 3]
+capacity 268435456 costs nothing yet = 0 null null false null null null {}
+cleared = true
+capacity 1073741824 costs nothing yet = 0 null null false null null null {}
+cleared = true
+capacity 2147483647 costs nothing yet = 0 null null false null null null {}
+cleared = true
 head below the low end ! java.lang.IllegalArgumentException: inconsistent range
 tail above the high end ! java.lang.IllegalArgumentException: inconsistent range
 sub above both ends ! java.lang.IllegalArgumentException: key out of range

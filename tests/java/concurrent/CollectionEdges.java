@@ -322,7 +322,75 @@ public class CollectionEdges {
         @Override public Integer replace(String k, Integer v) { return null; }
     }
 
+    /** What a sink does to the queue being drained: the bound differs per class, on the oracle. */
+    static <T> void drainFeeding(String name, BlockingQueue<T> q, List<T> start, int max) {
+        q.addAll(start);
+        List<T> sink = new ArrayList<T>() {
+            @Override public boolean add(T x) {
+                if (size() > 1000) throw new IllegalStateException("sink full");
+                q.offer(x);
+                return super.add(x);
+            }
+        };
+        show("drain into a sink feeding " + name + " " + max, () -> {
+            try {
+                return "moved " + q.drainTo(sink, max) + " left " + q.size();
+            } catch (IllegalStateException e) {
+                return n(e) + " moved " + sink.size() + " left " + q.size();
+            }
+        });
+    }
+
+    static final class Due implements Delayed {
+        final int v;
+        Due(int v) { this.v = v; }
+        @Override public long getDelay(TimeUnit u) { return -1; }
+        @Override public int compareTo(Delayed o) { return Integer.compare(v, ((Due) o).v); }
+    }
+
+    static void sinks() {
+        for (int max : new int[] {2, 3, 5, Integer.MAX_VALUE}) {
+            drainFeeding("LinkedBlockingQueue", new LinkedBlockingQueue<>(), Arrays.asList(1, 2, 3), max);
+            drainFeeding("ArrayBlockingQueue", new ArrayBlockingQueue<>(6), Arrays.asList(1, 2, 3), max);
+            drainFeeding("LinkedBlockingDeque", new LinkedBlockingDeque<>(), Arrays.asList(1, 2, 3), max);
+            drainFeeding("PriorityBlockingQueue", new PriorityBlockingQueue<>(), Arrays.asList(1, 2, 3), max);
+            drainFeeding("LinkedTransferQueue", new LinkedTransferQueue<>(), Arrays.asList(1, 2, 3), max);
+            drainFeeding("DelayQueue", new DelayQueue<Due>(), Arrays.asList(new Due(1), new Due(2), new Due(3)), max);
+        }
+        LinkedBlockingQueue<Integer> q = new LinkedBlockingQueue<>(Arrays.asList(1, 2, 3, 4));
+        List<Integer> taking = new ArrayList<Integer>() {
+            @Override public boolean add(Integer x) { q.poll(); return super.add(x); }
+        };
+        show("drain into a sink that takes from the queue", () -> q.drainTo(taking) + " " + taking + " left " + q);
+    }
+
+    static void copyOnWriteSiblings() {
+        CopyOnWriteArrayList<Integer> list = new CopyOnWriteArrayList<>(Arrays.asList(1, 2, 3, 4, 5));
+        List<Integer> me = list.subList(0, 3);
+        List<Integer> sibling = list.subList(2, 5);
+        Integer same = me.get(1);
+        show("sub set of the very element", () -> me.set(1, same));
+        show("its sibling stays valid", () -> sibling);
+        show("as does the sub-list", () -> me);
+        Integer equalOther = new Integer(same);
+        show("sub set of an equal element", () -> me.set(1, equalOther));
+        show("its sibling goes stale", () -> sibling);
+        show("the sub-list stays valid", () -> me);
+    }
+
+    static void largeCapacities() {
+        for (int capacity : new int[] {1 << 28, 1 << 30, Integer.MAX_VALUE}) {
+            ConcurrentHashMap<Integer, Integer> m = new ConcurrentHashMap<>(capacity);
+            show("capacity " + capacity + " costs nothing yet", () -> m.size() + " " + m.get(1) + " " + m.remove(1) + " " + m.keySet().iterator().hasNext() + " " + m.replace(1, 2) + " " + m.computeIfPresent(1, (a, b) -> b) + " " + m.compute(1, (a, b) -> null) + " " + m);
+            m.clear();
+            show("cleared", m::isEmpty);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
+        sinks();
+        copyOnWriteSiblings();
+        largeCapacities();
         ranges();
         identity();
         bulkEntries();
