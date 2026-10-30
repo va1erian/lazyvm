@@ -33,7 +33,7 @@ public class CompletableFutureReaders {
     static String name() { return Thread.currentThread().getName(); }
 
     static void await(CountDownLatch l) {
-        try { l.await(60, TimeUnit.SECONDS); } catch (InterruptedException e) { throw new IllegalStateException(e); }
+        try { l.await(20, TimeUnit.SECONDS); } catch (InterruptedException e) { throw new IllegalStateException(e); }
     }
 
     /** A read that blocks: 0 get, 1 timed get, 2 join. */
@@ -41,7 +41,7 @@ public class CompletableFutureReaders {
         return () -> {
             try {
                 if (how == 0) s.get();
-                else if (how == 1) s.get(60, TimeUnit.SECONDS);
+                else if (how == 1) s.get(20, TimeUnit.SECONDS);
                 else s.join();
             } catch (Exception e) {
                 // Only the state of `s` is of interest here.
@@ -89,45 +89,43 @@ public class CompletableFutureReaders {
         s.thenRun(() -> { in.countDown(); await(out); log.add("holder on " + name()); });
     }
 
+    interface Read { void from(CompletableFuture<String> s) throws Exception; }
+
+    /**
+     * After its release the reader races the completer for what the list holds. The holder keeps only the
+     * completer back, for as long as the reader takes, so whoever takes it the reader has run a callback
+     * before it returns, if it helps at all.
+     */
+    static String readerHelps(Read read) throws Exception {
+        CompletableFuture<String> s = cf();
+        List<String> log = Collections.synchronizedList(new ArrayList<>());
+        CountDownLatch returned = new CountDownLatch(1);
+        s.thenRun(() -> log.add("k0 on " + name()));
+        s.thenRun(() -> {
+            if (name().equals("completer")) await(returned);
+            log.add("holder on " + name());
+        });
+        boolean[] helped = new boolean[1];
+        Thread r = start("reader", () -> {
+            try { read.from(s); } catch (Exception e) { log.add(e.toString()); }
+            helped[0] = log.toString().contains("on reader");
+            returned.countDown();
+        });
+        blocked(r);
+        Thread c = start("completer", () -> s.complete("v"));
+        r.join();
+        c.join();
+        return "helped before returning " + helped[0] + ", callbacks " + log.size();
+    }
+
     static void release() throws Exception {
-        show("reader attached last goes first and helps", () -> {
-            CompletableFuture<String> s = cf();
-            List<String> log = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch in = new CountDownLatch(1), out = new CountDownLatch(1);
-            s.thenRun(() -> log.add("k0 on " + name()));
-            holding(s, log, in, out);
-            Thread r = start("reader", () -> { s.join(); log.add("reader returned"); });
-            blocked(r);
-            Thread c = start("completer", () -> s.complete("v"));
-            await(in);
-            r.join();
-            out.countDown();
-            c.join();
-            return log;
-        });
-        show("timed reader helps too", () -> {
-            CompletableFuture<String> s = cf();
-            List<String> log = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch in = new CountDownLatch(1), out = new CountDownLatch(1);
-            s.thenRun(() -> log.add("k0 on " + name()));
-            holding(s, log, in, out);
-            Thread r = start("reader", () -> {
-                try { s.get(60, TimeUnit.SECONDS); } catch (Exception e) { log.add(e.toString()); }
-                log.add("reader returned");
-            });
-            blocked(r);
-            Thread c = start("completer", () -> s.complete("v"));
-            await(in);
-            r.join();
-            out.countDown();
-            c.join();
-            return log;
-        });
+        show("reader attached last goes first and helps", () -> readerHelps(s -> s.join()));
+        show("timed reader helps too", () -> readerHelps(s -> s.get(20, TimeUnit.SECONDS)));
         show("reader attached before waits its turn", () -> {
             CompletableFuture<String> s = cf();
             List<String> log = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch in = new CountDownLatch(1), out = new CountDownLatch(1);
-            s.thenRun(() -> log.add("k0 on " + name()));
+            s.thenRun(() -> log.add("k0"));
             Thread r = start("reader", () -> { s.join(); log.add("reader returned"); });
             blocked(r);
             holding(s, log, in, out);
@@ -234,7 +232,7 @@ public class CompletableFutureReaders {
             CompletableFuture<String> s = cf();
             String[] r = new String[1];
             Thread t = start("t", () -> {
-                try { r[0] = "v=" + s.get(60, TimeUnit.SECONDS); } catch (Throwable e) { r[0] = e + " flag=" + Thread.currentThread().isInterrupted(); }
+                try { r[0] = "v=" + s.get(20, TimeUnit.SECONDS); } catch (Throwable e) { r[0] = e + " flag=" + Thread.currentThread().isInterrupted(); }
             });
             blocked(t);
             t.interrupt();
@@ -302,7 +300,7 @@ public class CompletableFutureReaders {
                     CompletableFuture.runAsync(() -> g.complete("sib"), p);
                     return g.join();
                 }, p);
-                return a.get(60, TimeUnit.SECONDS);
+                return a.get(20, TimeUnit.SECONDS);
             } finally {
                 p.shutdownNow();
             }
@@ -315,7 +313,7 @@ public class CompletableFutureReaders {
                     CompletableFuture.runAsync(() -> g.complete("sib"), p);
                     try { return g.get(); } catch (Exception e) { return e.toString(); }
                 }, p);
-                return a.get(60, TimeUnit.SECONDS);
+                return a.get(20, TimeUnit.SECONDS);
             } finally {
                 p.shutdownNow();
             }
@@ -326,9 +324,9 @@ public class CompletableFutureReaders {
                 CompletableFuture<String> g = cf();
                 CompletableFuture<String> a = CompletableFuture.supplyAsync(() -> {
                     CompletableFuture.runAsync(() -> g.complete("sib"), p);
-                    try { return g.get(50, TimeUnit.SECONDS); } catch (Exception e) { return e.toString(); }
+                    try { return g.get(15, TimeUnit.SECONDS); } catch (Exception e) { return e.toString(); }
                 }, p);
-                return a.get(60, TimeUnit.SECONDS);
+                return a.get(20, TimeUnit.SECONDS);
             } finally {
                 p.shutdownNow();
             }
@@ -348,7 +346,7 @@ public class CompletableFutureReaders {
                 in.await();
                 blocked(w[0]);
                 w[0].interrupt();
-                a.get(60, TimeUnit.SECONDS);
+                a.get(20, TimeUnit.SECONDS);
                 return r[0];
             } finally {
                 p.shutdownNow();

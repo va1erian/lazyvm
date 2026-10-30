@@ -1,0 +1,34 @@
+visit none = in blocker s=1 mid=0, after visit other done false s=1 mid=0 [blocker on firer, other on firer]
+visit s.complete = in blocker s=1 mid=0, after visit other done true s=0 mid=0 [other on visitor, blocker on firer]
+visit s.completeExceptionally = in blocker s=1 mid=0, after visit other done true s=0 mid=0 [other on visitor, blocker on firer]
+visit s.cancel = in blocker s=1 mid=0, after visit other done true s=0 mid=0 [other on visitor, blocker on firer]
+visit s.obtrudeValue = in blocker s=1 mid=0, after visit other done true s=0 mid=0 [other on visitor, blocker on firer]
+visit s.obtrudeException = in blocker s=1 mid=0, after visit other done true s=0 mid=0 [other on visitor, blocker on firer]
+visit s async rejected = in blocker s=1 mid=0, after visit other done true s=0 mid=0 [other on visitor, blocker on firer]
+visit s async direct = in blocker s=1 mid=0, after visit other done true s=0 mid=0 [other on visitor, blocker on firer]
+visit s async queued = in blocker s=1 mid=0, after visit other done false s=1 mid=0 [blocker on firer, other on firer]
+visit mid.complete = in blocker s=1 mid=0, after visit other done false s=1 mid=0 [blocker on firer, other on firer]
+visit s.thenRun = in blocker s=1 mid=0, after visit other done false s=1 mid=0 [blocker on firer, other on firer]
+visit mid.thenRun = in blocker s=1 mid=0, after visit other done false s=1 mid=0 [blocker on firer, other on firer]
+visit s.join = in blocker s=1 mid=0, after visit other done false s=1 mid=0 [blocker on firer, other on firer]
+visit mid.join = in blocker s=1 mid=0, after visit other done false s=1 mid=0 [blocker on firer, other on firer]
+two levels below, a visit to the root = 1 0 0 [] [other on visitor]
+root's list under what moved onto it = [m0, s=2, m1, s=1, old of s, s=0]
+step finds its target settled, in the target's own firing = [in, other, out]
+handed over, then found again through the other list = 1 [in, out, other] 0
+task of a compose left pending does not help = [task ran, sibling] 0 true true
+task end, either, receiver pending, through the other = [fn=1, sib0=1, sib1=1, own=0] 0
+task end, either, other pending, through the receiver = [fn=1, sib=0] 0
+task end, either, seen from the executor = [pre=1, sib=1, post=0]
+task run from a sibling = [fn=1, sib1=1, sib0 after task=0]
+task's ended entry found again does nothing = [fn, y done, count 0, own1, own0]
+rejected, either, leaves at once = [sib=0]
+both, the second settled inside a task's end, receiver true failed false = [fn a=2, sib a=1 b=0, a's own] 0
+both, the second settled inside a task's end, receiver true failed true = [sib a=1 b=0] 0
+both, the second settled inside a task's end, receiver false failed false = [fn a=2, sib a=1 b=0, a's own] 0
+both, the second settled inside a task's end, receiver false failed true = [sib a=1 b=0] 0
+wide either, settled by the receiver = 20000 0 0
+wide either, settled by the other = 20000 0 0
+many requests against one shutdown, shuffled = 20000 9999 0
+anyOf of one future, many times = 11808 1 0
+out of stack in a firing, then a visit: pending = 0

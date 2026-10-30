@@ -41,7 +41,12 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     /** With two sources: the first to settle is enough. */
     private final boolean either;
     private final CompletableFuture<?> target;
-    private boolean claimed;
+    /** Set the first time the sources allowed a firing; that one does the work. */
+    private boolean fired;
+    /** A task has settled its target: an entry still on a list is nothing but a count now. */
+    private boolean ended;
+    /** The entry on {@code second}'s list. */
+    private OtherSide otherSide;
 
     StageStep(int action, Object fn, Executor executor, CompletableFuture<?> first, CompletableFuture<?> second,
             boolean either, CompletableFuture<?> target) {
@@ -84,10 +89,11 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
 
     private void addToPendingSources() {
         if (first.outcome == null) {
-            first.addLink(this);
+            addTo(first);
         }
         if (second != null && second != first && second.outcome == null) {
-            second.addLink(this);
+            otherSide = new OtherSide();
+            otherSide.addTo(second);
         }
     }
 
@@ -99,31 +105,39 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
                 : first.outcome != null && second.outcome != null;
     }
 
-    private boolean claim() {
+    private boolean firstFiring() {
         synchronized (CompletableFuture.LOCK) {
-            if (claimed || !ready()) {
+            if (fired || !ready()) {
                 return false;
             }
-            claimed = true;
+            fired = true;
             return true;
         }
     }
 
+    /** A settled target's list is gone on with, however it was settled and however often this fires. */
     @Override
     CompletableFuture<?> fire() {
-        if (!claim()) {
-            return null;
+        if (!firstFiring()) {
+            return fired && !ended && target.outcome != null ? target : null;
         }
-        if (target.outcome != null) {
-            leaveOtherSource();
-            return null;
+        try {
+            if (target.outcome != null) {
+                leaveOtherSource();
+                return target;
+            }
+            if (executor == null || skipsExecutor()) {
+                boolean settled = settleTarget();
+                leaveSources();
+                return settled ? target : null;
+            }
+            return handOver();
+        } catch (StackOverflowError e) {
+            // Out of stack before the function was reached: compute catches what it throws. The list
+            // takes this back, so the next visitor does the work (CompletableFuture.fireLinks).
+            fired = false;
+            throw e;
         }
-        if (executor == null || skipsExecutor()) {
-            boolean settled = settleTarget();
-            leaveOtherSource();
-            return settled ? target : null;
-        }
-        return handOver();
     }
 
     private CompletableFuture<?> handOver() {
@@ -132,7 +146,7 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
             return null;
         } catch (Throwable t) {
             boolean settled = target.settle(StageOutcome.thrown(t));
-            leaveOtherSource();
+            leaveSources();
             return settled ? target : null;
         }
     }
@@ -141,12 +155,46 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     @Override
     public void run() {
         boolean settled = target.outcome == null && settleTarget();
-        if (first != null) {
-            leaveOtherSource();
-            helpSources();
+        // A compose left to its inner stage has not ended yet, as far as its sources are concerned.
+        if (first != null && target.outcome != null) {
+            ended = true;
+            endOnSources();
         }
         if (settled) {
             target.fireLinks();
+        }
+    }
+
+    /**
+     * Leaves the settled sources, then visits the other source and the receiver in turn. What a
+     * settled other source fires still finds an {@code either} step on a pending receiver.
+     */
+    private void endOnSources() {
+        if (either) {
+            synchronized (CompletableFuture.LOCK) {
+                leaveIfSettled(first);
+                leaveIfSettled(second);
+            }
+        }
+        if (second != null) {
+            endOn(second);
+        }
+        endOn(first);
+    }
+
+    private void leaveIfSettled(CompletableFuture<?> source) {
+        if (source.outcome != null) {
+            leave(source);
+        }
+    }
+
+    private void endOn(CompletableFuture<?> source) {
+        if (source.outcome != null) {
+            source.fireLinks();
+        } else if (either) {
+            synchronized (CompletableFuture.LOCK) {
+                leave(source);
+            }
         }
     }
 
@@ -157,11 +205,25 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
         first.fireLinksIfSettled();
     }
 
-    /** Only the {@code either} steps leave: a step of both sources stays counted on the other. */
+    /** A step found with its target settled: only the {@code either} steps leave. */
     private void leaveOtherSource() {
         if (either) {
-            first.removeLink(this);
-            second.removeLink(this);
+            leaveSources();
+        }
+    }
+
+    private void leaveSources() {
+        if (second != null) {
+            synchronized (CompletableFuture.LOCK) {
+                leave(first);
+                leave(second);
+            }
+        }
+    }
+
+    private void leave(CompletableFuture<?> source) {
+        if (!removeFrom(source) && otherSide != null) {
+            otherSide.removeFrom(source);
         }
     }
 
@@ -269,8 +331,15 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
             if (inner.outcome != null) {
                 return inner.outcome.inherited();
             }
-            inner.addLink(new StageStep(PASS, null, null, inner, null, false, target));
+            new StageStep(PASS, null, null, inner, null, false, target).addTo(inner);
             return null;
+        }
+    }
+
+    private final class OtherSide extends StageLink {
+        @Override
+        CompletableFuture<?> fire() {
+            return StageStep.this.fire();
         }
     }
 }

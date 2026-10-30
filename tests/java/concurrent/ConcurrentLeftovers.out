@@ -1,0 +1,17 @@
+offer timed, room = true [a]
+offer timed, goes last = [a, b]
+offer timed, full, no time = false [a]
+offer timed, full, runs out = false [a]
+offer timed, full, negative = false [a]
+offer timed, room made while it waits = a true [b]
+offer timed, null ! java.lang.NullPointerException
+offer timed, null unit ! java.lang.NullPointerException
+offer timed, flagged, room = java.lang.InterruptedException [] flag=false
+offer timed, interrupted while it waits = java.lang.InterruptedException flag=false [a]
+forEach, newKeySet = [a, b, c]
+forEach, keySet of a map = [x]
+forEach, empty = 0
+forEach, null ! java.lang.NullPointerException
+forEach, removal inside = []
+forEach, throws = java.lang.IllegalStateException: a [a]
+forEach, through Map.keySet's view type = [x]

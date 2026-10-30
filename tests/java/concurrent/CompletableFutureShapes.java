@@ -1,3 +1,4 @@
+// TIMEOUT: 120
 package concurrent;
 
 import java.util.ArrayList;
