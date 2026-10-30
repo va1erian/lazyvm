@@ -188,12 +188,14 @@ impl Vm {
                 }
             }
             f.pc = f.next_pc;
-            return Ok(Flow::Poll);
+            self.safepoint();
+            return Ok(Flow::Next);
         }
         self.top()?.stack.truncate(at);
         self.push_frame(m, &args)?;
         self.lock_pushed_frame(m)?;
-        Ok(Flow::Poll)
+        self.safepoint();
+        Ok(Flow::Next)
     }
 }
 

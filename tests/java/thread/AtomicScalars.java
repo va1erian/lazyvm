@@ -92,6 +92,13 @@ public class AtomicScalars {
         AtomicReference<Object> self = new AtomicReference<>(5);
         p(self.get() + " " + self);
         p(r.equals(new AtomicReference<>(r.get())) + " " + r.equals(r));
+        Object silent = new Object() {
+            @Override
+            public String toString() {
+                return null;
+            }
+        };
+        p(new AtomicReference<>(silent).toString() == null);
     }
 
     static class Sub extends AtomicInteger {
