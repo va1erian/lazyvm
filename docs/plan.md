@@ -408,10 +408,14 @@ platform completions into `CompletableFuture`.
       `removeShutdownHook` and `halt` (`ShutdownHooks`, `ShutdownExit`,
       `ShutdownExitInHook`, `ShutdownUncaught`, `ShutdownHalt`), and
       `TimeoutLimits`; each thread test passed 50 runs in a row on Windows.
-- [ ] S6-03 The Java memory model at the VM level: `volatile` fields and
+- [x] S6-03 The Java memory model at the VM level: `volatile` fields and
       `Unsafe`-free atomics through VM intrinsics (`lazy.internal.Atomics`)
       used by `java.util.concurrent.atomic`.
       Check: `tests/java/thread/AtomicCounters` (deterministic totals).
+      Done (docs/design/atomics.md): also `VolatileHandoff`, `AtomicScalars`,
+      `AtomicArrays`, `AtomicPairs`, `AtomicAdders`, `AtomicUpdaters`,
+      `AtomicUpdaterErrors`, `AtomicUpdaterAccess`, `AtomicApi` and
+      `tests/java/lazy/atomics/Intrinsics`.
 - [ ] S6-04 `java.util.concurrent`: locks (`ReentrantLock`, `Condition`,
       `ReentrantReadWriteLock`, `LockSupport`), executors, scheduled
       executors, `ConcurrentHashMap`, `CopyOnWriteArrayList`, blocking queues,

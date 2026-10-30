@@ -1,0 +1,43 @@
+false false true
+false false
+true true
+false true
+true false
+false true true
+false
+true
+false true
+0 -5
+0 2 2 0
+0 7 7
+false true 1
+false true 2
+2 9
+-2147483648 -2147483648 2147483647
+4 13 13
+13 1105 1105
+-1234567 -1234567 -912870344 -4525318800244998144 10617 121
+false true
+npe null -1234567
+from function -1234567
+0 -5
+0 2 2 0
+0 1099511627773 1099511627773
+false true 1
+false true 2
+2 9
+-9223372036854775808 -9223372036854775808 9223372036854775807
+4 13 13
+13 1105 1105
+-1985229329 81985529216486895 1536271028 4860004493881425119 -12817 -17
+false true
+null null x
+false true a
+false true b
+false true c
+c null
+e efg efg
+efg hefgi hefgi
+5 5
+false true
+1 Sub:1

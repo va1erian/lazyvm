@@ -1,0 +1,172 @@
+0 0 2 2 0
+0 7 7
+false true 1
+false true 2
+2 9
+-2147483648
+4 13 13
+13 1105 1105
+0 0 2 2 0
+0 1099511627773 1099511627773
+false true 1
+false true 2
+2 9
+-9223372036854775808
+4 13 13
+13 1105 1105
+null false true a
+false true b
+false true c
+c null
+e efg efg
+efg hefgi hefgi
+5 x
+true true
+-- getAndSet
+get
+compareAndSet 1 5
+1
+-- getAndIncrement
+get
+compareAndSet 5 6
+5
+-- getAndDecrement
+get
+compareAndSet 6 5
+6
+-- getAndAdd
+get
+compareAndSet 5 7
+5
+-- incrementAndGet
+get
+compareAndSet 7 8
+8
+-- decrementAndGet
+get
+compareAndSet 8 7
+7
+-- addAndGet
+get
+compareAndSet 7 9
+9
+-- getAndUpdate
+get
+compareAndSet 9 10
+9
+-- updateAndGet
+get
+compareAndSet 10 11
+11
+-- getAndAccumulate
+get
+compareAndSet 11 13
+11
+-- accumulateAndGet
+get
+compareAndSet 13 15
+15
+-- long getAndSet
+get
+compareAndSet 1 5
+1
+-- long getAndIncrement
+get
+compareAndSet 5 6
+5
+-- long getAndDecrement
+get
+compareAndSet 6 5
+6
+-- long getAndAdd
+get
+compareAndSet 5 7
+5
+-- long incrementAndGet
+get
+compareAndSet 7 8
+8
+-- long decrementAndGet
+get
+compareAndSet 8 7
+7
+-- long addAndGet
+get
+compareAndSet 7 9
+9
+-- long updateAndGet
+get
+compareAndSet 9 10
+10
+-- long accumulateAndGet
+get
+compareAndSet 10 12
+12
+-- ref getAndSet
+get
+compareAndSet v w
+v
+-- ref updateAndGet
+get
+compareAndSet w w1
+w1
+-- ref getAndAccumulate
+get
+compareAndSet w1 w1y
+w1
+[getAndSet]
+get
+compareAndSet 1 1
+== getAndSet 1
+[getAndIncrement]
+get
+compareAndSet 1 2
+== getAndIncrement 1
+[getAndDecrement]
+get
+compareAndSet 2 1
+== getAndDecrement 2
+[getAndAdd]
+get
+compareAndSet 1 3
+== getAndAdd 1
+[incrementAndGet]
+get
+compareAndSet 3 4
+== incrementAndGet 4
+[decrementAndGet]
+get
+compareAndSet 4 3
+== decrementAndGet 3
+[addAndGet]
+get
+compareAndSet 3 5
+== addAndGet 5
+[getAndSet]
+get
+compareAndSet 1 1
+== long getAndSet 1
+[getAndIncrement]
+get
+compareAndSet 1 2
+== long getAndIncrement 1
+[getAndDecrement]
+get
+compareAndSet 2 1
+== long getAndDecrement 2
+[getAndAdd]
+get
+compareAndSet 1 3
+== long getAndAdd 1
+[incrementAndGet]
+get
+compareAndSet 3 4
+== long incrementAndGet 4
+[decrementAndGet]
+get
+compareAndSet 4 3
+== long decrementAndGet 3
+[addAndGet]
+get
+compareAndSet 3 5
+== long addAndGet 5

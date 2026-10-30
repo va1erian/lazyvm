@@ -87,7 +87,11 @@ impl Vm {
     }
 
     /// `aastore` requires the value to be assignable to the component type.
-    fn check_array_store(&self, component: crate::class::ClassId, value: Value) -> VmResult<()> {
+    pub fn check_array_store(
+        &self,
+        component: crate::class::ClassId,
+        value: Value,
+    ) -> VmResult<()> {
         let Some(r): Option<Ref> = value.reference()? else {
             return Ok(());
         };

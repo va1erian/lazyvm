@@ -1,0 +1,87 @@
+own private: ok
+nested private from outer: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.AtomicUpdaterAccess$Nested with modifiers "private volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.AtomicUpdaterAccess$Nested with modifiers "private volatile"
+outer private from nested: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess$Nested can not access a member of class thread.AtomicUpdaterAccess with modifiers "private volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess$Nested can not access a member of class thread.AtomicUpdaterAccess with modifiers "private volatile"
+nested private from nested: ok
+nested package: ok
+nested protected: ok
+nested public: ok
+private nested public: ok
+other public: ok
+other package: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "volatile"
+other private: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "private volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "private volatile"
+other public class: ok
+other hidden class: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets$Hidden with modifiers "public volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets$Hidden with modifiers "public volatile"
+other protected class: ok
+other private class: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets$PrivateNested with modifiers "public volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets$PrivateNested with modifiers "public volatile"
+long private: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "private volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "private volatile"
+ref private: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "private volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "private volatile"
+no access and not there: java.lang.RuntimeException: java.lang.NoSuchFieldException: absent
+  cause java.lang.NoSuchFieldException: absent
+protected via superclass: ok
+receiver is caller: ok 1
+receiver is caller subclass: ok 1
+receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+get receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+set receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+lazySet receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+cas receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+weak receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+getAndSet receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+getAndAdd receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+null receiver: java.lang.NullPointerException: null
+null receiver set: java.lang.NullPointerException: null
+null receiver cas: java.lang.NullPointerException: null
+null receiver getAndAdd: java.lang.NullPointerException: null
+wrong receiver: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of java.lang.String
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of java.lang.String
+wrong receiver set: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of java.lang.String
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of java.lang.String
+wrong receiver cas: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of java.lang.String
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of java.lang.String
+sibling receiver: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.AtomicUpdaterAccess$Sibling
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.AtomicUpdaterAccess$Sibling
+long receiver is caller: ok 1
+long receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+long get receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+ref receiver is caller: ok true
+ref receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+ref null receiver: java.lang.NullPointerException: null
+long null receiver: java.lang.NullPointerException: null
+ref get receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+ref set receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+ref getAndSet receiver is the base: java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a protected member of class thread.other.UpdaterTargets using an instance of thread.other.UpdaterTargets
+inherited, through subclass class: java.lang.RuntimeException: java.lang.NoSuchFieldException: protectedField
+  cause java.lang.NoSuchFieldException: protectedField
+same package subclass: ok 1
+made at home: ok 1
+private made at home: ok 1
+reflective own private: ok
+reflective other private: java.lang.reflect.InvocationTargetException: null
+  cause java.lang.RuntimeException: java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "private volatile"
+  cause java.lang.IllegalAccessException: Class thread.AtomicUpdaterAccess can not access a member of class thread.other.UpdaterTargets with modifiers "private volatile"
+method reference own private: java.lang.RuntimeException, cause java.lang.IllegalAccessException
+method reference other private: java.lang.RuntimeException, cause java.lang.IllegalAccessException
+method reference other public: ok
+method reference same package: ok
