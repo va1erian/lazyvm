@@ -52,6 +52,8 @@ pub(crate) struct ThreadEntry {
     pub(crate) interrupted: bool,
     /// Set by `notify` for a thread in a wait set.
     pub(crate) notified: bool,
+    /// `LockSupport`'s permit: one, not a count.
+    park_permit: bool,
     pub(crate) blocked: Blocked,
     /// `Some` while the thread does not hold the VM.
     pub(crate) state: Option<ThreadState>,
@@ -137,6 +139,7 @@ impl ThreadEntry {
             daemon,
             interrupted: false,
             notified: false,
+            park_permit: false,
             blocked: Blocked::No,
             state: None,
         }
@@ -247,6 +250,40 @@ impl Vm {
         self.thread_index(t)
             .and_then(|i| self.threads.get(i))
             .map(|e| e.blocked)
+    }
+
+    /// `LockSupport.unpark`: a thread that is not alive is left alone.
+    pub fn unpark_thread(&mut self, t: Ref) {
+        if let Some(i) = self.thread_index(t)
+            && let Some(e) = self.threads.get_mut(i)
+        {
+            e.park_permit = true;
+            e.os.unpark();
+        }
+    }
+
+    /// `LockSupport.park`: returns when the permit is there (using it up), when the
+    /// interrupt flag is set (leaving it set), or at the end of `nanos`, if given.
+    /// The OS token can be stale, so only those three end the wait.
+    pub fn park_thread(&mut self, nanos: Option<u64>) {
+        let deadline = nanos.and_then(|n| Instant::now().checked_add(Duration::from_nanos(n)));
+        let blocked = match nanos {
+            Some(_) => Blocked::TimedWaiting,
+            None => Blocked::Waiting,
+        };
+        let me = self.current;
+        loop {
+            let Some(e) = self.threads.get_mut(me) else {
+                return;
+            };
+            if std::mem::take(&mut e.park_permit) || e.interrupted {
+                return;
+            }
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                return;
+            }
+            self.park(blocked, deadline);
+        }
     }
 
     /// `Thread.sleep`: interruptible, the flag cleared when it fires.

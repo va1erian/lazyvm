@@ -8,6 +8,7 @@ use crate::{long, obj, opt, ret_bool, ret_int, ret_ref, ret_void};
 
 const THREAD: &str = "java/lang/Thread";
 const OBJECT: &str = "java/lang/Object";
+const LOCK_SUPPORT: &str = "java/util/concurrent/locks/LockSupport";
 
 pub fn register(vm: &mut Vm) {
     vm.register_native(OBJECT, "notify", "()V", |vm, a| {
@@ -58,6 +59,15 @@ pub fn register(vm: &mut Vm) {
             Some(Blocked::TimedWaiting) => 3,
         };
         ret_int(state)
+    });
+    vm.register_native(LOCK_SUPPORT, "park0", "(J)V", |vm, a| {
+        // Java passes 0 for no limit and a positive time otherwise.
+        vm.park_thread(u64::try_from(long(a, 0)?).ok().filter(|n| *n > 0));
+        ret_void()
+    });
+    vm.register_native(LOCK_SUPPORT, "unpark0", "(Ljava/lang/Thread;)V", |vm, a| {
+        vm.unpark_thread(obj(a, 0)?);
+        ret_void()
     });
 }
 

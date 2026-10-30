@@ -1,6 +1,6 @@
 package java.util.concurrent;
 
-/** Units of time, each a whole number of nanoseconds. Threads come with S6. */
+/** Units of time, each a whole number of nanoseconds. */
 public enum TimeUnit {
     NANOSECONDS(1L),
     MICROSECONDS(1000L),
@@ -61,5 +61,31 @@ public enum TimeUnit {
 
     public long toDays(long d) {
         return DAYS.convert(d, this);
+    }
+
+    public void timedWait(Object obj, long timeout) throws InterruptedException {
+        if (timeout > 0) {
+            long millis = toMillis(timeout);
+            obj.wait(millis, nanosBeyond(timeout, millis));
+        }
+    }
+
+    public void timedJoin(Thread thread, long timeout) throws InterruptedException {
+        if (timeout > 0) {
+            long millis = toMillis(timeout);
+            thread.join(millis, nanosBeyond(timeout, millis));
+        }
+    }
+
+    public void sleep(long timeout) throws InterruptedException {
+        if (timeout > 0) {
+            long millis = toMillis(timeout);
+            Thread.sleep(millis, nanosBeyond(timeout, millis));
+        }
+    }
+
+    /** What truncating `d` of this unit to `millis` lost; only units below a millisecond lose any. */
+    private int nanosBeyond(long d, long millis) {
+        return nanos >= 1000000L ? 0 : (int) (d * nanos - millis * 1000000L);
     }
 }

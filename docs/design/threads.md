@@ -205,8 +205,12 @@ nothing but `synchronized` blocks and calls is about 5% slower again on top.
   all memory effects; with one thread running bytecode at a time, `volatile`
   needs nothing extra, and an atomic intrinsic is atomic if its native does
   not call `blocking`. See [`atomics.md`](atomics.md).
-- **`LockSupport` (S6-04):** `Vm::park` with a permit in `ThreadEntry` gives
-  park/unpark; executors and queues can be built on monitors.
+- **`LockSupport` (S6-04):** `Vm::park_thread` with a permit in `ThreadEntry`
+  gives park/unpark; executors and queues can be built on monitors. The locks
+  and `Semaphore` park in `lazy.internal.Turnstile`, whose rule for overtaking
+  a queue is the "Fairness" one above: a newcomer may pass a head younger than
+  one VM lock slice, because the thread that would otherwise switch still has
+  its slice to run.
 - **The reactor (S6-06):** a reactor OS thread does not run Java and must
   not take the VM to deliver completions. It should hand completions to a
   Java thread (for example by unparking a Java thread waiting in a native

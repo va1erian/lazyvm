@@ -36,6 +36,8 @@ public class Thread implements Runnable {
     private volatile int status;
     private volatile UncaughtExceptionHandler handler;
     private ClassLoader contextClassLoader;
+    /** What LockSupport says this thread is parked on; only LockSupport touches it. */
+    private Object blockedOn;
     /** Values of this thread's ThreadLocals and InheritableThreadLocals. */
     Map<ThreadLocal<?>, Object> locals;
     Map<ThreadLocal<?>, Object> inheritableLocals;
