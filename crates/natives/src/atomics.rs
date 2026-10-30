@@ -5,7 +5,11 @@
 //! may do either, come before the read.
 //!
 //! A field is named by its `Field` object, never by a raw offset: the checks
-//! below hold whatever Java passes, so bad input is an exception.
+//! below hold whatever Java passes, so bad input is an exception. No verifier
+//! stands in front of them yet (S8), so that includes an argument whose class
+//! contradicts the descriptor.
+
+use std::sync::Arc;
 
 use vm::class::ClassKind;
 use vm::heap::Array;
@@ -17,6 +21,7 @@ use crate::{arg, int, long, obj, opt, ret_bool, ret_int, ret_ref};
 const ATOMICS: &str = "lazy/internal/Atomics";
 const IAE: &str = "java/lang/IllegalArgumentException";
 const METHOD: &str = "java/lang/reflect/Method";
+const FIELD: &str = "java/lang/reflect/Field";
 
 /// The variable an operation works on, with its checks already done.
 #[derive(Clone, Copy)]
@@ -75,7 +80,17 @@ impl Kind {
 
 /// The field a `(target, Field, ...)` call names. `args[1]` is the `Field`.
 fn field_cell(vm: &mut Vm, args: &[Value], kind: Kind) -> VmResult<Cell> {
-    let (class, index) = member_of(vm, obj(args, 1)?)?;
+    Ok(checked_field(vm, args, kind)?.0)
+}
+
+/// The cell and its field's descriptor, read once: class initialization below
+/// may run Java that changes the `Field`, so nothing may read it again.
+fn checked_field(vm: &mut Vm, args: &[Value], kind: Kind) -> VmResult<(Cell, Arc<str>)> {
+    let member = obj(args, 1)?;
+    if &*vm.class(vm.heap.class_of(member)?).name != FIELD {
+        return Err(VmError::exception(IAE, "not a Field"));
+    }
+    let (class, index) = member_of(vm, member)?;
     let f = vm
         .class(class)
         .fields
@@ -87,24 +102,20 @@ fn field_cell(vm: &mut Vm, args: &[Value], kind: Kind) -> VmResult<Cell> {
     if f.access & classfile::ACC_FINAL != 0 {
         return Err(VmError::exception(IAE, "final field"));
     }
-    let (is_static, slot) = (f.is_static(), f.slot);
+    let (is_static, slot, descriptor) = (f.is_static(), f.slot, f.descriptor.clone());
     if is_static {
         // May run Java; the arguments stay rooted on the caller's stack.
         vm.initialize(class)?;
-        return Ok(Cell::Static(class, slot as usize));
+        return Ok((Cell::Static(class, slot as usize), descriptor));
     }
-    Ok(Cell::Instance(
-        check_receiver(vm, class, opt(args, 0)?)?,
-        slot,
-    ))
+    let receiver = check_receiver(vm, class, opt(args, 0)?)?;
+    Ok((Cell::Instance(receiver, slot), descriptor))
 }
 
-/// Only a value the field's declared type allows may go in a reference field.
-fn check_field_value(vm: &mut Vm, args: &[Value], value: Option<Ref>) -> VmResult<()> {
-    let Some(r) = value else { return Ok(()) };
-    let (class, index) = member_of(vm, obj(args, 1)?)?;
-    let f = vm.class(class).fields.get(index);
-    let descriptor = static_slot(f)?.descriptor.clone();
+/// The field of a reference store, with `value` checked against its declared type.
+fn field_cell_for(vm: &mut Vm, args: &[Value], value: Option<Ref>) -> VmResult<Cell> {
+    let (cell, descriptor) = checked_field(vm, args, Kind::Reference)?;
+    let Some(r) = value else { return Ok(cell) };
     let name = descriptor
         .strip_prefix('L')
         .and_then(|d| d.strip_suffix(';'))
@@ -112,7 +123,7 @@ fn check_field_value(vm: &mut Vm, args: &[Value], value: Option<Ref>) -> VmResul
     let declared = vm.load_class(name)?;
     let from = vm.heap.class_of(r)?;
     if vm.is_assignable(from, declared) {
-        return Ok(());
+        return Ok(cell);
     }
     Err(VmError::exception(
         "java/lang/ClassCastException",
@@ -123,6 +134,9 @@ fn check_field_value(vm: &mut Vm, args: &[Value], value: Option<Ref>) -> VmResul
 /// The element a `(array, i, ...)` call names, in an array of the right kind.
 fn element_cell(vm: &Vm, args: &[Value], kind: Kind) -> VmResult<Cell> {
     let a = obj(args, 0)?;
+    if !vm.class(vm.heap.class_of(a)?).is_array() {
+        return Err(VmError::exception(IAE, "wrong array type"));
+    }
     let right = match vm.heap.array(a)? {
         Array::Int(_) => kind == Kind::Int,
         Array::Long(_) => kind == Kind::Long,
@@ -243,8 +257,7 @@ pub fn register(vm: &mut Vm) {
         "compareAndSetRef",
         &d("Ljava/lang/Object;Ljava/lang/Object;)Z"),
         |vm, a| {
-            let c = field_cell(vm, a, Kind::Reference)?;
-            check_field_value(vm, a, opt(a, 3)?)?;
+            let c = field_cell_for(vm, a, opt(a, 3)?)?;
             ref_cas(vm, c, a)
         },
     );
@@ -253,8 +266,7 @@ pub fn register(vm: &mut Vm) {
         "getAndSetRef",
         &d("Ljava/lang/Object;)Ljava/lang/Object;"),
         |vm, a| {
-            let c = field_cell(vm, a, Kind::Reference)?;
-            check_field_value(vm, a, opt(a, 2)?)?;
+            let c = field_cell_for(vm, a, opt(a, 2)?)?;
             ref_swap(vm, c, a)
         },
     );

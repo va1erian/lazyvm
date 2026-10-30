@@ -37,14 +37,23 @@ final class UpdaterField {
         boolean samePackage = samePackage(tclass, caller);
         // A protected nested class is public as the VM sees it (JVMS 4.1 has no protected class).
         int classModifiers = tclass.getModifiers();
-        boolean classVisible = samePackage || Modifier.isPublic(classModifiers) || Modifier.isProtected(classModifiers);
+        boolean publicClass = Modifier.isPublic(classModifiers) || Modifier.isProtected(classModifiers);
+        boolean classVisible = samePackage || publicClass;
         boolean memberVisible = Modifier.isPublic(modifiers)
                 || (samePackage && !Modifier.isPrivate(modifiers))
                 || (Modifier.isProtected(modifiers) && tclass.isAssignableFrom(caller));
         if (!classVisible || !memberVisible) {
             throw new IllegalAccessException("Class " + caller.getName() + " can not access a member of class "
-                    + tclass.getName() + " with modifiers \"" + Modifier.toString(modifiers) + "\"");
+                    + tclass.getName() + " with modifiers \"" + Modifier.toString(shown(modifiers, publicClass)) + "\"");
         }
+    }
+
+    /** Observed: the refusal never says protected, and says public when the class is not. */
+    private static int shown(int modifiers, boolean publicClass) {
+        if (!Modifier.isProtected(modifiers)) {
+            return modifiers;
+        }
+        return (modifiers & ~Modifier.PROTECTED) | (publicClass ? 0 : Modifier.PUBLIC);
     }
 
     private static boolean samePackage(Class<?> a, Class<?> b) {

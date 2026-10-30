@@ -22,6 +22,7 @@ public class AtomicPairs {
         p(m.weakCompareAndSet("zz", "c", true, false) + " " + m.weakCompareAndSet(m.getReference(), "c", true, false));
         p(m.getReference() + " " + m.isMarked());
         String c = m.getReference();
+        p(m.attemptMark(new String(c), !m.isMarked()) + " " + m.isMarked());
         p(m.attemptMark("other", true) + " " + m.isMarked());
         p(m.attemptMark(c, true) + " " + m.isMarked() + " " + m.attemptMark(c, true) + " " + m.isMarked());
         m.set(null, false);
@@ -52,6 +53,7 @@ public class AtomicPairs {
         p(s.weakCompareAndSet("zz", "c", 8, 9) + " " + s.weakCompareAndSet(s.getReference(), "c", 8, 9));
         p(s.getReference() + " " + s.getStamp());
         String c = s.getReference();
+        p(s.attemptStamp(new String(c), 77) + " " + s.getStamp());
         p(s.attemptStamp("other", 5) + " " + s.getStamp());
         p(s.attemptStamp(c, 5) + " " + s.getStamp() + " " + s.attemptStamp(c, 5) + " " + s.getStamp());
         s.set(null, Integer.MIN_VALUE);

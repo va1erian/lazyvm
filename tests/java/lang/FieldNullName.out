@@ -1,0 +1,5 @@
+getField: java.lang.NullPointerException: null
+getDeclaredField: java.lang.NullPointerException: null
+getField absent: java.lang.NoSuchFieldException: absent
+getDeclaredField absent: java.lang.NoSuchFieldException: absent
+getField present: present

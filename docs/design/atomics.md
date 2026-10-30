@@ -63,19 +63,25 @@ private fields which reflection can change, so the native checks on every call:
 | Check | Failure |
 |---|---|
 | The `Field` is not null, its class is set | `NullPointerException` |
+| The object is a `java.lang.reflect.Field` | `IllegalArgumentException` |
 | The slot is a field of that class | `IllegalArgumentException` |
 | The descriptor is exactly `I`, `J`, or a reference | `IllegalArgumentException` |
 | The field is not `final` | `IllegalArgumentException` |
 | An instance field's target is not null | `NullPointerException` |
 | An instance field's target is an instance of the class | `IllegalArgumentException` |
 | A reference stored in a field fits its declared type | `ClassCastException` |
-| An element's array has the operation's kind | `IllegalArgumentException` |
+| An element's array is an array of the operation's kind | `IllegalArgumentException` |
 | The array is not null, the index is in range | `NullPointerException`, `ArrayIndexOutOfBoundsException` |
 | A reference stored in an element passes `aastore`'s check | `ArrayStoreException` |
 
 The field type check is what stops a forged `Field` from putting a value of the
-wrong kind in a slot. `tests/java/lazy/atomics/Intrinsics` covers each row,
-forged `Field`s included. int and long fields need no read intrinsic
+wrong kind in a slot. It uses the descriptor read during the same validation,
+because initializing the class can run Java that changes the `Field`.
+`tests/java/lazy/atomics/Intrinsics` covers each row, forged `Field`s included.
+javac code cannot reach the row on the array's kind, or pass something other
+than a `Field`; until the verifier (S8) bytecode can, so the test loads
+`CraftedAtomics.class`, which `tools/fixtures.py` builds from
+`tools/crafted/CraftedAtomics.java` with the casts removed. int and long fields need no read intrinsic
 (`getAndAdd` of zero is one), so the only plain read is `getRef`.
 
 The `Field` lookups cost about 20% over a plain method call on `AtomicInteger`
@@ -110,7 +116,9 @@ field of the class that wrote it (`AtomicUpdaterAccess`). Observed rules:
 - Access follows JLS 6.6 with the class as the VM sees it: a `private` nested
   class counts as package-private and a `protected` one as public. A class's own
   nested classes get no private access to it, nor it to them: nesting is a
-  compiler feature here.
+  compiler feature here. A refused protected field's message never says
+  `protected`: its modifiers read `volatile` on a class the VM sees as public and
+  `public volatile` on any other.
 - Then, in order: the type (`IllegalArgumentException` "Must be integer type" or
   "Must be long type"; for references, `ClassCastException` unless the field's
   type is exactly `vclass`, then "Must be reference type" if that is primitive);

@@ -124,6 +124,10 @@ public class AtomicAdders {
         nan.reset();
         p(nan);
         p(Double.doubleToRawLongBits(new DoubleAccumulator(Math::max, Double.longBitsToDouble(0x7ff8000000000123L)).get()));
+        DoubleAccumulator payload = new DoubleAccumulator((x, y) -> Double.longBitsToDouble(0x7ff8000000000123L), 0);
+        payload.accumulate(1);
+        p(Double.doubleToRawLongBits(payload.get()));
+        p(Double.doubleToRawLongBits(payload.getThenReset()) + " " + Double.doubleToRawLongBits(payload.get()));
         DoubleAccumulator counted = new DoubleAccumulator((x, y) -> {
             p("called " + x + " " + y);
             return x + y;
