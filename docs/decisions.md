@@ -230,7 +230,7 @@ lazyvm/
   crates/natives-ui     the lazy.ui natives, linked only by lazyvm-ui
   crates/lazyvm-win     Windows-only parts: xui winit window host (S9)
   crates/lazyvm-lazyos  LazyOS-only parts: Messenger, xuid (GPL-3.0-or-later;
-                        not created yet: S9-04 and S10 add it)
+                        not created yet)
   crates/launcher       the `lazyvm` / `java` command line (a lib and its bin)
   crates/launcher-ui    `lazyvm-ui`: the same launcher plus lazy.ui (S9)
   java/lazyrt           the java.* class library (Java source)

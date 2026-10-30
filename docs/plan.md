@@ -135,10 +135,11 @@ Gate: `tools/test.py --filter s1` all `PASS`.
 Goal: ordinary object-oriented single-threaded programs run, with a real `java.lang` core.
 
 - [x] S2-01 Heap and object model: a slot table with checked `Ref`s and
-      generation-tagged slots (D5), field layout per class, arrays of
-      references, and a precise non-moving mark-sweep collector with roots from
-      frames, statics, the native root stack and interned strings. `-Xmx` sizing applies, and running out of
-      memory raises `OutOfMemoryError`.
+      generation-tagged slots (D5), an object header (class pointer, hash and
+      lock word), field layout per class, arrays of references, and a precise
+      non-moving mark-sweep collector with roots from frames, statics, the
+      native root stack and interned strings. `-Xmx` sizing applies, and
+      running out of memory raises `OutOfMemoryError`.
       Files: `crates/vm/src/heap/*.rs`.
       Check: `cargo test -p vm heap::` (a stress test allocating 100x the heap); `tests/java/s2/GcChurn`.
 - [x] S2-02 Class loading and linking for one class path (JVMS 5): loading,
@@ -396,8 +397,9 @@ Goal: real threads, `java.util.concurrent`, and `lazy.async` delivering
 platform completions into `CompletableFuture`.
 
 - [x] S6-01 Threads: `Thread` on OS threads sharing one VM lock handed over at
-      yield points (D5; GC runs under it), `Thread.sleep`/`join`/`interrupt`/`yield`, daemon threads, the
-      uncaught exception handler, `ThreadLocal`, and VM exit when the last
+      yield points (D5; GC runs under it),
+      `Thread.sleep`/`join`/`interrupt`/`yield`, daemon threads, the uncaught
+      exception handler, `ThreadLocal`, and VM exit when the last
       non-daemon thread ends.
       Check: `tests/java/thread/StartJoin`, `Interrupts`, `GcUnderThreads` (8 threads allocating while GC runs, 1000 iterations).
 - [x] S6-02 Monitors: `synchronized`, `wait`/`notify`/`notifyAll`, and
