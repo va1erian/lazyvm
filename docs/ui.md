@@ -291,7 +291,7 @@ host. The Javadoc of `Ui.run` and `lazy.gfx.Window.open` says so, and
   `lazy.internal.ui.Headless` is the loop. It runs a window through the run
   hook, injects clicks, keys and text, advances a manual clock that fires
   `Ui.after`/`every` timers, drains `Ui.later` work, and returns
-  `capture()`d pixels. Tests in `tests/lazy/ui` print a pixel checksum and
+  `capture()`d pixels. Tests in `tests/java/lazy/ui` print a pixel checksum and
   the state their callbacks saw, against hand-written `lazy.*` goldens
   (shared rule 3). Modal dialogs and resizes are tested on window hosts
   until xui's offscreen backend supports them (gap 5).

@@ -134,11 +134,12 @@ Gate: `tools/test.py --filter s1` all `PASS`.
 
 Goal: ordinary object-oriented single-threaded programs run, with a real `java.lang` core.
 
-- [x] S2-01 Heap and object model: object header (class pointer, hash and lock
-      word), field layout per class, arrays of references, `Handle`/handle
-      scopes, and a mark-compact collector with roots from frames, statics,
-      handles and interned strings. `-Xmx` sizing applies, and running out of
-      memory raises `OutOfMemoryError`.
+- [x] S2-01 Heap and object model: a slot table with checked `Ref`s and
+      generation-tagged slots (D5), an object header (class pointer, hash and
+      lock word), field layout per class, arrays of references, and a precise
+      non-moving mark-sweep collector with roots from frames, statics, the
+      native root stack and interned strings. `-Xmx` sizing applies, and
+      running out of memory raises `OutOfMemoryError`.
       Files: `crates/vm/src/heap/*.rs`.
       Check: `cargo test -p vm heap::` (a stress test allocating 100x the heap); `tests/java/s2/GcChurn`.
 - [x] S2-02 Class loading and linking for one class path (JVMS 5): loading,
@@ -395,9 +396,10 @@ prints the top 20 with `printf`) matches the oracle on both platforms.
 Goal: real threads, `java.util.concurrent`, and `lazy.async` delivering
 platform completions into `CompletableFuture`.
 
-- [x] S6-01 Threads: `Thread` on OS threads, safepoints, a stop-the-world GC
-      handshake, `Thread.sleep`/`join`/`interrupt`/`yield`, daemon threads, the
-      uncaught exception handler, `ThreadLocal`, and VM exit when the last
+- [x] S6-01 Threads: `Thread` on OS threads sharing one VM lock handed over at
+      yield points (D5; GC runs under it),
+      `Thread.sleep`/`join`/`interrupt`/`yield`, daemon threads, the uncaught
+      exception handler, `ThreadLocal`, and VM exit when the last
       non-daemon thread ends.
       Check: `tests/java/thread/StartJoin`, `Interrupts`, `GcUnderThreads` (8 threads allocating while GC runs, 1000 iterations).
 - [x] S6-02 Monitors: `synchronized`, `wait`/`notify`/`notifyAll`, and
@@ -428,7 +430,7 @@ platform completions into `CompletableFuture`.
       `cancel`, `obtrude*`) never call one another virtually; internal
       completion goes through private helpers, so S6-06's subclass can
       override them ([`async.md`](async.md), "Inside").
-      Check: `tests/java/concurrent/CompletableFutures`. (The rule is checked through S6-06's `LoopFuture` in `tests/lazy/async/Cancel`: a `java.*` golden would record the oracle's own internal calls.)
+      Check: `tests/java/concurrent/CompletableFutures`. (The rule is checked through S6-06's `LoopFuture` in `tests/java/lazy/async/Cancel`: a `java.*` golden would record the oracle's own internal calls.)
 - [ ] S6-06 `lazy.async.Loop` as [`async.md`](async.md) designs it: the
       reactor thread of [`decisions.md`](decisions.md) D8, `Loop.executor()`
       and timers (`Loop.delay(time, unit)` returning `CompletionStage<Void>`),
@@ -440,9 +442,9 @@ platform completions into `CompletableFuture`.
       (MIT): recorded in `THIRD_PARTY.md`, with the `tools/size.py` delta in
       the PR.
       Files: `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/{Reactor,LoopFuture}.java`, `crates/platform/src/reactor.rs`, `crates/natives/src/lazy_async.rs`.
-      Check: `tests/lazy/async/Timers`, `Cancel`, `ExecutorOrder` (both); no polling: `tests/lazy/async/Idle` asserts the reactor thread's CPU time over an idle 2 s is at most two ticks of the platform's thread clock (both); `python tools/licenses.py`; `python tools/size.py`.
+      Check: `tests/java/lazy/async/Timers`, `Cancel`, `ExecutorOrder` (both); no polling: `tests/java/lazy/async/Idle` asserts the reactor thread's CPU time over an idle 2 s is at most two ticks of the platform's thread clock (both); `python tools/licenses.py`; `python tools/size.py`.
 
-Gate: `tests/lazy/async/Pipeline` (1000 chained timer stages fanned in with
+Gate: `tests/java/lazy/async/Pipeline` (1000 chained timer stages fanned in with
 `allOf`) passes on both platforms.
 
 ## S7. `lazy.net` async TCP
@@ -470,7 +472,7 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
         rule into the guest's listening port, and passes the addresses to
         the tests ([`async.md`](async.md), "Files").
       Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/net.rs`, `crates/natives/src/lazy_async.rs`, `tools/lazyos_test.py`.
-      Check: `cargo test -p platform net`; on Windows `tests/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `Ipv6Loopback`; on LazyOS (`tools/lazyos_test.py --net`) `tests/lazy/net/HostEcho`, `HostInbound`.
+      Check: `cargo test -p platform net`; on Windows `tests/java/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `Ipv6Loopback`; on LazyOS (`tools/lazyos_test.py --net`) `tests/java/lazy/net/HostEcho`, `HostInbound`.
       Needs: S6-06.
 
 Gate: `samples/tcpget` sends a hand-written HTTP/1.0 `GET` over `lazy.net` to a

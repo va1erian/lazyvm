@@ -118,7 +118,12 @@ impl Vm {
     #[inline]
     pub(crate) fn safepoint(&mut self) {
         if self.gil.wanted() {
-            self.blocking(|| ());
+            self.yield_vm();
         }
+    }
+
+    #[cold]
+    fn yield_vm(&mut self) {
+        self.blocking(|| ());
     }
 }

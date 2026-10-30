@@ -47,6 +47,7 @@ impl Vm {
         Ok(Flow::Next)
     }
 
+    #[inline]
     fn current_class(&self) -> VmResult<ClassId> {
         self.frames
             .last()

@@ -24,8 +24,6 @@ use crate::{Vm, VmError, VmResult};
 /// What an instruction did to control flow.
 pub(crate) enum Flow {
     Next,
-    /// Next, after a safepoint: a backward branch or a call was taken.
-    Poll,
     Return(Option<Value>),
 }
 
@@ -115,6 +113,7 @@ impl Vm {
         }
     }
 
+    #[inline]
     pub(crate) fn pop_frame(&mut self) {
         if let Some(f) = self.frames.pop() {
             self.frame_slots -= f.locals.len() + usize::from(f.code.max_stack);
@@ -145,10 +144,6 @@ impl Vm {
             }
             let outcome = match self.step() {
                 Ok(Flow::Next) => continue,
-                Ok(Flow::Poll) => {
-                    self.safepoint();
-                    continue;
-                }
                 Ok(Flow::Return(v)) => match self.check_balanced() {
                     Err(e) => Err(e),
                     Ok(()) => {

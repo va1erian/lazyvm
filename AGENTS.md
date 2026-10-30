@@ -150,13 +150,12 @@ python tools/case_marks.py             # regenerate the mark sets behind String'
 python tools/locale_symbols.py         # regenerate the decimal/grouping characters Formatter uses per locale (--check verifies)
 ```
 
-These tools are created by S0. Until then, only `cargo build` exists.
-
 ## Layout
 
 The repo layout is [`docs/decisions.md`](docs/decisions.md) D10. Rust code
 goes in `crates/`, the `java.*` class library in `java/lazyrt`, the `lazy.*` API
-in `java/lazy-api`, and tests in `tests/`. `crates/lazyvm-lazyos` is the only
+in `java/lazy-api` (not created yet: `lazy.*` lives in `java/lazyrt` until it
+is), and tests in `tests/`. `crates/lazyvm-lazyos` (not created yet) is the only
 GPL-3.0-or-later crate. Nothing else may depend on it.
 
 ## LazyOS
