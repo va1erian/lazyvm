@@ -7,7 +7,7 @@ import java.util.function.Function;
 /**
  * The table of {@link ConcurrentHashMap}. Readers take no lock: a resize builds a new table of new
  * nodes and publishes it in one write, so a chain a reader walks only ever loses a node, which
- * keeps its link. Writers hold this object's monitor, only for the table work.
+ * keeps its link and value. Writers hold this object's monitor, only for the table work.
  *
  * <p>A computing function runs with no table lock, so other keys go on being read and written, and
  * the function may itself use the map. Instead the computation holds a {@link Claim} on its key: a
@@ -18,7 +18,6 @@ final class HashCore<K, V> {
     static final class Node<K, V> {
         final int hash;
         final K key;
-        /** Null once removed. */
         V value;
         Node<K, V> next;
 
@@ -83,6 +82,10 @@ final class HashCore<K, V> {
     V get(Object key) {
         Node<K, V> n = find(key, spread(key));
         return n == null ? null : n.value;
+    }
+
+    boolean computing() {
+        return claims != null;
     }
 
     private Claim claimOn(Object key, int hash) {
@@ -256,16 +259,12 @@ final class HashCore<K, V> {
             }
             n.next = gone.next;
         }
-        gone.value = null;
         size--;
     }
 
     synchronized void clear() {
         Node<K, V>[] t = table;
         for (int i = 0; i < t.length; i++) {
-            for (Node<K, V> n = t[i]; n != null; n = n.next) {
-                n.value = null;
-            }
             t[i] = null;
         }
         size = 0;
@@ -274,7 +273,8 @@ final class HashCore<K, V> {
     /**
      * A weak walk over the table as it was at the start. After a resize that table no longer
      * changes, so each pair is checked against the map: what has left since is skipped, and a
-     * changed value is seen. Holds the next pair from the moment it finds it (G6).
+     * changed value is seen. Holds the next pair from the moment it finds it (G6). A chain it is
+     * already on stays as it was, removed nodes included, as on the oracle (concurrent.md).
      */
     abstract static class Walk<K, V, E> implements Iterator<E>, java.util.Enumeration<E> {
         private final HashCore<K, V> core;

@@ -243,6 +243,85 @@ public class CollectionEdges {
         show("fair putters FIFO", () -> took);
     }
 
+    /** One bin for all, so an iterator's next steps run along a chain. */
+    static final class Same {
+        final String s;
+        Same(String s) { this.s = s; }
+        @Override public int hashCode() { return 7; }
+        @Override public String toString() { return s; }
+    }
+
+    static List<Object> rest(Iterator<?> it) {
+        List<Object> l = new ArrayList<>();
+        while (it.hasNext()) l.add(it.next());
+        return l;
+    }
+
+    static void chains() throws Exception {
+        Same a = new Same("a"), b = new Same("b"), c = new Same("c"), d = new Same("d");
+        ConcurrentHashMap<Same, Integer> m = new ConcurrentHashMap<>();
+        for (Same k : new Same[] {a, b, c, d}) m.put(k, 1);
+        Iterator<Same> i = m.keySet().iterator();
+        i.next();
+        m.remove(b);
+        m.remove(c);
+        show("removed further along one bin", () -> rest(i).size());
+        m.put(b, 1);
+        m.put(c, 1);
+        Iterator<Same> j = m.keySet().iterator();
+        j.next();
+        m.clear();
+        show("cleared under an iterator", () -> rest(j).size());
+        ConcurrentHashMap<String, Integer> h = new ConcurrentHashMap<>();
+        h.put("k", 1);
+        show("entry contains a null key", () -> h.entrySet().contains(new AbstractMap.SimpleEntry<>(null, 1)));
+        show("entry contains a null value", () -> h.entrySet().contains(new AbstractMap.SimpleEntry<>("k", null)));
+        CountDownLatch in = new CountDownLatch(1), go = new CountDownLatch(1);
+        Thread comp = new Thread(() -> h.compute("k", (k, v) -> {
+            in.countDown();
+            try { go.await(); } catch (InterruptedException e) { return -1; }
+            return v + 1;
+        }));
+        comp.start();
+        in.await();
+        int[] seen = new int[1];
+        Thread late = new Thread(() -> seen[0] = h.computeIfAbsent("k", k -> 9));
+        late.start();
+        while (late.getState() != Thread.State.BLOCKED) Thread.sleep(1);
+        show("computeIfAbsent of a present key waits for its compute", late::getState);
+        go.countDown();
+        comp.join();
+        late.join();
+        show("and answers what it computed", () -> seen[0]);
+        show("get null with a comparator that allows it", () -> new ConcurrentSkipListMap<Integer, String>(Comparator.nullsFirst(Comparator.<Integer>naturalOrder())).get(null));
+        show("set equals a smaller set", () -> new CopyOnWriteArraySet<>(Arrays.asList("a", "b")).equals(new HashSet<>(Arrays.asList("a"))));
+        LinkedBlockingQueue<String> q = new LinkedBlockingQueue<>(Arrays.asList("a", "b"));
+        Iterator<String> w = q.iterator();
+        w.next();
+        q.poll();
+        q.poll();
+        q.add("c");
+        show("linked queue iterator follows past what left", () -> rest(w));
+        ConcurrentMap<String, Integer> raced = new ConcurrentHashMap<String, Integer>() {
+            @Override public Integer computeIfAbsent(String k, java.util.function.Function<? super String, ? extends Integer> f) {
+                return lost.computeIfAbsent(k, f);
+            }
+        };
+        show("default computeIfAbsent that lost answers the winner", () -> raced.computeIfAbsent("k", k -> 1));
+        show("default merge rejects a null value on an absent key", () -> lost.merge("new", null, Integer::sum));
+    }
+
+    /** Says another thread won every putIfAbsent, and leaves the rest to ConcurrentMap's defaults. */
+    static final ConcurrentMap<String, Integer> lost = new LostRaces();
+
+    static final class LostRaces extends AbstractMap<String, Integer> implements ConcurrentMap<String, Integer> {
+        @Override public Set<Map.Entry<String, Integer>> entrySet() { return Collections.emptySet(); }
+        @Override public Integer putIfAbsent(String k, Integer v) { return 77; }
+        @Override public boolean remove(Object k, Object v) { return false; }
+        @Override public boolean replace(String k, Integer o, Integer n) { return false; }
+        @Override public Integer replace(String k, Integer v) { return null; }
+    }
+
     public static void main(String[] args) throws Exception {
         ranges();
         identity();
@@ -251,5 +330,6 @@ public class CollectionEdges {
         computing();
         copyOnWrite();
         queues();
+        chains();
     }
 }

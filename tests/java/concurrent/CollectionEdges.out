@@ -71,3 +71,14 @@ non-fair: the newest taker first = [2:x0, 1:x1, 0:x2]
 one hand-over per consumer = true true false
 after = 0 0
 fair putters FIFO = [-1, 0, 1, 2]
+removed further along one bin = 3
+cleared under an iterator = 3
+entry contains a null key = false
+entry contains a null value = false
+computeIfAbsent of a present key waits for its compute = BLOCKED
+and answers what it computed = 2
+get null with a comparator that allows it ! java.lang.NullPointerException
+set equals a smaller set = false
+linked queue iterator follows past what left = [b, c]
+default computeIfAbsent that lost answers the winner = 77
+default merge rejects a null value on an absent key ! java.lang.NullPointerException

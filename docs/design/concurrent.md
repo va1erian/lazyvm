@@ -436,10 +436,14 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   writes it back").
 - An iterator goes on seeing the table it started on while the map grows: no key twice, every old
   key once, and a key removed since is not handed out, beyond the one it already held ("growing map:
-  no repeat, all old keys seen", "removed after growth: at most the one it held").
+  no repeat, all old keys seen", "removed after growth: at most the one it held"). Without growth, it
+  still hands out keys removed further along the bin it is already in, even after `clear`, so colliding keys
+  show more than other keys do ("removed further along one bin", "cleared under an iterator").
 - A running `compute` shuts out writers of its own key, as `BLOCKED` threads, but not readers, nor
   writers or computations of keys in other bins ("writer of that key", "read during compute", "other
-  key during compute", "other compute during compute"). Nothing here looks at the flag ("flag kept by
+  key during compute", "other compute during compute"). `computeIfAbsent` counts as a writer even when its key is
+  present, and answers what the compute produced ("computeIfAbsent of a present key waits for its compute", "and
+  answers what it computed"). Nothing here looks at the flag ("flag kept by
   compute").
 
 ### `ConcurrentSkipListMap`, `ConcurrentSkipListSet` (`SkipLists`)

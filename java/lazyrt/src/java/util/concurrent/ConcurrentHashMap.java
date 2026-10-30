@@ -206,7 +206,8 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
     public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(mappingFunction);
-        V v = core.get(key);
+        // Present and nobody computing: the common case needs no claim. A running compute is waited for.
+        V v = core.computing() ? null : core.get(key);
         return v != null ? v : core.atomically(key, old -> old != null ? old : mappingFunction.apply(key));
     }
 
