@@ -81,6 +81,17 @@ threads handing a lock around share one slice however many switches they make.
 Without spinners the queue round is 42-46 ms, before and after. `SpinnerConvoy`
 pins this: it takes seconds now, and hits the test's time limit if a handover
 waits behind busy threads again. `Fairness` still bounds starvation on a lock.
+Naming the woken thread is not pinned by a test, as the VM only loses speed
+without it: a thread that gets back before its waker blocks needs no name, and
+one that does not waits out a slice. Measured with 3 spinners, a hop of a
+ping-pong takes 165 us rather than 270 us on a `LinkedBlockingQueue`, and 15 us
+rather than 110 us on `wait`/`notify`.
+
+All of this runs only when a thread gives up the VM, so one thread pays nothing
+for it: by the method below, against the commit before it, `ScannerLong`
++1.0%, `RegexDepth` +1.2%, `RegexMemoStarts` -1.4%, `CharacterTables` +1.4%,
+`GcChurn` +0.4%, `CaseMapping` +0.2% and 80M uncontended monitor entries +1.0%,
+all within what repeated runs of one build differ by.
 
 ### Stopping the world
 
