@@ -30,6 +30,7 @@ impl Vm {
                     self.throw_new("java/lang/VerifyError", Some(&m))
                 }
                 VmError::OutOfMemory => {
+                    self.heap.give_handler_room();
                     self.throw_new("java/lang/OutOfMemoryError", Some("Java heap space"))
                 }
                 other => return Err(other),
@@ -61,7 +62,7 @@ impl Vm {
             )));
         }
         self.creating_exception += 1;
-        let result = self.construct_exception(class, message);
+        let result = self.past_limit(|vm| vm.construct_exception(class, message));
         self.creating_exception -= 1;
         result
     }

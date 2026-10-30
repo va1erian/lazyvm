@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 pub(crate) use gil::Gil;
+use gil::Line;
 pub(crate) use monitor::Monitors;
 
 use crate::interp::Frame;
@@ -40,6 +41,7 @@ pub(crate) struct ThreadState {
     frame_slots: usize,
     nesting: u32,
     creating_exception: u32,
+    past_limit: u32,
     loading: Vec<Arc<str>>,
 }
 
@@ -48,6 +50,8 @@ pub(crate) struct ThreadEntry {
     pub(crate) java: Option<Ref>,
     /// For waking the thread when it is parked.
     os: std::thread::Thread,
+    /// In `Vm::park`: it holds no VM, and comes back for it once woken.
+    parked: bool,
     pub(crate) daemon: bool,
     pub(crate) interrupted: bool,
     /// Set by `notify` for a thread in a wait set.
@@ -103,16 +107,21 @@ impl Threads {
             .position(|e| e.as_ref().is_some_and(|e| e.java == Some(t)))
     }
 
-    pub(crate) fn unpark(&self, i: usize) {
+    /// Wakes thread `i` if it is parked. Its waker holds the VM, so the
+    /// thread gets its place in the line now (`Gil::expect`).
+    pub(crate) fn unpark(&self, gil: &Gil, i: usize) {
         if let Some(e) = self.get(i) {
+            if e.parked {
+                gil.expect(i);
+            }
             e.os.unpark();
         }
     }
 
     /// Wakes every thread in `list` and empties it.
-    pub(crate) fn unpark_all(&self, list: &mut Vec<usize>) {
+    pub(crate) fn unpark_all(&self, gil: &Gil, list: &mut Vec<usize>) {
         for i in list.drain(..) {
-            self.unpark(i);
+            self.unpark(gil, i);
         }
     }
 
@@ -136,6 +145,7 @@ impl ThreadEntry {
         ThreadEntry {
             java,
             os: std::thread::current(),
+            parked: false,
             daemon,
             interrupted: false,
             notified: false,
@@ -155,6 +165,7 @@ impl Vm {
             frame_slots: self.frame_slots,
             nesting: self.nesting,
             creating_exception: self.creating_exception,
+            past_limit: self.heap.past_limit,
             loading: std::mem::take(&mut self.loading),
         };
         if let Some(e) = self.threads.get_mut(me) {
@@ -172,6 +183,7 @@ impl Vm {
         self.frame_slots = s.frame_slots;
         self.nesting = s.nesting;
         self.creating_exception = s.creating_exception;
+        self.heap.past_limit = s.past_limit;
         self.loading = s.loading;
     }
 
@@ -179,18 +191,19 @@ impl Vm {
     /// `deadline` passes. Wakeups can be spurious: callers loop on their
     /// condition, which they check while holding the VM.
     pub(crate) fn park(&mut self, blocked: Blocked, deadline: Option<Instant>) {
-        self.set_blocked(blocked);
+        self.set_blocked(blocked, true);
         self.blocking(|| match deadline {
             None => std::thread::park(),
             Some(d) => std::thread::park_timeout(d.saturating_duration_since(Instant::now())),
         });
-        self.set_blocked(Blocked::No);
+        self.set_blocked(Blocked::No, false);
     }
 
-    fn set_blocked(&mut self, b: Blocked) {
+    fn set_blocked(&mut self, b: Blocked, parked: bool) {
         let me = self.current;
         if let Some(e) = self.threads.get_mut(me) {
             e.blocked = b;
+            e.parked = parked;
         }
     }
 
@@ -220,7 +233,7 @@ impl Vm {
             && let Some(e) = self.threads.get_mut(i)
         {
             e.interrupted = true;
-            e.os.unpark();
+            self.threads.unpark(&self.gil, i);
         }
     }
 
@@ -258,7 +271,7 @@ impl Vm {
             && let Some(e) = self.threads.get_mut(i)
         {
             e.park_permit = true;
-            e.os.unpark();
+            self.threads.unpark(&self.gil, i);
         }
     }
 

@@ -149,6 +149,9 @@ impl Vm {
     /// because every live reference is in a frame.
     fn ensure_room(&mut self, bytes: usize) -> VmResult<()> {
         if self.heap.would_exceed(bytes) {
+            if self.heap.past_limit > 0 {
+                return Ok(());
+            }
             self.collect_garbage();
             if self.heap.would_exceed(bytes) {
                 // Soft references are cleared before running out of memory.

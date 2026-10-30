@@ -28,7 +28,7 @@ Rust: no new `unsafe` block was needed.
   runs `f` (which cannot see the VM), and takes it back. Sleeping, waiting,
   blocking on a monitor or a class being initialized, `Thread.yield` and a
   console read all go through it.
-- Turns are first come, first served, by ticket.
+- Who goes next is below, in "Turns".
 - Fields of `Vm` that belong to one thread (`frames`, `roots`, the nesting
   and frame-slot counters, `creating_exception`, `loading`) describe the
   thread holding the VM. `blocking` moves them into the thread's
@@ -37,12 +37,61 @@ Rust: no new `unsafe` block was needed.
 ### Safepoints and time slices
 
 The interpreter polls at every backward branch and every call (`Vm::safepoint`,
-called from `op_branch` and `call`): one relaxed atomic load. A thread that has
-waited a whole slice (5 ms) for the VM sets the flag, and the holder yields at
+called from `op_branch` and `call`): one relaxed atomic load. A waiting thread
+sets the flag once the running slice (5 ms) is spent, and the holder yields at
 its next poll.
 Yielding at every poll whenever anyone waits was tried first and spent all
-the time handing over (8 allocating threads made almost no progress), so the
-slice gives each holder at least 5 ms, like a classic interpreter lock.
+the time handing over (8 allocating threads made almost no progress), so a
+slice lasts 5 ms, like a classic interpreter lock.
+
+### Turns
+
+The line has two parts: *preempted* threads, which could have gone on running
+(their slice ended, or `Thread.yield`, or just started), and *woken* threads,
+which were blocked. The rules, in `gil.rs`:
+
+1. A thread that blocks before its slice is spent leaves the rest of the slice
+   to the woken line, and the preempted line waits for it to be spent.
+2. Whoever wakes a parked thread holds the VM, and names the thread in the
+   woken line there and then (`Gil::expect`), before the OS has woken it. Should
+   the VM come free before it arrives, it stays idle for it, at worst until the
+   slice is spent. `ThreadEntry::parked` says the thread is sure to come.
+3. A spent slice goes to the oldest preempted thread if the woken line had the
+   last one, otherwise to the woken line. So a preempted thread is never passed
+   for more than one slice per thread ahead of it, and the woken line never
+   waits longer than one slice.
+
+Before this, turns were first come, first served, and a thread woken from a
+monitor queued behind every busy thread. Each lock handover then cost a whole
+round of slices, during which the next waiter grew older than the 5 ms that
+makes a release hand over and makes `Turnstile` close to newcomers, so the
+next handover was forced too. A convoy formed and did not dissolve. Counted on
+`LinkedBlockingQueue` with 3 spinning threads: about 115 VM switches and 28
+monitor handovers a second, for tens of seconds or longer, against a round of
+under 200 ms when no convoy formed, so it was slowness and not a livelock, but
+as good as one. A woken thread going in the same slice takes the wait out, and
+threads handing a lock around share one slice however many switches they make.
+
+| 3 spinning and 3 contending threads, `Convoy2 3 5000`, per round | before | after | oracle |
+|---|---|---|---|
+| plain monitor | 50-62 ms | 26-45 ms | 1-4 ms |
+| `LinkedBlockingQueue` offer and poll | over 280 s | 97-221 ms | 3 ms |
+| `ConcurrentHashMap` put | not reached | 82-104 ms | 3 ms |
+
+Without spinners the queue round is 42-46 ms, before and after. `SpinnerConvoy`
+pins this: it takes seconds now, and hits the test's time limit if a handover
+waits behind busy threads again. `Fairness` still bounds starvation on a lock.
+Naming the woken thread is not pinned by a test, as the VM only loses speed
+without it: a thread that gets back before its waker blocks needs no name, and
+one that does not waits out a slice. Measured with 3 spinners, a hop of a
+ping-pong takes 165 us rather than 270 us on a `LinkedBlockingQueue`, and 15 us
+rather than 110 us on `wait`/`notify`.
+
+All of this runs only when a thread gives up the VM, so one thread pays nothing
+for it: by the method below, against the commit before it, `ScannerLong`
++1.0%, `RegexDepth` +1.2%, `RegexMemoStarts` -1.4%, `CharacterTables` +1.4%,
+`GcChurn` +0.4%, `CaseMapping` +0.2% and 80M uncontended monitor entries +1.0%,
+all within what repeated runs of one build differ by.
 
 ### Stopping the world
 
@@ -147,11 +196,12 @@ monitor get an entry in `Vm::monitors`, listing its entrants and wait set.
   static method, once its frame is pushed (a native: before the call, its
   arguments still on the caller's stack), and releases it when the frame is
   popped.
-- **Fairness.** A release normally frees the monitor and wakes the entrants
-  to compete. That alone starves them: the releasing thread keeps the VM, so
-  a thread looping on `synchronized` re-enters before a woken entrant ever
-  runs, and when it finally yields at a safepoint it usually owns the
-  monitor again (3 threads looping on one lock got 12912, 1 and 1 turns in
+- **Fairness.** A release normally frees the monitor and wakes the oldest
+  entrant to compete; it stays first on the list until it gets in, and its own
+  release wakes the next. That alone starves them: the releasing thread keeps
+  the VM, so a thread looping on `synchronized` re-enters before a woken
+  entrant ever runs, and when it finally yields at a safepoint it usually owns
+  the monitor again (3 threads looping on one lock got 12912, 1 and 1 turns in
   1.5 s). So once the oldest entrant has waited 5 ms (one slice of the VM
   lock), the release hands it the monitor directly, with the count it asked
   for. Handing over at every release would be fairer still but would switch
@@ -174,6 +224,43 @@ A failure leaves the class erroneous, and every later use throws
 `NoClassDefFoundError: Could not initialize class ...`. A thread waiting for
 another thread's initializer reports `RUNNABLE`, before and after an
 interrupt, as Java 8 does (`ClinitState`); the wait is not interruptible.
+
+## Out of memory
+
+An allocating bytecode that cannot fit even after collecting (soft references
+included) is `OutOfMemoryError`, on any thread, and everything the VM does to
+report it must work with the heap full. The limit is a count of bytes, not the
+memory itself, so nothing is set aside and nothing happens at startup; the VM
+just does not apply it in these places (`OutOfMemory`, `OutOfMemoryUncaught`):
+
+- **Creating an exception** (`throw_new`): loading and initializing its class,
+  running its constructor, recording the trace. Otherwise the first failure in
+  a program that had thrown nothing yet took the exception classes down with
+  it: `NoClassDefFoundError` could not initialize itself either, and the VM
+  gave up.
+- **Library class initializers** (`Class::from_boot`): a shortage while
+  `Throwable`, say, is first used must not leave it erroneous for good. On the
+  oracle such classes are mostly initialized before `main`. A program's own
+  classes get no such pass: an initializer that runs out of memory throws that
+  error and leaves its class erroneous (JVMS 5.5 steps 10 to 12), and later
+  uses throw `NoClassDefFoundError`, as on the oracle (`Fails`, `FailsToo` in
+  the test). Both are tracked per thread (`Heap::past_limit`).
+- **The handler**: an `OutOfMemoryError` makes 64 KiB more available until a
+  collection gets back under the limit, as a handler usually reports what it
+  caught. On the oracle, slack in its generations gives the same. It is one
+  fixed amount: a loop that catches the error and retains more runs out, and
+  so does a handler reached after library code swallowed earlier errors
+  (`Retain composeDone` gets a second, uncaught `OutOfMemoryError` there).
+
+A collection is always some way off after one (`MIN_GC_STEP`), even when live
+data is over the limit, or every instruction would collect until it was not.
+
+Not the same as the oracle: its class loading needs the Java heap, so a class
+first *loaded* with the heap full fails to load, without being marked. Here
+loading uses no heap, so its initializer runs and the class may become
+erroneous, or may work. The test loads its classes first. Messages also differ,
+as the oracle may say `GC overhead limit exceeded`, so no test pins one for
+small objects.
 
 ## Cost on one thread
 
