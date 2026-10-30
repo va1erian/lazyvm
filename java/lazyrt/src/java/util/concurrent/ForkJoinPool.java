@@ -26,7 +26,7 @@ public class ForkJoinPool extends AbstractExecutorService {
 
     public static final ForkJoinWorkerThreadFactory defaultForkJoinWorkerThreadFactory = new PlainWorkers();
     private static int poolNumbers;
-    static final ForkJoinPool common = makeCommon();
+    static final ForkJoinPool shared = makeCommon();
 
     final ForkJoinCore core;
     private final int parallelism;
@@ -99,7 +99,7 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     public static ForkJoinPool commonPool() {
-        return common;
+        return shared;
     }
 
     public <T> T invoke(ForkJoinTask<T> task) {
@@ -181,7 +181,7 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     public static int getCommonPoolParallelism() {
-        return common.parallelism;
+        return shared.parallelism;
     }
 
     public int getPoolSize() {
@@ -193,7 +193,7 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     public int getRunningThreadCount() {
-        return core.running();
+        return core.runningCount();
     }
 
     public int getActiveThreadCount() {
@@ -205,28 +205,28 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     public long getStealCount() {
-        return core.steals();
+        return core.queues.stealCount();
     }
 
     public long getQueuedTaskCount() {
-        return core.queuedTasks();
+        return core.queues.localTaskCount();
     }
 
     public int getQueuedSubmissionCount() {
-        return core.queuedSubmissions();
+        return core.queues.submissionCount();
     }
 
     public boolean hasQueuedSubmissions() {
-        return core.queuedSubmissions() > 0;
+        return core.queues.submissionCount() > 0;
     }
 
     protected ForkJoinTask<?> pollSubmission() {
-        return core.pollSubmission();
+        return core.queues.takeSubmission();
     }
 
     protected int drainTasksTo(Collection<? super ForkJoinTask<?>> c) {
         int n = 0;
-        for (ForkJoinTask<?> t = core.pollForeign(); t != null; t = core.pollForeign()) {
+        for (ForkJoinTask<?> t = core.queues.pollForeign(); t != null; t = core.queues.pollForeign()) {
             c.add(t);
             n++;
         }
@@ -238,13 +238,13 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     public void shutdown() {
-        if (this != common) {
+        if (this != shared) {
             core.shutdown();
         }
     }
 
     public List<Runnable> shutdownNow() {
-        if (this != common) {
+        if (this != shared) {
             core.stop();
         }
         return Collections.emptyList();
@@ -267,7 +267,7 @@ public class ForkJoinPool extends AbstractExecutorService {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
-        if (this == common) {
+        if (this == shared) {
             awaitQuiescence(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
             return false;
         }

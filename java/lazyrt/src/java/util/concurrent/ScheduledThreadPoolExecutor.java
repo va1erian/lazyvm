@@ -252,7 +252,7 @@ public class ScheduledThreadPoolExecutor extends ThreadPoolExecutor implements S
     private void settlePolicy(boolean value) {
         if (!value && isShutdown()) {
             onShutdown();
-            pool.tryTerminate();
+            pool.endIfDone();
         }
     }
 

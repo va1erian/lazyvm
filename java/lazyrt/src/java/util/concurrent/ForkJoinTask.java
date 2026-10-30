@@ -16,6 +16,8 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     private volatile int status;
     private transient Throwable failure;
+    /** Who settled it with {@link #failure}: any other reader gets a copy. */
+    private transient Thread failedOn;
     private boolean waited;
     private short tag;
 
@@ -24,7 +26,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     /** Throws anything from code that declares nothing: a failure comes back as it was thrown. */
     @SuppressWarnings("unchecked")
-    static <E extends Throwable> void rethrow(Throwable t) throws E {
+    static <E extends Throwable> void sneak(Throwable t) throws E {
         throw (E) t;
     }
 
@@ -32,6 +34,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         synchronized (this) {
             if (status == PENDING) {
                 failure = cause;
+                failedOn = cause != null ? Thread.currentThread() : null;
                 status = to;
                 if (waited) {
                     notifyAll();
@@ -51,7 +54,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         } catch (Throwable ex) {
             settle(FAILED, ex);
             if (escapes() && ForkJoinWorkerThread.current() != null) {
-                ForkJoinTask.<RuntimeException>rethrow(ex);
+                ForkJoinTask.<RuntimeException>sneak(ex);
             }
             return;
         }
@@ -69,7 +72,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (w != null) {
             w.core.pushLocal(w, this);
         } else {
-            ForkJoinPool.common.core.pushExternal(this);
+            ForkJoinPool.shared.core.pushExternal(this);
         }
         return this;
     }
@@ -92,8 +95,12 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (s == CANCELLED) {
             throw new CancellationException();
         }
-        ForkJoinTask.<RuntimeException>rethrow(failure);
+        ForkJoinTask.<RuntimeException>sneak(failureHere());
         throw new AssertionError();
+    }
+
+    private Throwable failureHere() {
+        return failedOn == Thread.currentThread() ? failure : FailureCopies.of(failure);
     }
 
     /** Runs this task in the caller, if it is queued and the caller may. */
@@ -102,7 +109,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (w != null) {
             w.core.helpJoin(w, this);
         } else {
-            ForkJoinPool.common.core.helpOutside(this);
+            ForkJoinPool.shared.core.helpOutside(this);
         }
     }
 
@@ -171,7 +178,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             }
         }
         if (first != null) {
-            ForkJoinTask.<RuntimeException>rethrow(first);
+            ForkJoinTask.<RuntimeException>sneak(first);
         }
     }
 
@@ -203,7 +210,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     public final Throwable getException() {
         int s = status;
-        return s == FAILED ? failure : s == CANCELLED ? new CancellationException() : null;
+        return s == FAILED ? failureHere() : s == CANCELLED ? new CancellationException() : null;
     }
 
     public void completeExceptionally(Throwable ex) {
@@ -253,7 +260,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
         // A worker runs nothing here, as that could overrun the deadline; blocking frees another.
         if (w == null) {
-            ForkJoinPool.common.core.helpOutside(this);
+            ForkJoinPool.shared.core.helpOutside(this);
         }
         while (status == PENDING) {
             try {
@@ -275,7 +282,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (s == CANCELLED) {
             throw new CancellationException();
         }
-        throw new ExecutionException(failure);
+        throw new ExecutionException(failureHere());
     }
 
     /** An interrupt during the wait comes back afterwards, unless this is a worker: it is dropped. */
@@ -300,8 +307,14 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         }
     }
 
+    /** On a stack too deep to go on safely, the task moves to another worker's new stack. */
     public final void quietlyInvoke() {
-        run0();
+        ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
+        if (w != null && status == PENDING && ForkJoinCore.stackTight()) {
+            w.core.pushLocal(w, this);
+        } else {
+            run0();
+        }
         quietlyJoin();
     }
 
@@ -310,7 +323,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (w != null) {
             w.core.helpQuiesce(w);
         } else {
-            ForkJoinPool.common.awaitQuiescence(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            ForkJoinPool.shared.awaitQuiescence(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -318,6 +331,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         synchronized (this) {
             status = PENDING;
             failure = null;
+            failedOn = null;
             tag = 0;
         }
     }
@@ -333,12 +347,12 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     public boolean tryUnfork() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return (w != null ? w.core : ForkJoinPool.common.core).unfork(w, this);
+        return (w != null ? w.core : ForkJoinPool.shared.core).queues.unforkNewest(w, this);
     }
 
     public static int getQueuedTaskCount() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.localCount(w) : 0;
+        return w != null ? w.core.queues.ownCount(w) : 0;
     }
 
     public static int getSurplusQueuedTaskCount() {
@@ -354,17 +368,17 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     protected static ForkJoinTask<?> peekNextLocalTask() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.nextLocal(w, false) : null;
+        return w != null ? w.core.queues.nextLocal(w, false) : null;
     }
 
     protected static ForkJoinTask<?> pollNextLocalTask() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.nextLocal(w, true) : null;
+        return w != null ? w.core.queues.nextLocal(w, true) : null;
     }
 
     protected static ForkJoinTask<?> pollTask() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.pollAny(w) : null;
+        return w != null ? w.core.queues.pollAny(w) : null;
     }
 
     public final short getForkJoinTaskTag() {
@@ -441,7 +455,7 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
                 if (form == CALLABLE) {
                     throw new RuntimeException(e);
                 }
-                ForkJoinTask.<RuntimeException>rethrow(e);
+                ForkJoinTask.<RuntimeException>sneak(e);
                 return false;
             }
         }

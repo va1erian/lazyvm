@@ -14,7 +14,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     private final Object mu = new Object();
     private Callable<V> callable;
     private volatile int state;
-    private Object outcome;
+    private Object settled;
     private Thread runner;
 
     public FutureTask(Callable<V> callable) {
@@ -86,12 +86,12 @@ public class FutureTask<V> implements RunnableFuture<V> {
     private V report() throws ExecutionException {
         int s = state;
         if (s == SUCCEEDED) {
-            return (V) outcome;
+            return (V) settled;
         }
         if (s == CANCELLED) {
             throw new CancellationException();
         }
-        throw new ExecutionException((Throwable) outcome);
+        throw new ExecutionException((Throwable) settled);
     }
 
     protected void done() {
@@ -121,7 +121,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
 
     /** The monitor is held. The callable goes at once: a finished task must not keep it alive. */
     private void settle(int to, Object value) {
-        outcome = value;
+        settled = value;
         state = to;
         callable = null;
         mu.notifyAll();

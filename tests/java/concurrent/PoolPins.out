@@ -1,0 +1,7 @@
+setCorePoolSize wakes idle workers = true
+setMaximumPoolSize wakes idle workers = true
+first task after a stop = [first task interrupted=true]
+end waits for the drain = [hook sees queue=0, await=true queue then=0] returned=1
+fixed rate catches up after a slow run = true
+huge delay behind an overdue task = true [overdue, soon] queued=1
+huge period behind an overdue task = true [periodic, overdue]

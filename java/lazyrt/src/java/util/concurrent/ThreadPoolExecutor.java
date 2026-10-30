@@ -46,18 +46,18 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
         if (command == null) {
             throw new NullPointerException();
         }
-        if (pool.addWorker(command, true)) {
+        if (pool.startWorker(command, true)) {
             return;
         }
         if (pool.state == PoolWorkers.RUNNING && pool.queue.offer(command)) {
             // A shutdown in between may already have counted the queue as empty.
             if (pool.state != PoolWorkers.RUNNING && pool.queue.remove(command)) {
-                pool.tryTerminate();
+                pool.endIfDone();
                 reject(command);
             } else if (pool.size() == 0) {
-                pool.addWorker(null, false);
+                pool.startWorker(null, false);
             }
-        } else if (!pool.addWorker(command, false)) {
+        } else if (!pool.startWorker(command, false)) {
             reject(command);
         }
     }
@@ -69,7 +69,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     public void shutdown() {
         pool.markShutdown();
         onShutdown();
-        pool.tryTerminate();
+        pool.endIfDone();
     }
 
     /** What a subclass must do to its queue at {@code shutdown}. */
@@ -141,12 +141,12 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
     }
 
     public boolean prestartCoreThread() {
-        return pool.addWorker(null, true);
+        return pool.startWorker(null, true);
     }
 
     public int prestartAllCoreThreads() {
         int made = 0;
-        while (pool.addWorker(null, true)) {
+        while (pool.startWorker(null, true)) {
             made++;
         }
         return made;
@@ -194,7 +194,7 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
     public boolean remove(Runnable task) {
         boolean removed = pool.queue.remove(task);
-        pool.tryTerminate();
+        pool.endIfDone();
         return removed;
     }
 
@@ -204,13 +204,13 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
                 pool.queue.remove(r);
             }
         }
-        pool.tryTerminate();
+        pool.endIfDone();
     }
 
     /** Starts a worker for a queue that just got a task, if the pool has room or nobody at all. */
     final void ensureWorker() {
-        if (!pool.addWorker(null, true) && pool.size() == 0) {
-            pool.addWorker(null, false);
+        if (!pool.startWorker(null, true) && pool.size() == 0) {
+            pool.startWorker(null, false);
         }
     }
 
