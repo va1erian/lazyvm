@@ -2,7 +2,10 @@
 package thread;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Running out of heap is an error like any other, wherever it strikes: in main
@@ -58,7 +61,7 @@ public class OutOfMemory {
     }
 
     static List<Object> full;
-    static final String[] seen = new String[8];
+    static final Class<?>[] seen = new Class<?>[8];
 
     static void fill() {
         full = new ArrayList<>(1 << 16);
@@ -72,7 +75,21 @@ public class OutOfMemory {
     }
 
     static void note(int at, Class<?> c) {
-        seen[at] = c.getName();
+        seen[at] = c;
+    }
+
+    /** Fills every last gap, unlike {@link #fill}. */
+    static void fillTight() {
+        fill();
+        for (int size = 32 << 10; size >= 16; size /= 2) {
+            try {
+                while (true) {
+                    full.add(new byte[size]);
+                }
+            } catch (OutOfMemoryError e) {
+                // On to a smaller size.
+            }
+        }
     }
 
     static void withFullHeap() throws Exception {
@@ -100,6 +117,64 @@ public class OutOfMemory {
         note(3, Copes.coped ? Copes.class : Fails.class);
         note(4, NoAllocation.seven == 7 ? NoAllocation.class : Fails.class);
         full = null;
+    }
+
+    /**
+     * The library's classes, first used while nothing can be allocated. This may
+     * work or not, but it must not break them for later: the oracle has most of
+     * them ready by now.
+     */
+    static void libraryClasses() {
+        final Object[] tries = new Object[3];
+        fillTight();
+        try {
+            tries[0] = TimeUnit.SECONDS;
+        } catch (Throwable t) {
+            tries[0] = t;
+        }
+        try {
+            tries[1] = Collections.EMPTY_MAP;
+        } catch (Throwable t) {
+            tries[1] = t;
+        }
+        try {
+            tries[2] = Locale.ROOT;
+        } catch (Throwable t) {
+            tries[2] = t;
+        }
+        full = null;
+        System.out.println(TimeUnit.SECONDS + " " + Collections.EMPTY_MAP + " [" + Locale.ROOT + "]");
+    }
+
+    /**
+     * Natives may go past the limit where a bytecode may not (clone here), and
+     * with them the heap can really be too full for the exception's own objects.
+     */
+    static void clonesOverTheLimit() {
+        Object[] keep = new Object[1 << 18];
+        int n = 0;
+        String stopped = "not stopped";
+        byte[][] pieces = new byte[5][];
+        for (int i = 0; i < pieces.length; i++) {
+            pieces[i] = new byte[(1 << (20 - 4 * i)) - 16];
+        }
+        for (byte[] piece : pieces) {
+            try {
+                while (n < keep.length) {
+                    keep[n++] = piece.clone();
+                }
+            } catch (OutOfMemoryError e) {
+                stopped = "stopped";
+                n--;
+            }
+        }
+        // Over the limit, code that allocates nothing still runs at full speed.
+        long sum = 0;
+        for (int i = 0; i < 2_000_000; i++) {
+            sum += i;
+        }
+        keep = null;
+        System.out.println("clones " + stopped + ", then " + sum);
     }
 
     /** A handler can report what it caught although nothing was freed. */
@@ -199,11 +274,13 @@ public class OutOfMemory {
 
     public static void main(String[] args) throws Exception {
         withFullHeap();
-        for (String s : seen) {
-            if (s != null) {
-                System.out.println(s);
+        for (Class<?> c : seen) {
+            if (c != null) {
+                System.out.println(c.getName());
             }
         }
+        libraryClasses();
+        clonesOverTheLimit();
         reportInHandler();
         inOtherThreads();
         uncaught();

@@ -3,6 +3,8 @@ java.lang.NoClassDefFoundError
 java.lang.NoClassDefFoundError
 thread.OutOfMemory$Copes
 thread.OutOfMemory$NoAllocation
+SECONDS {} []
+clones stopped, then 1999999000000
 in the handler: java.lang.OutOfMemoryError, nodes kept: true
 caught in threads: 6
 uncaught: java.lang.OutOfMemoryError, alive: false
