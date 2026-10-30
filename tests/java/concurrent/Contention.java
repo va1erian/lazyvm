@@ -59,7 +59,7 @@ public class Contention {
                     try { if (plain != other) torn.incrementAndGet(); } finally { rw.readLock().unlock(); }
                 } else {
                     rw.writeLock().lock();
-                    try { plain++; Thread.yield(); other++; } finally { rw.writeLock().unlock(); }
+                    try { plain++; other++; } finally { rw.writeLock().unlock(); }
                 }
             }
         });
