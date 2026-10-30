@@ -249,10 +249,8 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             throw new InterruptedException();
         }
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        // Only this task itself is run here: helping with others could overrun the deadline.
-        if (w != null) {
-            w.core.runIfQueued(w, this);
-        } else {
+        // A worker runs nothing here, as that could overrun the deadline; blocking frees another.
+        if (w == null) {
             ForkJoinPool.common.core.helpOutside(this);
         }
         while (status == PENDING) {

@@ -54,6 +54,12 @@ the label of a line of its golden. Change the rule and that line should change.
 | `SynchronizerEdges` | latch, barrier, exchanger, semaphore, random: check order, a running action, wake chains, wide ranges |
 | `PhaserEdges` | `Phaser`: forcing, late registration, tiers, a blocked or throwing hook |
 | `CollectionEdges` | the collections: range bounds, view identity, bulk entries, a running compute, what counts as a copy-on-write, hand-off order |
+| `ThreadPoolEdges` | `ThreadPoolExecutor`: hooks that throw, the `terminated` hook, odd factories and queues, late resizing |
+| `FutureEdges` | `FutureTask` re-entrancy, `invokeAll`/`invokeAny` check and failure order, `ExecutorCompletionService` delivery, `Executors` |
+| `ScheduledEdges` | `ScheduledThreadPoolExecutor`: the queue's view, policies changed late, decorated tasks |
+| `ForkJoinEdges` | `invokeAll` order and failures, status corners, `shutdownNow`, a worker dying, `pollTask` and `tryUnfork` |
+| `ForkJoinWorkers` | interrupts in `get` and `join` on a worker, compensation, submission order, deep joins |
+| `ForkJoinNoWorkers` | a common pool of parallelism 0 |
 | `ConcurrentExceptions` | the package's exception constructors |
 | `ConcurrentMapDefaults` | `ConcurrentMap`'s default methods on a custom map |
 
@@ -283,6 +289,31 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   runs queued work ("zero core still runs"); `getLargestPoolSize` keeps its peak
   ("largest kept"). `purge` removes cancelled queued futures, which otherwise stay
   ("queue before purge", "queue after purge").
+- Hooks that throw (`ThreadPoolEdges`). A throwing `beforeExecute` means the task does not run and `afterExecute` is not
+  called, yet the task counts as completed and the worker dies ("beforeThrows ..."). `afterExecute` sees the task's failure as it
+  was; if it throws too, the uncaught handler sees its exception instead ("bothThrow ..."). A checked exception hidden from the
+  compiler reaches `afterExecute` as is and the uncaught handler as `java.lang.Error` over it ("sneaky uncaught"). During both hooks the
+  worker is active and the task not yet counted ("... log").
+- A new worker counts as active from the moment it is listed until it first looks for work, so a thread just started for a task shows
+  in the rejection message ("core above max reject"), and one from a factory that ignored its `Runnable` stays active for good ("factory
+  ignoring runnable"). An interrupt meant for idle workers does not reach it.
+- `terminated()` runs once, on the thread that ended the pool, the caller of `shutdown` if there are no workers ("hook log (no workers)",
+  "hook once"). Inside it the pool is terminating, not terminated, and prints `Shutting down`. A throw from it reaches that thread, and the
+  pool still ends ("hook throws in shutdown", "after hook throw"). **While it runs, other threads wait** in `getPoolSize`, `getActiveCount`,
+  `getLargestPoolSize`, `getCompletedTaskCount`, `getTaskCount`, `toString`, `awaitTermination`, `shutdown`, `shutdownNow`, and so in the
+  message of a rejection, but not in the flags, `prestartCoreThread` or `setCorePoolSize` ("during hook ..."). A leftover interrupt from a task
+  or from `shutdownNow` is still set in the hook ("hook flag ...").
+- The factory: `getPoolSize` inside it does not count the thread being made ("size inside factory"). What it throws reaches the caller of
+  `execute` or `prestart*`, with the task not queued ("factory throws ..."). A thread it already started: `IllegalThreadStateException`
+  ("factory started thread"). A pool whose factory gives null and has queued work stays `Shutting down` after `shutdown`, until `shutdownNow`
+  returns the work ("null thread shutdown", "null thread shutdownNow").
+- The queue: only its public methods are used. `execute` lets a throw from `offer` through ("offer throws"); `offer` refusing means a new
+  worker up to the maximum, then rejection ("refusing ..."); a `shutdown` during `offer` means the task comes back out and is rejected ("shutdown
+  during offer"). `shutdownNow` gets what `drainTo` left by `toArray` and `remove` ("no drain"). Elements added by hand wait for a worker ("hand
+  added", "prestart serves it").
+- Sizes: raising the core starts workers only for what is queued ("raise with queued", "raise beyond queue"). A core above the maximum holds
+  while busy, and falls to the maximum when idle ("core above max ..."). A worker killed by its task is replaced even with no work, while the pool is
+  running ("abrupt replaced ..."), but after `shutdown` only if the queue holds something ("abrupt at shutdown ...").
 
 ### `Executors` (`ExecutorFactories`)
 
@@ -347,6 +378,16 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   the same future `submit` returned ("take third same future"), cancelled tasks
   delivered too ("cancelled is delivered"), a given queue is used ("own queue used"),
   an executor's rejection propagates ("completion service reject").
+- Order of checks and failures (`FutureEdges`). Untimed `invokeAll` executes each task as it makes it, so a null runs those before it ("all null
+  middle log"); the timed form makes all first, so it runs none ("all timed null middle log"), and it executes a task before looking at the clock, so
+  a zero timeout still hands the first task over ("all timed zero executes"). `invokeAll` looks at the flag only if it has to wait ("all flagged direct",
+  "all timed flagged"). A rejection cancels what ran and reaches the caller ("all reject second", "any reject second"). `invokeAny` with every task failed
+  reports the last ("any all failed which"), and a null is only found when reached ("any null later log").
+- `ExecutorCompletionService` hands the executor a wrapper, which queues the task when *it* runs: a task cancelled while queued is not delivered until
+  the executor gets to it ("not delivered until its turn"). A full queue's `IllegalStateException` comes out of the executor's run ("queue full").
+- `FutureTask`: `run` goes through the virtual `set` and `setException` ("run calls set virtually"), `cancel` through neither ("cancel skips set"). A `done` that
+  throws reaches the caller, with the state already set ("done throws ..."). `get(0, ...)` on a pending task with the flag set throws
+  `InterruptedException`, not `TimeoutException` ("timed zero flagged pending"). A null unit comes before the flag ("null unit flagged pending").
 
 ### `ScheduledThreadPoolExecutor` (`ScheduledExecutors`)
 
@@ -377,6 +418,17 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
 - `decorateTask`: called with the Runnable form for `schedule(Runnable)`,
   `submit(Runnable)`, `execute` and periodic tasks; the Callable form for
   `schedule(Callable)` and `submit(Callable)` ("decorate calls").
+- The queue's view (`ScheduledEdges`): `poll` and `drainTo` give only what is due, `peek` the soonest anyway ("poll not due", "peek not due", "drain not due").
+  A plain `Runnable` added by hand is a `ClassCastException` ("queue add plain"), whose message is not pinned. `shutdownNow` returns what is due first, in order,
+  then the rest ("shutdownNow order").
+- A cancelled task still queued goes at `shutdown`, whatever the policy, so it holds nothing up ("cancelled removed at shutdown"); one cancelled after `shutdown` stays
+  until `purge` or the remove policy ("cancelled stays", "purge ends", "remove policy ends"). Turning a policy off after `shutdown` applies it to what is queued ("policy off after
+  shutdown", "periodic off after shutdown").
+- **A periodic task that is running at `shutdown` or `shutdownNow` just stops:** its next run is not queued and it is left neither done nor cancelled, so a `get` on it never
+  returns ("running periodic end", "shutdownNow running"). This is what the oracle does.
+- Decorated tasks: reruns of a periodic task go through the decorated object ("periodic reruns go through the decorated one"); the remove policy removes only the undecorated
+  task, so a decorated one stays until `purge` ("remove policy with decorated", "purge decorated"). A discarding handler leaves the returned future pending ("discarded future"). `beforeExecute` and
+  `afterExecute` see the future, with null for a failure inside it ("hooks"). A huge delay reads about 106751 days, the most a `long` of nanoseconds holds ("huge getDelay days").
 
 ## Concurrent maps
 
@@ -781,6 +833,17 @@ One script, run on both; rules hold for both unless noted.
 - Hooks: `onStart`, the tasks, `onTermination(null)` ("hooks in order").
 - Protected queue operations: with its one worker blocked, three submissions queue up; `pollSubmission` returns one,
   `drainTasksTo` moves the rest without running them ("queued submissions" through "drained stay pending").
+- `submit`, `execute` and `invoke` from a worker go to the submissions, not its local queue ("submit from worker queued", "execute from worker queued"). Submissions run in
+  order on one worker, async or not ("submission order", "async submission order"). A `Runnable` that is also a `ForkJoinTask` goes in as the task ("execute runnable task",
+  "submit runnable same").
+- `shutdownNow` cancels what is queued **and what is running**, and interrupts the workers ("queued cancelled", "running saw"). While busy after `shutdown` the word is
+  `Shutting down` ("word while busy"). A pool that cannot make a worker keeps its queue after `shutdown` until `shutdownNow` ("null factory ..."). `isQuiescent` looks at workers only: a
+  queued task with no worker is quiescent ("null factory queued"). What a factory throws leaves the task queued ("throwing factory queue").
+- A worker dies when an `execute(Runnable)` task fails or `onStart` throws: `onTermination` gets the exception, then the thread's uncaught handler, which is the pool's when it has one, and a
+  new worker follows ("hook log after failure", "threads made", "onStart throws"). Only that form escapes: a `submit` or `execute(ForkJoinTask)` failure stays in the task ("submit failure no
+  handler", "execute(task) failure no handler").
+- The common pool's property (`ForkJoinNoWorkers`): 0 reports parallelism 1 but makes no workers, so a task only runs when an outside thread awaits it, also with a timeout ("common parallelism", "fork
+  join", "timed get", "worker thread name"). A negative or malformed value means the default, a value over the limit means the limit. Those last two were checked by hand on both VMs, as a golden there would depend on the machine.
 
 ### Tasks (`ForkJoin`, `ForkJoinTasks`)
 
@@ -808,6 +871,19 @@ One script, run on both; rules hold for both unless noted.
 - Local queue, on a one-worker pool: LIFO by default, FIFO in async mode ("lifo order", "async order").
   `getQueuedTaskCount`, `peekNextLocalTask`, `pollNextLocalTask` and `tryUnfork` act on that order ("lifo local ops",
   "async local ops"). Outside a pool: `inForkJoinPool` false, `getPool` null, `getQueuedTaskCount` 0 ("outside ...").
+- `invokeAll(t1, t2)` forks `t2`, runs `t1` here, then joins `t2`. If `t1` fails, the exception comes out at once and `t2` stays queued, not cancelled ("two fail at 0", "both fail"). A null `t1` is
+  found after `t2` was forked ("null first of two"), a null `t2` before anything ("null second of two"). The array and collection forms fork from the last to the second, run the first here, join in order,
+  and on the first failure cancel the rest ("three fail at ..."). A null there counts as a failure, found as the forking passes it: the first task still runs if the null is not first ("null in
+  array", "null first in array", "null in list").
+- A task's own throw is kept as it is, `Error` or hidden checked exception too ("sneaky ex", "error ex"), and so is a `CancellationException`, which does not make the task cancelled ("task throws CE flags",
+  "complete with CE"). A runnable adapter does not wrap a hidden checked exception, a callable one does ("adapted runnable sneaky", "adapted checked wraps"). `complete` after completion still calls `setRawResult`, leaving the
+  state alone ("complete after done", "complete after cancel"). `reinitialize` also clears the tag ("reinit tag", "reinit after fail").
+- **Interrupts on a worker** (`ForkJoinWorkers`) differ from outside. `get` never looks at the flag there and behaves as a `join` that wraps failures: it runs the task, and the flag stays set ("get flagged queued keeps
+  flag", "get flagged done"). The timed `get` does check the flag first ("timed get flagged queued", "timed get flagged done"). Blocked in either, a worker ignores an interrupt and the flag is lost ("done after interrupt", "pending get
+  interrupted ..."). Outside a pool `join` waits on and sets the flag again after ("join keeps waiting past interrupt", "join flag set after").
+- A worker blocked in `join`, `get` or a `ManagedBlocker` lets a queued task run even at parallelism 1 ("managed compensates", "join compensates"); blocked in a plain latch it does not ("unmanaged no compensation"). Plain tasks never run above the
+  parallelism ("runs to parallelism", "never above parallelism").
+- A chain of forks and joins 800 deep works ("deep 800"), though each level costs stack frames and a thread has at most 4094: a joiner stacks only so many tasks on itself, then blocks and lets another worker take over on a new stack.
 - `ManagedBlocker`: `isReleasable` true skips `block`; `block` repeats until true ("outside pool blocker", "releasable
   skips block", "inside pool blocker").
 
@@ -990,7 +1066,14 @@ being kept. Neither was: both are now what the oracle does.
   tests print only "rejected" there), the exact number of periodic runs ("no more runs" allows one in flight), and whether a
   periodic task is done after `shutdownNow` when it was running at that moment.
 - **Failures crossing threads**: in `ForkJoinTask`, a failure on another thread may surface as a different object of the same
-  class, whose message may be the original's `toString()`. Tests print only the class.
+  class, whose message may be the original's `toString()`. Tests print only the class. LazyVM rethrows the same object.
+- **Artefacts of the oracle's fork/join**: `getQueuedTaskCount` right after a join took an old task from the local queue (the oracle leaves a filler in its place and counts it), `getSurplusQueuedTaskCount`'s value, how many
+  spare workers exist after a compensation, and how soon `awaitQuiescence` returns right after a submission from outside (the oracle may answer before its first worker is up; here it waits for the work). LazyVM's worker ends after
+  2 s idle.
+- **What a dying worker had forked**: on the oracle it is usually lost, and sometimes runs. Here it moves to the submissions and runs, as nothing is gained by losing it.
+- **Private class names**: the message of a `ClassCastException` from `getQueue().add(...)` on a scheduled pool, the wrapper's class in a rejection from `invokeAny` or a completion service, and the classes behind `Executors`,
+  including the common pool's factory.
+- **An active worker with no task**: a new worker with no first task reads as active until it starts looking for work. Tests wait for `getActiveCount() == 0`.
 - **Message of an `ArrayStoreException`** from `toArray(T[])` with a wrong type, which differs between classes on the oracle.
   Tests print only the class.
 - **`invokeAny` with a null behind a quick task**: the first task may finish before the null is reached. Only a null in first place

@@ -13,8 +13,7 @@ import java.util.concurrent.locks.LockSupport;
  * dry, and outside threads add to a list of submissions. Parallelism still matters for tasks that
  * block, so a worker that blocks in a join or a {@code ManagedBlocker} stops counting, and another
  * may then take its place. A joiner runs the awaited task itself if it is still queued anywhere,
- * then its own tasks. It takes no others: one of those could be waiting for something lower on
- * its own stack.
+ * and nothing else: any other task could be waiting for something lower on its own stack.
  */
 final class ForkJoinCore {
     static final int MAX_WORKERS = 32767;
@@ -42,10 +41,10 @@ final class ForkJoinCore {
     private int waking;
     private int workerNumbers;
     private long steals;
-    private boolean shutdown;
+    volatile boolean shutdown;
     private boolean stop;
-    private boolean terminating;
-    private boolean terminated;
+    volatile boolean terminating;
+    volatile boolean terminated;
 
     ForkJoinCore(ForkJoinPool pool, int parallelism, boolean asyncMode, String workerPrefix) {
         this.pool = pool;
@@ -272,17 +271,14 @@ final class ForkJoinCore {
     }
 
     void helpJoin(ForkJoinWorkerThread w, ForkJoinTask<?> awaited) {
-        while (!awaited.isDone() && w.helpDepth < MAX_HELP_DEPTH) {
-            ForkJoinTask<?> next;
-            synchronized (this) {
-                next = removeQueued(w, awaited) ? awaited : ownNext(w);
-            }
-            if (next == null) {
-                return;
-            }
+        boolean mine;
+        synchronized (this) {
+            mine = w.helpDepth < MAX_HELP_DEPTH && removeQueued(w, awaited);
+        }
+        if (mine) {
             w.helpDepth++;
             try {
-                next.run0();
+                awaited.run0();
             } finally {
                 w.helpDepth--;
             }
@@ -308,21 +304,16 @@ final class ForkJoinCore {
         return submissions.removeFirstOccurrence(t);
     }
 
-    /** Runs the task in the caller if it is still queued here. */
-    void runIfQueued(ForkJoinWorkerThread w, ForkJoinTask<?> t) {
-        boolean mine;
-        synchronized (this) {
-            mine = removeQueued(w, t);
-        }
-        if (mine) {
-            t.run0();
-        }
-    }
-
     /** With no workers ever (a common pool of parallelism 0), a waiting outside thread must do it. */
     void helpOutside(ForkJoinTask<?> awaited) {
+        boolean mine = false;
         if (parallelism == 0) {
-            runIfQueued(null, awaited);
+            synchronized (this) {
+                mine = removeQueued(null, awaited);
+            }
+        }
+        if (mine) {
+            awaited.run0();
         }
     }
 
@@ -341,16 +332,6 @@ final class ForkJoinCore {
                 Thread.yield();
             }
         }
-    }
-
-    /** Runs one queued task in an outside thread; false when there is none. */
-    boolean runOneQueued() {
-        ForkJoinTask<?> t = pollForeign();
-        if (t == null) {
-            return false;
-        }
-        t.run0();
-        return true;
     }
 
     synchronized ForkJoinTask<?> pollForeign() {
@@ -488,18 +469,6 @@ final class ForkJoinCore {
             terminated = true;
             notifyAll();
         }
-    }
-
-    synchronized boolean isTerminated() {
-        return terminated;
-    }
-
-    synchronized boolean isTerminating() {
-        return terminating && !terminated;
-    }
-
-    synchronized boolean isShutdown() {
-        return shutdown;
     }
 
     /** False if the deadline came first. */

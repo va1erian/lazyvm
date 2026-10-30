@@ -103,9 +103,11 @@ public class ScheduledThreadPoolExecutor extends ThreadPoolExecutor implements S
 
     /**
      * The clock time {@code nanos} from now. Times are compared by difference, so a huge delay
-     * stays one that difference can express against the most overdue task.
+     * stays one that difference can express against the most overdue task. The clock is read
+     * before the head's delay, so time passing in between only makes the margin larger.
      */
     private long dueAfter(long nanos) {
+        long now = System.nanoTime();
         long delay = Math.max(nanos, 0);
         if (delay > Long.MAX_VALUE >> 1) {
             Delayed head = (Delayed) (Object) pool.queue.peek();
@@ -114,7 +116,7 @@ public class ScheduledThreadPoolExecutor extends ThreadPoolExecutor implements S
                 delay = Long.MAX_VALUE - overdue;
             }
         }
-        return System.nanoTime() + delay;
+        return now + delay;
     }
 
     private boolean keeps(RunnableScheduledFuture<?> t) {

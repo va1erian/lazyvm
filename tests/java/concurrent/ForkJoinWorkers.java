@@ -264,6 +264,7 @@ public class ForkJoinWorkers {
 
     public static void main(String[] args) throws Exception {
         workerGets();
+        show("common default parallelism", () -> ForkJoinPool.getCommonPoolParallelism() == Math.max(Runtime.getRuntime().availableProcessors() - 1, 1));
         managed();
         concurrency();
         names();

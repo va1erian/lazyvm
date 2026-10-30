@@ -246,6 +246,23 @@ public class ScheduledEdges {
         show("getDelay null", () -> p.schedule(NOOP, 1, TimeUnit.HOURS).getDelay(null));
         ScheduledFuture<?> huge = p.schedule(NOOP, Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         show("huge getDelay days", () -> huge.getDelay(TimeUnit.DAYS));
+        // Against a task already overdue, a huge delay must still compare as later.
+        ScheduledThreadPoolExecutor o = new ScheduledThreadPoolExecutor(1);
+        CountDownLatch og = new CountDownLatch(1), oe = new CountDownLatch(1);
+        o.execute(() -> { oe.countDown(); ScheduledEdges.await(og); });
+        oe.await();
+        ScheduledFuture<?> overdue = o.schedule(NOOP, 0, TimeUnit.SECONDS);
+        Thread.sleep(5);
+        ScheduledFuture<?> hugeLate = o.schedule(NOOP, Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        show("huge after overdue", () -> hugeLate.compareTo(overdue) > 0 && o.getQueue().peek() == overdue);
+        og.countDown();
+        o.shutdownNow();
+        // A last worker waiting for a task not yet due stays, rather than being replaced each time.
+        int[] made = new int[1];
+        ScheduledThreadPoolExecutor z0 = new ScheduledThreadPoolExecutor(0, r -> { made[0]++; return new Thread(r); });
+        show("core 0 late task", () -> z0.schedule(() -> "late", 30, TimeUnit.MILLISECONDS).get());
+        show("core 0 threads made", () -> made[0]);
+        z0.shutdown();
         ScheduledFuture<?> huge2 = p.schedule(NOOP, Long.MAX_VALUE, TimeUnit.DAYS);
         show("huge2 getDelay days", () -> huge2.getDelay(TimeUnit.DAYS));
         show("hug compare", () -> huge.compareTo(huge2) < 0);

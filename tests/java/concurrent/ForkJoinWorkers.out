@@ -15,6 +15,7 @@ outside get interrupted ! java.lang.InterruptedException
 outside flag = false
 outside timed get interrupted ! java.lang.InterruptedException
 outside flag 2 = false
+common default parallelism = true
 managed compensates = second ran
 blocker = unblocked
 unmanaged no compensation = timeout

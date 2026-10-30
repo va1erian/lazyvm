@@ -54,6 +54,9 @@ compare other kind = 1
 compare null ! java.lang.NullPointerException
 getDelay null ! java.lang.NullPointerException
 huge getDelay days = 106751
+huge after overdue = true
+core 0 late task = late
+core 0 threads made = 1
 huge2 getDelay days = 106751
 hug compare = true
 cancel done = false

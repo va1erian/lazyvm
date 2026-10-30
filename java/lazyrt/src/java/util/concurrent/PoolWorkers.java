@@ -84,9 +84,6 @@ final class PoolWorkers {
 
     /** Lists the worker and starts its thread, unless the pool stopped meanwhile. */
     private boolean register(Worker w) {
-        if (w.thread.isAlive()) {
-            throw new IllegalThreadStateException();
-        }
         synchronized (this) {
             if (state >= STOP || state == SHUTDOWN && w.first != null) {
                 return false;

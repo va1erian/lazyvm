@@ -257,15 +257,15 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     public boolean isTerminated() {
-        return core.isTerminated();
+        return core.terminated;
     }
 
     public boolean isTerminating() {
-        return core.isTerminating();
+        return core.terminating && !core.terminated;
     }
 
     public boolean isShutdown() {
-        return core.isShutdown();
+        return core.shutdown;
     }
 
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
@@ -292,10 +292,7 @@ public class ForkJoinPool extends AbstractExecutorService {
             if (System.nanoTime() - start >= left) {
                 return false;
             }
-            // On the common pool an outside thread may help: at parallelism 0 nobody else will.
-            if (this != common || !core.runOneQueued()) {
-                Thread.yield();
-            }
+            Thread.yield();
         }
         return true;
     }
