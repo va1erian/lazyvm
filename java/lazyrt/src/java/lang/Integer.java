@@ -183,6 +183,31 @@ public final class Integer extends Number implements Comparable<Integer> {
         return parseUnsignedInt(s, 10);
     }
 
+    public static Integer getInteger(String nm) {
+        return getInteger(nm, (Integer) null);
+    }
+
+    public static Integer getInteger(String nm, int val) {
+        Integer result = getInteger(nm, (Integer) null);
+        return result == null ? Integer.valueOf(val) : result;
+    }
+
+    /** The property decoded like decode; a missing, empty or malformed one gives `val`. */
+    public static Integer getInteger(String nm, Integer val) {
+        String v = null;
+        if (nm != null && nm.length() != 0) {
+            v = System.getProperty(nm);
+        }
+        if (v != null) {
+            try {
+                return Integer.decode(v);
+            } catch (NumberFormatException e) {
+                // falls through to the default
+            }
+        }
+        return val;
+    }
+
     public static Integer decode(String nm) throws NumberFormatException {
         if (nm.length() == 0) {
             throw new NumberFormatException("Zero length string");

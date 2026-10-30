@@ -130,6 +130,24 @@ fn form(b: &[u8]) -> Option<(u32, usize)> {
     (cp >= min && cp <= 0x10FFFF).then_some((cp, n))
 }
 
+/// A Java string as a Rust `String` that loses nothing: a lone surrogate, and U+10FFFF,
+/// which serves as the escape marker, become the marker plus a code ("m" for U+10FFFF
+/// itself, "x" and four hex digits for a surrogate). Two distinct strings never share a
+/// result. System property names are stored in this form, so two names that differ
+/// only by an unpaired surrogate stay distinct.
+pub fn escape(units: &[u16]) -> String {
+    const MARK: char = '\u{10FFFF}';
+    let mut out = String::new();
+    for c in char::decode_utf16(units.iter().copied()) {
+        match c {
+            Ok(MARK) => out.push_str("\u{10FFFF}m"),
+            Ok(c) => out.push(c),
+            Err(e) => out.push_str(&format!("\u{10FFFF}x{:04x}", e.unpaired_surrogate())),
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,5 +224,16 @@ mod tests {
             decode(&[0x61, 0xFF, 0xC0, 0x80]),
             vec![0x61, 0xFFFD, 0xFFFD, 0xFFFD]
         );
+    }
+
+    #[test]
+    fn escapes_are_exact() {
+        let esc = |s: &str| escape(&s.encode_utf16().collect::<Vec<_>>());
+        assert_eq!(esc("java.home"), "java.home");
+        assert_ne!(esc("k\u{10FFFF}"), esc("k"));
+        // The marker's own spelling cannot be forged with a lone surrogate or plain text.
+        assert_ne!(esc("\u{10FFFF}xd800"), escape(&[0xD800]));
+        assert_ne!(escape(&[0xD800]), escape(&[0xDBFF]));
+        assert_ne!(esc("\u{10FFFF}"), esc("\u{10FFFF}m"));
     }
 }

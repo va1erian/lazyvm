@@ -1,0 +1,28 @@
+[package]
+name = "launcher-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+# The launcher's own script: the VM's stack on Windows, and the delay-load
+# of xui's OpenGL DLL.
+build = "../launcher/build.rs"
+
+[lints]
+workspace = true
+
+# `lazyvm-ui`: the `lazyvm` launcher plus the `lazy.ui` natives, and so xui
+# (docs/ui.md, "Size"). The plain `lazyvm` binary stays without them.
+[[bin]]
+name = "lazyvm-ui"
+path = "src/main.rs"
+
+[dependencies]
+launcher = { path = "../launcher", default-features = false }
+natives-ui = { path = "../natives-ui", default-features = false }
+
+[features]
+default = ["desktop"]
+# Real windows: `lazy.gfx` and, on Windows, `lazy.ui`.
+desktop = ["launcher/desktop", "natives-ui/desktop"]

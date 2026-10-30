@@ -1,0 +1,60 @@
+[ja_JP_JP_#u-ca-japanese] L=ja S= C=JP V=JP tag=ja-JP-u-ca-japanese-x-lvariant-JP ek=[u] rt=true hc=1703425729
+[th_TH_TH_#u-nu-thai] L=th S= C=TH V=TH tag=th-TH-u-nu-thai-x-lvariant-TH ek=[u] rt=true hc=-1917599994
+[no_NO_NY] L=no S= C=NO V=NY tag=nn-NO ek=[] rt=false hc=104974025
+[no_NO] L=no S= C=NO V= tag=no-NO ek=[] rt=true hc=104971518
+[no] L=no S= C= V= tag=no ek=[] rt=true hc=104894111
+[iw_IL] L=iw S= C=IL V= tag=he-IL ek=[] rt=true hc=100587343
+[in] L=in S= C= V= tag=id ek=[] rt=true hc=100246715
+[ji] L=ji S= C= V= tag=yi ek=[] rt=true hc=101021281
+[iw] L=iw S= C= V= tag=he ek=[] rt=true hc=100514834
+[iw_IL_x] L=iw S= C=IL V=x tag=he-IL-x-lvariant-x ek=[] rt=true hc=100587463
+[en_US_a_b] L=en S= C=US V=a_b tag=en-US-x-lvariant-a-b ek=[] rt=true hc=96733149
+[en_US_a b] L=en S= C=US V=a b tag=en-US ek=[] rt=false hc=96731196
+[en_US_a-b] L=en S= C=US V=a-b tag=en-US ek=[] rt=false hc=96731599
+[en___x] L=en S= C= V=_x tag=en ek=[] rt=false hc=96555696
+[en_US_POSIX_WIN] L=en S= C=US V=POSIX_WIN tag=en-US-POSIX-x-lvariant-WIN ek=[] rt=true hc=299739065
+[english] L=english S= C= V= tag=english ek=[] rt=true hc=-322170992
+[e] L=e S= C= V= tag=und ek=[] rt=false hc=3008891
+[en_USA] L=en S= C=USA V= tag=en ek=[] rt=false hc=99166644
+[en_U] L=en S= C=U V= tag=en ek=[] rt=false hc=96555266
+[en_123] L=en S= C=123 V= tag=en-123 ek=[] rt=true hc=98062021
+[123] L=123 S= C= V= tag=und ek=[] rt=false hc=1450523790
+[en_US_1234] L=en S= C=US V=1234 tag=en-US-1234 ek=[] rt=true hc=98146331
+[en_US_abcd] L=en S= C=US V=abcd tag=en-US-x-lvariant-abcd ek=[] rt=true hc=99623963
+[en_US_ab] L=en S= C=US V=ab tag=en-US-x-lvariant-ab ek=[] rt=true hc=96639994
+[_US] L= S= C=US V= tag=und-US ek=[] rt=true hc=84258
+[] L= S= C= V=foo tag=x-lvariant-foo ek=[] rt=true hc=101574
+[] L= S= C= V=abcde tag=und-abcde ek=[] rt=true hc=92599395
+[en_US_Posix] L=en S= C=US V=Posix tag=en-US-Posix ek=[] rt=true hc=173939260
+[en_US_  ] L=en S= C=US V=   tag=en-US ek=[] rt=false hc=96637913
+[en_US__] L=en S= C=US V=_ tag=en-US ek=[] rt=false hc=96636984
+[en_US_a__b] L=en S= C=US V=a__b tag=en-US-x-lvariant-a ek=[] rt=false hc=99620954
+[en_US__a_] L=en S= C=US V=_a_ tag=en-US ek=[] rt=false hc=96731286
+[ja_JP_JP_X] L=ja S= C=JP V=JP_X tag=ja-JP-x-lvariant-JP-X ek=[] rt=true hc=103140994
+[en_US_lvariant] L=en S= C=US V=lvariant tag=en-US-lvariant ek=[] rt=true hc=-421622158
+[und__NY] L=und S= C= V=NY tag=und-x-lvariant-NY ek=[] rt=false hc=-840787712
+[und] L=und S= C= V= tag=und ek=[] rt=false hc=-840790219
+[und_US] L=und S= C=US V= tag=und-US ek=[] rt=false hc=-840705961
+[e__NY] L=e S= C= V=NY tag=x-lvariant-NY ek=[] rt=false hc=3011398
+[und] L=und S= C= V= tag=und ek=[] rt=false hc=-840790219
+[de__x y] L=de S= C= V=x y tag=de ek=[] rt=false hc=95477424
+[] L= S= C= V= tag=und ek=[] rt=true hc=0
+[ja_JP] L=ja S= C=JP V= tag=ja-JP ek=[] rt=true hc=100856547
+[zh_CN] L=zh S= C=CN V= tag=zh-CN ek=[] rt=true hc=115834631
+[en] L=en S= C= V= tag=en ek=[] rt=true hc=96552631
+true false false
+gregory latn null [ca, nu] [attr] attr-ca-gregory-nu-latn null
+|gregory
+getExtension(1) java.lang.IllegalArgumentException: Ill-formed extension key: 1
+getUnicodeLocaleType(null) java.lang.NullPointerException
+getUnicodeLocaleType(c) java.lang.IllegalArgumentException: Ill-formed Unicode locale key: c
+new Locale(null) java.lang.NullPointerException
+new Locale(en,null) java.lang.NullPointerException
+getDefault(null) java.lang.NullPointerException
+setDefault(null) java.lang.NullPointerException: Can't set default locale to NULL
+setDefault(FORMAT,null) java.lang.NullPointerException: Can't set default locale to NULL
+setDefault(null,US) java.lang.NullPointerException: Category cannot be NULL
+default en_US en_US en_US
+en_US fr_FR en_US
+de_DE de_DE de_DE
+de_DE de_DE it_IT

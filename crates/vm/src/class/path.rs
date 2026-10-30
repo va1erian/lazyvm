@@ -178,6 +178,10 @@ fn lexical(p: &Path) -> PathBuf {
             other => out.push(other.as_os_str()),
         }
     }
+    // Nothing left means the current directory ("." or "a/.."), not an empty path.
+    if out.as_os_str().is_empty() {
+        out.push(".");
+    }
     out
 }
 

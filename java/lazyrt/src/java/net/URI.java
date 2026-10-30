@@ -9,7 +9,7 @@ import lazy.internal.UriText;
  * (user info, host and port when it is a server authority), path, query and
  * fragment (lazy.internal.UriParser), the component getters, comparison in
  * the Javadoc's component order, and the (scheme, host, path, fragment)
- * constructor. normalize, resolve, relativize and toURL come with S7-02.
+ * constructor. normalize, resolve, relativize and toURL come with S15-02.
  * Escaping is lazy.internal.UriText's.
  */
 public final class URI implements Comparable<URI>, java.io.Serializable {
@@ -194,19 +194,29 @@ public final class URI implements Comparable<URI>, java.io.Serializable {
         return same(authority, that.authority);
     }
 
+    // Values match the oracle's, found by probing: components fold in 127-wise (escapes with
+    // upper-case hex), scheme and host fold per lower-cased character 31-wise, port adds 1949 each.
     private static int hash(int h, String s) {
-        return 31 * h + (s == null ? 0 : UriText.normalEscapes(s).hashCode());
+        return s == null ? h : h * 127 + UriText.normalEscapes(s).hashCode();
+    }
+
+    private static int hashIgnoringCase(int h, String s) {
+        for (int i = 0; i < s.length(); i++) {
+            h = 31 * h + Character.toLowerCase(s.charAt(i));
+        }
+        return h;
     }
 
     public int hashCode() {
-        int h = scheme == null ? 0 : scheme.toLowerCase(Locale.ROOT).hashCode();
+        int h = scheme == null ? 0 : hashIgnoringCase(0, scheme);
         h = hash(h, fragment);
         if (isOpaque()) {
             return hash(h, ssp);
         }
         h = hash(hash(h, path), query);
         if (host != null) {
-            return 31 * hash(hash(h, userInfo), host.toLowerCase(Locale.ROOT)) + port;
+            h = hash(h, userInfo);
+            return hashIgnoringCase(h, host) + 1949 * port;
         }
         return hash(h, authority);
     }

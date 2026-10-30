@@ -4,7 +4,7 @@ use platform::Stream;
 use vm::heap::Array;
 use vm::{Value, Vm, VmError, VmResult};
 
-use crate::{arg, int, obj, ret_int, ret_ref, ret_void};
+use crate::{arg, int, obj, ret_bool, ret_int, ret_ref, ret_void};
 
 const VM_CLASS: &str = "lazy/internal/VM";
 const OUT: &str = "lazy/internal/ConsoleOutputStream";
@@ -17,6 +17,27 @@ pub fn register(vm: &mut Vm) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         get_property,
     );
+    vm.register_native(
+        VM_CLASS,
+        "setProperty",
+        "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+        set_property,
+    );
+    vm.register_native(
+        VM_CLASS,
+        "clearProperty",
+        "(Ljava/lang/String;)Ljava/lang/String;",
+        clear_property,
+    );
+    vm.register_native(
+        VM_CLASS,
+        "environment",
+        "()[Ljava/lang/String;",
+        environment,
+    );
+    vm.register_native(VM_CLASS, "environmentIgnoresCase", "()Z", |_, _| {
+        ret_bool(platform::environment_ignores_case())
+    });
     vm.register_native(VM_CLASS, "exit", "(I)V", |_, a| {
         Err(VmError::Exit(int(a, 0)?))
     });
@@ -63,12 +84,49 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(IN, "available0", "(I)I", |_, _| ret_int(0));
 }
 
-fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = vm.string_arg(arg(args, 0)?)?;
-    match vm.properties.get(&key).cloned() {
+/// The environment as name, value, name, value... in one String[].
+fn environment(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
+    let pairs = platform::environment();
+    let len = i32::try_from(pairs.len() * 2).map_err(|_| VmError::OutOfMemory)?;
+    let array = vm.new_array_of("Ljava/lang/String;", len)?;
+    for (i, units) in pairs.iter().flat_map(|(n, v)| [n, v]).enumerate() {
+        let s = vm.new_string_utf16(units)?;
+        vm.heap
+            .array_mut(array)?
+            .store(i, Value::Ref(Some(s)), false)?;
+    }
+    ret_ref(Some(array))
+}
+
+fn units_arg(vm: &Vm, v: Value) -> VmResult<Vec<u16>> {
+    vm.string_utf16(v.reference()?.ok_or_else(VmError::npe)?)
+}
+
+fn old_property(vm: &mut Vm, old: Option<Vec<u16>>) -> VmResult<Option<Value>> {
+    match old {
         Some(v) => ret_ref(Some(vm.new_string_utf16(&v)?)),
         None => ret_ref(None),
     }
+}
+
+fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let key = units_arg(vm, arg(args, 0)?)?;
+    let old = vm.property(&key).map(<[u16]>::to_vec);
+    old_property(vm, old)
+}
+
+fn set_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let key = units_arg(vm, arg(args, 0)?)?;
+    let value = obj(args, 1)?;
+    let units = vm.string_utf16(value)?;
+    let old = vm.set_property(&key, units);
+    old_property(vm, old)
+}
+
+fn clear_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let key = units_arg(vm, arg(args, 0)?)?;
+    let old = vm.clear_property(&key);
+    old_property(vm, old)
 }
 
 fn get_resource(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

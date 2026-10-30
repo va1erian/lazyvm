@@ -1,8 +1,12 @@
 package java.util;
 
 /**
- * A language/country/variant triple. LazyVM has no locale data: formatting
- * always uses the en-US conventions, whatever locale is passed.
+ * A language, script, country, variant and extensions. LazyVM has little
+ * locale data: Formatter knows the number symbols of a few languages
+ * (LocaleSymbols); Scanner still reads numbers with the ROOT symbols and
+ * everything else behaves as en-US. The default
+ * comes from the user.language, user.country, user.variant and user.script
+ * properties, which LazyVM sets to en, US, "" and "" unless -D says otherwise.
  */
 public final class Locale implements java.io.Serializable {
     public static final Locale ENGLISH = new Locale("en", "");
@@ -28,19 +32,72 @@ public final class Locale implements java.io.Serializable {
     public static final Locale CANADA_FRENCH = new Locale("fr", "CA");
     public static final Locale ROOT = new Locale("", "");
 
-    private static Locale defaultLocale = US;
+    /** The two kinds of default locale a program can set apart. */
+    public enum Category {
+        DISPLAY, FORMAT
+    }
+
+    // The base default is read once, when the class is initialised (System does that at
+    // startup), so later changes to the user.* properties do not move it.
+    private static Locale defaultLocale = fromProperties();
+    private static Locale formatLocale;
+    private static Locale displayLocale;
 
     private final String language;
+    private final String script;
     private final String country;
     private final String variant;
+    /** Canonical extension text such as "a-bb-u-ca-gregory-x-foo"; "" when there are none. */
+    private final String extensions;
 
     public Locale(String language, String country, String variant) {
-        if (language == null || country == null || variant == null) {
+        this(nonNull(language), "", nonNull(country), nonNull(variant), "");
+    }
+
+    public Locale(String language, String country) {
+        this(language, country, "");
+    }
+
+    public Locale(String language) {
+        this(language, "", "");
+    }
+
+    private static String nonNull(String s) {
+        if (s == null) {
             throw new NullPointerException();
         }
-        this.language = ascii(language, false);
+        return s;
+    }
+
+    /** Callers have checked for null; a non-empty `extensions` is already canonical. */
+    Locale(String language, String script, String country, String variant, String extensions) {
+        this.language = oldCode(ascii(language, false));
+        this.script = script;
         this.country = ascii(country, true);
         this.variant = variant;
+        this.extensions = extensions.isEmpty() ? legacyExtension() : extensions;
+    }
+
+    // Japanese and Thai calendars and digits were once spelled as a variant (ja_JP_JP, th_TH_TH).
+    private String legacyExtension() {
+        if (language.equals("ja") && country.equals("JP") && variant.equals("JP")) {
+            return "u-ca-japanese";
+        }
+        if (language.equals("th") && country.equals("TH") && variant.equals("TH")) {
+            return "u-nu-thai";
+        }
+        return "";
+    }
+
+    // Java 8 keeps the pre-1989 codes for Hebrew, Yiddish and Indonesian.
+    private static String oldCode(String lang) {
+        if (lang.equals("he")) {
+            return "iw";
+        }
+        if (lang.equals("yi")) {
+            return "ji";
+        }
+        return lang.equals("id") ? "in" : lang;
     }
 
     // Only the ASCII letters change case, whatever the default locale is.
@@ -55,27 +112,103 @@ public final class Locale implements java.io.Serializable {
         return new String(chars);
     }
 
-    public Locale(String language, String country) {
-        this(language, country, "");
+    public static Locale forLanguageTag(String languageTag) {
+        return LocaleTags.parse(languageTag);
     }
 
-    public Locale(String language) {
-        this(language, "", "");
+    public String toLanguageTag() {
+        return LocaleTags.format(language, script, country, variant, extensions);
     }
 
-    public static Locale getDefault() {
+    // The base default, from user.language, user.script, user.country and user.variant.
+    // user.region, when set, supplies country and variant ("FR_CA" is country FR, variant CA)
+    // in place of user.country and user.variant, and the script is then empty.
+    private static Locale fromProperties() {
+        String region = System.getProperty("user.region");
+        String script = nonNullOr(System.getProperty("user.script"), "");
+        String country = nonNullOr(System.getProperty("user.country"), "");
+        String variant = nonNullOr(System.getProperty("user.variant"), "");
+        if (region != null) {
+            int cut = region.indexOf('_');
+            script = "";
+            country = cut < 0 ? region : region.substring(0, cut);
+            variant = cut < 0 ? "" : region.substring(cut + 1);
+        }
+        String lang = nonNullOr(System.getProperty("user.language"), "en");
+        if (!script.isEmpty()) {
+            script = ascii(script.substring(0, 1), true) + ascii(script.substring(1), false);
+        }
+        return new Locale(lang, script, country, variant, "");
+    }
+
+    // A category default starts from the base default and takes each field from its own
+    // property (user.language.format ...) when that is set. Like the reference, it is worked
+    // out on first use, so only these properties are read late, never the base ones.
+    private static Locale forCategory(String suffix) {
+        Locale base = defaultLocale;
+        String script = nonNullOr(System.getProperty("user.script" + suffix), base.script);
+        if (!script.isEmpty()) {
+            script = ascii(script.substring(0, 1), true) + ascii(script.substring(1), false);
+        }
+        return new Locale(nonNullOr(System.getProperty("user.language" + suffix), base.language), script,
+                nonNullOr(System.getProperty("user.country" + suffix), base.country),
+                nonNullOr(System.getProperty("user.variant" + suffix), base.variant), "");
+    }
+
+    private static String nonNullOr(String s, String def) {
+        return s == null ? def : s;
+    }
+
+    public static synchronized Locale getDefault() {
         return defaultLocale;
     }
 
+    public static synchronized Locale getDefault(Category category) {
+        if (category == Category.FORMAT) {
+            if (formatLocale == null) {
+                formatLocale = forCategory(".format");
+            }
+            return formatLocale;
+        }
+        if (category == null) {
+            throw new NullPointerException();
+        }
+        if (displayLocale == null) {
+            displayLocale = forCategory(".display");
+        }
+        return displayLocale;
+    }
+
+    /** Sets the default and, as the specification says, both category defaults. */
     public static synchronized void setDefault(Locale newLocale) {
         if (newLocale == null) {
             throw new NullPointerException("Can't set default locale to NULL");
         }
         defaultLocale = newLocale;
+        formatLocale = newLocale;
+        displayLocale = newLocale;
+    }
+
+    public static synchronized void setDefault(Category category, Locale newLocale) {
+        if (category == null) {
+            throw new NullPointerException("Category cannot be NULL");
+        }
+        if (newLocale == null) {
+            throw new NullPointerException("Can't set default locale to NULL");
+        }
+        if (category == Category.FORMAT) {
+            formatLocale = newLocale;
+        } else {
+            displayLocale = newLocale;
+        }
     }
 
     public String getLanguage() {
         return language;
+    }
+
+    public String getScript() {
+        return script;
     }
 
     public String getCountry() {
@@ -86,15 +219,56 @@ public final class Locale implements java.io.Serializable {
         return variant;
     }
 
-    /** language_COUNTRY_variant, with trailing empty parts dropped. */
+    /** The extension for a singleton key, without the key, or null. */
+    public String getExtension(char key) {
+        if (!(key >= 'a' && key <= 'z' || key >= 'A' && key <= 'Z')) {
+            throw new IllegalArgumentException("Ill-formed extension key: " + key);
+        }
+        return LocaleTags.extension(extensions, Character.toLowerCase(key));
+    }
+
+    public Set<Character> getExtensionKeys() {
+        return LocaleTags.extensionKeys(extensions);
+    }
+
+    public Set<String> getUnicodeLocaleAttributes() {
+        return LocaleTags.unicodeAttributes(extensions);
+    }
+
+    public String getUnicodeLocaleType(String key) {
+        if (key == null) {
+            throw new NullPointerException();
+        }
+        if (!LocaleTags.isUnicodeKey(key)) {
+            throw new IllegalArgumentException("Ill-formed Unicode locale key: " + key);
+        }
+        return LocaleTags.unicodeType(extensions, ascii(key, false));
+    }
+
+    public Set<String> getUnicodeLocaleKeys() {
+        return LocaleTags.unicodeKeys(extensions);
+    }
+
+    /** language_COUNTRY_variant, then "_#" and the script and extensions when there are any. */
     public final String toString() {
         if (language.isEmpty() && country.isEmpty()) {
             return "";
         }
-        if (variant.isEmpty()) {
-            return country.isEmpty() ? language : language + "_" + country;
+        StringBuilder sb = new StringBuilder(language);
+        boolean tail = !script.isEmpty() || !extensions.isEmpty();
+        if (!country.isEmpty() || !variant.isEmpty() || tail) {
+            sb.append('_').append(country);
         }
-        return language + "_" + country + "_" + variant;
+        if (!variant.isEmpty()) {
+            sb.append('_').append(variant);
+        }
+        if (tail) {
+            sb.append("_#").append(script);
+            if (!extensions.isEmpty()) {
+                sb.append(script.isEmpty() ? "" : "_").append(extensions);
+            }
+        }
+        return sb.toString();
     }
 
     public boolean equals(Object obj) {
@@ -105,11 +279,16 @@ public final class Locale implements java.io.Serializable {
             return false;
         }
         Locale other = (Locale) obj;
-        return language.equals(other.language) && country.equals(other.country)
-                && variant.equals(other.variant);
+        return language.equals(other.language) && script.equals(other.script)
+                && country.equals(other.country) && variant.equals(other.variant)
+                && extensions.equals(other.extensions);
     }
 
+    // Matches the oracle's values, found by probing: the four parts fold 31-wise and the
+    // extension text is mixed in by xor.
     public int hashCode() {
-        return (language.hashCode() * 31 + country.hashCode()) * 31 + variant.hashCode();
+        int h = ((language.hashCode() * 31 + script.hashCode()) * 31 + country.hashCode()) * 31
+                + variant.hashCode();
+        return extensions.isEmpty() ? h : h ^ extensions.hashCode();
     }
 }

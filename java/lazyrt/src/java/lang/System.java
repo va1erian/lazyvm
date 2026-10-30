@@ -18,6 +18,8 @@ public final class System {
         in = new java.io.BufferedInputStream(new ConsoleInputStream(0));
         out = new PrintStream(new ConsoleOutputStream(1), true);
         err = new PrintStream(new ConsoleOutputStream(2), true);
+        // Fixes the default locales before any user code can change the user.* properties.
+        java.util.Locale.getDefault();
     }
 
     private System() {
@@ -33,18 +35,46 @@ public final class System {
     public static native int identityHashCode(Object x);
 
     public static String getProperty(String key) {
-        if (key == null) {
-            throw new NullPointerException("key can't be null");
-        }
-        if (key.length() == 0) {
-            throw new IllegalArgumentException("key can't be empty");
-        }
+        checkKey(key);
         return VM.getProperty(key);
     }
 
     public static String getProperty(String key, String def) {
         String value = getProperty(key);
         return value == null ? def : value;
+    }
+
+    public static String setProperty(String key, String value) {
+        checkKey(key);
+        if (value == null) {
+            throw new NullPointerException();
+        }
+        return VM.setProperty(key, value);
+    }
+
+    public static String clearProperty(String key) {
+        checkKey(key);
+        return VM.clearProperty(key);
+    }
+
+    private static void checkKey(String key) {
+        if (key == null) {
+            throw new NullPointerException("key can't be null");
+        }
+        if (key.length() == 0) {
+            throw new IllegalArgumentException("key can't be empty");
+        }
+    }
+
+    public static String getenv(String name) {
+        if (name == null) {
+            throw new NullPointerException();
+        }
+        return lazy.internal.Environment.lookup(name);
+    }
+
+    public static java.util.Map<String, String> getenv() {
+        return lazy.internal.Environment.map();
     }
 
     public static String lineSeparator() {

@@ -25,7 +25,9 @@ from common import die, find_tool  # noqa: E402
 
 # IgnoreUnrecognizedVMOptions lets JDK 8, which has no helpful NPE messages, accept the flag.
 ORACLE_FLAGS = ["-XX:+IgnoreUnrecognizedVMOptions", "-XX:-ShowCodeDetailsInExceptionMessages",
-                "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8"]
+                "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8",
+                # The OS regional settings must not leak into goldens: LazyVM defaults to en-US.
+                "-Duser.language=en", "-Duser.country=US", "-Duser.variant=", "-Duser.script="]
 
 
 def java_major(java: str) -> int:

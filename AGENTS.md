@@ -100,11 +100,13 @@ python tools/check_rules.py            # shared blocks, 500 lines, SAFETY commen
 python tools/licenses.py               # permissive dependency tree
 python tools/buffers.py --check        # generated java.nio buffers are up to date
 python tools/case_marks.py --check     # CaseMarks.java matches the oracle (local gate: needs the Java 8 oracle, CI has none)
+python tools/locale_symbols.py --check # LocaleSymbolData.java matches the oracle (local gate: needs the Java 8 oracle)
 python tools/lazyrt.py                 # the class library builds
 python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
 python tools/launcher_test.py          # -jar, manifests and jar errors
 python tools/size.py                   # binary + lazyrt.jar under the 4 MB budget (D14)
+cargo build --release -p launcher-ui && python tools/size.py --exe target/release/lazyvm-ui.exe   # the lazy.ui binary too
 python tools/lazyos_test.py --lazyos <LazyOS checkout>   # the suite inside LazyOS; slow, before each PR
 cargo build -p launcher --target x86_64-unknown-linux-musl
 ```
@@ -132,6 +134,7 @@ changed, and which gates ran locally.
 
 ```bash
 cargo build --workspace
+cargo build -p launcher-ui             # lazyvm-ui: the VM with lazy.ui (docs/ui.md); lazyvm has none
 cargo test --workspace
 python tools/lazyrt.py                 # dist/lazyrt.jar
 python tools/test.py --filter <area>   # differential suite on lazyvm
@@ -143,6 +146,7 @@ python tools/licenses.py
 python tools/unicode.py                # regenerate + verify crates/natives/data/unicode.bin on the Java 8 oracle
 python tools/regex_data.py             # regenerate java.util.regex's block/script tables on the oracle (--check verifies)
 python tools/case_marks.py             # regenerate the mark sets behind String's Turkic/Lithuanian case rules (--check verifies)
+python tools/locale_symbols.py         # regenerate the decimal/grouping characters Formatter uses per locale (--check verifies)
 ```
 
 These tools are created by S0. Until then, only `cargo build` exists.

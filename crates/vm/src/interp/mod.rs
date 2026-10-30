@@ -5,6 +5,7 @@
 //! Rust (`Vm::invoke`) runs a nested loop that stops when its frame returns.
 
 mod frame;
+mod lend;
 mod ops_array;
 mod ops_basic;
 mod ops_branch;
@@ -14,6 +15,7 @@ mod ops_object;
 mod sync;
 
 pub use frame::Frame;
+pub use lend::with_lent;
 
 use crate::class::MethodRef;
 use crate::value::{Ref, Value};

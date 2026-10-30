@@ -207,6 +207,31 @@ public final class Long extends Number implements Comparable<Long> {
         return parseUnsignedLong(s, 10);
     }
 
+    public static Long getLong(String nm) {
+        return getLong(nm, (Long) null);
+    }
+
+    public static Long getLong(String nm, long val) {
+        Long result = getLong(nm, (Long) null);
+        return result == null ? Long.valueOf(val) : result;
+    }
+
+    /** The property decoded like decode; a missing, empty or malformed one gives `val`. */
+    public static Long getLong(String nm, Long val) {
+        String v = null;
+        if (nm != null && nm.length() != 0) {
+            v = System.getProperty(nm);
+        }
+        if (v != null) {
+            try {
+                return Long.decode(v);
+            } catch (NumberFormatException e) {
+                // falls through to the default
+            }
+        }
+        return val;
+    }
+
     public static Long decode(String nm) throws NumberFormatException {
         if (nm.length() == 0) {
             throw new NumberFormatException("Zero length string");

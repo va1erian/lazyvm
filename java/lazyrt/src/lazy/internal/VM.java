@@ -7,6 +7,17 @@ public final class VM {
 
     public static native String getProperty(String key);
 
+    /** The process environment as name, value, name, value... */
+    public static native String[] environment();
+
+    /** Whether environment names compare ignoring case on this platform. */
+    public static native boolean environmentIgnoresCase();
+
+    /** Sets a system property; returns the old value or null. */
+    public static native String setProperty(String key, String value);
+
+    public static native String clearProperty(String key);
+
     public static native void exit(int status);
 
     public static native void gc();
