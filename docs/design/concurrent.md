@@ -960,6 +960,8 @@ happens to behave the same way, so `CompletableFutureShapes` pins it too ("subcl
 - A released reader goes on with what the list still holds, on its own thread, before it returns ("reader attached last goes first and
   helps", "timed reader helps too"). A reader that finds the future settled when it arrives does neither ("late reader of a settled stage
   does not help"), and nor do reads inside a callback ("inside join", "inside get" in `CompletableFutureEdges`).
+- `cancel` answers from the outcome after it has fired what the list held ("lost cancel answers after firing"). The public reads do
+  not ask one another ("public reads do not ask one another").
 - A pool worker blocked in any of the three does not hold up the pool, even at parallelism 1 ("worker join, settled by a sibling", "worker
   get ...", "worker timed get ...").
 
@@ -1051,8 +1053,12 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   executor").
 - The skip is decided when the dependent fires ("async skip decided at firing"); a task reads its sources when it runs ("async reads at run",
   "async failure at run", "async either reads the receiver first", "async both reads at run").
-- A task does its work once however often the executor runs it ("task runs once", "supply task runs once"), and not at all if the
-  dependent was settled before ("target settled between hand-over and run", "supply settled before its task").
+- A task run again by its executor finds the stage settled and does nothing ("task runs once", "supply task runs once"), and it does not
+  run at all if the dependent was settled before ("target settled between hand-over and run", "supply settled before its task"). So a compose
+  still waiting for its inner stage runs its function again and follows a second stage (`CompletableFutureShapes`: "compose task, run twice").
+  Dependents fired through two lists are handed over once ("two lists, one hand-over"), and a task leaves a source still pending alone ("task
+  leaves a pending source alone").
+- A rejection or anything else an executor throws reads as a function's failure would ("rejection reads as wrapped").
 - An executor that throws anything fails the dependent, once ("executor throws an Error"); after it ran the task, its exception is dropped
   ("executor runs then throws"), except from `supplyAsync` and `runAsync`, which pass it to the caller ("supply executor runs then throws").
 - A common pool named as the executor, below parallelism 2, also means a new thread per task (`CompletableFutureNoCommonEdges`: "named common
@@ -1175,6 +1181,8 @@ being kept. Neither was: both are now what the oracle does.
   following the queue, like the other FIFO queues on the oracle (b, then c).
 - **Different on purpose**: a function given to `ConcurrentHashMap.computeIfAbsent` that updates *other* keys of the same
   map can hang the oracle, depending on bins. Here it works.
+- **`CompletableFuture`, different on purpose**: a `cancel` that loses on the oracle asks `isCancelled()` virtually for its answer. Here it does
+  not, by the owner rule at the top of its section, which goes further than the oracle: a subclass overriding `isCancelled` sees a difference, and no test holds it.
 - **`CompletableFuture`, what is left**: the class of a task handed to an executor (on the oracle it is a `ForkJoinTask`; here it is not, and it
   is only promised to be a `Runnable` marked `AsynchronousCompletionTask`). How deep user recursion through the API goes: a callback completing
   the next future, a `thenCompose` over done stages, or a chain with a direct executor costs about 10 frames per level, so LazyVM's 4094 frames end

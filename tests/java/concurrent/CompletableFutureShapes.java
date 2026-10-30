@@ -166,6 +166,11 @@ public class CompletableFutureShapes {
         @Override public boolean isCompletedExceptionally() { throw new Error("isCompletedExceptionally"); }
         @Override public boolean isCancelled() { throw new Error("isCancelled"); }
         @Override public CompletableFuture<String> toCompletableFuture() { return this; }
+        String justJoin() { return super.join(); }
+        String justGet() throws Exception { return super.get(1, TimeUnit.SECONDS); }
+        String justNow() { return super.getNow("absent"); }
+        boolean justCancelled() { return super.isCancelled(); }
+        boolean justFailed() { return super.isCompletedExceptionally(); }
     }
 
     static void subclasses() {
@@ -198,6 +203,13 @@ public class CompletableFutureShapes {
             return state(t.thenApply(v -> v)) + " " + state(CompletableFuture.completedFuture("v").thenCompose(v -> t)) + " "
                 + state(new CompletableFuture<String>().applyToEither(t, v -> v)) + " " + state(CompletableFuture.anyOf(t, cf()))
                 + " " + state(CompletableFuture.allOf(t));
+        });
+        show("public reads do not ask one another", () -> {
+            Traps t = new Traps();
+            t.complete("t");
+            Traps f = new Traps();
+            f.completeExceptionally(new Error("e"));
+            return t.justJoin() + " " + t.justGet() + " " + t.justNow() + " " + t.justCancelled() + " " + t.justFailed() + " " + f.justFailed() + " " + f.justCancelled();
         });
         show("subclass other through toCompletableFuture", () -> {
             CompletableFuture<String> real = CompletableFuture.completedFuture("real");
@@ -310,6 +322,27 @@ public class CompletableFutureShapes {
                 @Override public CompletableFuture<String> toCompletableFuture() { throw new IllegalStateException("tcf"); }
             };
             return new CompletableFuture<String>().thenCombine(stage, null);
+        });
+        show("compose task, run twice", () -> {
+            List<Runnable> q = new ArrayList<>();
+            int[] c = new int[1];
+            CompletableFuture<String> in = cf();
+            CompletableFuture.completedFuture("v").thenComposeAsync(v -> { c[0]++; return in; }, q::add);
+            q.get(0).run();
+            q.get(0).run();
+            return c[0] + " " + counts(in);
+        });
+        show("rejection reads as wrapped", () -> {
+            CompletableFuture<String> d = CompletableFuture.completedFuture("v").thenApplyAsync(v -> v, r -> { throw new RejectedExecutionException("no"); });
+            return d.handle((v, t) -> t.toString()).join();
+        });
+        show("lost cancel answers after firing", () -> {
+            CompletableFuture<String> s = cf();
+            String[] r = new String[1];
+            s.thenRun(() -> s.obtrudeException(new CancellationException()));
+            s.thenRun(() -> r[0] = "cancel=" + s.cancel(false));
+            s.complete("v");
+            return r[0];
         });
         show("a value that is a Throwable", () -> {
             CompletableFuture<Object> s = cf();

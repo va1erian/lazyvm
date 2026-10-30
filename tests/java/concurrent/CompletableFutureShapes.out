@@ -50,6 +50,7 @@ either a nested settle keeps the receiver = b
 subclass, each completion alone = ok v | ok v/null calls=0; failed java.util.concurrent.CompletionException: java.lang.Error: e | ok null/Error calls=0; failed java.util.concurrent.CancellationException | ok null/CancellationException calls=0; ok o | ok o/null calls=0; failed java.util.concurrent.CompletionException: java.lang.Error: e | ok null/Error calls=0; 
 subclass dependents are plain = java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture java.util.concurrent.CompletableFuture Five
 subclass read through its fields = ok t ok t ok t ok t ok null
+public reads do not ask one another = t t t false false true false
 subclass other through toCompletableFuture = ok real ok areal
 subclass receiver not through toCompletableFuture = false false
 toString asks the count = @H[Not completed, 99 dependents]
@@ -94,6 +95,9 @@ thrown checked through a dependent = java.util.concurrent.CompletionException: m
 thrown by toCompletableFuture in compose = failed java.util.concurrent.CompletionException: java.lang.IllegalStateException: tcf
 thrown by other's toCompletableFuture ! java.lang.IllegalStateException: tcf
 null function before other's toCompletableFuture ! java.lang.NullPointerException
+compose task, run twice = 2 2
+rejection reads as wrapped = java.util.concurrent.CompletionException: java.util.concurrent.RejectedExecutionException: no
+lost cancel answers after firing = cancel=true
 a value that is a Throwable = false java.lang.Error: v java.lang.Error: v/null
 compose of the dependent itself = false 1 x 0
 target settled inside its own function = [k1, k0, end] inner

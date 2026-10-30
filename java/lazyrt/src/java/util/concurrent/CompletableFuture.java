@@ -148,38 +148,33 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
 
     public T get() throws InterruptedException, ExecutionException {
         StageOutcome o = outcome;
-        if (o == null) {
-            if (Thread.interrupted()) {
-                throw new InterruptedException();
-            }
-            o = await(new StageReader(true, false, 0L));
-            if (o == null) {
-                throw new InterruptedException();
-            }
-        }
-        return reported(o);
+        return reported(o != null ? o : blockingGet(false, 0L));
     }
 
     public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         long nanos = unit.toNanos(timeout);
         StageOutcome o = outcome;
+        if (o != null) {
+            return reported(o);
+        }
+        o = blockingGet(true, nanos);
         if (o == null) {
-            if (Thread.interrupted()) {
-                throw new InterruptedException();
-            }
-            if (nanos <= 0L) {
-                throw new TimeoutException();
-            }
-            StageReader reader = new StageReader(true, true, System.nanoTime() + nanos);
-            o = await(reader);
-            if (o == null) {
-                if (reader.interrupted) {
-                    throw new InterruptedException();
-                }
-                throw new TimeoutException();
-            }
+            throw new TimeoutException();
         }
         return reported(o);
+    }
+
+    /** A pending stage: the flag is looked at even with no time left (docs/design/concurrent.md G5). */
+    private StageOutcome blockingGet(boolean timed, long nanos) throws InterruptedException {
+        if (Thread.interrupted()) {
+            throw new InterruptedException();
+        }
+        StageReader reader = new StageReader(true, timed, timed ? System.nanoTime() + nanos : 0L);
+        StageOutcome o = await(reader);
+        if (o == null && reader.interrupted) {
+            throw new InterruptedException();
+        }
+        return o;
     }
 
     public T join() {

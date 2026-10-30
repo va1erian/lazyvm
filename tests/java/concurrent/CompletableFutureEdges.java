@@ -398,6 +398,30 @@ public class CompletableFutureEdges {
         show("supply executor runs then throws", () -> CompletableFuture.supplyAsync(() -> "ran", r -> { r.run(); throw new Error("ex"); }));
     }
 
+    static void tasksOnce() {
+        for (boolean both : new boolean[] {true, false}) {
+            show("two lists, one hand-over" + (both ? " both" : " either"), () -> {
+                List<Runnable> q = new ArrayList<>();
+                CompletableFuture<String> r = cf(), b = cf();
+                CompletableFuture<String> a = r.thenApply(v -> v);
+                a.thenRun(() -> b.complete("b"));
+                if (both) a.thenCombineAsync(b, (p, o) -> p, q::add); else a.applyToEitherAsync(b, p -> p, q::add);
+                r.complete("r");
+                return q.size();
+            });
+            show("task leaves a pending source alone" + (both ? ", receiver" : ", other"), () -> {
+                List<String> log = new ArrayList<>();
+                CompletableFuture<String> a = cf(), b = cf();
+                (both ? a : b).thenRun(() -> log.add("pending source fired"));
+                (both ? a : b).applyToEitherAsync(both ? b : a, p -> { log.add("body"); return p; }, Runnable::run);
+                (both ? b : a).complete("x");
+                String before = counts(a, b);
+                (both ? a : b).complete("y");
+                return log + " " + before + " " + counts(a, b);
+            });
+        }
+    }
+
     /** Which level a stage's dependents fire at, by how it settled. */
     static void levels() {
         show("level rejected", () -> below(s -> s.thenApplyAsync(v -> v, r -> { throw new RejectedExecutionException(); }), false));
@@ -457,6 +481,7 @@ public class CompletableFutureEdges {
         deadEntries();
         helping();
         tasks();
+        tasksOnce();
         levels();
     }
 }

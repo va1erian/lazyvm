@@ -42,7 +42,6 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     private final boolean either;
     private final CompletableFuture<?> target;
     private boolean claimed;
-    private boolean ran;
 
     StageStep(int action, Object fn, Executor executor, CompletableFuture<?> first, CompletableFuture<?> second,
             boolean either, CompletableFuture<?> target) {
@@ -138,15 +137,9 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
         }
     }
 
-    /** Executor entry point. Once only, however many times an executor calls it. */
+    /** Executor entry point. An executor that calls it again finds the target settled, as a rule. */
     @Override
     public void run() {
-        synchronized (CompletableFuture.LOCK) {
-            if (ran) {
-                return;
-            }
-            ran = true;
-        }
         boolean settled = target.outcome == null && settleTarget();
         if (first != null) {
             leaveOtherSource();

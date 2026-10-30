@@ -58,6 +58,10 @@ both failed on one side waits, no executor = 0 false 0 1 / 0 failed java.util.co
 executor runs then throws = ok ran
 executor throws an Error = true failed java.util.concurrent.CompletionException: java.lang.Error: ex
 supply executor runs then throws ! java.lang.Error: ex
+two lists, one hand-over both = 1
+task leaves a pending source alone, receiver = [body, pending source fired] 1 0 0 0
+two lists, one hand-over either = 1
+task leaves a pending source alone, other = [body, pending source fired] 0 1 0 0
 level rejected = [k0, k1]
 level skip = [k0, k1]
 level compose task, inner done = [k1, k0]
