@@ -99,7 +99,33 @@ public class QueueIdleIterators {
         return broken;
     }
 
+    /** The element it holds was at the iterator's own end when it left: it starts again there. */
+    static void startsAgain(Deque<String> d) {
+        String name = d.getClass().getSimpleName();
+        d.add("a");
+        Iterator<String> back = d.descendingIterator();
+        d.pollLast();
+        d.addLast("b");
+        System.out.println(name + " backward, then newer at its end: " + walk(back));
+        d.clear();
+        d.add("a");
+        d.add("c");
+        Iterator<String> forward = d.iterator();
+        d.pollFirst();
+        d.addFirst("b");
+        System.out.println(name + " forward, then newer at its end: " + walk(forward));
+        d.clear();
+    }
+
+    static String walk(Iterator<String> it) {
+        StringBuilder out = new StringBuilder();
+        while (it.hasNext()) out.append(it.next()).append(' ');
+        return out.toString();
+    }
+
     public static void main(String[] args) {
+        startsAgain(new ConcurrentLinkedDeque<>());
+        startsAgain(new LinkedBlockingDeque<>());
         traffic(new ConcurrentLinkedDeque<>());
         traffic(new LinkedBlockingDeque<>());
         queueTraffic(new ConcurrentLinkedQueue<>());

@@ -13,9 +13,11 @@ import lazy.internal.Turnstile;
  * A plain monitor because these calls are short and this VM runs one thread at a time: it costs
  * about a fortieth of a {@code ReentrantLock}.
  *
- * <p>A removed node has a null item and no links, so whatever an idle iterator holds keeps nothing
- * else alive. Every node has a place, rising from head to tail and never reused: an iterator whose
- * node has left finds the first node still in the list beyond that place.
+ * <p>A removed node has a null item and links to nothing but itself, so whatever an idle iterator
+ * holds keeps nothing else alive. A self link says it had a neighbour on that side when it left, a null
+ * that it was at that end. Every node has a place, rising from head to tail and never reused: an
+ * iterator whose node has left finds the first node still in the list beyond that place, or, if nothing
+ * was behind that node, starts again at its own end, where only newer elements can be.
  */
 final class LinkedCore<E> {
     static final class Node<E> {
@@ -121,8 +123,8 @@ final class LinkedCore<E> {
         } else {
             n.next.prev = n.prev;
         }
-        n.prev = null;
-        n.next = null;
+        n.prev = n.prev == null ? null : n;
+        n.next = n.next == null ? null : n;
         size--;
         if (putters != null) {
             putters.wakeHead();
@@ -395,12 +397,15 @@ final class LinkedCore<E> {
             }
         }
 
-        /** The node after {@code n}: if {@code n} has left, the first one still in beyond its place. */
+        /** The node after {@code n}; if {@code n} has left, see the class comment. */
         private Node<E> after(Node<E> n) {
             if (n.item != null) {
                 return back ? n.prev : n.next;
             }
             Node<E> p = back ? tail : head;
+            if ((back ? n.next : n.prev) == null) {
+                return p;
+            }
             while (p != null && (back ? p.place >= n.place : p.place <= n.place)) {
                 p = back ? p.prev : p.next;
             }
