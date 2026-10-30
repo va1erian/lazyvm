@@ -1,0 +1,102 @@
+empty = []
+isEmpty = true
+poll empty = null
+peek empty = null
+element empty ! java.util.NoSuchElementException
+remove empty ! java.util.NoSuchElementException
+add null ! java.lang.NullPointerException
+offer null ! java.lang.NullPointerException
+contains null = false
+remove null = false
+null collection ! java.lang.NullPointerException
+null element ! java.lang.NullPointerException
+collection = [a, b]
+addAll self ! java.lang.IllegalArgumentException
+addAll null element ! java.lang.NullPointerException
+addAll atomic = []
+add = true
+offer = true
+addAll = true
+addAll empty = false
+order = [a, b, c, d]
+size = 4
+peek = a
+element = a
+contains = true
+remove obj = true
+remove absent = false
+toArray = [a, c, d]
+toArray big = [a, c, d, null]
+toArray null ! java.lang.NullPointerException
+remove before next ! java.lang.IllegalStateException
+iterator remove = [c, d]
+remove twice ! java.lang.IllegalStateException
+sees later add = [c, d, later]
+past end ! java.util.NoSuchElementException
+poll = c
+remove() = d
+clear = 0
+empty = []
+peekFirst = null
+peekLast = null
+pollFirst = null
+pollLast = null
+getFirst ! java.util.NoSuchElementException
+getLast ! java.util.NoSuchElementException
+removeFirst ! java.util.NoSuchElementException
+removeLast ! java.util.NoSuchElementException
+pop ! java.util.NoSuchElementException
+element ! java.util.NoSuchElementException
+remove ! java.util.NoSuchElementException
+addFirst null ! java.lang.NullPointerException
+addLast null ! java.lang.NullPointerException
+offerFirst null ! java.lang.NullPointerException
+offerLast null ! java.lang.NullPointerException
+push null ! java.lang.NullPointerException
+add null ! java.lang.NullPointerException
+contains null = false
+remove null ! java.lang.NullPointerException
+first null ! java.lang.NullPointerException
+last null ! java.lang.NullPointerException
+null collection ! java.lang.NullPointerException
+null element ! java.lang.NullPointerException
+addAll self ! java.lang.IllegalArgumentException
+addAll null element ! java.lang.NullPointerException
+addAll atomic = []
+offerFirst = true
+offerLast = true
+offer = true
+add = true
+order = [0, a, b, c, d, e, f]
+size = 7
+peek = 0
+peekLast 2 = f
+getFirst 2 = 0
+getLast 2 = f
+pollLast 2 = f
+pollFirst 2 = 0
+pop 2 = a
+removeLast 2 = e
+removeFirst 2 = b
+poll = c
+left = [d]
+removeFirstOccurrence = true
+removeLastOccurrence = true
+then = [b, a, c]
+remove obj = true
+remove absent = false
+then 2 = [b, c]
+descending = [d, c, b, a]
+toArray = [a, b, c, d]
+toArray typed = [a, b, c, d, null]
+remove before next ! java.lang.IllegalStateException
+iterator remove = [b, c, d]
+remove twice ! java.lang.IllegalStateException
+descending remove = [b, c]
+sees later add = [b, c, later]
+past end ! java.util.NoSuchElementException
+clear = true
+polled total = 13495500
+queue empty = true
+deque size = 9000
+deque total = 13495500

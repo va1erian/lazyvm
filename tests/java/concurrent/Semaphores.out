@@ -1,0 +1,58 @@
+toString = java.util.concurrent.Semaphore@H[Permits = 3]
+available = 3
+default fair = false
+fair flag = true
+negative ok = java.util.concurrent.Semaphore@H[Permits = -2]
+after acquires = 0
+toString 0 = java.util.concurrent.Semaphore@H[Permits = 0]
+tryAcquire none = false
+tryAcquire n none = false
+timed none = false
+timed n none = false
+timed zero = false
+release beyond initial = 8
+tryAcquire = true
+tryAcquire n = true
+timed = true
+timed n = true
+drain = 2
+drain empty = 0
+zero acquire = ok
+tryAcquire zero = true
+negative tryAcquire = false
+negative drain = -2
+drained negative = 0
+after release 0 = 0
+acquire -1 ! java.lang.IllegalArgumentException
+uninterruptibly -1 ! java.lang.IllegalArgumentException
+tryAcquire -1 ! java.lang.IllegalArgumentException
+timed -1 ! java.lang.IllegalArgumentException
+release -1 ! java.lang.IllegalArgumentException
+timed null unit ! java.lang.NullPointerException
+timed null unit single ! java.lang.NullPointerException
+reduce -1 ! java.lang.IllegalArgumentException
+reduced below zero = -2
+release overflow ! java.lang.Error: Maximum permit count exceeded
+reduce underflow ! java.lang.Error: Permit count underflow
+from limits = 2147483647 -2147483648
+no waiters = false
+queue length = 1
+queued = [a]
+not enough = 1
+still queued = 1
+back = 2
+interrupted acquire = java.lang.InterruptedException flag=false
+left queue = 0
+uninterruptible stays = 1
+uninterruptible = got flag=true
+acquire flagged, permits free ! java.lang.InterruptedException
+timed flagged, permits free ! java.lang.InterruptedException
+tryAcquire flagged = true
+uninterruptibly flagged = true
+permits = 3
+head served = [t0]
+head needs 2: those behind it wait = [t0] 1 3
+then = [t0, t1]
+fair order = [t0, t1, t2, t3]
+fair timed respects the queue = false 1
+fair tryAcquire barges = true 0

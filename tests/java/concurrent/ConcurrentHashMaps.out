@@ -1,0 +1,147 @@
+capacity negative ! java.lang.IllegalArgumentException
+capacity zero = {}
+factor zero ! java.lang.IllegalArgumentException
+factor negative capacity ! java.lang.IllegalArgumentException
+concurrency zero ! java.lang.IllegalArgumentException
+null source ! java.lang.NullPointerException
+source null value ! java.lang.NullPointerException
+copy = {k=1}
+put null key ! java.lang.NullPointerException
+put null value ! java.lang.NullPointerException
+get null ! java.lang.NullPointerException
+containsKey null ! java.lang.NullPointerException
+containsValue null ! java.lang.NullPointerException
+contains null ! java.lang.NullPointerException
+remove null ! java.lang.NullPointerException
+remove null key pair ! java.lang.NullPointerException
+remove null value pair = false
+putIfAbsent null key ! java.lang.NullPointerException
+putIfAbsent null value ! java.lang.NullPointerException
+replace null key ! java.lang.NullPointerException
+replace null value ! java.lang.NullPointerException
+replace3 null old ! java.lang.NullPointerException
+replace3 null new ! java.lang.NullPointerException
+getOrDefault null key ! java.lang.NullPointerException
+getOrDefault null default = null
+compute null key ! java.lang.NullPointerException
+compute null fn ! java.lang.NullPointerException
+computeIfAbsent null key ! java.lang.NullPointerException
+computeIfAbsent null fn ! java.lang.NullPointerException
+computeIfPresent null fn ! java.lang.NullPointerException
+merge null key ! java.lang.NullPointerException
+merge null value ! java.lang.NullPointerException
+merge null fn ! java.lang.NullPointerException
+forEach null ! java.lang.NullPointerException
+replaceAll null ! java.lang.NullPointerException
+replaceAll to null ! java.lang.NullPointerException
+untouched = [a=1, b=2, c=3]
+putAll null ! java.lang.NullPointerException
+putAll null value ! java.lang.NullPointerException
+empty = {}
+empty flags = true 0 0
+put new = null
+single toString = {k=1}
+put old = 1
+get = 2
+get absent = null
+getOrDefault = 9
+getOrDefault present = 2
+contains value = true
+containsValue = true
+containsKey = true
+keys enumeration = [k]
+elements enumeration = [2]
+putIfAbsent present = 2
+putIfAbsent absent = null
+remove pair wrong = false
+remove pair right = true
+replace absent = null
+replace present = 2
+replace3 wrong = false
+replace3 right = true
+remove = 6
+remove absent = null
+after remove = {}
+grown = 2000 2000 1999
+values sum = 1999000
+cleared = true
+compute existing = 11
+compute absent = 100
+compute to null removes = null
+compute absent null = null
+size = 3
+computeIfAbsent present = 11
+computeIfAbsent new = 4
+computeIfAbsent null = null
+computeIfPresent = 8
+computeIfPresent to null = null
+computeIfPresent absent = null
+merge new = 1
+merge old = 6
+merge to null = null
+present = false
+compute throws ! java.lang.IllegalStateException: in fn
+computeIfAbsent throws ! java.lang.IllegalStateException: in fn
+merge throws ! java.lang.IllegalStateException: in fn
+unchanged = [a=11, b=2, c=3]
+replaceAll = [a=12, b=3, c=4]
+forEach = [a12, b3, c4]
+views live = 4 4 4
+key add ! java.lang.UnsupportedOperationException
+key addAll ! java.lang.UnsupportedOperationException
+value add ! java.lang.UnsupportedOperationException
+value addAll ! java.lang.UnsupportedOperationException
+entry add = true
+entry add same = false
+entry add changes = false
+entry addAll = true
+after entry adds = [a=1, b=2, c=3, d=4, e=6, f=7]
+entry contains = true
+entry contains wrong = false
+entry contains non-entry = false
+entry contains null = false
+entry remove = true
+key contains null ! java.lang.NullPointerException
+key remove null ! java.lang.NullPointerException
+value contains null ! java.lang.NullPointerException
+value remove null = false
+key remove = true
+value remove = true
+after removes = [a, b, c]
+keys toString = [k]
+values toString = [1]
+entries toString = [k=1]
+toArray = [a, b, c]
+toArray typed = 3
+removeAll = true
+retainAll = false
+removeAll null ! java.lang.NullPointerException
+retainAll null ! java.lang.NullPointerException
+containsAll = true
+keySet equals = true
+view map = true
+view default = null
+clear via view = true
+remove before next ! java.lang.IllegalStateException
+entry setValue returns = false
+writes through = 50
+entry equals = true
+entry hash = true
+entry toString = true
+setValue null ! java.lang.NullPointerException
+iterator remove = false
+double remove ! java.lang.IllegalStateException
+mutate while iterating, no CME = ok
+hasNext empty = false
+next empty ! java.util.NoSuchElementException
+enum empty = false
+enum next empty ! java.util.NoSuchElementException
+equals hashmap = true
+hashmap equals = true
+hash = true
+not equal = false
+equals other type = false
+is ConcurrentMap = true
+merge total = 8000
+compute total = 8000
+size = 25

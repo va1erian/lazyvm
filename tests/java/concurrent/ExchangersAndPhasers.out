@@ -1,0 +1,99 @@
+main receives = from t
+t receives = from main
+null both ways = null
+t got null = got null
+timed pairs = timed
+timed got = m
+timeout ! java.util.concurrent.TimeoutException
+zero timeout ! java.util.concurrent.TimeoutException
+null unit ! java.lang.NullPointerException
+flagged ! java.lang.InterruptedException
+timed flagged ! java.lang.InterruptedException
+cleared = false
+interrupted = java.lang.InterruptedException flag=false
+usable after interrupt = after
+negative parties ! java.lang.IllegalArgumentException: Illegal number of parties
+too many parties ! java.lang.IllegalArgumentException: Illegal number of parties
+max parties = java.util.concurrent.Phaser@H[phase = 0 parties = 65535 arrived = 0]
+empty = java.util.concurrent.Phaser@H[phase = 0 parties = 0 arrived = 0]
+phase = 0
+parties = 0
+arrived = 0
+unarrived = 0
+terminated = false
+parent = null
+root is self = true
+arrive unregistered ! java.lang.IllegalStateException: Attempted arrival of unregistered party for java.util.concurrent.Phaser@H[phase = 0 parties = 0 arrived = 0]
+deregister unregistered ! java.lang.IllegalStateException: Attempted arrival of unregistered party for java.util.concurrent.Phaser@H[phase = 0 parties = 0 arrived = 0]
+await-arrive unregistered ! java.lang.IllegalStateException: Attempted arrival of unregistered party for java.util.concurrent.Phaser@H[phase = 0 parties = 0 arrived = 0]
+register = 0
+register 2 = 0
+two = java.util.concurrent.Phaser@H[phase = 0 parties = 2 arrived = 0]
+bulk negative ! java.lang.IllegalArgumentException
+bulk zero = 0
+bulk = 0
+four = java.util.concurrent.Phaser@H[phase = 0 parties = 4 arrived = 0]
+bulk too many ! java.lang.IllegalStateException: Attempt to register more than 65535 parties for java.util.concurrent.Phaser@H[phase = 0 parties = 4 arrived = 0]
+register at limit ! java.lang.IllegalStateException: Attempt to register more than 65535 parties for java.util.concurrent.Phaser@H[phase = 0 parties = 65535 arrived = 0]
+arrive = 0
+one arrived = java.util.concurrent.Phaser@H[phase = 0 parties = 4 arrived = 1]
+arrive 2 = 0
+arrive 3 = 0
+before last = 3 1 0
+arrive advances = 0
+advanced = java.util.concurrent.Phaser@H[phase = 1 parties = 4 arrived = 0]
+await past phase = 1
+await negative = -1
+await far phase = 1
+interruptibly past = 1
+timed past = 1
+timeout ! java.util.concurrent.TimeoutException
+timed null unit current ! java.lang.NullPointerException
+interruptibly flagged ! java.lang.InterruptedException
+interruptibly flagged past = 1
+flag kept = true
+timed flagged ! java.lang.InterruptedException
+deregister = 1
+three = java.util.concurrent.Phaser@H[phase = 1 parties = 3 arrived = 0]
+one left = java.util.concurrent.Phaser@H[phase = 1 parties = 1 arrived = 0]
+last deregister = 1
+zero parties terminates = java.util.concurrent.Phaser@H[phase = -2147483646 parties = 0 arrived = 0]
+is terminated = true
+phase negative = true
+register terminated = true
+arrive terminated = true
+await terminated = true
+arriveAndAwait terminated = true
+parties after = 0
+main arrives last = 1
+log = [t phase 1]
+phase = 1
+observer = advanced to 2
+interrupted = java.lang.InterruptedException flag=false
+awaitAdvance ignores interrupt = WAITING
+kept flag = phase 3 flag=true
+arrive 0 = 0
+arrive 1 = 1
+arrive 2 = 2
+hook log = [onAdvance 0 1, onAdvance 1 1, onAdvance 2 1]
+terminated by hook = true
+parties kept = 1
+hook keeps alive = false 1
+hook throws ! java.lang.IllegalStateException: hook
+force releases = negative true
+force terminated = true
+force keeps parties = 2
+force twice = true
+register under terminated parent = true
+root parties = 2
+a parent = true
+leaf root = true
+leaf no party yet = 1
+leaf registers up = 2 2
+null parent = null
+child arrive = 0
+a done, root waits = 0 0 1 1
+a toString = java.util.concurrent.Phaser@H[phase = 0 parties = 2 arrived = 2]
+all advanced = 1 1 1 1
+emptied child = 0 1 false
+terminate from root = true true true

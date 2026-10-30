@@ -1,0 +1,154 @@
+toString = [a, b, c]
+empty = []
+from array = [x, null]
+null collection ! java.lang.NullPointerException
+null array ! java.lang.NullPointerException
+array copied = [x]
+add = true
+add null = true
+contains null = true
+indexOf null = 4
+remove null = true
+get = b
+get neg ! java.lang.ArrayIndexOutOfBoundsException: -1
+get far ! java.lang.ArrayIndexOutOfBoundsException: 99
+set = a
+set far ! java.lang.ArrayIndexOutOfBoundsException: 99
+add at = [A, m, b, c, d]
+add at far ! java.lang.IndexOutOfBoundsException: Index: 99, Size: 5
+add at neg ! java.lang.IndexOutOfBoundsException: Index: -1, Size: 5
+remove at = m
+remove at far ! java.lang.ArrayIndexOutOfBoundsException: 99
+remove at neg ! java.lang.ArrayIndexOutOfBoundsException: -1
+remove obj = true
+remove absent = false
+addAll = true
+addAll empty = false
+addAll at = true
+addAll at far ! java.lang.IndexOutOfBoundsException: Index: 99, Size: 6
+addAll at empty = false
+addAll null ! java.lang.NullPointerException
+state = [A, p, b, c, x, y]
+indexOf from = 2
+indexOf from past = -1
+indexOf far = -1
+indexOf neg ! java.lang.ArrayIndexOutOfBoundsException: -1
+lastIndexOf from = 0
+lastIndexOf from 0 = -1
+lastIndexOf far ! java.lang.ArrayIndexOutOfBoundsException: 99
+lastIndexOf neg = -1
+addIfAbsent new = true
+addIfAbsent old = false
+addAllAbsent = 2
+addAllAbsent null ! java.lang.NullPointerException
+after absent = [A, p, b, c, x, y, new, n2, n3]
+removeAll = true
+removeAll null ! java.lang.NullPointerException
+retainAll = true
+retainAll null ! java.lang.NullPointerException
+containsAll = true
+removeIf = true
+removeIf none = false
+removeIf null ! java.lang.NullPointerException
+replaceAll = [new!, n2!]
+replaceAll null ! java.lang.NullPointerException
+sort = [new!, n2!]
+sort null natural = [n2!, new!]
+forEach = [n2!, new!]
+forEach null ! java.lang.NullPointerException
+clone independent = 2 3
+equals list = true
+list equals = true
+equals other = false
+hashCode = true
+toArray = [a, b, c]
+toArray small = [a, b, c]
+toArray big = [a, b, c, null, null]
+toArray bad type = ArrayStoreException
+clear = true
+snapshot = [a, b, c]
+exhausted = false
+next past end ! java.util.NoSuchElementException
+iterator remove ! java.lang.UnsupportedOperationException
+hasPrevious = false
+previous at start ! java.util.NoSuchElementException
+next = a
+nextIndex = 1
+previousIndex = 0
+previous = a
+li set ! java.lang.UnsupportedOperationException
+li add ! java.lang.UnsupportedOperationException
+li remove ! java.lang.UnsupportedOperationException
+listIterator at = c
+listIterator end = false
+listIterator far ! java.lang.IndexOutOfBoundsException: Index: 4
+listIterator neg ! java.lang.IndexOutOfBoundsException: Index: -1
+mutate during foreach = 3 [a, b, c, aa, bb, cc]
+sub = [b, c, d]
+sub size = 3
+sub get = c
+sub get far ! java.lang.IndexOutOfBoundsException: Index: 3,Size: 3
+sub get neg ! java.lang.IndexOutOfBoundsException: Index: -1,Size: 3
+sub set = b
+sub set far ! java.lang.IndexOutOfBoundsException: Index: 3,Size: 3
+through to parent = [a, B, c, d, e]
+sub add = true
+sub add at = [first, B, c, d, n]
+sub add far ! java.lang.IndexOutOfBoundsException
+sub remove at = first
+sub remove far ! java.lang.IndexOutOfBoundsException: Index: 99,Size: 4
+sub remove obj = true
+sub remove absent = false
+state = [B, c, d] [a, B, c, d, e]
+sub iterator next = B
+sub iterator remove ! java.lang.UnsupportedOperationException
+sub listIterator = c
+sub listIterator set ! java.lang.UnsupportedOperationException
+sub listIterator far ! java.lang.IndexOutOfBoundsException: Index: 99, Size: 3
+nested = [c, d]
+nested bad ! java.lang.IndexOutOfBoundsException
+bad from ! java.lang.IndexOutOfBoundsException
+bad to ! java.lang.IndexOutOfBoundsException
+bad order ! java.lang.IndexOutOfBoundsException
+empty sub = []
+sub after outer change ! java.util.ConcurrentModificationException
+sub get after outer change ! java.util.ConcurrentModificationException
+sub toString after outer change ! java.util.ConcurrentModificationException
+sub iterator after outer change ! java.util.ConcurrentModificationException
+sub clear = [c]
+sub valid after own change = true
+sub after clear add = [z, c]
+empty = []
+add = true
+add dup = false
+add other = true
+add null = true
+add null dup = false
+insertion order = [b, a, null]
+contains null = true
+remove null = true
+addAll = true
+from collection order = [q, p, r]
+null collection ! java.lang.NullPointerException
+size = 3
+snapshot = [b, a, z]
+iterator next end ! java.util.NoSuchElementException
+iterator remove ! java.lang.UnsupportedOperationException
+equals set = true
+set equals = true
+equals order free = true
+equals list = false
+hashCode = true
+containsAll = true
+containsAll empty = true
+containsAll null ! java.lang.NullPointerException
+removeAll = true
+retainAll = true
+removeAll null ! java.lang.NullPointerException
+state = [z]
+removeIf = true
+removeIf null ! java.lang.NullPointerException
+forEach = [m, k]
+toArray = [m, k]
+toArray typed = [m, k, null]
+clear = true

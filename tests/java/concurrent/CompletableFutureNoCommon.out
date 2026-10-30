@@ -1,0 +1,5 @@
+parallelism = 1
+supplyAsync thread = worker=false inPool=false daemon=false main=false
+thenApplyAsync thread = worker=false daemon=false
+a new thread each time = true
+runAsync chain = 3

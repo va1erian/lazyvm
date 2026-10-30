@@ -1,0 +1,118 @@
+core negative ! java.lang.IllegalArgumentException
+max zero ! java.lang.IllegalArgumentException
+max below core ! java.lang.IllegalArgumentException
+negative keepalive ! java.lang.IllegalArgumentException
+null queue ! java.lang.NullPointerException
+null unit ! java.lang.NullPointerException
+null factory ! java.lang.NullPointerException
+null handler ! java.lang.NullPointerException
+null both ! java.lang.NullPointerException
+toString = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+core = 2
+max = 3
+keepAlive = 60
+keepAlive ms = 60000
+queue same = true
+default handler = java.util.concurrent.ThreadPoolExecutor$AbortPolicy
+factory set = true
+setCore negative ! java.lang.IllegalArgumentException
+setMax zero ! java.lang.IllegalArgumentException
+setMax below core ! java.lang.IllegalArgumentException
+setCore above max = 9/3
+setKeepAlive negative ! java.lang.IllegalArgumentException
+setFactory null ! java.lang.NullPointerException
+setHandler null ! java.lang.NullPointerException
+allowCore default = false
+allowCore zero keepalive ! java.lang.IllegalArgumentException: Core threads must have nonzero keep alive times
+allowCore off zero keepalive = ok
+setKeepAlive zero with allowCore ! java.lang.IllegalArgumentException: Core threads must have nonzero keep alive times
+execute null ! java.lang.NullPointerException
+submit null ! java.lang.NullPointerException
+submit null callable ! java.lang.NullPointerException
+await null unit ! java.lang.NullPointerException
+empty = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+one core = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
+queued = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 1, active threads = 1, queued tasks = 1, completed tasks = 0]
+overflow worker = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 2, active threads = 2, queued tasks = 1, completed tasks = 0]
+rejected ! java.util.concurrent.RejectedExecutionException: Task Task(d) rejected from java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 2, active threads = 2, queued tasks = 1, completed tasks = 0]
+largest = 2
+taskCount = 3
+queue = [Task(b)]
+remove queued = true
+remove absent = false
+completed = 2
+idle = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 2, active threads = 0, queued tasks = 0, completed tasks = 2]
+terminated = java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 2]
+after shutdown reject ! java.util.concurrent.RejectedExecutionException: Task Task(late) rejected from java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 2]
+after shutdown submit ! java.util.concurrent.RejectedExecutionException: Task java.util.concurrent.FutureTask@H rejected from java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 2]
+ran = [a, c]
+CallerRunsPolicy overflow = returned
+CallerRunsPolicy queue = [Task(q1), Task(q2)]
+CallerRunsPolicy log = [q3]
+CallerRunsPolicy final = [q3, w, q1, q2]
+CallerRunsPolicy after shutdown = [q3, w, q1, q2]
+DiscardPolicy overflow = returned
+DiscardPolicy queue = [Task(q1), Task(q2)]
+DiscardPolicy log = []
+DiscardPolicy final = [w, q1, q2]
+DiscardPolicy after shutdown = [w, q1, q2]
+DiscardOldestPolicy overflow = returned
+DiscardOldestPolicy queue = [Task(q2), Task(q3)]
+DiscardOldestPolicy log = []
+DiscardOldestPolicy final = [w, q2, q3]
+DiscardOldestPolicy after shutdown = [w, q2, q3]
+AbortPolicy overflow ! java.util.concurrent.RejectedExecutionException: Task Task(q3) rejected from java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 1, active threads = 1, queued tasks = 2, completed tasks = 0]
+AbortPolicy queue = [Task(q1), Task(q2)]
+AbortPolicy log = []
+AbortPolicy final = [w, q1, q2]
+AbortPolicy after shutdown ! java.util.concurrent.RejectedExecutionException: Task Task(dead) rejected from java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 3]
+policy null task = ok
+caller null task ! java.lang.NullPointerException
+await not done = false
+flags before = false false false
+flags shutdown = true true false
+toString shutting = java.util.concurrent.ThreadPoolExecutor@H[Shutting down, pool size = 1, active threads = 1, queued tasks = 2, completed tasks = 0]
+await done = true
+flags terminated = true false true
+queued ran after shutdown = [run, q1, q2]
+await terminated zero = true
+shutdownNow terminated = []
+shutdownNow = [Task(q1), Task(q2)]
+queue empty = []
+interrupted worker = [run interrupted]
+final = java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 1]
+no workers terminate at once = true
+await flagged = true
+await flagged running ! java.lang.InterruptedException
+submit failure ! java.util.concurrent.ExecutionException: java.lang.IllegalStateException: sub
+uncaught = [uncaught w1 java.lang.IllegalStateException: boom]
+log before w1 Task(ok)
+log ok
+log after Task(ok) null
+log before w1 Thrower
+log after Thrower java.lang.IllegalStateException: boom
+log before w2 Task(next)
+log next
+log after Task(next) null
+log before w2 java.util.concurrent.FutureTask
+log after java.util.concurrent.FutureTask null
+log terminated
+threads made = 2
+completed counts failure = 4
+interrupt not carried to next task = false
+null thread execute = 0 1
+null thread prestart = false
+prestart one = true
+size = 1
+prestart two = true
+prestart full = false
+prestart all = 2
+size all = 3
+no core-thread timeout = 2
+core timed out = 0
+largest kept = 2
+shrunk = 1
+shrunk to none = 0
+zero core still runs = true
+queue before purge = 1
+queue after purge = 0

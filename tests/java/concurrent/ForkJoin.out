@@ -1,0 +1,122 @@
+common parallelism from property = 3
+common getParallelism = 3
+common same = true
+common async = false
+common ignores shutdown = false
+common shutdownNow = []
+common still open = false
+common never terminates = false
+common toString prefix = java.util.concurrent.ForkJoinPool@H[Running, parallelism = 3
+default factory = true
+parallelism 0 ! java.lang.IllegalArgumentException
+parallelism negative ! java.lang.IllegalArgumentException
+parallelism limit = 32767
+parallelism over limit ! java.lang.IllegalArgumentException
+null factory ! java.lang.NullPointerException
+fresh toString = java.util.concurrent.ForkJoinPool@H[Running, parallelism = 2, size = 0, active = 0, running = 0, steals = 0, tasks = 0, submissions = 0]
+parallelism = 2
+async default = false
+handler default = null
+factory default = true
+idle counts = 0 0 0 0 0 0
+quiescent = true
+hasQueuedSubmissions = false
+worker identity = ForkJoinPool-N-worker-N daemon=true pool=true index>=0=true inPool=true getPool=true
+common worker identity = ForkJoinPool.commonPool-worker-N daemon=true worker=true
+outside pool = false
+outside getPool = null
+outside getQueuedTaskCount = 0
+null submit ! java.lang.NullPointerException
+null submit runnable ! java.lang.NullPointerException
+null submit task ! java.lang.NullPointerException
+null execute ! java.lang.NullPointerException
+null execute task ! java.lang.NullPointerException
+null invoke ! java.lang.NullPointerException
+null invokeAll ! java.lang.NullPointerException
+awaitQuiescence = true
+shutdown await = true
+flags = true false true
+terminated toString = java.util.concurrent.ForkJoinPool@H[Terminated
+submit after shutdown ! java.util.concurrent.RejectedExecutionException
+execute after shutdown ! java.util.concurrent.RejectedExecutionException
+invoke after shutdown ! java.util.concurrent.RejectedExecutionException
+invoke fib = 144
+common invoke = 144
+submit fib = 55
+join = 5
+get = 5
+rawResult = 5
+flags = true true false false null
+exec twice ok = 5
+action invoke = null
+action sum = 499500
+action raw = null
+submit callable = c
+submit runnable = null
+submit runnable result = r
+execute ran = true
+invokeAll = [a, b, c]
+invokeAny = any
+static invokeAll = 5 8 13
+static invokeAll list same = true
+static list = 2 3
+invokeAll null array ! java.lang.NullPointerException
+invokeAll null element ! java.lang.NullPointerException
+invokeAll null collection ! java.lang.NullPointerException
+adapt runnable = null
+adapt value = v
+adapt callable = cv
+adapt null ! java.lang.NullPointerException
+adapt null callable ! java.lang.NullPointerException
+invoke failure ! java.lang.IllegalStateException
+submit join failure ! java.lang.IllegalStateException
+submit get failure ! java.util.concurrent.ExecutionException
+quietlyJoin = true
+failed flags = true false false
+getException type = java.lang.IllegalStateException
+cause of get ! java.lang.IllegalStateException
+direct invoke, same thread ! java.lang.IllegalStateException: boom
+direct getException = java.lang.IllegalStateException: boom
+direct get ! java.util.concurrent.ExecutionException: java.lang.IllegalStateException: boom
+adapted checked wraps ! java.lang.RuntimeException: java.io.IOException: io
+adapted exception = java.lang.RuntimeException: java.io.IOException: io
+adapted unchecked ! java.lang.IllegalArgumentException: r
+direct checked get type ! java.lang.RuntimeException
+quietlyInvoke = true
+cancel fresh = true
+cancel again = true
+cancel flags = true true true false
+cancel getException = java.util.concurrent.CancellationException
+cancel join ! java.util.concurrent.CancellationException
+cancel get ! java.util.concurrent.CancellationException
+cancel invoke ! java.util.concurrent.CancellationException
+cancel done = false
+complete = 99
+complete flags = true true
+completeExceptionally join ! java.lang.IllegalArgumentException: given
+completeExceptionally get ! java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: given
+completeExceptionally ex = java.lang.IllegalArgumentException: given
+checked via join ! java.lang.RuntimeException: java.io.IOException: checked
+checked via get ! java.util.concurrent.ExecutionException: java.lang.RuntimeException: java.io.IOException: checked
+checked ex = java.lang.RuntimeException: java.io.IOException: checked
+completeExceptionally null = true
+after null = java.lang.RuntimeException
+fresh flags = false null
+timed get pending ! java.util.concurrent.TimeoutException
+reinitialize then invoke = 1
+reinitialized = false
+get flagged ! java.lang.InterruptedException
+timed get flagged ! java.lang.InterruptedException
+cleared = false
+lifo mode = false
+lifo order = [c, b, a]
+lifo local ops = queued=2 peek=y tryUnfork=true tryUnfork again=false poll=x empty=0 surplus>=0=true unforked done=false
+async mode = true
+async order = [a, b, c]
+async local ops = queued=2 peek=x tryUnfork=true tryUnfork again=false poll=x empty=0 surplus>=0=true unforked done=false
+outside pool blocker = 1 true
+releasable skips block = 1
+null blocker ! java.lang.NullPointerException
+inside pool blocker = 2
+handler set = true
+custom factory = mine

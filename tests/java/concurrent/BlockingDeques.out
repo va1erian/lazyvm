@@ -1,0 +1,95 @@
+capacity zero ! java.lang.IllegalArgumentException
+default capacity = 2147483647
+init = [a, b]
+init null ! java.lang.NullPointerException
+init null element ! java.lang.NullPointerException
+empty = []
+peekFirst = null
+peekLast = null
+pollFirst = null
+pollLast = null
+getFirst ! java.util.NoSuchElementException
+getLast ! java.util.NoSuchElementException
+removeFirst ! java.util.NoSuchElementException
+removeLast ! java.util.NoSuchElementException
+pop ! java.util.NoSuchElementException
+element ! java.util.NoSuchElementException
+remove ! java.util.NoSuchElementException
+timed pollFirst = null
+timed pollLast = null
+addFirst null ! java.lang.NullPointerException
+addLast null ! java.lang.NullPointerException
+offerFirst null ! java.lang.NullPointerException
+offerLast null ! java.lang.NullPointerException
+putFirst null ! java.lang.NullPointerException
+putLast null ! java.lang.NullPointerException
+timed offerFirst null ! java.lang.NullPointerException
+timed offerLast null ! java.lang.NullPointerException
+push null ! java.lang.NullPointerException
+addFirst = [b]
+addLast = [b, c]
+push = [a, b, c]
+remaining = 0
+addFirst full ! java.lang.IllegalStateException: Deque full
+addLast full ! java.lang.IllegalStateException: Deque full
+add full ! java.lang.IllegalStateException: Deque full
+push full ! java.lang.IllegalStateException: Deque full
+offerFirst full = false
+offerLast full = false
+offer full = false
+timed offerFirst full = false
+timed offerLast full = false
+peek = a
+peekFirst 2 = a
+peekLast 2 = c
+getFirst 2 = a
+getLast 2 = c
+element 2 = a
+takeLast = c
+takeFirst = a
+take = b
+puts = [f, l, m]
+poll = f
+timed poll = l
+timed pollLast 2 = m
+empty again = true
+removeFirstOccurrence = true
+then = [b, a, c, a]
+removeLastOccurrence = true
+then 2 = [b, a, c]
+remove obj is first = false
+first null = false
+last null = false
+remove null = false
+contains null = false
+contains = true
+toArray = [b, a, c]
+toArray typed = [b, a, c, null]
+toArray null ! java.lang.NullPointerException
+drain self ! java.lang.IllegalArgumentException
+drain null ! java.lang.NullPointerException
+drain none = 0
+drain 1 = 1
+out = [b]
+drain = 2
+out 2 = [b, a, c]
+ascending = [a, b, c, d]
+descending = [d, c, b, a]
+remove before next ! java.lang.IllegalStateException
+removed head = [b, c, d]
+remove twice ! java.lang.IllegalStateException
+removed tail = [b, c]
+no CME = true
+past end ! java.util.NoSuchElementException
+clear = []
+empty descending = false
+empty descending next ! java.util.NoSuchElementException
+taken at the far end = p1
+putter = both in
+left = [p2]
+takeLast waited = v
+interrupted = java.lang.InterruptedException flag=false
+takeFirst flagged, element ready = x
+putFirst flagged, room = [q]
+flag kept by uninterruptible put = true
+timed offerFirst flagged ! java.lang.InterruptedException

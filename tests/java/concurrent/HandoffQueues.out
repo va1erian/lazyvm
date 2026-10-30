@@ -1,0 +1,102 @@
+toString = []
+size = 0
+isEmpty = true
+remaining = 0
+peek = null
+poll = null
+element ! java.util.NoSuchElementException
+remove() ! java.util.NoSuchElementException
+offer alone = false
+add alone ! java.lang.IllegalStateException: Queue full
+timed offer alone = false
+timed poll alone = null
+zero poll = null
+offer null ! java.lang.NullPointerException
+put null ! java.lang.NullPointerException
+timed offer null ! java.lang.NullPointerException
+add null ! java.lang.NullPointerException
+contains = false
+contains null = false
+remove obj = false
+removeAll = false
+retainAll = false
+containsAll = false
+containsAll empty = true
+toArray = []
+toArray typed sets null = [null, keep2]
+toArray null ! java.lang.NullPointerException
+iterator = false
+iterator next ! java.util.NoSuchElementException
+iterator remove ! java.lang.IllegalStateException
+drain null ! java.lang.NullPointerException
+drain self ! java.lang.IllegalArgumentException
+drain = 0
+drain max = 0
+clear = ok
+offer to taker = true
+taker got = v
+size while putter waits = 0
+peek while putter waits = null
+poll from putter = w
+putter = put returned
+interrupted put = java.lang.InterruptedException flag=false
+nothing left = null
+take flagged ! java.lang.InterruptedException
+put flagged ! java.lang.InterruptedException
+offer flagged = false
+poll flagged = null
+flag stays = true
+fair FIFO = [t0 got 0, t1 got 1, t2 got 2]
+toString = []
+remaining = 2147483647
+no consumer = false
+consumer count = 0
+tryTransfer none = false
+timed tryTransfer none = false
+left no trace = 0
+tryTransfer null ! java.lang.NullPointerException
+transfer null ! java.lang.NullPointerException
+timed tryTransfer null ! java.lang.NullPointerException
+offer null ! java.lang.NullPointerException
+add null ! java.lang.NullPointerException
+put null ! java.lang.NullPointerException
+null collection ! java.lang.NullPointerException
+collection null element ! java.lang.NullPointerException
+collection = [a, b]
+waiting = 1
+size ignores consumers = 0
+peek ignores consumers = null
+tryTransfer to consumer = true
+consumer got = direct
+drained = false
+pending visible = sent
+contains pending = true
+poll takes pending = sent
+sender = returned
+interrupted transfer = java.lang.InterruptedException flag=false
+element withdrawn = 0
+timed tryTransfer withdrawn = false 0
+transfer flagged ! java.lang.InterruptedException
+not left behind = 0
+put never blocks = true true
+fifo = [a, b, c, d]
+peek = a
+element = a
+contains null = false
+remove null = false
+remove middle = true
+toArray = [a, c, d]
+remove before next ! java.lang.IllegalStateException
+iterator remove = [c, d]
+no CME = ok
+drain self ! java.lang.IllegalArgumentException
+drain null ! java.lang.NullPointerException
+drain 1 = 1
+drain = 2
+out = [c, d, z]
+poll empty = null
+timed poll empty = null
+element empty ! java.util.NoSuchElementException
+take flagged ! java.lang.InterruptedException
+interrupted consumer = take java.lang.InterruptedException
+consumer gone = 0

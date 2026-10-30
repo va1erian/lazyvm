@@ -1,0 +1,64 @@
+null callable ! java.lang.NullPointerException
+null runnable ! java.lang.NullPointerException
+toString = java.util.concurrent.FutureTask@H
+fresh = done=false cancelled=false
+timed get pending ! java.util.concurrent.TimeoutException
+get zero pending ! java.util.concurrent.TimeoutException
+get null unit pending ! java.lang.NullPointerException
+after run = done=true cancelled=false
+get = v
+get zero = v
+get null unit done ! java.lang.NullPointerException
+runs once = 1
+cancel after done = false
+flags after late cancel = done=true cancelled=false
+toString done = java.util.concurrent.FutureTask@H
+runnable result = fixed
+runnable ran = 50
+null result = null
+failed flags = done=true cancelled=false
+failed get ! java.util.concurrent.ExecutionException: java.io.IOException: io
+failed timed get ! java.util.concurrent.ExecutionException: java.io.IOException: io
+cause type = java.io.IOException
+message = java.io.IOException: io
+error captured ! java.util.concurrent.ExecutionException: java.lang.StackOverflowError: deep
+cancel new = true
+flags = done=true cancelled=true
+cancel again = false
+get cancelled ! java.util.concurrent.CancellationException
+timed get cancelled ! java.util.concurrent.CancellationException
+run after cancel skipped = 0
+cancel(true) running = true
+flags running = done=true cancelled=true
+task saw = interrupted
+get ! java.util.concurrent.CancellationException
+cancel(false) running = true
+flags before task ends = done=true cancelled=true
+task finished anyway = finished flag=false
+get ignores its result ! java.util.concurrent.CancellationException
+waiter released by cancel = java.util.concurrent.CancellationException
+get flagged pending ! java.lang.InterruptedException
+flag cleared = false
+timed get flagged pending ! java.lang.InterruptedException
+get flagged done = v
+flag after done get = true
+waiter interrupted = java.lang.InterruptedException flag=false
+task unaffected = done=false cancelled=false
+done hook once = [done done=true cancelled=false]
+set ignored = called
+setException ignored = called
+set wins = set
+set then run = [done done=true cancelled=false]
+setException ! java.util.concurrent.ExecutionException: java.lang.RuntimeException: x
+setException flags = [done done=true cancelled=false]
+cancel fires done = [done done=true cancelled=true]
+set after cancel = done=true cancelled=true
+runAndReset = true
+runAndReset 2 = true
+still pending = done=false cancelled=false
+reset count = 2
+reset no done = []
+normal run after = v
+reset after done = false
+runAndReset failing = false
+failing get ! java.util.concurrent.ExecutionException: java.lang.RuntimeException: r

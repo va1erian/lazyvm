@@ -1,0 +1,111 @@
+forEach seq = 20 k10=10
+forEach par = 20 k10=10
+forEach transform seq = [k19, k20]
+forEach transform par = [k19, k20]
+forEachKey seq = 20
+forEachKey par = 20
+forEachKey transform seq = [k3!]
+forEachKey transform par = [k3!]
+forEachValue seq = 20
+forEachValue par = 20
+forEachValue transform seq = [seven]
+forEachValue transform par = [seven]
+forEachEntry seq = 20
+forEachEntry par = 20
+forEachEntry transform seq = [k2=2]
+forEachEntry transform par = [k2=2]
+search seq = k5
+search par = k5
+search none seq = null
+search none par = null
+searchKeys seq = k9?
+searchKeys par = k9?
+searchValues seq = nine
+searchValues par = nine
+searchEntries seq = k11
+searchEntries par = k11
+reduce seq = 210
+reduce par = 210
+reduce skip nulls seq = 39
+reduce skip nulls par = 39
+reduce all null seq = null
+reduce all null par = null
+reduceToDouble seq = 106.0
+reduceToDouble par = 105.0
+reduceToLong seq = 310
+reduceToLong par = 210
+reduceToInt seq = 1210
+reduceToInt par = 210
+reduceKeys seq = 4
+reduceKeys par = 4
+reduceKeys transform seq = 51
+reduceKeys transform par = 51
+reduceKeysToDouble seq = 51.5
+reduceKeysToDouble par = 51.0
+reduceKeysToLong seq = 52
+reduceKeysToLong par = 51
+reduceKeysToInt seq = 53
+reduceKeysToInt par = 51
+reduceValues seq = 210
+reduceValues par = 210
+reduceValues transform seq = 420
+reduceValues transform par = 420
+reduceValuesToDouble seq = 210.25
+reduceValuesToDouble par = 210.0
+reduceValuesToLong seq = 213
+reduceValuesToLong par = 210
+reduceValuesToInt seq = 214
+reduceValuesToInt par = 210
+reduceEntries seq = 210
+reduceEntries par = 210
+reduceEntries merge seq = only=1
+reduceEntries merge par = only=1
+reduceEntriesToDouble seq = 210.5
+reduceEntriesToDouble par = 210.0
+reduceEntriesToLong seq = 215
+reduceEntriesToLong par = 210
+reduceEntriesToInt seq = 216
+reduceEntriesToInt par = 210
+empty reduce seq = null
+empty reduce par = null
+empty reduceToInt seq = 42
+empty reduceToInt par = 0
+empty search seq = null
+empty search par = null
+forEach null seq ! java.lang.NullPointerException
+forEach null par ! java.lang.NullPointerException
+search null seq ! java.lang.NullPointerException
+search null par ! java.lang.NullPointerException
+reduce null seq ! java.lang.NullPointerException
+reduce null par ! java.lang.NullPointerException
+reduceToInt null seq ! java.lang.NullPointerException
+reduceToInt null par ! java.lang.NullPointerException
+reduceKeys null seq ! java.lang.NullPointerException
+reduceKeys null par ! java.lang.NullPointerException
+forEach throws seq = java.lang.IllegalStateException
+forEach throws par = java.lang.IllegalStateException
+threshold zero = 210
+threshold negative = 210
+common pool intact = true
+newKeySet add = true
+newKeySet dup = false
+newKeySet = [a]
+newKeySet null ! java.lang.NullPointerException
+newKeySet addAll = true
+newKeySet size = 2
+newKeySet cap = true
+newKeySet bad cap ! java.lang.IllegalArgumentException
+view mapped true = true
+backing value = true
+keySet default value = 7
+keySet add puts default = true
+keySet add again = false
+backed = {k=7}
+addAll = true
+backing map = true
+keySet null default ! java.lang.NullPointerException
+plain default = null
+plain add ! java.lang.UnsupportedOperationException
+plain addAll ! java.lang.UnsupportedOperationException
+hash vs set = true
+view toString one = [k]

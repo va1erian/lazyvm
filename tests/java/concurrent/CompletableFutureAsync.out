@@ -1,0 +1,77 @@
+named thenApplyAsync on done = v@named
+named thenApplyAsync on pending = p@named
+named thenAcceptAsync on done = v@named
+named thenAcceptAsync on pending = p@named
+named thenRunAsync on done = @named
+named thenRunAsync on pending = @named
+named thenCombineAsync on done = vo@named
+named thenCombineAsync on pending = po@named
+named thenAcceptBothAsync on done = vo@named
+named thenAcceptBothAsync on pending = po@named
+named runAfterBothAsync on done = @named
+named runAfterBothAsync on pending = @named
+named applyToEitherAsync on done = v@named
+named applyToEitherAsync on pending = p@named
+named acceptEitherAsync on done = v@named
+named acceptEitherAsync on pending = p@named
+named runAfterEitherAsync on done = @named
+named runAfterEitherAsync on pending = @named
+named thenComposeAsync on done = v@named
+named thenComposeAsync on pending = p@named
+named whenCompleteAsync on done = v@named
+named whenCompleteAsync on pending = p@named
+named handleAsync on done = v@named
+named handleAsync on pending = p@named
+supplyAsync on executor = named
+runAsync on executor = named
+runAsync value = null
+supply fails get ! ExecutionException(java.lang.IllegalStateException: s) <- IllegalStateException(s)
+supply fails join ! CompletionException(java.lang.IllegalStateException: s) <- IllegalStateException(s)
+run fails get ! ExecutionException(java.lang.IllegalStateException: r) <- IllegalStateException(r)
+supply throws CE ! ExecutionException(java.io.IOException: x) <- IOException(x)
+marker = [marker=true, marker=true]
+supply on common = ForkJoinPool.commonPool-worker-N
+common thread = true worker=true common=true
+default marker = m
+rejecting supplyAsync ! RejectedExecutionException(full)
+rejecting runAsync ! RejectedExecutionException(full)
+rejecting dependent on done = failed join!CompletionException(java.util.concurrent.RejectedExecutionException: full) <- RejectedExecutionException(full)
+rejecting dependent on pending = true ok join=v / failed join!CompletionException(java.util.concurrent.RejectedExecutionException: full) <- RejectedExecutionException(full)
+failed source skips executor = 2 failed join!CompletionException(java.lang.RuntimeException: x) <- RuntimeException(x) / ok join=h / failed join!CompletionException(java.lang.RuntimeException: x) <- RuntimeException(x)
+one executor call per dependent = 2
+direct executor, thread = main
+direct executor done at return = true
+sync dependent runs where source finished = named
+attached after done runs in caller = main
+runs on completing thread = completer
+runs on cancelling thread = canceller
+cancel while running = true
+result is cancellation = cancelled join!CancellationException(null)
+running task was not interrupted = false
+still cancelled = true
+marker declared = true
+marker empty = 0
+default thenApplyAsync on done = v@ForkJoinPool.commonPool-worker-N
+default thenApplyAsync on pending = p@ForkJoinPool.commonPool-worker-N
+default thenAcceptAsync on done = v@ForkJoinPool.commonPool-worker-N
+default thenAcceptAsync on pending = p@ForkJoinPool.commonPool-worker-N
+default thenRunAsync on done = @ForkJoinPool.commonPool-worker-N
+default thenRunAsync on pending = @ForkJoinPool.commonPool-worker-N
+default thenCombineAsync on done = vo@ForkJoinPool.commonPool-worker-N
+default thenCombineAsync on pending = po@ForkJoinPool.commonPool-worker-N
+default thenAcceptBothAsync on done = vo@ForkJoinPool.commonPool-worker-N
+default thenAcceptBothAsync on pending = po@ForkJoinPool.commonPool-worker-N
+default runAfterBothAsync on done = @ForkJoinPool.commonPool-worker-N
+default runAfterBothAsync on pending = @ForkJoinPool.commonPool-worker-N
+default applyToEitherAsync on done = v@ForkJoinPool.commonPool-worker-N
+default applyToEitherAsync on pending = p@ForkJoinPool.commonPool-worker-N
+default acceptEitherAsync on done = v@ForkJoinPool.commonPool-worker-N
+default acceptEitherAsync on pending = p@ForkJoinPool.commonPool-worker-N
+default runAfterEitherAsync on done = @ForkJoinPool.commonPool-worker-N
+default runAfterEitherAsync on pending = @ForkJoinPool.commonPool-worker-N
+default thenComposeAsync on done = v@ForkJoinPool.commonPool-worker-N
+default thenComposeAsync on pending = p@ForkJoinPool.commonPool-worker-N
+default whenCompleteAsync on done = v@ForkJoinPool.commonPool-worker-N
+default whenCompleteAsync on pending = p@ForkJoinPool.commonPool-worker-N
+default handleAsync on done = v@ForkJoinPool.commonPool-worker-N
+default handleAsync on pending = p@ForkJoinPool.commonPool-worker-N

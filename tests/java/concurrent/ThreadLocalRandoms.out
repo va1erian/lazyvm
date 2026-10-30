@@ -1,0 +1,36 @@
+same instance = true
+is Random = true
+usable elsewhere = 0
+setSeed ! java.lang.UnsupportedOperationException
+nextInt 0 ! java.lang.IllegalArgumentException: bound must be positive
+nextInt -1 ! java.lang.IllegalArgumentException: bound must be positive
+nextInt range bad ! java.lang.IllegalArgumentException: bound must be greater than origin
+nextInt range bad 2 ! java.lang.IllegalArgumentException: bound must be greater than origin
+nextLong 0 ! java.lang.IllegalArgumentException: bound must be positive
+nextLong range bad ! java.lang.IllegalArgumentException: bound must be greater than origin
+nextDouble 0 ! java.lang.IllegalArgumentException: bound must be positive
+nextDouble -1 ! java.lang.IllegalArgumentException: bound must be positive
+nextDouble NaN ! java.lang.IllegalArgumentException: bound must be positive
+nextDouble infinite = true
+nextDouble range bad ! java.lang.IllegalArgumentException: bound must be greater than origin
+nextDouble range NaN ! java.lang.IllegalArgumentException: bound must be greater than origin
+nextInt 1 = 0
+nextLong 1 = 0
+nextInt 7..8 = 7
+nextLong 7..8 = 7
+nextInt bound = true
+nextInt power of two = true
+nextInt range = true
+nextInt wide range = true
+nextLong bound = true
+nextLong range = true
+nextLong wide range = true
+nextDouble = true
+nextDouble bound = true
+nextDouble range = true
+nextFloat = true
+nextGaussian finite = true
+nextBoolean both = true
+nextBytes = 8
+nextBytes null ! java.lang.NullPointerException
+varies = true
