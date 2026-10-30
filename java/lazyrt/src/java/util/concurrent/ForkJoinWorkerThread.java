@@ -14,12 +14,8 @@ public class ForkJoinWorkerThread extends Thread {
     /** The task its work loop is running, and the one it blocks on, for {@code shutdownNow} to cancel. */
     volatile ForkJoinTask<?> current;
     volatile ForkJoinTask<?> awaited;
-    /** How many tasks are stacked on this thread by joins. Only this thread touches it. */
-    int helpDepth;
-    /** Parked and listed as idle. */
+    /** Listed as idle. */
     volatile boolean parked;
-    /** Told to look for work, and not yet arrived. */
-    boolean woken;
 
     protected ForkJoinWorkerThread(ForkJoinPool pool) {
         super((ThreadGroup) null, (Runnable) null, "ForkJoinWorker");
@@ -31,6 +27,10 @@ public class ForkJoinWorkerThread extends Thread {
             setUncaughtExceptionHandler(handler);
         }
         this.index = core.register(this);
+    }
+
+    int slot() {
+        return index;
     }
 
     /** The calling thread if it is a worker of any pool, else null. */
@@ -55,8 +55,10 @@ public class ForkJoinWorkerThread extends Thread {
 
     public void run() {
         Throwable failure = null;
+        boolean began = false;
         try {
             onStart();
+            began = true;
             core.workLoop(this);
         } catch (Throwable t) {
             failure = t;
@@ -68,12 +70,12 @@ public class ForkJoinWorkerThread extends Thread {
                     failure = t;
                 }
             } finally {
-                core.deregister(this, index);
+                core.deregister(this, index, began, failure != null);
             }
         }
         if (failure != null) {
             // On to this thread's uncaught handler, which is the pool's when it has one.
-            ForkJoinTask.<RuntimeException>rethrow(failure);
+            ForkJoinTask.<RuntimeException>sneak(failure);
         }
     }
 }

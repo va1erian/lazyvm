@@ -26,6 +26,8 @@ final class PoolWorkers {
     volatile int state = RUNNING;
     /** Slots taken while a thread is being made, outside the monitor. */
     private int starting;
+    /** Threads in {@code shutdownNow} emptying the queue: the pool does not end before they are done. */
+    private int draining;
     private int busy;
     private int largest;
     private long completed;
@@ -56,7 +58,7 @@ final class PoolWorkers {
     }
 
     /** Starts a worker if the state and the limit allow it; false also if the factory gave no thread. */
-    boolean addWorker(Runnable first, boolean withinCore) {
+    boolean startWorker(Runnable first, boolean withinCore) {
         if (state >= TERMINATING) {
             return false;
         }
@@ -113,7 +115,7 @@ final class PoolWorkers {
         synchronized (this) {
             starting--;
         }
-        tryTerminate();
+        endIfDone();
     }
 
     private void workLoop(Worker w) {
@@ -215,16 +217,16 @@ final class PoolWorkers {
             workers.remove(w);
             size = workers.size();
         }
-        tryTerminate();
+        endIfDone();
         if (state >= STOP) {
             return;
         }
         // A worker that died from a task's throw is replaced at once; one that retired only if
         // the queue would otherwise have nobody to serve it.
         if (abrupt) {
-            addWorker(null, false);
+            startWorker(null, false);
         } else if (size < (coreTimesOut ? 0 : core) || size == 0 && !queue.isEmpty()) {
-            addWorker(null, false);
+            startWorker(null, false);
         }
     }
 
@@ -252,7 +254,7 @@ final class PoolWorkers {
     }
 
     /** To be called after anything that may have ended the pool's last work. */
-    void tryTerminate() {
+    void endIfDone() {
         if (state == RUNNING) {
             return;
         }
@@ -261,7 +263,7 @@ final class PoolWorkers {
             if (state >= TERMINATING || state == SHUTDOWN && !empty) {
                 return;
             }
-            if (!workers.isEmpty() || starting > 0) {
+            if (!workers.isEmpty() || starting > 0 || draining > 0) {
                 // Someone may be waiting on a queue that was emptied by a remove.
                 if (empty) {
                     interruptIdle();
@@ -294,10 +296,16 @@ final class PoolWorkers {
             for (Worker w : workers) {
                 w.thread.interrupt();
             }
+            draining++;
         }
-        List<Runnable> left = drain();
-        tryTerminate();
-        return left;
+        try {
+            return drain();
+        } finally {
+            synchronized (this) {
+                draining--;
+            }
+            endIfDone();
+        }
     }
 
     boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
@@ -328,7 +336,7 @@ final class PoolWorkers {
             }
         }
         // New core workers start only as far as there is queued work for them.
-        for (int k = Math.min(raised, queue.size()); k > 0 && !queue.isEmpty() && addWorker(null, true); k--) {
+        for (int k = Math.min(raised, queue.size()); k > 0 && !queue.isEmpty() && startWorker(null, true); k--) {
             continue;
         }
     }

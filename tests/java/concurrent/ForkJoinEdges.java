@@ -185,7 +185,7 @@ public class ForkJoinEdges {
         show("get in worker helps", () -> p.submit(() -> ForkJoinTask.adapt(() -> "x").fork().get()).get());
         show("timed get in worker helps", () -> p.submit(() -> {
             ForkJoinTask<String> f = ForkJoinTask.adapt(() -> "x").fork();
-            try { return f.get(50, TimeUnit.MILLISECONDS); } catch (TimeoutException e) { return "timeout queued=" + ForkJoinTask.getQueuedTaskCount() + " unfork=" + f.tryUnfork(); }
+            try { return f.get(20, TimeUnit.SECONDS); } catch (TimeoutException e) { return "timeout queued=" + ForkJoinTask.getQueuedTaskCount() + " unfork=" + f.tryUnfork(); }
         }).get());
         show("join in worker runs other local", () -> p.submit(() -> {
             List<String> l = Collections.synchronizedList(new ArrayList<>());

@@ -4,42 +4,51 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
+import lazy.internal.VM;
 
 /**
  * Tasks and workers of a {@link ForkJoinPool} under one monitor. Only one thread runs Java at a
  * time in LazyVM (docs/design/threads.md), so parallelism buys no speed here and workers need no
- * lock-free queues: every worker has a plain deque, others take from its old end when they run
- * dry, and outside threads add to a list of submissions. Parallelism still matters for tasks that
- * block, so a worker that blocks in a join or a {@code ManagedBlocker} stops counting, and another
- * may then take its place. A joiner runs the awaited task itself if it is still queued anywhere,
- * and nothing else: any other task could be waiting for something lower on its own stack.
+ * lock-free queues. Parallelism still matters for tasks that block or wait on one another, and one
+ * that blocks must never keep a queued task from running.
+ *
+ * <p>So at most one idle worker, the scout, looks out for queued work the running workers are not
+ * getting to. It waits in the VM's own line by yielding, which means it gets a turn at once when a
+ * running worker blocks, and otherwise once per time slice. It starts on a task as soon as no other
+ * worker can be using the processor. A worker that seems to be using it may be spinning on what a
+ * queued task would do, or be in a blocking read, so the scout gives in after a time that doubles
+ * with the workers already running: CPU-bound work ends up with few threads, and every wait ends.
+ *
+ * <p>A joiner runs the awaited task itself if it is still queued anywhere, and nothing else: any
+ * other task could be waiting for something lower on its own stack.
  */
 final class ForkJoinCore {
     static final int MAX_WORKERS = 32767;
     /** Idle workers end after this long; daemons or not, each is an OS thread with a stack. */
     private static final long IDLE_NANOS = 2_000_000_000L;
-    /**
-     * How many tasks a joiner stacks up on itself. Past this it blocks and another worker takes
-     * over on a fresh stack: a thread has at most 4094 frames, and recursive joins may be deep.
-     */
-    private static final int MAX_HELP_DEPTH = 400;
+    /** How long a scout defers to one running worker; twice that for two, and so on up to the cap. */
+    private static final long DEFER_NANOS = 10_000_000L;
+    private static final int MAX_DEFER_SHIFT = 4;
+    private static final long QUIESCE_POLL_NANOS = 1_000_000L;
 
     private final ForkJoinPool pool;
     private final int parallelism;
-    private final boolean asyncMode;
     private final String workerPrefix;
+    private final ForkJoinQueues queues;
 
-    private final ArrayDeque<ForkJoinTask<?>> submissions = new ArrayDeque<ForkJoinTask<?>>();
-    /** By pool index; a slot is empty once its worker ended. */
-    private final ArrayList<ForkJoinWorkerThread> workers = new ArrayList<ForkJoinWorkerThread>();
     private final ArrayDeque<ForkJoinWorkerThread> idle = new ArrayDeque<ForkJoinWorkerThread>();
+    /** Workers counted from the start of their thread. Past a failed start they are gone again. */
     private int live;
+    /** Worker threads being made by a factory, outside the monitor. */
     private int reserved;
+    /** Built by a factory and not started. A constructor that throws leaves one here for good. */
+    private int unstarted;
     private int blocked;
-    /** Workers told to look for work that have not looked yet; one at a time is enough. */
-    private int waking;
+    /** Workers in {@code helpQuiesce} with nothing to run: they do not hold the pool from being quiet. */
+    private int quiescing;
+    private volatile ForkJoinWorkerThread scout;
+    private long scoutSince;
     private int workerNumbers;
-    private long steals;
     volatile boolean shutdown;
     private boolean stop;
     volatile boolean terminating;
@@ -48,8 +57,8 @@ final class ForkJoinCore {
     ForkJoinCore(ForkJoinPool pool, int parallelism, boolean asyncMode, String workerPrefix) {
         this.pool = pool;
         this.parallelism = parallelism;
-        this.asyncMode = asyncMode;
         this.workerPrefix = workerPrefix;
+        this.queues = new ForkJoinQueues(asyncMode);
     }
 
     void pushExternal(ForkJoinTask<?> task) {
@@ -58,7 +67,7 @@ final class ForkJoinCore {
             if (shutdown) {
                 throw new RejectedExecutionException();
             }
-            submissions.addLast(task);
+            queues.addSubmission(task);
             spawn = signal();
         }
         if (spawn) {
@@ -69,7 +78,7 @@ final class ForkJoinCore {
     void pushLocal(ForkJoinWorkerThread w, ForkJoinTask<?> task) {
         boolean spawn;
         synchronized (this) {
-            w.local.addLast(task);
+            queues.pushLocal(w, task);
             spawn = signal();
         }
         if (spawn) {
@@ -77,16 +86,19 @@ final class ForkJoinCore {
         }
     }
 
-    /** The monitor is held. Wakes or orders one more worker if the pool is below its target. */
+    /** The monitor is held. */
+    private int running() {
+        return live - idle.size() - blocked;
+    }
+
+    /** The monitor is held. Names a scout if the pool is below its target and has none. */
     private boolean signal() {
-        if (waking > 0 || terminating || live + reserved - idle.size() - blocked >= parallelism) {
+        if (scout != null || reserved > 0 || terminating || running() >= parallelism) {
             return false;
         }
-        ForkJoinWorkerThread w = idle.pollLast();
+        ForkJoinWorkerThread w = idle.peekLast();
         if (w != null) {
-            w.parked = false;
-            w.woken = true;
-            waking++;
+            appoint(w);
             LockSupport.unpark(w);
             return false;
         }
@@ -94,8 +106,13 @@ final class ForkJoinCore {
             return false;
         }
         reserved++;
-        waking++;
         return true;
+    }
+
+    /** The monitor is held. */
+    private void appoint(ForkJoinWorkerThread w) {
+        scout = w;
+        scoutSince = System.nanoTime();
     }
 
     /** The user's factory runs outside the monitor. What it throws reaches whoever needed a worker. */
@@ -105,53 +122,69 @@ final class ForkJoinCore {
         try {
             w = pool.getFactory().newThread(pool);
             if (w != null) {
-                synchronized (this) {
-                    w.woken = true;
-                }
+                enlist(w);
                 w.start();
                 started = true;
             }
         } finally {
             synchronized (this) {
                 reserved--;
-                if (!started) {
-                    waking--;
-                    if (w != null) {
-                        w.woken = false;
-                    }
+                if (w != null && !started) {
+                    forget(w);
                 }
                 maybeFinish();
             }
         }
     }
 
+    /** A new worker begins as an idle one and the scout, and looks for work when its thread runs. */
+    private synchronized void enlist(ForkJoinWorkerThread w) {
+        unstarted--;
+        live++;
+        w.parked = true;
+        idle.addLast(w);
+        appoint(w);
+    }
+
+    /** The monitor is held. Its thread did not start, so it never ran and nothing else knows it. */
+    private void forget(ForkJoinWorkerThread w) {
+        queues.freeSlot(w.slot());
+        live--;
+        unlist(w);
+    }
+
+    /** The monitor is held. */
+    private void unlist(ForkJoinWorkerThread w) {
+        if (w.parked) {
+            idle.remove(w);
+            w.parked = false;
+        }
+        if (scout == w) {
+            scout = null;
+        }
+    }
+
     /** Called by a worker's constructor. Its number and slot are taken here. */
     synchronized int register(ForkJoinWorkerThread w) {
         w.setName(workerPrefix + ++workerNumbers);
-        live++;
-        int slot = workers.indexOf(null);
-        if (slot < 0) {
-            workers.add(w);
-            return workers.size() - 1;
-        }
-        workers.set(slot, w);
-        return slot;
+        unstarted++;
+        return queues.takeSlot(w);
     }
 
-    void deregister(ForkJoinWorkerThread w, int slot) {
+    /**
+     * A worker killed by a task gets a successor if nobody idle can take its place, work or not, but
+     * one whose {@code onStart} failed gets none ("killed worker's forks", "onStart failure: gone").
+     */
+    void deregister(ForkJoinWorkerThread w, int slot, boolean began, boolean killed) {
         boolean spawn;
         List<ForkJoinTask<?>> dropped = new ArrayList<ForkJoinTask<?>>();
         synchronized (this) {
-            workers.set(slot, null);
+            queues.freeSlot(slot);
             live--;
-            if (w.woken) {
-                w.woken = false;
-                waking--;
-            }
-            // What it forked and nobody took must not be lost with it, unless the pool is stopping.
-            (stop ? dropped : submissions).addAll(w.local);
-            w.local.clear();
-            spawn = !stop && anyQueued() && signal();
+            unlist(w);
+            // Only a worker killed by a task can have anything queued here, and that is not run.
+            queues.drainLocal(w, dropped);
+            spawn = !stop && began && (killed || queues.anyQueued()) && signal();
             maybeFinish();
         }
         cancelAll(dropped);
@@ -174,18 +207,17 @@ final class ForkJoinCore {
             ForkJoinTask<?> t;
             boolean spawn = false;
             synchronized (this) {
-                if (w.woken) {
-                    w.woken = false;
-                    waking--;
-                }
                 if (terminating) {
                     return null;
                 }
-                // Above target after a blocked worker came back, this one stays out of the way.
-                t = live - idle.size() - blocked <= parallelism ? take(w) : null;
+                t = look(w);
                 if (t != null) {
-                    spawn = anyQueued() && signal();
-                } else {
+                    if (w.parked) {
+                        idle.removeLastOccurrence(w);
+                        w.parked = false;
+                    }
+                    spawn = queues.anyQueued() && signal();
+                } else if (!w.parked) {
                     w.parked = true;
                     idle.addLast(w);
                     maybeFinish();
@@ -203,15 +235,65 @@ final class ForkJoinCore {
         }
     }
 
+    /**
+     * The monitor is held. A worker's own tasks are always its to run, even above the target after
+     * a blocked worker came back: nobody else may get to them. Only then does it stay out of the way.
+     */
+    private ForkJoinTask<?> look(ForkJoinWorkerThread w) {
+        ForkJoinTask<?> t = queues.ownNext(w);
+        if (t != null) {
+            return t;
+        }
+        if (!w.parked) {
+            return running() - 1 < parallelism ? queues.takeForeign(w) : null;
+        }
+        if (scout != w) {
+            return null;
+        }
+        if (!queues.anyQueued() || running() >= parallelism) {
+            scout = null;
+            return null;
+        }
+        if (defers()) {
+            return null;
+        }
+        scout = null;
+        return queues.takeForeign(w);
+    }
+
+    /** The monitor is held. Whether the scout should give the workers now running more time. */
+    private boolean defers() {
+        if (running() == 0 || System.nanoTime() - scoutSince >= DEFER_NANOS << Math.min(live - idle.size() - 1, MAX_DEFER_SHIFT)) {
+            return false;
+        }
+        for (ForkJoinWorkerThread other : queues.workers()) {
+            if (other != null && !other.parked && mayBeBusy(other)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A short wait for a monitor is part of being busy, and a joiner whose task is done just has not got back. */
+    private static boolean mayBeBusy(ForkJoinWorkerThread w) {
+        Thread.State state = w.getState();
+        ForkJoinTask<?> awaited = w.awaited;
+        return state == Thread.State.RUNNABLE || state == Thread.State.BLOCKED || awaited != null && awaited.isDone();
+    }
+
     /** False when the worker stayed idle too long and is off the idle list, so it should end. */
     private boolean parkIdle(ForkJoinWorkerThread w) {
         long deadline = System.nanoTime() + IDLE_NANOS;
         while (w.parked) {
             Thread.interrupted();
+            if (scout == w) {
+                Thread.yield();
+                return true;
+            }
             long left = deadline - System.nanoTime();
             if (left <= 0) {
                 synchronized (this) {
-                    if (w.parked) {
+                    if (w.parked && scout != w) {
                         idle.remove(w);
                         w.parked = false;
                         return false;
@@ -224,77 +306,22 @@ final class ForkJoinCore {
         return true;
     }
 
-    private ForkJoinTask<?> ownNext(ForkJoinWorkerThread w) {
-        return asyncMode ? w.local.pollFirst() : w.local.pollLast();
-    }
-
-    /** The monitor is held. Own tasks first, then the oldest of another's, then a submission. */
-    private ForkJoinTask<?> take(ForkJoinWorkerThread w) {
-        ForkJoinTask<?> t = ownNext(w);
-        return t != null ? t : takeForeign(w);
-    }
-
-    private ForkJoinTask<?> takeForeign(ForkJoinWorkerThread w) {
-        for (ForkJoinWorkerThread other : workers) {
-            if (other != null && other != w) {
-                ForkJoinTask<?> t = other.local.pollFirst();
-                if (t != null) {
-                    steals++;
-                    return t;
-                }
-            }
-        }
-        return submissions.pollFirst();
-    }
-
-    /** The monitor is held. */
-    private boolean anyQueued() {
-        return !submissions.isEmpty() || localCount() > 0;
-    }
-
-    /** The monitor is held. */
-    private int localCount() {
-        int n = 0;
-        for (ForkJoinWorkerThread w : workers) {
-            if (w != null) {
-                n += w.local.size();
-            }
-        }
-        return n;
+    /** Whether a task should go on another worker's fresh stack rather than on top of this one. */
+    static boolean stackTight() {
+        return VM.stackHalfUsed();
     }
 
     void helpJoin(ForkJoinWorkerThread w, ForkJoinTask<?> awaited) {
+        if (stackTight()) {
+            return;
+        }
         boolean mine;
         synchronized (this) {
-            mine = w.helpDepth < MAX_HELP_DEPTH && removeQueued(w, awaited);
+            mine = queues.removeQueued(w, awaited);
         }
         if (mine) {
-            w.helpDepth++;
-            try {
-                awaited.run0();
-            } finally {
-                w.helpDepth--;
-            }
+            awaited.run0();
         }
-    }
-
-    /** The monitor is held. Looks at the likely places first: this worker's newest, then oldest. */
-    private boolean removeQueued(ForkJoinWorkerThread w, ForkJoinTask<?> t) {
-        if (w != null) {
-            if (w.local.peekLast() == t) {
-                w.local.pollLast();
-                return true;
-            }
-            if (w.local.removeFirstOccurrence(t)) {
-                return true;
-            }
-        }
-        for (ForkJoinWorkerThread other : workers) {
-            if (other != null && other != w && other.local.removeFirstOccurrence(t)) {
-                return true;
-            }
-        }
-        return submissions.removeFirstOccurrence(t);
     }
 
     /** With no workers ever (a common pool of parallelism 0), a waiting outside thread must do it. */
@@ -302,7 +329,7 @@ final class ForkJoinCore {
         boolean mine = false;
         if (parallelism == 0) {
             synchronized (this) {
-                mine = removeQueued(null, awaited);
+                mine = queues.removeQueued(null, awaited);
             }
         }
         if (mine) {
@@ -310,32 +337,54 @@ final class ForkJoinCore {
         }
     }
 
+    /**
+     * Runs what it can find, then waits for the workers to have nothing to do. Blocked workers do
+     * not count as doing something, nor do others waiting here ("two in helpQuiesce"), but one that
+     * leaves counts again at once: the second stays until the first's task is over.
+     */
     void helpQuiesce(ForkJoinWorkerThread w) {
+        boolean waiting = false;
         for (;;) {
-            ForkJoinTask<?> t;
+            ForkJoinTask<?> t = null;
+            boolean tight = stackTight();
             synchronized (this) {
-                t = take(w);
-                if (t == null && live - idle.size() <= 1) {
+                if (!tight) {
+                    t = queues.ownNext(w);
+                    t = t != null ? t : queues.takeForeign(w);
+                }
+                if (t != null && waiting) {
+                    quiescing--;
+                    waiting = false;
+                } else if (t == null && !waiting) {
+                    quiescing++;
+                    waiting = true;
+                }
+                if (t == null && !queues.anyQueued() && running() == quiescing) {
+                    quiescing--;
                     return;
                 }
             }
             if (t != null) {
                 t.run0();
+            } else if (tight) {
+                beginBlock();
+                LockSupport.parkNanos(this, QUIESCE_POLL_NANOS);
+                endBlock();
             } else {
-                Thread.yield();
+                LockSupport.parkNanos(this, QUIESCE_POLL_NANOS);
             }
         }
     }
 
     synchronized ForkJoinTask<?> pollForeign() {
-        return takeForeign(null);
+        return queues.takeForeign(null);
     }
 
     void beginBlock() {
         boolean spawn;
         synchronized (this) {
             blocked++;
-            spawn = anyQueued() && signal();
+            spawn = queues.anyQueued() && signal();
         }
         if (spawn) {
             createWorker();
@@ -347,12 +396,7 @@ final class ForkJoinCore {
     }
 
     synchronized boolean unfork(ForkJoinWorkerThread w, ForkJoinTask<?> t) {
-        ArrayDeque<ForkJoinTask<?>> q = w != null ? w.local : submissions;
-        if (q.peekLast() != t) {
-            return false;
-        }
-        q.pollLast();
-        return true;
+        return queues.unfork(w, t);
     }
 
     synchronized int localCount(ForkJoinWorkerThread w) {
@@ -364,54 +408,53 @@ final class ForkJoinCore {
     }
 
     synchronized ForkJoinTask<?> nextLocal(ForkJoinWorkerThread w, boolean remove) {
-        if (remove) {
-            return ownNext(w);
-        }
-        return asyncMode ? w.local.peekFirst() : w.local.peekLast();
+        return remove ? queues.ownNext(w) : queues.peekOwnNext(w);
     }
 
     synchronized ForkJoinTask<?> pollAny(ForkJoinWorkerThread w) {
-        return take(w);
+        ForkJoinTask<?> t = queues.ownNext(w);
+        return t != null ? t : queues.takeForeign(w);
     }
 
     synchronized int poolSize() {
         return live;
     }
 
-    synchronized int running() {
-        return live - idle.size() - blocked;
+    synchronized int runningCount() {
+        return running();
     }
 
     synchronized int active() {
         return live - idle.size();
     }
 
+    /** A scout still in place has queued work it is about to start on. */
     synchronized boolean isQuiescent() {
-        return live + reserved == idle.size();
+        return live + reserved == idle.size() && (scout == null || !queues.anyQueued());
     }
 
     synchronized long steals() {
-        return steals;
+        return queues.steals();
     }
 
     synchronized long queuedTasks() {
-        return localCount();
+        return queues.localTasks();
     }
 
     synchronized int queuedSubmissions() {
-        return submissions.size();
+        return queues.submissions();
     }
 
     synchronized ForkJoinTask<?> pollSubmission() {
-        return submissions.pollFirst();
+        return queues.pollSubmission();
     }
 
     /** The bracket of the pool's {@code toString}. */
     synchronized String describe() {
         String word = terminated ? "Terminated" : terminating ? "Terminating" : shutdown ? "Shutting down" : "Running";
         return "[" + word + ", parallelism = " + parallelism + ", size = " + live + ", active = "
-                + (live - idle.size()) + ", running = " + (live - idle.size() - blocked) + ", steals = " + steals
-                + ", tasks = " + localCount() + ", submissions = " + submissions.size() + "]";
+                + (live - idle.size()) + ", running = " + running() + ", steals = " + queues.steals()
+                + ", tasks = " + queues.localTasks() + ", submissions = " + queues.submissions() + "]";
     }
 
     synchronized void shutdown() {
@@ -422,28 +465,30 @@ final class ForkJoinCore {
     /** Ends the pool now, cancelling what is queued, running or awaited. */
     void stop() {
         List<ForkJoinTask<?>> dropped = new ArrayList<ForkJoinTask<?>>();
+        List<ForkJoinWorkerThread> toInterrupt = new ArrayList<ForkJoinWorkerThread>();
         synchronized (this) {
             shutdown = true;
             stop = true;
-            dropped.addAll(submissions);
-            submissions.clear();
-            for (ForkJoinWorkerThread w : workers) {
+            queues.drainAll(dropped);
+            for (ForkJoinWorkerThread w : queues.workers()) {
                 if (w != null) {
-                    dropped.addAll(w.local);
-                    w.local.clear();
                     if (w.current != null) {
                         dropped.add(w.current);
                     }
                     if (w.awaited != null) {
                         dropped.add(w.awaited);
                     }
-                    w.interrupt();
+                    toInterrupt.add(w);
                 }
             }
             beginTermination();
             maybeFinish();
         }
+        // In this order: a running task that looks finds itself cancelled first ("cancelled first").
         cancelAll(dropped);
+        for (ForkJoinWorkerThread w : toInterrupt) {
+            w.interrupt();
+        }
     }
 
     /** Outside the monitor, as {@code cancel} is the user's to override. One that throws stops no other. */
@@ -460,6 +505,7 @@ final class ForkJoinCore {
     /** The monitor is held. */
     private void beginTermination() {
         terminating = true;
+        scout = null;
         for (ForkJoinWorkerThread w : idle) {
             w.parked = false;
             LockSupport.unpark(w);
@@ -469,10 +515,10 @@ final class ForkJoinCore {
 
     /** The monitor is held. To be called whenever a worker went idle or away, or on shutdown. */
     private void maybeFinish() {
-        if (shutdown && !terminating && live == idle.size() && !anyQueued()) {
+        if (shutdown && !terminating && live == idle.size() && !queues.anyQueued()) {
             beginTermination();
         }
-        if (terminating && !terminated && live == 0 && reserved == 0) {
+        if (terminating && !terminated && live == 0 && reserved == 0 && unstarted == 0) {
             terminated = true;
             notifyAll();
         }
