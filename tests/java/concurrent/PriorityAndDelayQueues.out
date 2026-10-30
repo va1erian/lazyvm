@@ -1,0 +1,104 @@
+capacity zero ! java.lang.IllegalArgumentException
+capacity zero cmp ! java.lang.IllegalArgumentException
+null collection ! java.lang.NullPointerException
+collection null element ! java.lang.NullPointerException
+capacity one grows = 100
+default comparator = null
+given comparator = true
+sorted source comparator kept = true
+queue source comparator kept = true
+plain source no comparator = null
+empty = []
+poll empty = null
+peek empty = null
+timed poll empty = null
+element empty ! java.util.NoSuchElementException
+remove empty ! java.util.NoSuchElementException
+remaining = 2147483647
+add null ! java.lang.NullPointerException
+offer null ! java.lang.NullPointerException
+put null ! java.lang.NullPointerException
+timed offer = true
+one element toString = [only]
+size = 6
+peek = 1
+contains = true
+contains null = false
+remove null = false
+remove value = true
+sorted toArray length = 5
+toArray typed length = 5
+iterator contents = [1, 2, 2, 3, 5]
+take order = [1, 2, 2, 3, 5]
+drain null ! java.lang.NullPointerException
+drain self ! java.lang.IllegalArgumentException
+drain none = 0
+drain 2 = 2
+drain order = [1, 2]
+drain rest = 1
+drain order 2 = [1, 2, 3]
+drain refused midway = java.lang.IllegalStateException: sink left 2 head 2
+take flagged, element ready ! java.lang.InterruptedException
+cleared by take = false 1
+timed poll flagged, element ready ! java.lang.InterruptedException
+put flagged = 1
+timed offer flagged = true
+flag kept by put and offer = true
+comparator order = cba
+first non-comparable ! java.lang.ClassCastException: java.lang.Object cannot be cast to java.lang.Comparable
+after failure = 0
+second mismatch ! java.lang.ClassCastException: java.lang.String cannot be cast to java.lang.Integer
+after mismatch = 1
+remove before next ! java.lang.IllegalStateException
+iterator remove = false
+iterator is a snapshot = 2
+past end ! java.util.NoSuchElementException
+removeIf = true
+taker released = 0
+take flagged ! java.lang.InterruptedException
+empty = []
+poll empty = null
+peek empty = null
+timed poll empty = null
+remaining = 2147483647
+element empty ! java.util.NoSuchElementException
+remove empty ! java.util.NoSuchElementException
+add null ! java.lang.NullPointerException
+offer null ! java.lang.NullPointerException
+put null ! java.lang.NullPointerException
+null collection ! java.lang.NullPointerException
+collection = [one]
+offer timed = true
+size counts unexpired = 3
+poll unexpired = null
+peek shows unexpired head = nearer
+element = nearer
+timed poll unexpired = null
+drain unexpired = 0
+remove() ! java.util.NoSuchElementException
+drain null ! java.lang.NullPointerException
+drain self ! java.lang.IllegalArgumentException
+contains = true
+remove obj = true
+toArray length = 2
+iterator sees unexpired = true
+clear = 0
+peek expired head = past
+drain 1 = 1
+sink = [past]
+drain expired only = 1
+sink 2 = [past, past2]
+size = 1
+drain refused midway = java.lang.IllegalStateException: sink left 2 head e2
+take flagged, element ready ! java.lang.InterruptedException
+cleared by take = false 1
+put flagged = 1
+timed offer flagged = true
+flag kept by put and offer = true
+take waits = soon
+timed poll waits = soon2
+taker waits on empty = WAITING
+taken = 0
+take flagged ! java.lang.InterruptedException
+taker sleeps until head due = TIMED_WAITING
+earlier head wakes taker = first

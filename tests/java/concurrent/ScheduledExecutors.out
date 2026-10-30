@@ -1,0 +1,70 @@
+toString = java.util.concurrent.ScheduledThreadPoolExecutor@H[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+core negative ! java.lang.IllegalArgumentException
+null factory ! java.lang.NullPointerException
+null handler ! java.lang.NullPointerException
+full constructor = 2 DiscardPolicy named
+full constructor null factory ! java.lang.NullPointerException
+full constructor null handler ! java.lang.NullPointerException
+schedule null ! java.lang.NullPointerException
+schedule null callable ! java.lang.NullPointerException
+schedule null unit ! java.lang.NullPointerException
+fixedRate null ! java.lang.NullPointerException
+fixedRate null unit ! java.lang.NullPointerException
+fixedRate zero ! java.lang.IllegalArgumentException
+fixedDelay negative ! java.lang.IllegalArgumentException
+execute null ! java.lang.NullPointerException
+policy existing delayed = true
+policy periodic = false
+policy remove on cancel = false
+max = 2147483647
+keepAlive = 0
+after shutdown ! java.util.concurrent.RejectedExecutionException: Task <task> rejected from java.util.concurrent.ScheduledThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+delay order = [neg2, neg1, z1, exec, sub, early, late]
+getDelay = 59
+getDelay in range = true
+compare = true
+compare self = 0
+schedule result = near
+periodic flag = false
+near delay expired = true
+queue has far = 1
+queue elem is future = true
+cancel far = true
+cancelled stays queued = 1
+far get ! java.util.concurrent.CancellationException
+purged = 0
+queued = 1
+removed on cancel = 0
+huge delay positive = true
+huge after near = true
+periodic flag = true
+not done while repeating = false
+timed get repeats ! java.util.concurrent.TimeoutException
+cancel = true
+done = true
+cancelled = true
+get ! java.util.concurrent.CancellationException
+no more runs = true
+fixed delay cancelled = true
+failure stops ! java.util.concurrent.ExecutionException: java.lang.IllegalStateException: third
+failure run count = 3
+failure flags = true false
+default: periodic cancelled on shutdown = true
+default: delayed stays = false
+default: terminating = true
+default: delayed ran = [delayed]
+default: terminated = true
+drop policy flag = false
+drop: awaited = true
+drop: cancelled = true
+drop: log = [delayed]
+keep: still running = false
+keep: not terminated = false
+keep: reject new = rejected
+keep: shutdownNow = true
+keep: terminated = true
+shutdownNow returned = 1
+shutdownNow same future = true
+shutdownNow leaves it = false false
+awaited = true
+decorate calls = [decorate runnable, decorate callable, decorate callable, decorate runnable, decorate runnable, decorate runnable]

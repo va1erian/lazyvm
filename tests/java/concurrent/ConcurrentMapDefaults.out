@@ -1,0 +1,33 @@
+getOrDefault present = 1
+getOrDefault absent = 9
+forEach = [a1, b2]
+forEach null ! java.lang.NullPointerException
+replaceAll = {a=10, b=20}
+replaceAll null ! java.lang.NullPointerException
+replaceAll to null is the map's to judge = {a=null}
+computeIfAbsent present = 10
+computeIfAbsent new = 3
+computeIfAbsent null result = null
+computeIfAbsent null fn ! java.lang.NullPointerException
+computeIfPresent = 4
+computeIfPresent absent = null
+computeIfPresent to null = null
+computeIfPresent null fn ! java.lang.NullPointerException
+after = {a=10, b=20}
+compute new = 5
+compute old = 6
+compute to null = null
+compute absent null = null
+compute null fn ! java.lang.NullPointerException
+merge new = 1
+merge old = 3
+merge to null = null
+merge null value ! java.lang.NullPointerException
+merge null fn ! java.lang.NullPointerException
+final = {a=10, b=20}
+merge retries a lost replace = 102
+compute retries a lost replace = 203
+computeIfPresent retries = 304
+replaceAll retries = {k=405}
+forEach skips a vanished entry = [a1, c3]
+replaceAll skips a vanished entry = {a=2, b=2, c=4}

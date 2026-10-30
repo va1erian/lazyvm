@@ -1,0 +1,131 @@
+new toString = java.util.concurrent.CompletableFuture@H[Not completed]
+new = pending; getNow=null
+getNow default = dflt
+dependents = 0
+timed get ! TimeoutException(null)
+zero get ! TimeoutException(null)
+null unit pending ! NullPointerException(null)
+toCompletableFuture = true
+complete = true
+complete again = false
+completeExceptionally late = false
+cancel late = false
+done toString = java.util.concurrent.CompletableFuture@H[Completed normally]
+done = done; getNow=v; join=v; get=v; handed=value v
+getNow done = v
+timed get done = v
+null unit done ! NullPointerException(null)
+complete null = true
+null value = done; getNow=null; join=null; get=null; handed=value null
+null getNow = null
+completedFuture = done; getNow=cf; join=cf; get=cf; handed=value cf
+completedFuture null = done; getNow=null; join=null; get=null; handed=value null
+completedFuture toString = java.util.concurrent.CompletableFuture@H[Completed normally]
+fail with IOException(io) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done failed; getNow!CompletionException(java.io.IOException: io) <- IOException(io); join!CompletionException(java.io.IOException: io) <- IOException(io); get!ExecutionException(java.io.IOException: io) <- IOException(io); handed=IOException(io)
+  again = false
+  complete late = false
+fail with IllegalStateException(ise) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done failed; getNow!CompletionException(java.lang.IllegalStateException: ise) <- IllegalStateException(ise); join!CompletionException(java.lang.IllegalStateException: ise) <- IllegalStateException(ise); get!ExecutionException(java.lang.IllegalStateException: ise) <- IllegalStateException(ise); handed=IllegalStateException(ise)
+  again = false
+  complete late = false
+fail with StackOverflowError(err) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done failed; getNow!CompletionException(java.lang.StackOverflowError: err) <- StackOverflowError(err); join!CompletionException(java.lang.StackOverflowError: err) <- StackOverflowError(err); get!ExecutionException(java.lang.StackOverflowError: err) <- StackOverflowError(err); handed=StackOverflowError(err)
+  again = false
+  complete late = false
+fail with CompletionException(ce) <- RuntimeException(inner) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done failed; getNow!CompletionException(ce) <- RuntimeException(inner); join!CompletionException(ce) <- RuntimeException(inner); get!ExecutionException(java.lang.RuntimeException: inner) <- RuntimeException(inner); handed=CompletionException(ce) <- RuntimeException(inner)
+  again = false
+  complete late = false
+fail with CompletionException(java.lang.RuntimeException: inner2) <- RuntimeException(inner2) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done failed; getNow!CompletionException(java.lang.RuntimeException: inner2) <- RuntimeException(inner2); join!CompletionException(java.lang.RuntimeException: inner2) <- RuntimeException(inner2); get!ExecutionException(java.lang.RuntimeException: inner2) <- RuntimeException(inner2); handed=CompletionException(java.lang.RuntimeException: inner2) <- RuntimeException(inner2)
+  again = false
+  complete late = false
+fail with CompletionException(no cause) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done failed; getNow!CompletionException(no cause); join!CompletionException(no cause); get!ExecutionException(java.util.concurrent.CompletionException: no cause) <- CompletionException(no cause); handed=CompletionException(no cause)
+  again = false
+  complete late = false
+fail with CancellationException(cx) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done cancelled failed; getNow!CancellationException(cx); join!CancellationException(cx); get!CancellationException(cx); handed=CancellationException(cx)
+  again = false
+  complete late = false
+fail with ExecutionException(ee) <- RuntimeException(inner3) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done failed; getNow!CompletionException(java.util.concurrent.ExecutionException: ee) <- ExecutionException(ee) <- RuntimeException(inner3); join!CompletionException(java.util.concurrent.ExecutionException: ee) <- ExecutionException(ee) <- RuntimeException(inner3); get!ExecutionException(java.util.concurrent.ExecutionException: ee) <- ExecutionException(ee) <- RuntimeException(inner3); handed=ExecutionException(ee) <- RuntimeException(inner3)
+  again = false
+  complete late = false
+fail with Exception(null) = true
+  toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+  read = done failed; getNow!CompletionException(java.lang.Exception) <- Exception(null); join!CompletionException(java.lang.Exception) <- Exception(null); get!ExecutionException(java.lang.Exception) <- Exception(null); handed=Exception(null)
+  again = false
+  complete late = false
+fail null ! NullPointerException(null)
+fail null leaves = pending; getNow=null
+identity join cause = true
+identity CE not rewrapped = true
+cancel(true) = true
+cancelled toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+cancelled read = done cancelled failed; getNow!CancellationException(null); join!CancellationException(null); get!CancellationException(null); handed=CancellationException(null)
+cancel again = true
+complete after cancel = false
+fail after cancel = false
+cancel(false) = true
+cancelled toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+cancelled read = done cancelled failed; getNow!CancellationException(null); join!CancellationException(null); get!CancellationException(null); handed=CancellationException(null)
+cancel again = true
+complete after cancel = false
+fail after cancel = false
+cancel failed = false
+failed not cancelled = false
+cancel when failed with CE = true
+dependent of cancelled = done failed; getNow!CompletionException(java.util.concurrent.CancellationException) <- CancellationException(null); join!CompletionException(java.util.concurrent.CancellationException) <- CancellationException(null); get!ExecutionException(java.util.concurrent.CancellationException) <- CancellationException(null); handed=CompletionException(java.util.concurrent.CancellationException) <- CancellationException(null)
+dep cancelled flag = false
+cancelling child leaves parent = false
+parent completes = done; getNow=v; join=v; get=v; handed=value v
+child stays cancelled = true
+obtrude pending = done; getNow=o1; join=o1; get=o1; handed=value o1
+obtrude fires dependents = [dep o1]
+later dep = [dep o1, later o1]
+obtrude done = done; getNow=o2; join=o2; get=o2; handed=value o2
+no refire = [dep o1, later o1]
+obtrude exception over value = done failed; getNow!CompletionException(java.lang.IllegalStateException: oe) <- IllegalStateException(oe); join!CompletionException(java.lang.IllegalStateException: oe) <- IllegalStateException(oe); get!ExecutionException(java.lang.IllegalStateException: oe) <- IllegalStateException(oe); handed=IllegalStateException(oe)
+toString = java.util.concurrent.CompletableFuture@H[Completed exceptionally]
+obtrude cancellation = done cancelled failed; getNow!CancellationException(cx); join!CancellationException(cx); get!CancellationException(cx); handed=CancellationException(cx)
+isCancelled = true
+obtrude null value = done; getNow=null; join=null; get=null; handed=value null
+obtrude null exception ! NullPointerException(null)
+left = done; getNow=null; join=null; get=null; handed=value null
+obtrude over cancel = done; getNow=back; join=back; get=back; handed=value back
+complete after obtrude = false
+dep keeps old = a!
+obtrude exception pending = done failed; getNow!CompletionException(java.lang.RuntimeException: first) <- RuntimeException(first); join!CompletionException(java.lang.RuntimeException: first) <- RuntimeException(first); get!ExecutionException(java.lang.RuntimeException: first) <- RuntimeException(first); handed=RuntimeException(first)
+get flagged pending ! InterruptedException(null)
+flag cleared = false
+timed get flagged pending ! InterruptedException(null)
+flag cleared 2 = false
+get flagged done = v
+flag kept = true
+timed get flagged done = v
+join flagged done = v
+flag kept 2 = true
+get interrupted = InterruptedException(null) flag=false
+future untouched = false
+join ignores interrupt = WAITING
+join return = v flag=true
+get waiter = ExecutionException(java.lang.RuntimeException: x) <- RuntimeException(x)
+join waiter = CompletionException(java.lang.RuntimeException: x) <- RuntimeException(x)
+timed waiter on cancel = CancellationException(null)
+sub toString = Sub:concurrent.CompletableFutures$Sub@H[Not completed]
+sub dependent class = java.util.concurrent.CompletableFuture
+sub toCompletableFuture = true
+sub handle class = java.util.concurrent.CompletableFuture
+sub exceptionally class = java.util.concurrent.CompletableFuture
+is stage = true
+is future = true

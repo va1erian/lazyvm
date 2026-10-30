@@ -1,0 +1,59 @@
+first pool thread = pool-1-thread-1 daemon=false prio=5 group=main
+second pool thread = pool-2-thread-1 daemon=false prio=5 group=main
+fixed = core=2 max=2 keep=0s queue=java.util.concurrent.LinkedBlockingQueue handler=java.util.concurrent.ThreadPoolExecutor$AbortPolicy
+fixed toString = java.util.concurrent.ThreadPoolExecutor@H[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
+fixed first thread = pool-N-thread-1 daemon=false prio=5 group=main
+fixed 0 ! java.lang.IllegalArgumentException
+fixed null factory ! java.lang.NullPointerException
+cached = core=0 max=2147483647 keep=60s queue=java.util.concurrent.SynchronousQueue handler=java.util.concurrent.ThreadPoolExecutor$AbortPolicy
+cached thread = pool-N-thread-1 daemon=false prio=5 group=main
+cached null factory ! java.lang.NullPointerException
+single = not a ThreadPoolExecutor
+single thread = pool-N-thread-1 daemon=false prio=5 group=main
+single is ExecutorService = false
+single terminated = true
+single null factory ! java.lang.NullPointerException
+scheduled = true
+scheduled sizes = 3 2147483647
+scheduled keep = 0
+scheduled negative ! java.lang.IllegalArgumentException
+single scheduled = false
+scheduled factory = named
+scheduled null factory ! java.lang.NullPointerException
+single scheduled factory = named
+single scheduled null factory ! java.lang.NullPointerException
+single scheduled runs = ran
+stealing type = true
+stealing parallelism = 2
+stealing async = true
+stealing daemon = true
+stealing bad ! java.lang.IllegalArgumentException
+stealing default parallelism = true
+unconfigurable hides = false
+unconfigurable runs = ran
+unconfigurable passes shutdown = true
+unconfigurable null ! java.lang.NullPointerException
+unconfigurable sched hides = false
+unconfigurable sched runs = ran
+unconfigurable sched null ! java.lang.NullPointerException
+name a = pool-N-thread-1
+name b = pool-N-thread-2
+not started = NEW
+not daemon = false
+priority = 5
+newThread null = Thread[pool-N-thread-3,5,main]
+priority resets = 5
+daemon parent not inherited = false
+second factory numbered apart = false
+second factory restarts threads = true
+callable = null
+callable value = v
+callable null ! java.lang.NullPointerException
+callable null with value ! java.lang.NullPointerException
+ran = [ran, ran]
+privilegedCallable = pc
+privilegedCallable null ! java.lang.NullPointerException
+privilegedCallable loader = pl
+privilegedCallable loader null ! java.lang.NullPointerException
+privilegedThreadFactory = pool-N-thread-1 false 5
+callable throw ! java.lang.IllegalStateException: x

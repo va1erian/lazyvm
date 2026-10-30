@@ -1,0 +1,27 @@
+Cancellation = CancellationException message=null cause=null text=java.util.concurrent.CancellationException
+Cancellation msg = CancellationException message=m cause=null text=java.util.concurrent.CancellationException: m
+BrokenBarrier = BrokenBarrierException message=null cause=null text=java.util.concurrent.BrokenBarrierException
+BrokenBarrier msg = BrokenBarrierException message=m cause=null text=java.util.concurrent.BrokenBarrierException: m
+Timeout = TimeoutException message=null cause=null text=java.util.concurrent.TimeoutException
+Timeout msg = TimeoutException message=m cause=null text=java.util.concurrent.TimeoutException: m
+Rejected = RejectedExecutionException message=null cause=null text=java.util.concurrent.RejectedExecutionException
+Rejected msg = RejectedExecutionException message=m cause=null text=java.util.concurrent.RejectedExecutionException: m
+Rejected msg cause = RejectedExecutionException message=m cause=java.lang.IllegalStateException: c text=java.util.concurrent.RejectedExecutionException: m
+Rejected cause = RejectedExecutionException message=java.lang.IllegalStateException: c cause=java.lang.IllegalStateException: c text=java.util.concurrent.RejectedExecutionException: java.lang.IllegalStateException: c
+Rejected null cause = RejectedExecutionException message=null cause=null text=java.util.concurrent.RejectedExecutionException
+Completion = Completion message=null cause=null text=concurrent.ConcurrentExceptions$Completion
+Completion msg = Completion message=m cause=null text=concurrent.ConcurrentExceptions$Completion: m
+Completion msg cause = CompletionException message=m cause=java.lang.IllegalStateException: c text=java.util.concurrent.CompletionException: m
+Completion cause = CompletionException message=java.lang.IllegalStateException: c cause=java.lang.IllegalStateException: c text=java.util.concurrent.CompletionException: java.lang.IllegalStateException: c
+Completion null cause = CompletionException message=null cause=null text=java.util.concurrent.CompletionException
+Execution = Execution message=null cause=null text=concurrent.ConcurrentExceptions$Execution
+Execution msg = Execution message=m cause=null text=concurrent.ConcurrentExceptions$Execution: m
+Execution msg cause = ExecutionException message=m cause=java.lang.IllegalStateException: c text=java.util.concurrent.ExecutionException: m
+Execution cause = ExecutionException message=java.lang.IllegalStateException: c cause=java.lang.IllegalStateException: c text=java.util.concurrent.ExecutionException: java.lang.IllegalStateException: c
+Execution null cause = ExecutionException message=null cause=null text=java.util.concurrent.ExecutionException
+Cancellation is IllegalState = true
+Completion is Runtime = true
+Rejected is Runtime = true
+Execution is checked = true
+Timeout is checked = true
+BrokenBarrier is checked = true

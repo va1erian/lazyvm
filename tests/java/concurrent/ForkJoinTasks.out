@@ -1,0 +1,40 @@
+exec true: invoke = initial
+exec true: log = [exec, get]
+exec true: flags = true true
+no second exec = [exec, get, get]
+exec false: runs and waits = done=false then given
+complete calls set = [exec, set given, get]
+quietlyComplete = true true initial
+quietlyComplete log = [get]
+exec throws ! java.lang.IllegalStateException: exec
+exec throws flags = true
+setRawResult throws = true
+setRawResult exception = java.lang.IllegalStateException: set
+action complete null = null
+action normal = true
+tag default = 0
+tag set returns old = 0
+tag = 5
+cas wrong = false
+cas right = true
+tag negative = -6
+tag survives completion = -6
+tag set after completion = -6
+flags intact = true
+run = ok
+hooks in order = [onStart, task, onTermination null]
+null worker: no thread = 0
+thrown by factory ! java.lang.IllegalStateException: factory
+handler sees execute failure = [java.lang.IllegalStateException: escaped]
+pool keeps working = still
+queued submissions = 3
+hasQueuedSubmissions = true
+active = 1
+not quiescent = false
+poll one is ours = true
+drain rest = 2
+drained = 2
+queue empty = 0
+poll empty = null
+drained stay pending = false
+terminated = true

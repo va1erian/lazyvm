@@ -1,0 +1,72 @@
+same read view = true
+same write view = true
+new = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 0, Read locks = 0]
+read new = java.util.concurrent.locks.ReentrantReadWriteLock$ReadLock@H[Read locks = 0]
+write new = java.util.concurrent.locks.ReentrantReadWriteLock$WriteLock@H[Unlocked]
+fair = true
+default fair = false
+read toString = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 0, Read locks = 2]
+read view = java.util.concurrent.locks.ReentrantReadWriteLock$ReadLock@H[Read locks = 2]
+readLockCount = 2
+readHoldCount = 2
+isWriteLocked = false
+write tryLock under read = false
+write toString = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 2, Read locks = 0]
+write view = java.util.concurrent.locks.ReentrantReadWriteLock$WriteLock@H[Locked by thread main]
+writeHoldCount = 2
+view holdCount = 2
+isWriteLocked 2 = true
+byCurrent = true
+view byCurrent = true
+downgrade toString = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 2, Read locks = 1]
+after downgrade = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 0, Read locks = 1]
+after downgrade write = false
+released = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 0, Read locks = 0]
+read unlock free ! java.lang.IllegalMonitorStateException: attempt to unlock read lock, not locked by current thread
+write unlock free ! java.lang.IllegalMonitorStateException
+read newCondition ! java.lang.UnsupportedOperationException
+await unowned ! java.lang.IllegalMonitorStateException
+signal unowned ! java.lang.IllegalMonitorStateException
+hasWaiters unowned ! java.lang.IllegalMonitorStateException
+hasWaiters null ! java.lang.NullPointerException
+waitLength null ! java.lang.NullPointerException
+hasWaiters foreign ! java.lang.IllegalArgumentException: Not owner
+hasWaiters none = false
+await timed = false
+upgrade tryLock = false
+upgrade timed = false
+read unlock other = false
+readHold other = true
+read interruptibly flagged ! java.lang.InterruptedException
+write interruptibly flagged ! java.lang.InterruptedException
+read timed flagged ! java.lang.InterruptedException
+read limit = 65535 java.lang.Error: Maximum lock count exceeded
+read tryLock at limit = java.lang.Error: Maximum lock count exceeded
+readLockCount = 65535
+write limit = 65535 java.lang.Error: Maximum lock count exceeded
+write tryLock at limit = java.lang.Error: Maximum lock count exceeded
+writeHold = 65535
+read shared = true
+write blocked = false
+read blocked = false
+write excluded = false
+read blocked timed = false
+queue = 3
+hasQueued = true
+hasQueuedThread = true
+toString queued = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 1, Read locks = 0]
+fair order = [r0, w1, w2]
+fair timed read behind writer = false
+barging read tryLock = true
+waitLength = 1
+condition return = holds 2
+owner free = null
+owner = main
+queued writers = [writer]
+queued readers = [reader]
+queued all = [reader, writer]
+waiting none = []
+waiting null ! java.lang.NullPointerException
+waiting unowned ! java.lang.IllegalMonitorStateException
+owner under read = null
+iface views differ = true
