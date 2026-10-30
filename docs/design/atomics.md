@@ -81,8 +81,10 @@ because initializing the class can run Java that changes the `Field`.
 javac code cannot reach the row on the array's kind, or pass something other
 than a `Field`; until the verifier (S8) bytecode can, so the test loads
 `CraftedAtomics.class`, which `tools/fixtures.py` builds from
-`tools/crafted/CraftedAtomics.java` with the casts removed. int and long fields need no read intrinsic
-(`getAndAdd` of zero is one), so the only plain read is `getRef`.
+`tools/crafted/CraftedAtomics.java` with the casts removed.
+
+int and long fields need no read intrinsic (`getAndAdd` of zero is one), so the
+only plain read is `getRef`.
 
 The `Field` lookups cost about 20% over a plain method call on `AtomicInteger`
 (2M calls: 201 ns for a Java method, 245 ns for `getAndAdd`), so a separate
