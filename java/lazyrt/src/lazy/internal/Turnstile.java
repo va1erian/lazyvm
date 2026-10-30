@@ -24,7 +24,10 @@ public final class Turnstile {
 
     private static final long SLICE_NANOS = 5_000_000L;
 
-    /** Lets the waiter in, updating the owner's state, if it can; the monitor is held. */
+    /**
+     * Lets the waiter in, updating the owner's state, if it can; the monitor is held. An
+     * {@code Error} from here reaches the waiter's caller, and the waiter leaves the queue.
+     */
     public interface Gate {
         boolean enter(Waiter w);
     }
@@ -81,44 +84,57 @@ public final class Turnstile {
      */
     public int pass(Waiter w, boolean interruptible, boolean timed, long deadline) {
         boolean flagged = false;
-        int result;
-        for (;;) {
-            long left;
-            synchronized (this) {
-                if (queue.peekFirst() == w && gate.enter(w)) {
-                    queue.pollFirst();
-                    if (w.shared) {
-                        wakeHead();
+        try {
+            for (;;) {
+                long left;
+                synchronized (this) {
+                    if (admit(w)) {
+                        return ENTERED;
                     }
-                    result = ENTERED;
-                    break;
-                }
-                if (Thread.interrupted()) {
-                    if (interruptible) {
+                    if (Thread.interrupted()) {
+                        if (interruptible) {
+                            leave(w);
+                            return INTERRUPTED;
+                        }
+                        // Left set, the flag would make every park below return at once.
+                        flagged = true;
+                    }
+                    left = deadline - System.nanoTime();
+                    if (timed && left <= 0) {
                         leave(w);
-                        result = INTERRUPTED;
-                        break;
+                        return TIMED_OUT;
                     }
-                    // Left set, the flag would make every park below return at once.
-                    flagged = true;
                 }
-                left = deadline - System.nanoTime();
-                if (timed && left <= 0) {
-                    leave(w);
-                    result = TIMED_OUT;
-                    break;
+                if (timed) {
+                    LockSupport.parkNanos(this, left);
+                } else {
+                    LockSupport.park(this);
                 }
             }
-            if (timed) {
-                LockSupport.parkNanos(this, left);
-            } else {
-                LockSupport.park(this);
+        } finally {
+            if (flagged) {
+                Thread.currentThread().interrupt();
             }
         }
-        if (flagged) {
-            Thread.currentThread().interrupt();
+    }
+
+    private boolean admit(Waiter w) {
+        if (queue.peekFirst() != w) {
+            return false;
         }
-        return result;
+        try {
+            if (!gate.enter(w)) {
+                return false;
+            }
+        } catch (Error e) {
+            leave(w);
+            throw e;
+        }
+        queue.pollFirst();
+        if (w.shared) {
+            wakeHead();
+        }
+        return true;
     }
 
     private void leave(Waiter w) {

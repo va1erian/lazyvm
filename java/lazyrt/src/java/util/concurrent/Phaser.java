@@ -5,8 +5,9 @@ package java.util.concurrent;
  * tiers advance in one step. Arrivals are counted per node and only count for the phase they were
  * made in: a node's count goes stale, rather than being reset, when the phase moves on. A node
  * whose parties have all arrived arrives once at its parent; one left with no parties leaves it.
- * {@code onAdvance} runs under the monitor (Javadoc: other calls from it are unspecified), and the
- * getters take no lock, so they never wait for it.
+ * {@code onAdvance} runs outside the monitor, as nothing may keep the others out while user code
+ * runs: during it the root counts as fully arrived, so an arrival is an error and a registration
+ * waits for the phase to change (concurrent.md "Phaser": "hook ..." lines).
  */
 public class Phaser {
     private static final int MAX_PARTIES = 65535;
@@ -18,6 +19,8 @@ public class Phaser {
     private int parties;
     private int arrived;
     private int arrivedIn;
+    /** At the root: the hook is running or has thrown, and the phase has not moved on. */
+    private boolean inHook;
 
     public Phaser() {
         this(null, 0);
@@ -60,9 +63,9 @@ public class Phaser {
             if (n == 0 || root.phase < 0) {
                 return root.phase;
             }
-            // A child that has arrived at its parent cannot take a new party in this phase: its
-            // arrival would count twice. Javadoc: registering may wait for the advance.
-            if (parent != null && parties > 0 && arrivedNow() == parties) {
+            // A child whose parties have all arrived cannot take a new one in this phase: its
+            // arrival would count twice. And nothing registers during the hook. Javadoc: this may wait.
+            while (root.inHook || parties > 0 && arrivedNow() == parties) {
                 awaitChange(root.phase);
                 if (root.phase < 0) {
                     return root.phase;
@@ -88,27 +91,35 @@ public class Phaser {
     }
 
     public int arriveAndAwaitAdvance() {
+        int now = arrival(false);
+        if (now < 0) {
+            return now;
+        }
         synchronized (mu) {
-            int now = arrival(false);
-            return now < 0 ? now : awaitChange(now);
+            return awaitChange(now);
         }
     }
 
     private int arrival(boolean leaving) {
+        int now;
         synchronized (mu) {
-            int now = root.phase;
+            now = root.phase;
             if (now < 0) {
                 return now;
             }
             if (parties - arrivedNow() <= 0) {
                 throw new IllegalStateException("Attempted arrival of unregistered party for " + this);
             }
-            step(leaving, now);
-            return now;
+            if (!step(leaving, now)) {
+                return now;
+            }
         }
+        root.advance(now);
+        return now;
     }
 
-    private void step(boolean leaving, int now) {
+    /** Counts one arrival or departure here and up the tree; true if the whole tree has arrived. */
+    private boolean step(boolean leaving, int now) {
         arrived = arrivedNow();
         arrivedIn = now;
         if (leaving) {
@@ -117,20 +128,26 @@ public class Phaser {
             arrived++;
         }
         if (parties > arrived) {
-            return;
+            return false;
         }
         if (parent != null) {
-            parent.step(parties == 0, now);
-        } else {
-            advance(now);
+            return parent.step(parties == 0, now);
         }
+        inHook = true;
+        return true;
     }
 
     private void advance(int now) {
         boolean end = onAdvance(now, parties);
         int next = (now + 1) & Integer.MAX_VALUE;
-        phase = end ? next | Integer.MIN_VALUE : next;
-        mu.notifyAll();
+        synchronized (mu) {
+            // forceTermination during the hook wins: the phase stays as it left it.
+            if (phase >= 0) {
+                phase = end ? next | Integer.MIN_VALUE : next;
+                inHook = false;
+                mu.notifyAll();
+            }
+        }
     }
 
     public int awaitAdvance(int phase) {

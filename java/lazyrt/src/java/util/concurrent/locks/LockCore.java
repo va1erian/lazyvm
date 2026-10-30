@@ -25,10 +25,9 @@ final class LockCore implements Turnstile.Gate {
         this.limit = limit;
     }
 
-    // A queued waiter at the read limit stays queued; the next read release lets it try again.
     public boolean enter(Turnstile.Waiter w) {
         if (w.shared) {
-            if (owner != null || readHolds == limit) {
+            if (owner != null) {
                 return false;
             }
             addRead(w.thread);
@@ -56,9 +55,6 @@ final class LockCore implements Turnstile.Gate {
         if (!mine && (owner != null || !barge && !turnstile.open())) {
             return false;
         }
-        if (readHolds == limit) {
-            throw new Error("Maximum lock count exceeded");
-        }
         addRead(me);
         return true;
     }
@@ -85,6 +81,9 @@ final class LockCore implements Turnstile.Gate {
     }
 
     private void addRead(Thread t) {
+        if (readHolds == limit) {
+            throw new Error("Maximum lock count exceeded");
+        }
         int[] holds = holdsOf(t);
         if (holds == null) {
             if (readers == null) {
@@ -158,7 +157,7 @@ final class LockCore implements Turnstile.Gate {
                 readers.remove(me);
             }
             readHolds--;
-            if (readHolds == 0 || readHolds == limit - 1) {
+            if (readHolds == 0) {
                 turnstile.wakeHead();
             }
         }

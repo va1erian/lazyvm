@@ -1,0 +1,67 @@
+forced with an arrival = java.util.concurrent.Phaser@H[phase = -2147483648 parties = 3 arrived = 1] 1 2 flag=false
+forced at phase 2 = -2147483646 flag=false
+register forced = -2147483646 flag=false
+arrive forced = -2147483646 flag=false
+deregister forced = -2147483646 flag=false
+bulk zero forced = -2147483646 flag=false
+bulk negative forced ! java.lang.IllegalArgumentException flag=false
+parties forced = 1 flag=false
+interruptibly negative = -5 flag=false
+timed negative = -5 flag=false
+timed negative null unit ! java.lang.NullPointerException flag=false
+timed past null unit ! java.lang.NullPointerException flag=false
+timed zero flagged ! java.lang.InterruptedException flag=false
+timed past flagged = 0 flag=true
+timed zero ! java.util.concurrent.TimeoutException flag=false
+awaitAdvance past flagged = 0 flag=true
+arrive flagged = 0 flag=true
+hook throws ! java.lang.IllegalStateException: hook flag=false
+after the throw = concurrent.PhaserEdges$Logging@H[phase = 0 parties = 1 arrived = 1] 0 false flag=false
+arrive after the throw ! java.lang.IllegalStateException: Attempted arrival of unregistered party for concurrent.PhaserEdges$Logging@H[phase = 0 parties = 1 arrived = 1] flag=false
+hook not called again = [0,1] flag=false
+bulk zero after the throw = 0 flag=false
+register released by force = = -2147483648 flag=false
+awaitAdvance released by force = = -2147483648 flag=false
+end of that = concurrent.PhaserEdges$Logging@H[phase = -2147483648 parties = 1 arrived = 1] flag=false
+deregister then arrive = concurrent.PhaserEdges$Logging@H[phase = 1 parties = 1 arrived = 0] [0,1] flag=false
+last deregister calls hook = concurrent.PhaserEdges$Logging@H[phase = -2147483646 parties = 0 arrived = 0] [0,1, 1,0] flag=false
+hook only on the root = [0,2] [] [] flag=false
+child arrived = concurrent.PhaserEdges$Logging@H[phase = 1 parties = 1 arrived = 1] concurrent.PhaserEdges$Logging@H[phase = 1 parties = 2 arrived = 1] flag=false
+register on an arrived child waited = = 2 concurrent.PhaserEdges$Logging@H[phase = 2 parties = 2 arrived = 0] concurrent.PhaserEdges$Logging@H[phase = 2 parties = 2 arrived = 0] flag=false
+bulk on a child = 0 java.util.concurrent.Phaser@H[phase = 0 parties = 1 arrived = 0] java.util.concurrent.Phaser@H[phase = 0 parties = 3 arrived = 0] flag=false
+child too many ! java.lang.IllegalStateException: Attempt to register more than 65535 parties for java.util.concurrent.Phaser@H[phase = 0 parties = 3 arrived = 0] flag=false
+child after that = java.util.concurrent.Phaser@H[phase = 0 parties = 1 arrived = 0] java.util.concurrent.Phaser@H[phase = 0 parties = 3 arrived = 0] flag=false
+new child under a full parent ! java.lang.IllegalStateException: Attempt to register more than 65535 parties for java.util.concurrent.Phaser@H[phase = 0 parties = 65535 arrived = 0] flag=false
+full parent after = java.util.concurrent.Phaser@H[phase = 0 parties = 65535 arrived = 0] flag=false
+register under a full parent ! java.lang.IllegalStateException: Attempt to register more than 65535 parties for java.util.concurrent.Phaser@H[phase = 0 parties = 65535 arrived = 0] flag=false
+child left empty = java.util.concurrent.Phaser@H[phase = 0 parties = 0 arrived = 0] java.util.concurrent.Phaser@H[phase = 0 parties = 65535 arrived = 0] flag=false
+child leaves = 0 java.util.concurrent.Phaser@H[phase = 0 parties = 0 arrived = 0] java.util.concurrent.Phaser@H[phase = 0 parties = 1 arrived = 0] flag=false
+child rejoins = 0 java.util.concurrent.Phaser@H[phase = 0 parties = 1 arrived = 0] java.util.concurrent.Phaser@H[phase = 0 parties = 2 arrived = 0] flag=false
+only child leaves, root ends = 0 java.util.concurrent.Phaser@H[phase = -2147483647 parties = 0 arrived = 0] java.util.concurrent.Phaser@H[phase = -2147483647 parties = 0 arrived = 0] true flag=false
+arrived child counts = 0 1 flag=false
+arrived child arrives again ! java.lang.IllegalStateException: Attempted arrival of unregistered party for java.util.concurrent.Phaser@H[phase = 0 parties = 1 arrived = 1] flag=false
+during hook: state = concurrent.PhaserEdges$Blocking@H[phase = 0 parties = 1 arrived = 1] 0 1 1 0 false flag=false
+during hook: arrive ! java.lang.IllegalStateException: Attempted arrival of unregistered party for concurrent.PhaserEdges$Blocking@H[phase = 0 parties = 1 arrived = 1] flag=false
+during hook: deregister ! java.lang.IllegalStateException: Attempted arrival of unregistered party for concurrent.PhaserEdges$Blocking@H[phase = 0 parties = 1 arrived = 1] flag=false
+during hook: arriveAndAwait ! java.lang.IllegalStateException: Attempted arrival of unregistered party for concurrent.PhaserEdges$Blocking@H[phase = 0 parties = 1 arrived = 1] flag=false
+during hook: bulk zero = 0 flag=false
+during hook: awaitAdvance of another phase = 0 flag=false
+during hook: timed wait ! java.util.concurrent.TimeoutException flag=false
+after hook: register = = 1 flag=false
+after hook: awaitAdvance = = 1 flag=false
+after hook: interruptibly = = 1 flag=false
+after hook: state = concurrent.PhaserEdges$Blocking@H[phase = 1 parties = 2 arrived = 0] flag=false
+force during hook = concurrent.PhaserEdges$Blocking@H[phase = -2147483648 parties = 1 arrived = 1] true flag=false
+hook ends after force = concurrent.PhaserEdges$Blocking@H[phase = -2147483648 parties = 1 arrived = 1] flag=false
+hook forces = 0 concurrent.Hook@H[phase = -2147483648 parties = 1 arrived = 1] flag=false
+hook forces and ends = 0 concurrent.Hook@H[phase = -2147483648 parties = 2 arrived = 2] flag=false
+empty during hook = concurrent.PhaserEdges$Blocking@H[phase = 0 parties = 0 arrived = 0] flag=false
+register during empty hook = = -2147483647 flag=false
+empty after hook = concurrent.PhaserEdges$Blocking@H[phase = -2147483647 parties = 0 arrived = 0] flag=false
+child during hook = java.util.concurrent.Phaser@H[phase = 0 parties = 1 arrived = 1] flag=false
+child arrive during hook ! java.lang.IllegalStateException: Attempted arrival of unregistered party for java.util.concurrent.Phaser@H[phase = 0 parties = 1 arrived = 1] flag=false
+child register after hook = = 1 flag=false
+empty child register after hook = = 1 flag=false
+tree after hook = concurrent.PhaserEdges$Blocking@H[phase = 1 parties = 2 arrived = 0] java.util.concurrent.Phaser@H[phase = 1 parties = 2 arrived = 0] java.util.concurrent.Phaser@H[phase = 1 parties = 1 arrived = 0] flag=false
+hook's own view = [seen concurrent.Hook@H[phase = 0 parties = 1 arrived = 1], java.lang.IllegalStateException: Attempted arrival of unregistered party for concurrent.Hook@H[phase = 0 parties = 1 arrived = 1], timed 0] flag=false
+after own view = concurrent.Hook@H[phase = 1 parties = 1 arrived = 0] flag=false

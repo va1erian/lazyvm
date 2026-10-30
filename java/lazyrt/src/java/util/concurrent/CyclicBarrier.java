@@ -1,9 +1,12 @@
 package java.util.concurrent;
 
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+
 /**
- * Arrivals count down on a private monitor. A thread waits on the {@link Round} it joined:
- * the round ends when the last party arrives, or broken. The barrier action runs under the
- * monitor, so nobody can arrive during it, while the getters take no lock and never wait for it.
+ * Arrivals count down under a lock. A thread waits on the {@link Round} it joined: the round ends
+ * when the last party arrives, or broken. The barrier action runs holding the lock, so during it
+ * the others wait in WAITING state, the getters too (concurrent.md, "CyclicBarrier").
  */
 public class CyclicBarrier {
     /** One trip of the barrier; a reset or a completed trip starts a new one. */
@@ -11,7 +14,8 @@ public class CyclicBarrier {
         boolean broken;
     }
 
-    private final Object mu = new Object();
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition tripped = lock.newCondition();
     private final int parties;
     private final Runnable action;
     private int missing;
@@ -49,8 +53,8 @@ public class CyclicBarrier {
 
     private int arrive(boolean timed, long nanos)
             throws InterruptedException, BrokenBarrierException, TimeoutException {
-        long deadline = System.nanoTime() + nanos;
-        synchronized (mu) {
+        lock.lock();
+        try {
             Round mine = round;
             if (mine.broken) {
                 throw new BrokenBarrierException();
@@ -64,8 +68,10 @@ public class CyclicBarrier {
                 finishRound();
                 return 0;
             }
-            waitFor(mine, timed, deadline);
+            waitFor(mine, timed, nanos);
             return index;
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -86,14 +92,15 @@ public class CyclicBarrier {
         }
     }
 
-    private void waitFor(Round mine, boolean timed, long deadline)
+    private void waitFor(Round mine, boolean timed, long nanos)
             throws InterruptedException, BrokenBarrierException, TimeoutException {
+        long left = nanos;
         for (;;) {
             try {
-                if (timed) {
-                    TimeUnit.NANOSECONDS.timedWait(mu, deadline - System.nanoTime());
-                } else {
-                    mu.wait();
+                if (!timed) {
+                    tripped.await();
+                } else if (left > 0) {
+                    left = tripped.awaitNanos(left);
                 }
             } catch (InterruptedException e) {
                 if (mine == round && !mine.broken) {
@@ -109,7 +116,7 @@ public class CyclicBarrier {
             if (mine != round) {
                 return;
             }
-            if (timed && deadline - System.nanoTime() <= 0) {
+            if (timed && left <= 0) {
                 breakRound();
                 throw new TimeoutException();
             }
@@ -119,27 +126,40 @@ public class CyclicBarrier {
     private void breakRound() {
         round.broken = true;
         missing = parties;
-        mu.notifyAll();
+        tripped.signalAll();
     }
 
     private void startRound() {
         round = new Round();
         missing = parties;
-        mu.notifyAll();
+        tripped.signalAll();
     }
 
     public boolean isBroken() {
-        return round.broken;
+        lock.lock();
+        try {
+            return round.broken;
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void reset() {
-        synchronized (mu) {
+        lock.lock();
+        try {
             breakRound();
             startRound();
+        } finally {
+            lock.unlock();
         }
     }
 
     public int getNumberWaiting() {
-        return parties - missing;
+        lock.lock();
+        try {
+            return parties - missing;
+        } finally {
+            lock.unlock();
+        }
     }
 }
