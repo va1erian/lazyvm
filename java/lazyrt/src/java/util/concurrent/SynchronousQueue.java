@@ -16,7 +16,7 @@ import java.util.concurrent.locks.LockSupport;
 public class SynchronousQueue<E> extends AbstractQueue<E> implements BlockingQueue<E>, java.io.Serializable {
     private static final class Party<E> {
         final Thread thread = Thread.currentThread();
-        /** What a giver brings; what a taker got. */
+        /** What a giver brings, which it keeps as proof of being met; what a taker got. */
         E item;
         boolean met;
 
@@ -45,7 +45,9 @@ public class SynchronousQueue<E> extends AbstractQueue<E> implements BlockingQue
             }
             Party<E> other = fair ? line.pollFirst() : line.pollLast();
             E got = other.item;
-            other.item = given;
+            if (given != null) {
+                other.item = given;
+            }
             other.met = true;
             LockSupport.unpark(other.thread);
             return given != null ? given : got;

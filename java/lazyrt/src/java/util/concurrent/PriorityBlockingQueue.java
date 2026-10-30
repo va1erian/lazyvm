@@ -112,7 +112,8 @@ public class PriorityBlockingQueue<E> extends AbstractQueue<E> implements Blocki
 
     public int drainTo(Collection<? super E> c, int maxElements) {
         LinkedCore.checkDrainTarget(c, this);
-        return core.drainTo(c, maxElements);
+        // Only what is there at the start can move, so a sink feeding this queue ends.
+        return core.drainTo(c, Math.min(maxElements, core.size()));
     }
 
     public void clear() {

@@ -19,10 +19,10 @@ import java.util.Set;
  */
 final class SkipView<K, V> extends AbstractMap<K, V> implements ConcurrentNavigableMap<K, V> {
     private final ConcurrentSkipListMap<K, V> map;
-    private final K lo;
-    private final boolean loInclusive;
-    private final K hi;
-    private final boolean hiInclusive;
+    private final K minKey;
+    private final boolean minIncluded;
+    private final K maxKey;
+    private final boolean maxIncluded;
     private final boolean descending;
     private NavigableSet<K> keys;
     private Collection<V> values;
@@ -33,14 +33,14 @@ final class SkipView<K, V> extends AbstractMap<K, V> implements ConcurrentNaviga
         this(map, null, false, null, false, false);
     }
 
-    private SkipView(ConcurrentSkipListMap<K, V> map, K lo, boolean loInclusive, K hi, boolean hiInclusive, boolean descending) {
+    private SkipView(ConcurrentSkipListMap<K, V> map, K minKey, boolean minIncluded, K maxKey, boolean maxIncluded, boolean descending) {
         this.map = map;
-        this.lo = lo;
-        this.loInclusive = loInclusive;
-        this.hi = hi;
-        this.hiInclusive = hiInclusive;
+        this.minKey = minKey;
+        this.minIncluded = minIncluded;
+        this.maxKey = maxKey;
+        this.maxIncluded = maxIncluded;
         this.descending = descending;
-        if (lo != null && hi != null && order(lo, hi) > 0) {
+        if (minKey != null && maxKey != null && order(minKey, maxKey) > 0) {
             throw new IllegalArgumentException("inconsistent range");
         }
     }
@@ -51,24 +51,24 @@ final class SkipView<K, V> extends AbstractMap<K, V> implements ConcurrentNaviga
         return c != null ? c.compare((K) a, (K) b) : ((Comparable<Object>) a).compareTo(b);
     }
 
-    private boolean tooLow(Object key) {
-        if (lo == null) {
+    private boolean belowRange(Object key) {
+        if (minKey == null) {
             return false;
         }
-        int c = order(key, lo);
-        return c < 0 || (c == 0 && !loInclusive);
+        int c = order(key, minKey);
+        return c < 0 || (c == 0 && !minIncluded);
     }
 
-    private boolean tooHigh(Object key) {
-        if (hi == null) {
+    private boolean aboveRange(Object key) {
+        if (maxKey == null) {
             return false;
         }
-        int c = order(key, hi);
-        return c > 0 || (c == 0 && !hiInclusive);
+        int c = order(key, maxKey);
+        return c > 0 || (c == 0 && !maxIncluded);
     }
 
     private boolean inRange(Object key) {
-        return !tooLow(key) && !tooHigh(key);
+        return !belowRange(key) && !aboveRange(key);
     }
 
     private K checked(K key) {
@@ -82,22 +82,22 @@ final class SkipView<K, V> extends AbstractMap<K, V> implements ConcurrentNaviga
     // In the map's own order, ignoring direction: the entry nearest an end of the range.
 
     private Map.Entry<K, V> lowest() {
-        Map.Entry<K, V> e = lo == null ? map.firstEntry() : loInclusive ? map.ceilingEntry(lo) : map.higherEntry(lo);
-        return e == null || tooHigh(e.getKey()) ? null : e;
+        Map.Entry<K, V> e = minKey == null ? map.firstEntry() : minIncluded ? map.ceilingEntry(minKey) : map.higherEntry(minKey);
+        return e == null || aboveRange(e.getKey()) ? null : e;
     }
 
     private Map.Entry<K, V> highest() {
-        Map.Entry<K, V> e = hi == null ? map.lastEntry() : hiInclusive ? map.floorEntry(hi) : map.lowerEntry(hi);
-        return e == null || tooLow(e.getKey()) ? null : e;
+        Map.Entry<K, V> e = maxKey == null ? map.lastEntry() : maxIncluded ? map.floorEntry(maxKey) : map.lowerEntry(maxKey);
+        return e == null || belowRange(e.getKey()) ? null : e;
     }
 
     /** The next entry above {@code key} if {@code up}, else below it; {@code key} itself if {@code orEqual}. */
     private Map.Entry<K, V> near(K key, boolean up, boolean orEqual) {
         Objects.requireNonNull(key);
-        if (up && tooLow(key)) {
+        if (up && belowRange(key)) {
             return lowest();
         }
-        if (!up && tooHigh(key)) {
+        if (!up && aboveRange(key)) {
             return highest();
         }
         Map.Entry<K, V> e = up
@@ -248,19 +248,19 @@ final class SkipView<K, V> extends AbstractMap<K, V> implements ConcurrentNaviga
 
     /** A view of this one, narrower in the map's own order; a null bound keeps the current one. */
     private SkipView<K, V> narrowed(K newLo, boolean newLoInclusive, K newHi, boolean newHiInclusive, boolean direction) {
-        K l = lo;
-        boolean li = loInclusive;
-        K h = hi;
-        boolean hi2 = hiInclusive;
+        K l = minKey;
+        boolean li = minIncluded;
+        K h = maxKey;
+        boolean hi2 = maxIncluded;
         if (newLo != null) {
-            if (lo != null && beyond(order(newLo, lo), loInclusive, newLoInclusive, true)) {
+            if (minKey != null && beyond(order(newLo, minKey), minIncluded, newLoInclusive, true)) {
                 throw new IllegalArgumentException("key out of range");
             }
             l = newLo;
             li = newLoInclusive;
         }
         if (newHi != null) {
-            if (hi != null && beyond(order(newHi, hi), hiInclusive, newHiInclusive, false)) {
+            if (maxKey != null && beyond(order(newHi, maxKey), maxIncluded, newHiInclusive, false)) {
                 throw new IllegalArgumentException("key out of range");
             }
             h = newHi;

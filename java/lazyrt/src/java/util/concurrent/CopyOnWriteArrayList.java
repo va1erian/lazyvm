@@ -187,22 +187,37 @@ public class CopyOnWriteArrayList<E> implements List<E>, RandomAccess, Cloneable
         }
     }
 
+    /**
+     * This and {@code addIfAbsent} run the argument's {@code equals}, user code, with {@code mu} free:
+     * it may take a lock another writer holds. The answer stands only if the array is still that one.
+     */
     public boolean remove(Object o) {
-        synchronized (mu) {
+        for (;;) {
             Object[] a = array;
             int at = indexIn(o, a, 0, a.length);
             if (at < 0) {
                 return false;
             }
-            array = spliced(a, at, 1, new Object[0]);
-            return true;
+            synchronized (mu) {
+                if (array == a) {
+                    array = spliced(a, at, 1, new Object[0]);
+                    return true;
+                }
+            }
         }
     }
 
     public boolean addIfAbsent(E e) {
-        synchronized (mu) {
+        for (;;) {
             Object[] a = array;
-            return indexIn(e, a, 0, a.length) < 0 && add(e);
+            if (indexIn(e, a, 0, a.length) >= 0) {
+                return false;
+            }
+            synchronized (mu) {
+                if (array == a) {
+                    return add(e);
+                }
+            }
         }
     }
 

@@ -20,7 +20,7 @@ final class HashBulk<K, V> {
     }
 
     /** A walk that hands the pair itself on; only a fold needs no allocation per step. */
-    private final class Pair extends HashCore.Walk<K, V, Pair> {
+    private final class Pair extends HashWalk<K, V, Pair> {
         K key;
         V value;
 
