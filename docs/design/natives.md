@@ -165,6 +165,12 @@ thread (run, the uncaught exception handler, then `exitByVm`), and
 `java.lang.Shutdown.runHooks()` after the last non-daemon thread, if that
 class was loaded.
 
+### `lazy.internal.Atomics`
+Compare-and-set, get-and-set and get-and-add on one int, long or reference
+variable, named by a `Field` (instance or static) or by an array and index, plus
+`getRef` and `callerClass`. The checks each one makes are in
+[`atomics.md`](atomics.md).
+
 ### `lazy.internal.VM`
 - `public static native String getProperty(String key)` (null when unset)
 - `public static native void exit(int status)`

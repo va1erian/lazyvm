@@ -149,7 +149,7 @@ fn constant(vm: &mut Vm, args: &[Value]) -> VmResult<Constant> {
 }
 
 /// The class and slot of a `Field`, `Method` or `Constructor` object.
-fn member_of(vm: &Vm, member: Ref) -> VmResult<(ClassId, usize)> {
+pub(crate) fn member_of(vm: &Vm, member: Ref) -> VmResult<(ClassId, usize)> {
     let clazz = vm
         .field_by_name(member, "clazz", "Ljava/lang/Class;")?
         .reference()?;
@@ -162,7 +162,7 @@ fn member_of(vm: &Vm, member: Ref) -> VmResult<(ClassId, usize)> {
 }
 
 /// The receiver must be an instance of the member's class.
-fn check_receiver(vm: &Vm, class: ClassId, receiver: Option<Ref>) -> VmResult<Ref> {
+pub(crate) fn check_receiver(vm: &Vm, class: ClassId, receiver: Option<Ref>) -> VmResult<Ref> {
     let r = receiver.ok_or_else(VmError::npe)?;
     if vm.is_assignable(vm.heap.class_of(r)?, class) {
         Ok(r)
@@ -314,7 +314,7 @@ fn array_new(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     ret_ref(Some(vm.new_array(array_class, len)?))
 }
 
-fn index(vm: &Vm, array: Ref, i: i32) -> VmResult<usize> {
+pub(crate) fn index(vm: &Vm, array: Ref, i: i32) -> VmResult<usize> {
     let len = vm.heap.array(array)?.len();
     usize::try_from(i)
         .ok()

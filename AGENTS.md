@@ -102,6 +102,7 @@ python tools/buffers.py --check        # generated java.nio buffers are up to da
 python tools/case_marks.py --check     # CaseMarks.java matches the oracle (local gate: needs the Java 8 oracle, CI has none)
 python tools/locale_symbols.py --check # LocaleSymbolData.java matches the oracle (local gate: needs the Java 8 oracle)
 python tools/lazyrt.py                 # the class library builds
+python tools/fixtures.py --check       # checked-in class files match their sources (javac 25)
 python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
 python tools/launcher_test.py          # -jar, manifests and jar errors

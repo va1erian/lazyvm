@@ -261,7 +261,7 @@ a null check, and it was 14.9% before this fix.
 - **Memory model (S6-03):** every handover goes through a mutex, so it orders
   all memory effects; with one thread running bytecode at a time, `volatile`
   needs nothing extra, and an atomic intrinsic is atomic if its native does
-  not call `blocking`.
+  not call `blocking`. See [`atomics.md`](atomics.md).
 - **`LockSupport` (S6-04):** `Vm::park` with a permit in `ThreadEntry` gives
   park/unpark; executors and queues can be built on monitors.
 - **The reactor (S6-06):** a reactor OS thread does not run Java and must

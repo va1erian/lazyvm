@@ -1,0 +1,131 @@
+int nulls: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+int null class: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+int null name: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+int missing: java.lang.RuntimeException: java.lang.NoSuchFieldException: nope
+  cause java.lang.NoSuchFieldException: nope
+int inherited: java.lang.RuntimeException: java.lang.NoSuchFieldException: i
+  cause java.lang.NoSuchFieldException: i
+int non volatile: java.lang.IllegalArgumentException: Must be volatile type
+int static: java.lang.IllegalArgumentException: null
+int static plain: java.lang.IllegalArgumentException: Must be volatile type
+int on l: java.lang.IllegalArgumentException: Must be integer type
+int on o: java.lang.IllegalArgumentException: Must be integer type
+int on boxed: java.lang.IllegalArgumentException: Must be integer type
+int on sh: java.lang.IllegalArgumentException: Must be integer type
+int on by: java.lang.IllegalArgumentException: Must be integer type
+int on ch: java.lang.IllegalArgumentException: Must be integer type
+int on bo: java.lang.IllegalArgumentException: Must be integer type
+int on fl: java.lang.IllegalArgumentException: Must be integer type
+int on db: java.lang.IllegalArgumentException: Must be integer type
+int on ints: java.lang.IllegalArgumentException: Must be integer type
+int on plainLong: java.lang.IllegalArgumentException: Must be integer type
+int on primitive class: java.lang.RuntimeException: java.lang.NoSuchFieldException: i
+  cause java.lang.NoSuchFieldException: i
+int on array class: java.lang.RuntimeException: java.lang.NoSuchFieldException: length
+  cause java.lang.NoSuchFieldException: length
+int on interface: java.lang.RuntimeException: java.lang.NoSuchFieldException: x
+  cause java.lang.NoSuchFieldException: x
+long nulls: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+long null class: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+long null name: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+long missing: java.lang.RuntimeException: java.lang.NoSuchFieldException: nope
+  cause java.lang.NoSuchFieldException: nope
+long inherited: java.lang.RuntimeException: java.lang.NoSuchFieldException: l
+  cause java.lang.NoSuchFieldException: l
+long non volatile: java.lang.IllegalArgumentException: Must be volatile type
+long static: java.lang.IllegalArgumentException: null
+long on i: java.lang.IllegalArgumentException: Must be long type
+long on o: java.lang.IllegalArgumentException: Must be long type
+long on sh: java.lang.IllegalArgumentException: Must be long type
+long on db: java.lang.IllegalArgumentException: Must be long type
+long on plainInt: java.lang.IllegalArgumentException: Must be long type
+ref nulls: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+ref null class: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+ref null vclass: java.lang.ClassCastException: null
+ref null name: java.lang.RuntimeException: java.lang.NullPointerException
+  cause java.lang.NullPointerException: null
+ref missing: java.lang.RuntimeException: java.lang.NoSuchFieldException: nope
+  cause java.lang.NoSuchFieldException: nope
+ref inherited: java.lang.RuntimeException: java.lang.NoSuchFieldException: o
+  cause java.lang.NoSuchFieldException: o
+ref non volatile: java.lang.IllegalArgumentException: Must be volatile type
+ref non volatile wrong type: java.lang.ClassCastException: null
+ref static: java.lang.IllegalArgumentException: null
+ref static wrong type: java.lang.ClassCastException: null
+ref field narrower: java.lang.ClassCastException: null
+ref field wider: java.lang.ClassCastException: null
+ref unrelated: java.lang.ClassCastException: null
+ref interface wider: java.lang.ClassCastException: null
+ref on interface field: ok
+ref on int with int: java.lang.IllegalArgumentException: Must be reference type
+ref on int with Integer: java.lang.ClassCastException: null
+ref on int with Object: java.lang.ClassCastException: null
+ref on Integer with int: java.lang.ClassCastException: null
+ref on array: ok
+ref on array with Object: java.lang.ClassCastException: null
+ref on Object[] with String[]: java.lang.ClassCastException: null
+ref void: java.lang.ClassCastException: null
+ref on plain int with int: java.lang.IllegalArgumentException: Must be reference type
+ref on static int with int: java.lang.IllegalArgumentException: Must be reference type
+ref static plain: java.lang.IllegalArgumentException: Must be volatile type
+ref static plain wrong: java.lang.ClassCastException: null
+ref plain array: java.lang.IllegalArgumentException: Must be volatile type
+use int get null: java.lang.ClassCastException: null
+use int set null: java.lang.ClassCastException: null
+use int lazySet null: java.lang.ClassCastException: null
+use int cas null: java.lang.ClassCastException: null
+use int weak null: java.lang.ClassCastException: null
+use int getAndSet null: java.lang.ClassCastException: null
+use int getAndAdd null: java.lang.ClassCastException: null
+use int incrementAndGet null: java.lang.ClassCastException: null
+use int updateAndGet null: java.lang.ClassCastException: null
+use int get wrong: java.lang.ClassCastException: null
+use int set wrong: java.lang.ClassCastException: null
+use int lazySet wrong: java.lang.ClassCastException: null
+use int cas wrong: java.lang.ClassCastException: null
+use int weak wrong: java.lang.ClassCastException: null
+use int getAndSet wrong: java.lang.ClassCastException: null
+use int getAndAdd wrong: java.lang.ClassCastException: null
+use int getAndIncrement wrong: java.lang.ClassCastException: null
+use int accumulateAndGet wrong: java.lang.ClassCastException: null
+use int updateAndGet null function: java.lang.NullPointerException: null
+use long get null: java.lang.ClassCastException: null
+use long set null: java.lang.ClassCastException: null
+use long cas null: java.lang.ClassCastException: null
+use long getAndSet null: java.lang.ClassCastException: null
+use long getAndAdd null: java.lang.ClassCastException: null
+use long get wrong: java.lang.ClassCastException: null
+use long set wrong: java.lang.ClassCastException: null
+use long lazySet wrong: java.lang.ClassCastException: null
+use long cas wrong: java.lang.ClassCastException: null
+use long weak wrong: java.lang.ClassCastException: null
+use long getAndAdd wrong: java.lang.ClassCastException: null
+use ref get null: java.lang.ClassCastException: null
+use ref set null: java.lang.ClassCastException: null
+use ref cas null: java.lang.ClassCastException: null
+use ref getAndSet null: java.lang.ClassCastException: null
+use ref get wrong: java.lang.ClassCastException: null
+use ref set wrong: java.lang.ClassCastException: null
+use ref lazySet wrong: java.lang.ClassCastException: null
+use ref cas wrong: java.lang.ClassCastException: null
+use ref weak wrong: java.lang.ClassCastException: null
+use ref getAndSet wrong: java.lang.ClassCastException: null
+use ref set wrong value: java.lang.ClassCastException: null
+use ref lazySet wrong value: java.lang.ClassCastException: null
+use ref cas wrong update: java.lang.ClassCastException: null
+use ref cas wrong update no match: java.lang.ClassCastException: null
+use ref cas wrong expect: ok false
+use ref cas wrong both: java.lang.ClassCastException: null
+use ref weak wrong update: java.lang.ClassCastException: null
+use ref getAndSet wrong value: java.lang.ClassCastException: null
+use ref both wrong: java.lang.ClassCastException: null
+use ref value after: ok still null
+use ref null value: ok null

@@ -1,0 +1,23 @@
+expected rounds 240000
+atomicInt 240000
+atomicLong 720000
+casLoop 480000
+updated 240000
+accumulated 1200000
+atomicRef 240000
+intArray [60000, 60000, 60000, 60000]
+longArray [120000, 120000, 120000, 120000]
+refArray [120000, 120000]
+stamped 240000 stamp 480000
+markable 240000 mark false
+guarded 240000
+intField 240000
+longField 1680000
+refField 240000
+longAdder 240000
+doubleAdder 120000.0
+maximum 7029999
+doubleSum 60000.0
+swapLong 28800120000
+swapInt 28800120000
+swapRef 28800120000

@@ -1,0 +1,110 @@
+[1, 2, 3] 3 [] [0, 0]
+1 3 2 0
+3 10 [3, 0, 10]
+false true [1, 0, 10]
+false true [1, 1, 10]
+10 [1, 1, 8]
+2147483647
+4 13 13
+13 1105 [1, 1, 1105]
+int get: java.lang.IndexOutOfBoundsException: index -1
+int set: java.lang.IndexOutOfBoundsException: index -1
+int lazySet: java.lang.IndexOutOfBoundsException: index -1
+int getAndSet: java.lang.IndexOutOfBoundsException: index -1
+int compareAndSet: java.lang.IndexOutOfBoundsException: index -1
+int weakCompareAndSet: java.lang.IndexOutOfBoundsException: index -1
+int getAndIncrement: java.lang.IndexOutOfBoundsException: index -1
+int addAndGet: java.lang.IndexOutOfBoundsException: index -1
+int getAndUpdate: java.lang.IndexOutOfBoundsException: index -1
+int updateAndGet: java.lang.IndexOutOfBoundsException: index -1
+int getAndAccumulate: java.lang.IndexOutOfBoundsException: index -1
+int accumulateAndGet: java.lang.IndexOutOfBoundsException: index -1
+int get: java.lang.IndexOutOfBoundsException: index 3
+int set: java.lang.IndexOutOfBoundsException: index 3
+int lazySet: java.lang.IndexOutOfBoundsException: index 3
+int getAndSet: java.lang.IndexOutOfBoundsException: index 3
+int compareAndSet: java.lang.IndexOutOfBoundsException: index 3
+int weakCompareAndSet: java.lang.IndexOutOfBoundsException: index 3
+int getAndIncrement: java.lang.IndexOutOfBoundsException: index 3
+int addAndGet: java.lang.IndexOutOfBoundsException: index 3
+int getAndUpdate: java.lang.IndexOutOfBoundsException: index 3
+int updateAndGet: java.lang.IndexOutOfBoundsException: index 3
+int getAndAccumulate: java.lang.IndexOutOfBoundsException: index 3
+int accumulateAndGet: java.lang.IndexOutOfBoundsException: index 3
+int get: java.lang.IndexOutOfBoundsException: index 2147483647
+int set: java.lang.IndexOutOfBoundsException: index 2147483647
+int lazySet: java.lang.IndexOutOfBoundsException: index 2147483647
+int getAndSet: java.lang.IndexOutOfBoundsException: index 2147483647
+int compareAndSet: java.lang.IndexOutOfBoundsException: index 2147483647
+int weakCompareAndSet: java.lang.IndexOutOfBoundsException: index 2147483647
+int getAndIncrement: java.lang.IndexOutOfBoundsException: index 2147483647
+int addAndGet: java.lang.IndexOutOfBoundsException: index 2147483647
+int getAndUpdate: java.lang.IndexOutOfBoundsException: index 2147483647
+int updateAndGet: java.lang.IndexOutOfBoundsException: index 2147483647
+int getAndAccumulate: java.lang.IndexOutOfBoundsException: index 2147483647
+int accumulateAndGet: java.lang.IndexOutOfBoundsException: index 2147483647
+int get: java.lang.IndexOutOfBoundsException: index -2147483648
+int set: java.lang.IndexOutOfBoundsException: index -2147483648
+int lazySet: java.lang.IndexOutOfBoundsException: index -2147483648
+int getAndSet: java.lang.IndexOutOfBoundsException: index -2147483648
+int compareAndSet: java.lang.IndexOutOfBoundsException: index -2147483648
+int weakCompareAndSet: java.lang.IndexOutOfBoundsException: index -2147483648
+int getAndIncrement: java.lang.IndexOutOfBoundsException: index -2147483648
+int addAndGet: java.lang.IndexOutOfBoundsException: index -2147483648
+int getAndUpdate: java.lang.IndexOutOfBoundsException: index -2147483648
+int updateAndGet: java.lang.IndexOutOfBoundsException: index -2147483648
+int getAndAccumulate: java.lang.IndexOutOfBoundsException: index -2147483648
+int accumulateAndGet: java.lang.IndexOutOfBoundsException: index -2147483648
+int null: java.lang.NullPointerException: null
+int negative: java.lang.NegativeArraySizeException: null
+int null function: java.lang.NullPointerException: null
+[1, 2, 3] 3 [] [0, 0]
+1 3 2 0
+3 1099511627776 [3, 0, 1099511627776]
+false true [1, 0, 1099511627776]
+false true [1, 1, 1099511627776]
+1099511627776 [1, 1, 8]
+9223372036854775807
+4 13 13
+13 1105 [1, 1, 1105]
+long get: java.lang.IndexOutOfBoundsException: index -1
+long set: java.lang.IndexOutOfBoundsException: index -1
+long getAndSet: java.lang.IndexOutOfBoundsException: index -1
+long compareAndSet: java.lang.IndexOutOfBoundsException: index -1
+long addAndGet: java.lang.IndexOutOfBoundsException: index -1
+long updateAndGet: java.lang.IndexOutOfBoundsException: index -1
+long accumulateAndGet: java.lang.IndexOutOfBoundsException: index -1
+long get: java.lang.IndexOutOfBoundsException: index 3
+long set: java.lang.IndexOutOfBoundsException: index 3
+long getAndSet: java.lang.IndexOutOfBoundsException: index 3
+long compareAndSet: java.lang.IndexOutOfBoundsException: index 3
+long addAndGet: java.lang.IndexOutOfBoundsException: index 3
+long updateAndGet: java.lang.IndexOutOfBoundsException: index 3
+long accumulateAndGet: java.lang.IndexOutOfBoundsException: index 3
+long null: java.lang.NullPointerException: null
+long negative: java.lang.NegativeArraySizeException: null
+[a, b, null] 3 [] [null, null]
+false true [x, b, null]
+false true [x, b, y]
+y [x, b, null]
+s suv suv
+suv wsuvz [x, t, wsuvz]
+ref get: java.lang.IndexOutOfBoundsException: index -1
+ref set: java.lang.IndexOutOfBoundsException: index -1
+ref lazySet: java.lang.IndexOutOfBoundsException: index -1
+ref getAndSet: java.lang.IndexOutOfBoundsException: index -1
+ref compareAndSet: java.lang.IndexOutOfBoundsException: index -1
+ref updateAndGet: java.lang.IndexOutOfBoundsException: index -1
+ref accumulateAndGet: java.lang.IndexOutOfBoundsException: index -1
+ref get: java.lang.IndexOutOfBoundsException: index 3
+ref set: java.lang.IndexOutOfBoundsException: index 3
+ref lazySet: java.lang.IndexOutOfBoundsException: index 3
+ref getAndSet: java.lang.IndexOutOfBoundsException: index 3
+ref compareAndSet: java.lang.IndexOutOfBoundsException: index 3
+ref updateAndGet: java.lang.IndexOutOfBoundsException: index 3
+ref accumulateAndGet: java.lang.IndexOutOfBoundsException: index 3
+ref null: java.lang.NullPointerException: null
+ref negative: java.lang.NegativeArraySizeException: null
+[5]
+true [7.0]
+true

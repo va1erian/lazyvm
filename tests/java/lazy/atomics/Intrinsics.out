@@ -1,0 +1,140 @@
+fields found
+Statics initialized
+static add: 5
+static value: 7
+static cas no: false
+static cas yes: true
+static swap: 1
+static wrap: 2147483647 -2147483648
+static long add: 6 1099511627782
+static long cas: true -1
+static long swap: -1 3
+static ref read: start
+static ref cas: true next
+static ref swap: next null
+static ref wrong value: java.lang.ClassCastException: java.lang.Integer
+static final: java.lang.IllegalArgumentException: final field
+static failing init: java.lang.ExceptionInInitializerError: null
+static failing again: java.lang.NoClassDefFoundError: Could not initialize class lazy.atomics.Intrinsics$Failing
+null target: java.lang.NullPointerException: null
+wrong target: java.lang.IllegalArgumentException: object is not an instance of declaring class
+array target: java.lang.IllegalArgumentException: object is not an instance of declaring class
+sub target: 0
+null field: java.lang.NullPointerException: null
+null field long: java.lang.NullPointerException: null
+null field ref: java.lang.NullPointerException: null
+int op on l: java.lang.IllegalArgumentException: wrong field type
+int op on s: java.lang.IllegalArgumentException: wrong field type
+int op on b: java.lang.IllegalArgumentException: wrong field type
+int op on sh: java.lang.IllegalArgumentException: wrong field type
+int op on c: java.lang.IllegalArgumentException: wrong field type
+int op on z: java.lang.IllegalArgumentException: wrong field type
+int op on f: java.lang.IllegalArgumentException: wrong field type
+int op on d: java.lang.IllegalArgumentException: wrong field type
+int op on ints: java.lang.IllegalArgumentException: wrong field type
+long op on i: java.lang.IllegalArgumentException: wrong field type
+long op on s: java.lang.IllegalArgumentException: wrong field type
+long op on b: java.lang.IllegalArgumentException: wrong field type
+long op on f: java.lang.IllegalArgumentException: wrong field type
+long op on d: java.lang.IllegalArgumentException: wrong field type
+long op on ints: java.lang.IllegalArgumentException: wrong field type
+ref op on i: java.lang.IllegalArgumentException: wrong field type
+ref op on l: java.lang.IllegalArgumentException: wrong field type
+ref op on b: java.lang.IllegalArgumentException: wrong field type
+ref op on f: java.lang.IllegalArgumentException: wrong field type
+ref op on d: java.lang.IllegalArgumentException: wrong field type
+final field: java.lang.IllegalArgumentException: final field
+wrong value: java.lang.ClassCastException: java.lang.Integer
+wrong update, no match: java.lang.ClassCastException: java.lang.Integer
+wrong expect is fine: false
+still null: null
+interface field: null text
+interface field wrong: java.lang.ClassCastException: java.lang.Object
+array field wrong: java.lang.ClassCastException: [J
+array field right: true true
+null value: true
+int add: 2 7
+int cas: false true
+int swap: 0 8
+long add: 4 1099511627780
+long cas: false true
+long swap: 0 8
+ref swap: a c
+ref cas: false true d
+int low: java.lang.ArrayIndexOutOfBoundsException: null
+int high: java.lang.ArrayIndexOutOfBoundsException: null
+long low: java.lang.ArrayIndexOutOfBoundsException: null
+long high: java.lang.ArrayIndexOutOfBoundsException: null
+ref low: java.lang.ArrayIndexOutOfBoundsException: null
+ref high: java.lang.ArrayIndexOutOfBoundsException: null
+int null: java.lang.NullPointerException: null
+long null: java.lang.NullPointerException: null
+ref null: java.lang.NullPointerException: null
+store wrong: java.lang.ArrayStoreException: java.lang.Integer
+store wrong cas: java.lang.ArrayStoreException: java.lang.Integer
+store null: b null
+bounds before store: java.lang.ArrayIndexOutOfBoundsException: null
+nested array: [Ljava.lang.Object;
+slot past the end: java.lang.IllegalArgumentException: bad field slot
+slot negative: java.lang.IllegalArgumentException: bad slot
+slot of another kind: java.lang.IllegalArgumentException: wrong field type
+class changed: java.lang.IllegalArgumentException: wrong field type
+class has no fields: java.lang.IllegalArgumentException: bad field slot
+class is an array: java.lang.IllegalArgumentException: bad field slot
+no class: java.lang.NullPointerException: null
+ref slot past the end: java.lang.IllegalArgumentException: bad field slot
+repointed swap: java.lang.ClassCastException: java.lang.Integer
+repointed swap left: kept null
+repointed cas: java.lang.ClassCastException: java.lang.Integer
+repointed cas left: kept null
+as Field java.lang.reflect.Method: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.reflect.Method: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.reflect.Method: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.reflect.Method: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.String: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.String: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.String: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.String: java.lang.IllegalArgumentException: not a Field
+as Field [I: java.lang.IllegalArgumentException: not a Field
+as Field [I: java.lang.IllegalArgumentException: not a Field
+as Field [I: java.lang.IllegalArgumentException: not a Field
+as Field [I: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.Class: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.Class: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.Class: java.lang.IllegalArgumentException: not a Field
+as Field java.lang.Class: java.lang.IllegalArgumentException: not a Field
+as int[] [J: java.lang.IllegalArgumentException: wrong array type
+as int[] [J: java.lang.IllegalArgumentException: wrong array type
+as int[] [J: java.lang.IllegalArgumentException: wrong array type
+as int[] [Ljava.lang.Object;: java.lang.IllegalArgumentException: wrong array type
+as int[] [Ljava.lang.Object;: java.lang.IllegalArgumentException: wrong array type
+as int[] [Ljava.lang.Object;: java.lang.IllegalArgumentException: wrong array type
+as int[] [B: java.lang.IllegalArgumentException: wrong array type
+as int[] [B: java.lang.IllegalArgumentException: wrong array type
+as int[] [B: java.lang.IllegalArgumentException: wrong array type
+as int[] java.lang.String: java.lang.IllegalArgumentException: wrong array type
+as int[] java.lang.String: java.lang.IllegalArgumentException: wrong array type
+as int[] java.lang.String: java.lang.IllegalArgumentException: wrong array type
+as long[] [I: java.lang.IllegalArgumentException: wrong array type
+as long[] [I: java.lang.IllegalArgumentException: wrong array type
+as long[] [I: java.lang.IllegalArgumentException: wrong array type
+as long[] [Ljava.lang.Object;: java.lang.IllegalArgumentException: wrong array type
+as long[] [Ljava.lang.Object;: java.lang.IllegalArgumentException: wrong array type
+as long[] [Ljava.lang.Object;: java.lang.IllegalArgumentException: wrong array type
+as long[] [D: java.lang.IllegalArgumentException: wrong array type
+as long[] [D: java.lang.IllegalArgumentException: wrong array type
+as long[] [D: java.lang.IllegalArgumentException: wrong array type
+as long[] java.lang.String: java.lang.IllegalArgumentException: wrong array type
+as long[] java.lang.String: java.lang.IllegalArgumentException: wrong array type
+as long[] java.lang.String: java.lang.IllegalArgumentException: wrong array type
+as Object[] [I: java.lang.IllegalArgumentException: wrong array type
+as Object[] [I: java.lang.IllegalArgumentException: wrong array type
+as Object[] [J: java.lang.IllegalArgumentException: wrong array type
+as Object[] [J: java.lang.IllegalArgumentException: wrong array type
+as Object[] java.lang.String: java.lang.IllegalArgumentException: wrong array type
+as Object[] java.lang.String: java.lang.IllegalArgumentException: wrong array type
+still alive 0
+lazy.atomics.Intrinsics
+lazy.atomics.Intrinsics$Other
+lazy.atomics.Intrinsics
+80000 160000

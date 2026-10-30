@@ -206,7 +206,7 @@ public final class Class<T> implements java.io.Serializable, java.lang.reflect.G
     }
 
     public java.lang.reflect.Field getField(String name) throws NoSuchFieldException {
-        java.lang.reflect.Field f = ClassReflection.pickField(getFields(), name);
+        java.lang.reflect.Field f = ClassReflection.pickField(getFields(), nonNull(name));
         if (f == null) {
             throw new NoSuchFieldException(name);
         }
@@ -214,7 +214,7 @@ public final class Class<T> implements java.io.Serializable, java.lang.reflect.G
     }
 
     public java.lang.reflect.Field getDeclaredField(String name) throws NoSuchFieldException {
-        java.lang.reflect.Field f = ClassReflection.pickField(getDeclaredFields(), name);
+        java.lang.reflect.Field f = ClassReflection.pickField(getDeclaredFields(), nonNull(name));
         if (f == null) {
             throw new NoSuchFieldException(name);
         }
