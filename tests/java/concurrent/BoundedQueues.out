@@ -51,6 +51,7 @@ array drain rest = 1
 array out all = [a, b, c]
 array drain empty = 0
 array drain into failing = java.lang.IllegalStateException: sink left=[p, q]
+array drain refused midway = java.lang.IllegalStateException: sink left=[b, c] got=[a]
 array remove before next ! java.lang.IllegalStateException
 array next = a
 array iterator removed = [b, c]
@@ -132,6 +133,7 @@ linked drain rest = 1
 linked out all = [a, b, c]
 linked drain empty = 0
 linked drain into failing = java.lang.IllegalStateException: sink left=[p, q]
+linked drain refused midway = java.lang.IllegalStateException: sink left=[b, c] got=[a]
 linked remove before next ! java.lang.IllegalStateException
 linked next = a
 linked iterator removed = [b, c]

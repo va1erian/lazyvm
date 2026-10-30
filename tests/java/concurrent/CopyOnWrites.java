@@ -63,6 +63,9 @@ public class CopyOnWrites {
         show("lastIndexOf from 0", () -> abc().lastIndexOf("c", 0));
         show("lastIndexOf far", () -> abc().lastIndexOf("a", 99));
         show("lastIndexOf neg", () -> abc().lastIndexOf("a", -1));
+        show("lastIndexOf", () -> new CopyOnWriteArrayList<>(Arrays.asList("a", null, "a", null)).lastIndexOf("a"));
+        show("lastIndexOf null", () -> new CopyOnWriteArrayList<>(Arrays.asList("a", null, "a", null)).lastIndexOf(null));
+        show("lastIndexOf absent", () -> abc().lastIndexOf("z"));
         show("addIfAbsent new", () -> l.addIfAbsent("new"));
         show("addIfAbsent old", () -> l.addIfAbsent("new"));
         show("addAllAbsent", () -> l.addAllAbsent(Arrays.asList("new", "n2", "n2", "n3")));

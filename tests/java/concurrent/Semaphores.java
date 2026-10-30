@@ -166,8 +166,9 @@ public class Semaphores {
         s.release();
         ts[1].join();
         show("then", () -> order);
-        s.release(2);
+        s.release();
         ts[2].join();
+        s.release();
         ts[3].join();
         show("fair order", () -> order);
 

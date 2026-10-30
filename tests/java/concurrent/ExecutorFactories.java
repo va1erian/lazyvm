@@ -68,6 +68,21 @@ public class ExecutorFactories {
         sched.shutdown();
         ScheduledExecutorService singleS = Executors.newSingleThreadScheduledExecutor();
         show("single scheduled", () -> singleS instanceof ThreadPoolExecutor);
+        ThreadFactory named = r -> new Thread(r, "named");
+        show("scheduled factory", () -> {
+            ScheduledExecutorService s = Executors.newScheduledThreadPool(1, named);
+            String name = s.schedule(() -> Thread.currentThread().getName(), 0, TimeUnit.SECONDS).get();
+            s.shutdown();
+            return name;
+        });
+        show("scheduled null factory", () -> Executors.newScheduledThreadPool(1, null));
+        show("single scheduled factory", () -> {
+            ScheduledExecutorService s = Executors.newSingleThreadScheduledExecutor(named);
+            String name = s.schedule(() -> Thread.currentThread().getName(), 0, TimeUnit.SECONDS).get();
+            s.shutdown();
+            return name;
+        });
+        show("single scheduled null factory", () -> Executors.newSingleThreadScheduledExecutor(null));
         show("single scheduled runs", () -> singleS.schedule(() -> "ran", 0, TimeUnit.SECONDS).get());
         singleS.shutdown();
 

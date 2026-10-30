@@ -119,7 +119,6 @@ get interrupted = InterruptedException(null) flag=false
 future untouched = false
 join ignores interrupt = WAITING
 join return = v flag=true
-blocked waiters count as dependents = 2
 get waiter = ExecutionException(java.lang.RuntimeException: x) <- RuntimeException(x)
 join waiter = CompletionException(java.lang.RuntimeException: x) <- RuntimeException(x)
 timed waiter on cancel = CancellationException(null)

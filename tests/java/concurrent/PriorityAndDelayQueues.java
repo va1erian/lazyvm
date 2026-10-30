@@ -3,7 +3,7 @@ package concurrent;
 import java.util.*;
 import java.util.concurrent.*;
 
-/** PriorityBlockingQueue and DelayQueue. Heap order of iterators and toString is never printed. */
+/** PriorityBlockingQueue and DelayQueue. Iterator and toString order is never printed. */
 public class PriorityAndDelayQueues {
     interface Body { Object run() throws Throwable; }
 
@@ -12,6 +12,18 @@ public class PriorityAndDelayQueues {
     static void show(String label, Body body) {
         try { System.out.println(label + " = " + n(body.run())); }
         catch (Throwable t) { System.out.println(label + " ! " + n(t)); }
+    }
+
+    /** Takes one element, then refuses the rest: which elements survive the failure? */
+    static <T> String drainFailing(BlockingQueue<T> q) {
+        List<T> sink = new ArrayList<T>() {
+            @Override public boolean add(T t) {
+                if (!isEmpty()) throw new IllegalStateException("sink");
+                return super.add(t);
+            }
+        };
+        try { return "returned " + q.drainTo(sink); }
+        catch (IllegalStateException e) { return n(e) + " left=" + q + " got=" + new ArrayList<>(sink); }
     }
 
     interface Cond { boolean ok() throws Exception; }
@@ -84,6 +96,25 @@ public class PriorityAndDelayQueues {
         show("drain order", () -> d);
         show("drain rest", () -> q.drainTo(d));
         show("drain order 2", () -> d);
+        q.addAll(Arrays.asList(1, 2, 3));
+        show("drain refused midway", () -> {
+            String r = drainFailing(q);
+            return r.substring(0, r.indexOf(" left=")) + " left " + q.size() + " head " + q.peek();
+        });
+        q.clear();
+        q.add(7);
+        Thread.currentThread().interrupt();
+        show("take flagged, element ready", q::take);
+        show("cleared by take", () -> Thread.currentThread().isInterrupted() + " " + q.size());
+        Thread.currentThread().interrupt();
+        show("timed poll flagged, element ready", () -> q.poll(1, TimeUnit.SECONDS));
+        Thread.interrupted();
+        q.clear();
+        Thread.currentThread().interrupt();
+        show("put flagged", () -> { q.put(1); return q.size(); });
+        show("timed offer flagged", () -> q.offer(2, 1, TimeUnit.SECONDS));
+        show("flag kept by put and offer", Thread::interrupted);
+        q.clear();
         PriorityBlockingQueue<String> rev = new PriorityBlockingQueue<>(4, Comparator.reverseOrder());
         rev.addAll(Arrays.asList("a", "c", "b"));
         show("comparator order", () -> rev.take() + rev.take() + rev.take());
@@ -172,6 +203,24 @@ public class PriorityAndDelayQueues {
         show("drain expired only", () -> q.drainTo(sink));
         show("sink 2", () -> sink);
         show("size", q::size);
+        q.clear();
+        q.add(new Item("e1", -1000));
+        q.add(new Item("e2", -500));
+        q.add(new Item("e3", -100));
+        show("drain refused midway", () -> {
+            String r = drainFailing(q);
+            return r.substring(0, r.indexOf(" left=")) + " left " + q.size() + " head " + q.peek();
+        });
+        q.clear();
+        q.add(new Item("ready", -1000));
+        Thread.currentThread().interrupt();
+        show("take flagged, element ready", q::take);
+        show("cleared by take", () -> Thread.currentThread().isInterrupted() + " " + q.size());
+        q.clear();
+        Thread.currentThread().interrupt();
+        show("put flagged", () -> { q.put(new Item("p", -1)); return q.size(); });
+        show("timed offer flagged", () -> q.offer(new Item("o", -1), 1, TimeUnit.SECONDS));
+        show("flag kept by put and offer", Thread::interrupted);
         q.clear();
         q.add(new Item("soon", 30));
         show("take waits", () -> q.take().name);

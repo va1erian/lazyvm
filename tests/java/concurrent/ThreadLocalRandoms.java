@@ -49,6 +49,16 @@ public class ThreadLocalRandoms {
         show("nextLong bound", () -> allIn(() -> { long v = r.nextLong(1L << 40); return v >= 0 && v < 1L << 40; }));
         show("nextLong range", () -> allIn(() -> { long v = r.nextLong(-5, 5); return v >= -5 && v < 5; }));
         show("nextLong wide range", () -> allIn(() -> { long v = r.nextLong(Long.MIN_VALUE, Long.MAX_VALUE); return v < Long.MAX_VALUE; }));
+        show("nextLong varies", () -> {
+            long first = r.nextLong();
+            for (int i = 0; i < 100; i++) if (r.nextLong() != first) return true;
+            return false;
+        });
+        show("nextLong reaches both signs", () -> {
+            boolean neg = false, pos = false;
+            for (int i = 0; i < 2000; i++) { if (r.nextLong() < 0) neg = true; else pos = true; }
+            return neg && pos;
+        });
         show("nextDouble", () -> allIn(() -> { double v = r.nextDouble(); return v >= 0 && v < 1; }));
         show("nextDouble bound", () -> allIn(() -> { double v = r.nextDouble(2.5); return v >= 0 && v < 2.5; }));
         show("nextDouble range", () -> allIn(() -> { double v = r.nextDouble(-1.5, 2.5); return v >= -1.5 && v < 2.5; }));

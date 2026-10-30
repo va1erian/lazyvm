@@ -37,6 +37,13 @@ drain 2 = 2
 drain order = [1, 2]
 drain rest = 1
 drain order 2 = [1, 2, 3]
+drain refused midway = java.lang.IllegalStateException: sink left 2 head 2
+take flagged, element ready ! java.lang.InterruptedException
+cleared by take = false 1
+timed poll flagged, element ready ! java.lang.InterruptedException
+put flagged = 1
+timed offer flagged = true
+flag kept by put and offer = true
 comparator order = cba
 first non-comparable ! java.lang.ClassCastException: java.lang.Object cannot be cast to java.lang.Comparable
 after failure = 0
@@ -82,6 +89,12 @@ sink = [past]
 drain expired only = 1
 sink 2 = [past, past2]
 size = 1
+drain refused midway = java.lang.IllegalStateException: sink left 2 head e2
+take flagged, element ready ! java.lang.InterruptedException
+cleared by take = false 1
+put flagged = 1
+timed offer flagged = true
+flag kept by put and offer = true
 take waits = soon
 timed poll waits = soon2
 taker waits on empty = WAITING

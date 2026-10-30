@@ -73,6 +73,12 @@ public class ForkJoin {
         show("parallelism limit", () -> new ForkJoinPool(32767).getParallelism());
         show("parallelism over limit", () -> new ForkJoinPool(32768));
         show("null factory", () -> new ForkJoinPool(1, null, null, false));
+        show("no-arg parallelism", () -> {
+            ForkJoinPool none = new ForkJoinPool();
+            boolean same = none.getParallelism() == Runtime.getRuntime().availableProcessors();
+            none.shutdown();
+            return same;
+        });
         ForkJoinPool p = new ForkJoinPool(2);
         show("fresh toString", () -> p);
         show("parallelism", p::getParallelism);
@@ -104,6 +110,7 @@ public class ForkJoin {
         show("outside pool", ForkJoinTask::inForkJoinPool);
         show("outside getPool", ForkJoinTask::getPool);
         show("outside getQueuedTaskCount", ForkJoinTask::getQueuedTaskCount);
+        show("outside pollTask", ForkJoinTaskPeek::pollAny);
         show("null submit", () -> p.submit((Callable<String>) null));
         show("null submit runnable", () -> p.submit((Runnable) null));
         show("null submit task", () -> p.submit((ForkJoinTask<String>) null));
@@ -234,6 +241,16 @@ public class ForkJoin {
         Thread.currentThread().interrupt();
         show("timed get flagged", () -> new Fib(1).get(1, TimeUnit.SECONDS));
         show("cleared", () -> Thread.currentThread().isInterrupted());
+        Fib finished = new Fib(1);
+        finished.invoke();
+        Thread.currentThread().interrupt();
+        show("get flagged, done", finished::get);
+        show("cleared after done", () -> Thread.currentThread().isInterrupted());
+        Thread.currentThread().interrupt();
+        show("timed get flagged, done", () -> finished.get(1, TimeUnit.SECONDS));
+        Thread.currentThread().interrupt();
+        show("join flagged, done", finished::join);
+        show("flag kept by join", Thread::interrupted);
         p.shutdown();
     }
 
@@ -258,6 +275,8 @@ public class ForkJoin {
                 b.append(" tryUnfork=").append(y.tryUnfork());
                 b.append(" tryUnfork again=").append(y.tryUnfork());
                 b.append(" poll=").append(nameOf(x, y, ForkJoinTaskPeek.poll()));
+                ForkJoinTask<?> z = ForkJoinTask.adapt(() -> "z").fork();
+                b.append(" pollTask=").append(ForkJoinTaskPeek.pollAny() == z);
                 b.append(" empty=").append(ForkJoinTask.getQueuedTaskCount());
                 b.append(" surplus>=0=").append(RecursiveTaskProbe.surplus() >= 0);
                 b.append(" unforked done=").append(y.isDone());
@@ -275,6 +294,7 @@ public class ForkJoin {
     abstract static class ForkJoinTaskPeek extends ForkJoinTask<Void> {
         static ForkJoinTask<?> peek() { return peekNextLocalTask(); }
         static ForkJoinTask<?> poll() { return pollNextLocalTask(); }
+        static ForkJoinTask<?> pollAny() { return pollTask(); }
     }
 
     abstract static class RecursiveTaskProbe extends ForkJoinTask<Void> {

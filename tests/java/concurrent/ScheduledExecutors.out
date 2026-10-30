@@ -2,6 +2,9 @@ toString = java.util.concurrent.ScheduledThreadPoolExecutor@H[Running, pool size
 core negative ! java.lang.IllegalArgumentException
 null factory ! java.lang.NullPointerException
 null handler ! java.lang.NullPointerException
+full constructor = 2 DiscardPolicy named
+full constructor null factory ! java.lang.NullPointerException
+full constructor null handler ! java.lang.NullPointerException
 schedule null ! java.lang.NullPointerException
 schedule null callable ! java.lang.NullPointerException
 schedule null unit ! java.lang.NullPointerException
@@ -16,7 +19,7 @@ policy remove on cancel = false
 max = 2147483647
 keepAlive = 0
 after shutdown ! java.util.concurrent.RejectedExecutionException: Task <task> rejected from java.util.concurrent.ScheduledThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
-delay order = [neg1, neg2, z1, exec, sub, early, late]
+delay order = [neg2, neg1, z1, exec, sub, early, late]
 getDelay = 59
 getDelay in range = true
 compare = true

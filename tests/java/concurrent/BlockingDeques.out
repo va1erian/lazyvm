@@ -73,6 +73,7 @@ drain 1 = 1
 out = [b]
 drain = 2
 out 2 = [b, a, c]
+drain refused midway = java.lang.IllegalStateException: sink left=[b, c] got=[a]
 ascending = [a, b, c, d]
 descending = [d, c, b, a]
 remove before next ! java.lang.IllegalStateException

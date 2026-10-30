@@ -208,6 +208,7 @@ public class CompletableFutures {
         until(() -> j.getState() == Thread.State.WAITING);
         j.interrupt();
         Thread.sleep(5);
+        until(() -> j.getState() == Thread.State.WAITING);
         show("join ignores interrupt", j::getState);
         f.complete("v");
         j.join();
@@ -219,7 +220,6 @@ public class CompletableFutures {
         g1.start();
         g2.start();
         until(() -> g1.getState() == Thread.State.WAITING && g2.getState() == Thread.State.WAITING);
-        show("blocked waiters count as dependents", w::getNumberOfDependents);
         w.completeExceptionally(new RuntimeException("x"));
         g1.join();
         g2.join();

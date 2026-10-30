@@ -56,7 +56,8 @@ public class InvokeAllAny {
         show("any one failed", () -> p.invokeAny(Arrays.asList(fails("only"))));
         show("any empty", () -> p.invokeAny(Collections.<Callable<String>>emptyList()));
         show("any null", () -> p.invokeAny(null));
-        show("any null element", () -> p.invokeAny(Arrays.asList(value("a"), null)));
+        // Null first: behind a task that finishes quickly it may never be reached.
+        show("any null element", () -> p.invokeAny(Arrays.asList(null, value("a"))));
         show("any timed null", () -> p.invokeAny(null, 1, TimeUnit.SECONDS));
         show("any timed empty", () -> p.invokeAny(Collections.<Callable<String>>emptyList(), 1, TimeUnit.SECONDS));
         show("any timed ok", () -> p.invokeAny(Arrays.asList(value("a")), 30, TimeUnit.SECONDS));

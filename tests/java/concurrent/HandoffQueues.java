@@ -14,6 +14,18 @@ public class HandoffQueues {
         catch (Throwable t) { System.out.println(label + " ! " + n(t)); }
     }
 
+    /** Takes one element, then refuses the rest: which elements survive the failure? */
+    static <T> String drainFailing(BlockingQueue<T> q) {
+        List<T> sink = new ArrayList<T>() {
+            @Override public boolean add(T t) {
+                if (!isEmpty()) throw new IllegalStateException("sink");
+                return super.add(t);
+            }
+        };
+        try { return "returned " + q.drainTo(sink); }
+        catch (IllegalStateException e) { return n(e) + " left=" + q + " got=" + new ArrayList<>(sink); }
+    }
+
     interface Cond { boolean ok() throws Exception; }
 
     static void until(Cond c) throws Exception {
@@ -69,6 +81,7 @@ public class HandoffQueues {
         show("drain self", () -> q.drainTo(q));
         show("drain", () -> q.drainTo(out));
         show("drain max", () -> q.drainTo(out, 5));
+        show("drain nothing to a refusing sink", () -> drainFailing(q));
         show("clear", () -> { q.clear(); return "ok"; });
     }
 
@@ -193,6 +206,16 @@ public class HandoffQueues {
         show("drain 1", () -> q.drainTo(out, 1));
         show("drain", () -> q.drainTo(out));
         show("out", () -> out);
+        q.addAll(Arrays.asList("a", "b", "c"));
+        show("drain refused midway", () -> drainFailing(q));
+        q.clear();
+        q.add("ready");
+        Thread.currentThread().interrupt();
+        show("take flagged, element ready", q::take);
+        show("flag kept by take", () -> Thread.currentThread().isInterrupted());
+        q.add("ready2");
+        show("timed poll flagged, element ready", () -> q.poll(1, TimeUnit.SECONDS));
+        show("flag kept by poll", Thread::interrupted);
         show("poll empty", q::poll);
         show("timed poll empty", () -> q.poll(1, TimeUnit.MILLISECONDS));
         show("element empty", q::element);

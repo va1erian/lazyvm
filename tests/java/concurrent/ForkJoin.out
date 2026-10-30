@@ -13,6 +13,7 @@ parallelism negative ! java.lang.IllegalArgumentException
 parallelism limit = 32767
 parallelism over limit ! java.lang.IllegalArgumentException
 null factory ! java.lang.NullPointerException
+no-arg parallelism = true
 fresh toString = java.util.concurrent.ForkJoinPool@H[Running, parallelism = 2, size = 0, active = 0, running = 0, steals = 0, tasks = 0, submissions = 0]
 parallelism = 2
 async default = false
@@ -26,6 +27,7 @@ common worker identity = ForkJoinPool.commonPool-worker-N daemon=true worker=tru
 outside pool = false
 outside getPool = null
 outside getQueuedTaskCount = 0
+outside pollTask = null
 null submit ! java.lang.NullPointerException
 null submit runnable ! java.lang.NullPointerException
 null submit task ! java.lang.NullPointerException
@@ -108,12 +110,17 @@ reinitialized = false
 get flagged ! java.lang.InterruptedException
 timed get flagged ! java.lang.InterruptedException
 cleared = false
+get flagged, done ! java.lang.InterruptedException
+cleared after done = false
+timed get flagged, done ! java.lang.InterruptedException
+join flagged, done = 1
+flag kept by join = true
 lifo mode = false
 lifo order = [c, b, a]
-lifo local ops = queued=2 peek=y tryUnfork=true tryUnfork again=false poll=x empty=0 surplus>=0=true unforked done=false
+lifo local ops = queued=2 peek=y tryUnfork=true tryUnfork again=false poll=x pollTask=true empty=0 surplus>=0=true unforked done=false
 async mode = true
 async order = [a, b, c]
-async local ops = queued=2 peek=x tryUnfork=true tryUnfork again=false poll=x empty=0 surplus>=0=true unforked done=false
+async local ops = queued=2 peek=x tryUnfork=true tryUnfork again=false poll=x pollTask=true empty=0 surplus>=0=true unforked done=false
 outside pool blocker = 1 true
 releasable skips block = 1
 null blocker ! java.lang.NullPointerException

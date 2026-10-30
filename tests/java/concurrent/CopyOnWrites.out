@@ -37,6 +37,9 @@ lastIndexOf from = 0
 lastIndexOf from 0 = -1
 lastIndexOf far ! java.lang.ArrayIndexOutOfBoundsException: 99
 lastIndexOf neg = -1
+lastIndexOf = 2
+lastIndexOf null = 3
+lastIndexOf absent = -1
 addIfAbsent new = true
 addIfAbsent old = false
 addAllAbsent = 2

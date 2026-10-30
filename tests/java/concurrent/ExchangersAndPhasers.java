@@ -179,6 +179,7 @@ public class ExchangersAndPhasers {
         until(() -> keep.getState() == Thread.State.WAITING);
         keep.interrupt();
         Thread.sleep(5);
+        until(() -> keep.getState() == Thread.State.WAITING);
         show("awaitAdvance ignores interrupt", keep::getState);
         p.arrive();
         p.arrive();

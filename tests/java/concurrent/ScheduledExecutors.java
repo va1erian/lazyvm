@@ -37,6 +37,15 @@ public class ScheduledExecutors {
         show("core negative", () -> new ScheduledThreadPoolExecutor(-1));
         show("null factory", () -> new ScheduledThreadPoolExecutor(1, (ThreadFactory) null));
         show("null handler", () -> new ScheduledThreadPoolExecutor(1, (RejectedExecutionHandler) null));
+        show("full constructor", () -> {
+            ScheduledThreadPoolExecutor s = new ScheduledThreadPoolExecutor(2, t -> new Thread(t, "named"), new ThreadPoolExecutor.DiscardPolicy());
+            String info = s.getCorePoolSize() + " " + s.getRejectedExecutionHandler().getClass().getSimpleName()
+                + " " + s.schedule(() -> Thread.currentThread().getName(), 0, TimeUnit.SECONDS).get();
+            s.shutdown();
+            return info;
+        });
+        show("full constructor null factory", () -> new ScheduledThreadPoolExecutor(1, null, new ThreadPoolExecutor.AbortPolicy()));
+        show("full constructor null handler", () -> new ScheduledThreadPoolExecutor(1, Executors.defaultThreadFactory(), null));
         show("schedule null", () -> p.schedule((Runnable) null, 1, TimeUnit.SECONDS));
         show("schedule null callable", () -> p.schedule((Callable<String>) null, 1, TimeUnit.SECONDS));
         show("schedule null unit", () -> p.schedule(r, 1, null));
@@ -60,14 +69,15 @@ public class ScheduledExecutors {
         List<String> log = Collections.synchronizedList(new ArrayList<>());
         CountDownLatch gate = new CountDownLatch(1);
         p.execute(() -> { try { gate.await(); } catch (InterruptedException e) { } });
-        // Margins well above the time the lines below take, even on a slow interpreter.
-        p.schedule(() -> log.add("late"), 1200, TimeUnit.MILLISECONDS);
-        p.schedule(() -> log.add("early"), 800, TimeUnit.MILLISECONDS);
-        p.schedule(() -> log.add("neg1"), -5, TimeUnit.SECONDS);
+        // Immediate work goes in first, so the far delays cannot expire before it is queued.
         p.schedule(() -> log.add("neg2"), -1, TimeUnit.SECONDS);
+        p.schedule(() -> log.add("neg1"), -5, TimeUnit.SECONDS);
         p.schedule(() -> log.add("z1"), 0, TimeUnit.SECONDS);
         p.execute(() -> log.add("exec"));
         p.submit(() -> log.add("sub"));
+        // The one time margin left: the next two calls must be under 700 ms apart.
+        p.schedule(() -> log.add("late"), 1500, TimeUnit.MILLISECONDS);
+        p.schedule(() -> log.add("early"), 800, TimeUnit.MILLISECONDS);
         gate.countDown();
         until(() -> log.size() == 7);
         show("delay order", () -> log);
@@ -137,13 +147,15 @@ public class ScheduledExecutors {
     static void shutdownPolicies() throws Exception {
         ScheduledThreadPoolExecutor a = new ScheduledThreadPoolExecutor(1);
         List<String> log = Collections.synchronizedList(new ArrayList<>());
-        ScheduledFuture<?> delayed = a.schedule(() -> log.add("delayed"), 40, TimeUnit.MILLISECONDS);
+        CountDownLatch hold = new CountDownLatch(1);
+        ScheduledFuture<?> delayed = a.schedule(() -> { hold.await(); return log.add("delayed"); }, 1, TimeUnit.MILLISECONDS);
         AtomicInteger c = new AtomicInteger();
         ScheduledFuture<?> rep = a.scheduleAtFixedRate(c::incrementAndGet, 1, 1, TimeUnit.HOURS);
         a.shutdown();
         show("default: periodic cancelled on shutdown", () -> rep.isCancelled());
         show("default: delayed stays", delayed::isCancelled);
         show("default: terminating", a::isTerminating);
+        hold.countDown();
         a.awaitTermination(30, TimeUnit.SECONDS);
         show("default: delayed ran", () -> log);
         show("default: terminated", a::isTerminated);

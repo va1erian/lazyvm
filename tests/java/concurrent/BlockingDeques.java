@@ -14,6 +14,18 @@ public class BlockingDeques {
         catch (Throwable t) { System.out.println(label + " ! " + n(t)); }
     }
 
+    /** Takes one element, then refuses the rest: which elements survive the failure? */
+    static <T> String drainFailing(BlockingQueue<T> q) {
+        List<T> sink = new ArrayList<T>() {
+            @Override public boolean add(T t) {
+                if (!isEmpty()) throw new IllegalStateException("sink");
+                return super.add(t);
+            }
+        };
+        try { return "returned " + q.drainTo(sink); }
+        catch (IllegalStateException e) { return n(e) + " left=" + q + " got=" + new ArrayList<>(sink); }
+    }
+
     interface Cond { boolean ok() throws Exception; }
 
     static void until(Cond c) throws Exception {
@@ -115,6 +127,8 @@ public class BlockingDeques {
         show("out", () -> out);
         show("drain", () -> d.drainTo(out));
         show("out 2", () -> out);
+        d.addAll(Arrays.asList("a", "b", "c"));
+        show("drain refused midway", () -> drainFailing(d));
     }
 
     static void iterators() {

@@ -49,6 +49,9 @@ the label of a line of its golden. Change the rule and that line should change.
 | `CompletableFutureAsync` | async variants, executors, the common pool |
 | `CompletableFutureNoCommon` | a common pool below parallelism two |
 | `CompletableFutureOrder` | firing order, dependents counts, re-entrancy, deep chains |
+| `Contention` | totals under threads: exclusion, permits, no lost or repeated element |
+| `ConcurrentExceptions` | the package's exception constructors |
+| `ConcurrentMapDefaults` | `ConcurrentMap`'s default methods on a custom map |
 
 What the tests need besides this package: `AtomicInteger` (S6-03, used by
 `ScheduledExecutors`), and threads that report `WAITING` or `TIMED_WAITING`
@@ -86,15 +89,26 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
 - **G5, interrupts.** A method declaring `InterruptedException` that finds the
   flag set when it would otherwise wait throws at once, and the flag is clear
   when it throws (every "flag=false" line). Whether it also throws when it would
-  *not* have to wait differs per class. `CountDownLatch.await`,
-  `Semaphore.acquire`, `lockInterruptibly`, `ArrayBlockingQueue` and
-  `LinkedBlockingQueue` throw even then; `LinkedBlockingDeque`, `FutureTask.get`
-  and `CompletableFuture.get` do not. The class sections pin each. Untimed
-  non-blocking calls (`poll()`, `offer(e)`, `tryLock()`, `tryAcquire()`) ignore
-  the flag and leave it set ("offer flagged", "poll flagged", "tryLock keeps
-  flag"). Uninterruptible waits (`lock()`, `awaitUninterruptibly`,
-  `acquireUninterruptibly`, `join`, `Phaser.awaitAdvance`) keep waiting and
-  return with the flag set.
+  *not* have to wait differs per class, and is listed here in full.
+  - Throw even then: `CountDownLatch.await`, `Semaphore.acquire`,
+    `lockInterruptibly`, `put`, `take`, timed `offer` and timed `poll` of
+    `ArrayBlockingQueue` and `LinkedBlockingQueue`, `take` and timed `poll` of
+    `PriorityBlockingQueue` and `take` of `DelayQueue`
+    (`PriorityAndDelayQueues`: "take flagged, element ready", "timed poll flagged,
+    element ready"), and `ForkJoinTask.get` on a done task (`ForkJoin`: "get
+    flagged, done", "timed get flagged, done").
+  - Do the work and keep the flag: `take` and `put` of `LinkedBlockingDeque`;
+    `take` and timed `poll` of `LinkedTransferQueue` with an element ready
+    (`HandoffQueues`: "take flagged, element ready", "flag kept by take", "timed
+    poll flagged, element ready", "flag kept by poll"); `put` and timed `offer` of
+    `PriorityBlockingQueue` and `DelayQueue`, which never wait
+    (`PriorityAndDelayQueues`: "put flagged", "timed offer flagged", "flag kept by
+    put and offer"); `FutureTask.get` and `CompletableFuture.get` on a done future.
+  - Untimed non-blocking calls (`poll()`, `offer(e)`, `tryLock()`, `tryAcquire()`)
+    ignore the flag and leave it set ("offer flagged", "poll flagged", "tryLock
+    keeps flag"). Uninterruptible waits (`lock()`, `awaitUninterruptibly`,
+    `acquireUninterruptibly`, `join`, `Phaser.awaitAdvance`) keep waiting and
+    return with the flag set.
 - **G6, iterators of the concurrent collections** never throw
   `ConcurrentModificationException` ("no CME"). `next()` past the end throws
   `NoSuchElementException`. Where `remove()` is supported, calling it before
@@ -108,8 +122,13 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   `IllegalArgumentException` (both forms), `maxElements <= 0` returns 0 and moves
   nothing, elements move in the queue's own take order ("drain null", "drain
   self", "drain self max", "drain none", "drain negative", "drain 2"). If the
-  target throws, the element it refused and those after it stay in the queue, and
-  the exception reaches the caller (`BoundedQueues`: "drain into failing").
+  target throws, the exception reaches the caller, and what it had accepted is
+  gone from the queue. `ArrayBlockingQueue`, `LinkedBlockingQueue`,
+  `LinkedBlockingDeque`, `PriorityBlockingQueue` and `DelayQueue` keep the element
+  it refused and those after it. `LinkedTransferQueue` loses the refused element,
+  keeping only those after it. Each class has a line ("drain refused midway",
+  `BoundedQueues` also "drain into failing"). `SynchronousQueue` with nobody waiting
+  moves nothing ("drain nothing to a refusing sink").
 
 ## Locks
 
@@ -317,8 +336,8 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   rejected, and `shutdownNow` ends it ("keep: ...").
 - `shutdownNow` returns queued tasks, the very futures `schedule` returned, neither
   done nor cancelled ("shutdownNow same future", "shutdownNow leaves it").
-- Order: by due time, then submission. A negative delay counts as its real due time,
-  so -5 s runs before -1 s; `execute` and `submit` act as delay zero ("delay order").
+- Order: by due time, then submission. A negative delay counts as zero, so -1 s queued before
+  -5 s still runs first; `execute` and `submit` also act as delay zero ("delay order").
   A rejection follows the `ThreadPoolExecutor` message; the task's class in it is not
   API, and goldens hide it ("after shutdown").
 - `Long.MAX_VALUE` days does not overflow into the past, and compares after nearer
@@ -411,6 +430,16 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   ("key first" through "key descendingSet").
 - A `SortedMap` or `SortedSet` source's comparator is kept ("from sorted keeps
   comparator"). `clone` is independent ("clone independent").
+
+### `ConcurrentMap` defaults (`ConcurrentMapDefaults`)
+
+- On a map supplying only the abstract methods, the default `getOrDefault`, `forEach`, `replaceAll`, `computeIfAbsent`,
+  `computeIfPresent`, `compute` and `merge` give the Javadoc's results, with null functions and a null `merge` value rejected.
+- They use the map's conditional writes, retrying one that lost: the function runs again on the newer value ("merge retries a lost
+  replace", "compute retries a lost replace", "computeIfPresent retries", "replaceAll retries"). `forEach` and `replaceAll` skip an
+  entry whose `getKey` or `getValue` throws `IllegalStateException` ("forEach skips a vanished entry", "replaceAll skips a vanished
+  entry"). `replaceAll` itself does not reject a null result: that is left to the map's `replace` ("replaceAll to null is the map's to
+  judge").
 
 ## `CopyOnWriteArrayList`, `CopyOnWriteArraySet` (`CopyOnWrites`)
 
@@ -658,7 +687,8 @@ One script, run on both; rules hold for both unless noted.
   null collection").
 - A failure seen by the thread that ran it keeps the exception object ("direct invoke, same thread", "direct
   getException"). `get` wraps in `ExecutionException` ("direct get"). When it failed on another thread, only the class
-  is pinned, because the waiting thread may see a rebuilt copy ("invoke failure", "submit join failure", "getException
+  is
+  pinned, because the exception the waiting thread sees may be a different object of the same class ("invoke failure", "submit join failure", "getException
   type").
 - `completeExceptionally(unchecked)` rethrows it as is; a checked one, or the adapter's checked failure, is wrapped in
   `RuntimeException` whose message is the cause's `toString()` ("checked via join", "adapted checked wraps", "checked
@@ -717,8 +747,8 @@ One script, run on both; rules hold for both unless noted.
   removes cancellation ("obtrude over cancel"), after which `complete` is false ("complete after obtrude").
 - Interrupts: `get` throws when flagged only if it would wait; a done future returns and the flag stays ("get flagged
   pending", "get flagged done", "flag kept"). `join` ignores interrupts and returns with the flag set ("join ignores
-  interrupt", "join return"). Threads blocked in `get` and `join` count as dependents ("blocked waiters count as
-  dependents").
+  interrupt", "join return"). Blocked `get` and `join` threads are released when the future settles, each with its own
+  exception form ("get waiter", "join waiter", "timed waiter on cancel").
 - Dependents created from a subclass are plain `CompletableFuture`s: S6-06 relies on this ("sub dependent class", "sub
   handle class", "sub exceptionally class"). `toCompletableFuture` returns `this` ("toCompletableFuture").
 
@@ -799,11 +829,17 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
 
 ### Order, counts, depth (`CompletableFutureOrder`)
 
-- Direct dependents of one source fire in reverse order of attachment, all kinds together ("flat", "mixed kinds", "on
-  failure"). The Javadoc promises no order, but real programs print from callbacks, so this one level is pinned.
-- Below the first level only this is pinned: a stage fires before its dependents, and each subtree fires as one contiguous run
-  ("tree parents first", "tree subtrees contiguous", "chain and sibling"). The order among a stage's own dependents at deeper
-  levels is free ("tree size" and "tree top level" check the rest).
+- **First level.** Firing starts at a stage settled by a call (`complete`, `completeExceptionally`, `cancel`, `obtrudeValue`,
+  `obtrudeException`, a dependent settled directly included) or by a task an executor ran (`supplyAsync`, `runAsync`, any
+  `*Async` dependent, a direct executor included). That stage's own dependents fire last attached first, all kinds together
+  ("flat", "mixed kinds", "on failure", "settled by cancel", "settled by completeExceptionally", "settled by obtrudeValue",
+  "settled by obtrudeException", "dependent settled by a direct complete", "supplyAsync, several thenAccept", "dependent run by an
+  executor", "dependent run by a direct executor"). The Javadoc promises no order; these lines match the oracle's.
+- **Deeper levels.** A stage settled as part of another's firing, such as a sync dependent, including one below `thenCombine`,
+  `allOf`, `anyOf`, `applyToEither` or a pending `thenCompose`, fires its own dependents first attached first ("below thenApply",
+  "below thenCombine", "below allOf", "below anyOf", "below applyToEither", "below a pending compose", "below a failed thenApply").
+- Each stage fires before its dependents, and its whole subtree fires as one run before the next sibling ("whole tree", "chain and
+  sibling").
 - Re-entrancy: a dependent attached during firing to the settled source runs immediately in place, then the remaining ones
   continue ("attach during firing"). A dependent that settles another future runs that future's dependents before `complete`
   returns to it ("complete another inside"). `complete` from inside its own dependent is false, `getNow` there sees the value
@@ -814,9 +850,11 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   drops to 0, and later attachments run at once and do not count ("after completion", "attached after done"). A two-source
   dependent still counts on its unsettled source after the other settled ("both after first"). Whether a cancelled dependent
   still counts is not pinned ("cancelled dependent" only asserts `>= 0`).
-- Long chains never exhaust the stack: 20000 chained `thenApply` and `thenCompose`, and a fan of 20000 dependents, settle on
-  the default thread stack ("deep chain", "deep compose", "wide fan"). A failure passing through 20000 stages stays a single
-  `CompletionException` over `X` ("deep failure"). One native or Java frame per stage will not pass this.
+- Long chains of stages linked by the API do not exhaust the stack: 20000 chained `thenApply` and `thenCompose`, and a fan of 5000
+  dependents, settle on the default thread stack ("deep chain", "deep compose", "wide fan"). A failure passing through 20000 stages
+  stays a single `CompletionException` over `X` ("deep failure"). One native or Java frame per stage will not pass this, since
+  LazyVM's frame limit is 4094. This does not cover user code: a chain in which each dependent's function calls `complete` on the
+  next future is ordinary recursion, overflows on the oracle too, and is not tested.
 
 ## What is not pinned
 
@@ -829,17 +867,33 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
 - **Timing**: anything counted while workers are active: `completed tasks` in a rejection message from a pool still busy (the
   tests print only "rejected" there), the exact number of periodic runs ("no more runs" allows one in flight), and whether a
   periodic task is done after `shutdownNow` when it was running at that moment.
-- **Rebuilt exceptions**: in `ForkJoinTask`, a failure on another thread may surface as a new exception of the same class, whose
-  message may be the original's `toString()`. Tests print only the class.
+- **Failures crossing threads**: in `ForkJoinTask`, a failure on another thread may surface as a different object of the same
+  class, whose message may be the original's `toString()`. Tests print only the class.
 - **Message of an `ArrayStoreException`** from `toArray(T[])` with a wrong type, which differs between classes on the oracle.
   Tests print only the class.
+- **`invokeAny` with a null behind a quick task**: the first task may finish before the null is reached. Only a null in first place
+  is tested.
 - **Order**: `ConcurrentHashMap` iteration, `PriorityBlockingQueue` and `DelayQueue` iterators and ties, non-fair lock and queue
-  hand-off order, deeper levels of dependents (above).
+  hand-off order.
 - **Not tested at all**: serialization of these classes; `ConcurrentHashMap` recursive updates; `ThreadPoolExecutor.finalize`;
   the `Spliterator` and stream members listed as deferred below.
 - **Out of scope for S6-04**: `AbstractQueuedSynchronizer`, `AbstractQueuedLongSynchronizer`, `AbstractOwnableSynchronizer`,
   `StampedLock`, `CountedCompleter`. They are public SE 8 types, but the plan does not name them. Build none of them for their
   own sake, and do not expose a helper of your own under a `java.*` public name (`CLAUDE.md`, rule 2).
+
+## Contention and exceptions
+
+- `Contention` prints totals only, from 3 threads of 2000 operations each (300 for `CopyOnWriteArrayList`). Its counters are plain
+  `int`s under the lock under test, so a lock that fails to exclude loses counts: `ReentrantLock` and the write lock ("ReentrantLock
+  total", "write lock total", "readers saw a half write"). `Semaphore` never exceeds its permits and ends with them all
+  ("Semaphore over limit", "Semaphore permits"). `ArrayBlockingQueue`, `LinkedBlockingQueue`, `LinkedBlockingDeque` and
+  `PriorityBlockingQueue` under 3 producers and 3 consumers lose and repeat nothing ("... sum", "... repeats", "... left"), and on the
+  FIFO three each consumer sees each producer's elements in order ("... producer order broken"). `ConcurrentSkipListMap`: one winner per
+  `putIfAbsent` and `remove`, exact `merge` totals, sorted after ("skip list ..."). `CopyOnWriteArrayList`: one winner per
+  `addIfAbsent`, no lost `add` ("addIfAbsent ...", "add lost none").
+- `ConcurrentExceptions`: `(String, Throwable)` keeps both; `(Throwable)` takes the cause's `toString()` as message, and a null cause gives
+  a null message ("... cause", "... null cause"). `CancellationException` is an `IllegalStateException`; `CompletionException` and
+  `RejectedExecutionException` are unchecked; `ExecutionException`, `TimeoutException` and `BrokenBarrierException` are checked.
 
 ## Harness notes
 
@@ -851,9 +905,13 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
 - `tools/test.py` compiles the whole selection in one `javac` run, so while any class named here is missing, an unfiltered run
   stops at compilation, for the whole suite, not only these tests. This page's branch is therefore not mergeable alone. `python
   tools/test.py --filter <something else>` still works.
-- Each test ran within 2 s on the oracle (`ScheduledExecutors` is the longest by design, about 1.5 s: its margins are for a slow
-  interpreter). Goldens were checked for stability: repeated runs at 1, 2, 16 and all processors, under `-Xint`, and with six runs
-  at once under 24 busy processes.
+- Each test ran within about 2 s on the oracle. `ScheduledExecutors` is the longest by design, because its delays are real. Its one time
+  margin is in "delay order", where two consecutive `schedule` calls must be under 700 ms apart; everything else there, like the
+  "default: ..." lines, is ordered by latches or polling.
+- Goldens were checked for stability: repeated runs at 1, 2, 16 and all processors, under `-Xint`, with six runs at once under 24 busy
+  processes, and on a clock-starved core at about 41 times `-Xint`, the speed CI is expected to give LazyVM, where each test finished
+  within about 17 s, against a 60 s limit. Starvation exposes real races: this is how "any null element" was found to depend on which task finished
+  first, so that test now puts the null first.
 
 ## API checklist
 

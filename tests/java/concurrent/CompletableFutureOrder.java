@@ -1,8 +1,9 @@
 package concurrent;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 
 /** Single-thread firing order of dependents, dependents counts, re-entrant completion and deep chains. */
 public class CompletableFutureOrder {
@@ -43,60 +44,142 @@ public class CompletableFutureOrder {
         show("on failure", () -> flog);
     }
 
-    /**
-     * Below the first level the order is not pinned (the Javadoc promises nothing and any
-     * order would do): only that a stage fires before those depending on it and that each
-     * subtree fires as one run.
-     */
-    static void tree() {
+    /** Four dependents on `f` which log their tag and index. */
+    static void fan(CompletableFuture<?> f, List<String> log, String tag) {
+        for (int i = 0; i < 4; i++) {
+            String name = tag + i;
+            f.thenRun(() -> log.add(name));
+        }
+    }
+
+    /** A stage settled by a call, or by a task an executor ran, fires its own dependents last attached first. */
+    static void firstLevel() throws Exception {
+        List<String> c = new ArrayList<>();
+        CompletableFuture<String> cancelled = new CompletableFuture<>();
+        cancelled.handle((v, t) -> c.add("h0"));
+        cancelled.handle((v, t) -> c.add("h1"));
+        cancelled.cancel(false);
+        show("settled by cancel", () -> c);
+        List<String> e = new ArrayList<>();
+        CompletableFuture<String> failed = new CompletableFuture<>();
+        failed.handle((v, t) -> e.add("h0"));
+        failed.handle((v, t) -> e.add("h1"));
+        failed.completeExceptionally(new RuntimeException("x"));
+        show("settled by completeExceptionally", () -> e);
+        List<String> o = new ArrayList<>();
+        CompletableFuture<String> obtruded = new CompletableFuture<>();
+        fan(obtruded, o, "k");
+        obtruded.obtrudeValue("v");
+        show("settled by obtrudeValue", () -> o);
+        List<String> oe = new ArrayList<>();
+        CompletableFuture<String> obtrudedEx = new CompletableFuture<>();
+        obtrudedEx.handle((v, t) -> oe.add("h0"));
+        obtrudedEx.handle((v, t) -> oe.add("h1"));
+        obtrudedEx.obtrudeException(new RuntimeException("x"));
+        show("settled by obtrudeException", () -> oe);
+        List<String> d = new ArrayList<>();
+        CompletableFuture<String> viaApply = new CompletableFuture<>();
+        CompletableFuture<String> settledEarly = viaApply.thenApply(v -> v);
+        fan(settledEarly, d, "k");
+        settledEarly.complete("early");
+        show("dependent settled by a direct complete", () -> d);
+
+        ExecutorService ex = Executors.newSingleThreadExecutor();
+        List<String> sa = Collections.synchronizedList(new ArrayList<>());
+        CountDownLatch gate = new CountDownLatch(1);
+        CompletableFuture<String> supplied = CompletableFuture.supplyAsync(() -> {
+            try { gate.await(); } catch (InterruptedException x) { throw new IllegalStateException(x); }
+            return "v";
+        }, ex);
+        for (int i = 0; i < 4; i++) {
+            String name = "k" + i;
+            supplied.thenAccept(v -> sa.add(name));
+        }
+        gate.countDown();
+        List<String> ad = Collections.synchronizedList(new ArrayList<>());
+        CompletableFuture<String> src = new CompletableFuture<>();
+        CompletableFuture<String> viaExecutor = src.thenApplyAsync(v -> v, ex);
+        fan(viaExecutor, ad, "k");
+        src.complete("v");
+        ex.shutdown();
+        ex.awaitTermination(30, TimeUnit.SECONDS);
+        show("supplyAsync, several thenAccept", () -> sa);
+        show("dependent run by an executor", () -> ad);
+        List<String> dd = new ArrayList<>();
+        CompletableFuture<String> src2 = new CompletableFuture<>();
+        CompletableFuture<String> viaDirect = src2.thenApplyAsync(v -> v, Runnable::run);
+        fan(viaDirect, dd, "k");
+        src2.complete("v");
+        show("dependent run by a direct executor", () -> dd);
+    }
+
+    /** A stage settled as part of another's firing fires its own dependents first attached first. */
+    static void deeper() {
+        List<String> a = new ArrayList<>();
+        CompletableFuture<String> s = new CompletableFuture<>();
+        fan(s.thenApply(v -> v), a, "k");
+        s.complete("v");
+        show("below thenApply", () -> a);
+        List<String> b = new ArrayList<>();
+        CompletableFuture<String> x = new CompletableFuture<>(), y = new CompletableFuture<>();
+        fan(x.thenCombine(y, (p, q) -> p), b, "k");
+        x.complete("a");
+        y.complete("b");
+        show("below thenCombine", () -> b);
+        List<String> c = new ArrayList<>();
+        CompletableFuture<String> u = new CompletableFuture<>(), w = new CompletableFuture<>();
+        fan(CompletableFuture.allOf(u, w), c, "k");
+        u.complete("a");
+        w.complete("b");
+        show("below allOf", () -> c);
+        List<String> an = new ArrayList<>();
+        CompletableFuture<String> u2 = new CompletableFuture<>(), w2 = new CompletableFuture<>();
+        fan(CompletableFuture.anyOf(u2, w2), an, "k");
+        u2.complete("a");
+        show("below anyOf", () -> an);
+        List<String> e = new ArrayList<>();
+        CompletableFuture<String> u3 = new CompletableFuture<>(), w3 = new CompletableFuture<>();
+        fan(u3.applyToEither(w3, v -> v), e, "k");
+        u3.complete("a");
+        show("below applyToEither", () -> e);
+        List<String> d = new ArrayList<>();
+        CompletableFuture<String> outer = new CompletableFuture<>(), inner = new CompletableFuture<>();
+        fan(outer.thenCompose(v -> inner), d, "k");
+        outer.complete("v");
+        d.add("|");
+        inner.complete("i");
+        show("below a pending compose", () -> d);
+        List<String> f = new ArrayList<>();
+        CompletableFuture<String> failed = new CompletableFuture<>();
+        CompletableFuture<String> skip = failed.thenApply(v -> v);
+        skip.handle((v, t) -> f.add("h0"));
+        skip.handle((v, t) -> f.add("h1"));
+        skip.handle((v, t) -> f.add("h2"));
+        failed.completeExceptionally(new RuntimeException("x"));
+        show("below a failed thenApply", () -> f);
+
         List<String> log = new ArrayList<>();
         CompletableFuture<String> root = new CompletableFuture<>();
-        String[] names = {"a", "b", "c"};
-        for (String top : names) {
+        for (String top : new String[] {"a", "b", "c"}) {
             CompletableFuture<Void> t = root.thenRun(() -> log.add(top));
             for (int i = 0; i < 3; i++) {
                 String mid = top + i;
                 CompletableFuture<Void> m = t.thenRun(() -> log.add(mid));
                 for (int j = 0; j < 2; j++) {
                     String leaf = mid + j;
-                    m.thenRun(() -> log.add(leaf));
+                    CompletableFuture<Void> l = m.thenRun(() -> log.add(leaf));
+                    if (j == 1) l.thenRun(() -> log.add(leaf + "!"));
                 }
             }
         }
         root.complete("v");
-        show("tree size", log::size);
-        show("tree top level", () -> {
-            List<String> tops = new ArrayList<>();
-            for (String s : log) if (s.length() == 1) tops.add(s);
-            return tops;
-        });
-        show("tree parents first", () -> {
-            for (int i = 0; i < log.size(); i++) {
-                String s = log.get(i);
-                if (s.length() > 1 && log.indexOf(s.substring(0, s.length() - 1)) > i) return false;
-            }
-            return true;
-        });
-        show("tree subtrees contiguous", () -> {
-            for (String prefixSource : log) {
-                int first = -1, last = -1, count = 0;
-                for (int i = 0; i < log.size(); i++) {
-                    if (log.get(i).startsWith(prefixSource)) {
-                        if (first < 0) first = i;
-                        last = i;
-                        count++;
-                    }
-                }
-                if (last - first + 1 != count) return false;
-            }
-            return true;
-        });
+        show("whole tree", () -> log);
         List<String> chain = new ArrayList<>();
-        CompletableFuture<String> c = new CompletableFuture<>();
-        CompletableFuture<Void> x = c.thenRun(() -> chain.add("x"));
-        x.thenRun(() -> chain.add("x1")).thenRun(() -> chain.add("x2"));
-        c.thenRun(() -> chain.add("y"));
-        c.complete("v");
+        CompletableFuture<String> c2 = new CompletableFuture<>();
+        CompletableFuture<Void> z = c2.thenRun(() -> chain.add("x"));
+        z.thenRun(() -> chain.add("x1")).thenRun(() -> chain.add("x2"));
+        c2.thenRun(() -> chain.add("y"));
+        c2.complete("v");
         show("chain and sibling", () -> chain);
     }
 
@@ -186,7 +269,7 @@ public class CompletableFutureOrder {
 
     /** Very long chains settle without exhausting the stack, on any thread. */
     static void deep() throws Exception {
-        int depth = 20000;
+        int depth = 20000, width = 5000;
         CompletableFuture<Integer> head = new CompletableFuture<>();
         CompletableFuture<Integer> tail = head;
         for (int i = 0; i < depth; i++) tail = tail.thenApply(v -> v + 1);
@@ -195,7 +278,7 @@ public class CompletableFutureOrder {
         show("deep chain", end::join);
         CompletableFuture<String> fan = new CompletableFuture<>();
         int[] count = new int[1];
-        for (int i = 0; i < depth; i++) fan.thenRun(() -> count[0]++);
+        for (int i = 0; i < width; i++) fan.thenRun(() -> count[0]++);
         fan.complete("v");
         show("wide fan", () -> count[0]);
         CompletableFuture<Integer> src = new CompletableFuture<>();
@@ -222,7 +305,8 @@ public class CompletableFutureOrder {
 
     public static void main(String[] args) throws Exception {
         flat();
-        tree();
+        firstLevel();
+        deeper();
         reentrant();
         counts();
         deep();

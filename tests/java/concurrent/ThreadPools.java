@@ -194,7 +194,7 @@ public class ThreadPools {
         int[] made = new int[1];
         ThreadFactory f = r -> {
             Thread t = new Thread(r, "w" + (++made[0]));
-            // The dying worker reports after its replacement exists: a separate list, no order pinned.
+            // A separate list: no order against the other log is pinned.
             t.setUncaughtExceptionHandler((th, e) -> uncaught.add("uncaught " + th.getName() + " " + e));
             return t;
         };

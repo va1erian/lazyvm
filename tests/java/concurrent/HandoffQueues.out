@@ -32,6 +32,7 @@ drain null ! java.lang.NullPointerException
 drain self ! java.lang.IllegalArgumentException
 drain = 0
 drain max = 0
+drain nothing to a refusing sink = returned 0
 clear = ok
 offer to taker = true
 taker got = v
@@ -94,6 +95,11 @@ drain null ! java.lang.NullPointerException
 drain 1 = 1
 drain = 2
 out = [c, d, z]
+drain refused midway = java.lang.IllegalStateException: sink left=[c] got=[a]
+take flagged, element ready = ready
+flag kept by take = true
+timed poll flagged, element ready = ready2
+flag kept by poll = true
 poll empty = null
 timed poll empty = null
 element empty ! java.util.NoSuchElementException

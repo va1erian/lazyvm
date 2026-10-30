@@ -18,6 +18,10 @@ scheduled sizes = 3 2147483647
 scheduled keep = 0
 scheduled negative ! java.lang.IllegalArgumentException
 single scheduled = false
+scheduled factory = named
+scheduled null factory ! java.lang.NullPointerException
+single scheduled factory = named
+single scheduled null factory ! java.lang.NullPointerException
 single scheduled runs = ran
 stealing type = true
 stealing parallelism = 2
