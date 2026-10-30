@@ -127,11 +127,13 @@ public class CompletableFutureRoots {
             CompletableFuture<Void> d = a.runAfterBothAsync(b, () -> log.add("fn"), queue::add);
             d.thenRun(() -> log.add("other"));
             d.thenRun(() -> { log.add("in"); b.complete("v"); log.add("out"); });
-            b.obtrudeValue("b");
-            a.complete("v");
-            int handed = queue.size();
-            d.complete(null);
-            return handed + " " + log + " " + b.getNumberOfDependents();
+            b.thenRun(() -> {
+                a.complete("v");
+                log.add("handed " + queue.size());
+                d.complete(null);
+            });
+            b.complete("v");
+            return log + " " + a.getNumberOfDependents() + " " + b.getNumberOfDependents();
         });
         show("task of a compose left pending does not help", () -> {
             CompletableFuture<String> s = cf(), inner = cf();
