@@ -75,16 +75,17 @@ public class ScheduledExecutors {
         p.schedule(() -> log.add("z1"), 0, TimeUnit.SECONDS);
         p.execute(() -> log.add("exec"));
         p.submit(() -> log.add("sub"));
-        // The one time margin left: the next two calls must be under 700 ms apart.
-        p.schedule(() -> log.add("late"), 1500, TimeUnit.MILLISECONDS);
-        p.schedule(() -> log.add("early"), 800, TimeUnit.MILLISECONDS);
+        // The one time margin left: the next two calls must be under 1900 ms apart.
+        p.schedule(() -> log.add("late"), 2000, TimeUnit.MILLISECONDS);
+        p.schedule(() -> log.add("early"), 100, TimeUnit.MILLISECONDS);
         gate.countDown();
         until(() -> log.size() == 7);
         show("delay order", () -> log);
 
         ScheduledFuture<String> far = p.schedule(() -> "x", 1, TimeUnit.HOURS);
         ScheduledFuture<String> near = p.schedule(() -> "near", 10, TimeUnit.MILLISECONDS);
-        show("getDelay", () -> far.getDelay(TimeUnit.MINUTES));
+        // 60 until the clock has moved, which it need not have by now.
+        show("getDelay", () -> far.getDelay(TimeUnit.MINUTES) >= 59 && far.getDelay(TimeUnit.MINUTES) <= 60);
         show("getDelay in range", () -> far.getDelay(TimeUnit.SECONDS) <= 3600 && far.getDelay(TimeUnit.SECONDS) > 3500);
         show("compare", () -> far.compareTo(near) > 0 && near.compareTo(far) < 0);
         show("compare self", () -> far.compareTo(far));

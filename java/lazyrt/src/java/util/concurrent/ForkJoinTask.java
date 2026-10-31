@@ -2,6 +2,7 @@ package java.util.concurrent;
 
 import java.io.Serializable;
 import java.util.Collection;
+import lazy.internal.Turnstile;
 
 /**
  * A task's outcome, on its own monitor. Finishing is one short monitor section, and a thread that
@@ -63,6 +64,14 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         }
     }
 
+    /** On a thread helping from outside the pool. An escaping failure reaches it as it would a worker. */
+    final void runAssisting() {
+        run0();
+        if (escapes() && status == FAILED) {
+            ForkJoinTask.<RuntimeException>sneak(failure);
+        }
+    }
+
     boolean escapes() {
         return false;
     }
@@ -77,13 +86,24 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         return this;
     }
 
+    /** As {@link #quietlyJoin}, spelled out: a frame less per level of a chain of joins goes deeper. */
     public final V join() {
-        quietlyJoin();
+        if (status == PENDING) {
+            boolean tight = ForkJoinCore.stackTight();
+            if (takeHere(tight)) {
+                run0();
+            }
+            awaitDone(tight);
+        }
         return report();
     }
 
+    /** As {@link #quietlyInvoke}, spelled out for the same reason. */
     public final V invoke() {
-        quietlyInvoke();
+        if (!handedOff()) {
+            run0();
+        }
+        quietlyJoin();
         return report();
     }
 
@@ -103,46 +123,91 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         return failedOn == Thread.currentThread() ? failure : FailureCopies.of(failure);
     }
 
-    /** Runs this task in the caller, if it is queued and the caller may. */
-    private void help() {
+    /** Whether the caller should run this task now, it being queued and the caller about to wait. */
+    private boolean takeHere(boolean tight) {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        if (w != null) {
-            w.core.helpJoin(w, this);
-        } else {
-            ForkJoinPool.shared.core.helpOutside(this);
-        }
+        return w != null ? w.core.takeToJoin(w, this, tight) : ForkJoinPool.shared.core.takeOutside(this);
     }
 
-    /** Waits for the outcome, with a deadline if {@code timed}. A blocked worker stops counting. */
-    private void block(boolean timed, long deadline) throws InterruptedException, TimeoutException {
-        if (status != PENDING) {
-            return;
+    /**
+     * On a stack too deep to go on safely, the task moves to a worker's new stack, on the worker's
+     * own pool or, outside any pool, the common pool. False if it has to run here.
+     */
+    private boolean handedOff() {
+        if (status != PENDING || !ForkJoinCore.stackTight()) {
+            return false;
         }
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
+        return (w != null ? w.core : ForkJoinPool.shared.core).handOff(w, this);
+    }
+
+    /**
+     * Waits for the outcome, with a deadline if {@code timed}. A blocked worker stops counting. True
+     * if the wait ended with the task to be run by the caller, which only a tight stack can bring.
+     */
+    private boolean block(boolean tight, boolean timed, long deadline) throws InterruptedException, TimeoutException {
+        if (status != PENDING) {
+            return false;
+        }
+        ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
+        ForkJoinCore core = w != null ? w.core : ForkJoinPool.shared.core;
         try {
             if (w != null) {
                 w.awaited = this;
-                w.core.beginBlock();
             }
-            synchronized (this) {
-                waited = true;
-                while (status == PENDING) {
-                    if (!timed) {
-                        wait();
-                    } else {
-                        long left = deadline - System.nanoTime();
-                        if (left <= 0) {
-                            throw new TimeoutException();
-                        }
-                        TimeUnit.NANOSECONDS.timedWait(this, left);
-                    }
+            if (tight) {
+                core.enterTight();
+                if (core.awaitStandIn(w, this)) {
+                    return true;
                 }
+            } else if (w != null) {
+                core.beginBlock(w);
             }
+            waitForOutcome(timed, deadline);
+            return false;
         } finally {
             if (w != null) {
                 w.awaited = null;
-                w.core.endBlock();
+                core.endBlock(w);
             }
+            if (tight) {
+                core.leaveTight();
+            }
+        }
+    }
+
+    private synchronized void waitForOutcome(boolean timed, long deadline) throws InterruptedException, TimeoutException {
+        waited = true;
+        while (status == PENDING) {
+            if (!timed) {
+                wait();
+            } else {
+                long left = deadline - System.nanoTime();
+                if (left <= 0) {
+                    throw new TimeoutException();
+                }
+                TimeUnit.NANOSECONDS.timedWait(this, left);
+            }
+        }
+    }
+
+    /** An interrupt during the wait comes back afterwards, unless this is a worker: it is dropped. */
+    private void awaitDone(boolean tight) {
+        boolean outside = ForkJoinWorkerThread.current() == null;
+        boolean flagged = false;
+        while (status == PENDING) {
+            try {
+                if (block(tight, false, 0)) {
+                    run0();
+                }
+            } catch (InterruptedException e) {
+                flagged = outside;
+            } catch (TimeoutException cannotHappen) {
+                throw new AssertionError(cannotHappen);
+            }
+        }
+        if (flagged) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -240,31 +305,46 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
-        if (status == PENDING) {
-            try {
-                help();
-                block(false, 0);
-            } catch (TimeoutException cannotHappen) {
-                throw new AssertionError(cannotHappen);
+        boolean tight = status == PENDING && ForkJoinCore.stackTight();
+        if (status == PENDING && takeHere(tight)) {
+            run0();
+        }
+        try {
+            while (status == PENDING) {
+                if (block(tight, false, 0)) {
+                    run0();
+                }
             }
+        } catch (TimeoutException cannotHappen) {
+            throw new AssertionError(cannotHappen);
         }
         return reportForGet();
     }
 
+    /**
+     * With no time at all it just looks ("timed get in worker with no time"). Otherwise a queued task
+     * runs right here for as long as it likes: the limit is for waiting ("... outlasts its limit").
+     */
     public final V get(long timeout, TimeUnit unit)
             throws InterruptedException, ExecutionException, TimeoutException {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long nanos = unit.toNanos(timeout);
+        long deadline = Turnstile.deadline(nanos);
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        // A worker runs nothing here, as that could overrun the deadline; blocking frees another.
-        if (w == null) {
-            ForkJoinPool.shared.core.helpOutside(this);
+        if (status == PENDING && nanos <= 0) {
+            throw new TimeoutException();
+        }
+        boolean tight = status == PENDING && ForkJoinCore.stackTight();
+        if (status == PENDING && takeHere(tight)) {
+            run0();
         }
         while (status == PENDING) {
             try {
-                block(true, deadline);
+                if (block(tight, true, deadline)) {
+                    run0();
+                }
             } catch (InterruptedException e) {
                 if (w == null) {
                     throw e;
@@ -285,34 +365,18 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         throw new ExecutionException(failureHere());
     }
 
-    /** An interrupt during the wait comes back afterwards, unless this is a worker: it is dropped. */
     public final void quietlyJoin() {
-        if (status != PENDING) {
-            return;
-        }
-        help();
-        boolean outside = ForkJoinWorkerThread.current() == null;
-        boolean flagged = false;
-        while (status == PENDING) {
-            try {
-                block(false, 0);
-            } catch (InterruptedException e) {
-                flagged = outside;
-            } catch (TimeoutException cannotHappen) {
-                throw new AssertionError(cannotHappen);
+        if (status == PENDING) {
+            boolean tight = ForkJoinCore.stackTight();
+            if (takeHere(tight)) {
+                run0();
             }
-        }
-        if (flagged) {
-            Thread.currentThread().interrupt();
+            awaitDone(tight);
         }
     }
 
-    /** On a stack too deep to go on safely, the task moves to another worker's new stack. */
     public final void quietlyInvoke() {
-        ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        if (w != null && status == PENDING && ForkJoinCore.stackTight()) {
-            w.core.pushLocal(w, this);
-        } else {
+        if (!handedOff()) {
             run0();
         }
         quietlyJoin();
@@ -404,70 +468,14 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     }
 
     public static ForkJoinTask<?> adapt(Runnable runnable) {
-        return new Adapted<Object>(Executors.callable(runnable, null), Adapted.RUNNABLE);
+        return new AdaptedTask<Object>(Executors.callable(runnable, null), AdaptedTask.RUNNABLE);
     }
 
     public static <T> ForkJoinTask<T> adapt(Runnable runnable, T result) {
-        return new Adapted<T>(Executors.callable(runnable, result), Adapted.RUNNABLE);
+        return new AdaptedTask<T>(Executors.callable(runnable, result), AdaptedTask.RUNNABLE);
     }
 
     public static <T> ForkJoinTask<T> adapt(Callable<? extends T> callable) {
-        return new Adapted<T>(callable, Adapted.CALLABLE);
-    }
-
-    /** Runs a callable or runnable as a task. A callable's checked failure goes in wrapped. */
-    static final class Adapted<T> extends ForkJoinTask<T> implements RunnableFuture<T> {
-        static final int CALLABLE = 0;
-        static final int RUNNABLE = 1;
-        /** The {@code execute(Runnable)} form, whose failure escapes to the worker. */
-        static final int EXECUTED = 2;
-
-        private final Callable<? extends T> callable;
-        private final int form;
-        private T result;
-
-        Adapted(Callable<? extends T> callable, int form) {
-            if (callable == null) {
-                throw new NullPointerException();
-            }
-            this.callable = callable;
-            this.form = form;
-        }
-
-        @Override
-        public T getRawResult() {
-            return result;
-        }
-
-        @Override
-        protected void setRawResult(T value) {
-            result = value;
-        }
-
-        @Override
-        protected boolean exec() {
-            try {
-                result = callable.call();
-                return true;
-            } catch (RuntimeException | Error e) {
-                throw e;
-            } catch (Exception e) {
-                if (form == CALLABLE) {
-                    throw new RuntimeException(e);
-                }
-                ForkJoinTask.<RuntimeException>sneak(e);
-                return false;
-            }
-        }
-
-        @Override
-        public void run() {
-            invoke();
-        }
-
-        @Override
-        boolean escapes() {
-            return form == EXECUTED;
-        }
+        return new AdaptedTask<T>(callable, AdaptedTask.CALLABLE);
     }
 }

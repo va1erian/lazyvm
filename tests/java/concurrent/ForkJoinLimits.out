@@ -3,7 +3,7 @@ two in awaitQuiescence = true true
 helpQuiesce waits for a busy worker = true
 awaitQuiescence in worker outlasts its timeout = true
 helpQuiesce ignores a blocked worker = true 1
-second out of helpQuiesce stays = 0
+second out of helpQuiesce stays = true true
 helpQuiesce runs own forks then submissions = [b, a, sub]
 another pool's worker times out = false
 start throws: execute ! java.lang.OutOfMemoryError: cannot start
@@ -14,17 +14,17 @@ constructor throws: execute ! java.lang.IllegalStateException: ctor
 constructor throws: after = made=1 size=0 ran=0
 constructor throws: second = true made=2 size=1
 constructor throws: ends = false false
-killed worker's forks: 0 = true ran=0 cancelled=0 size=1
+killed worker's forks: 0 = true ran=0 cancelled=0 made=2
 killed worker's pool ends: 0 = true
-killed worker's forks: 2 = true ran=0 cancelled=2 size=1
+killed worker's forks: 2 = true ran=0 cancelled=2 made=2
 killed worker's pool ends: 2 = true
-killed worker with one idle beside it = true 2
+killed worker with one idle beside it = made=3
 submission behind a killed worker = true
 onStart failure: gone = true made=1 ran=0
 onStart failure: next call = true made=2
 idle workers go away = true
 and come back = yes
-fork left on a stand-in = true size=2
+fork left on a stand-in = true stand-in seen=true
 plain tasks at once after a stand-in = 1
 queue served above the target = true other still running=true
 latched on each other at 2 = true

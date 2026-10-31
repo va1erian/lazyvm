@@ -11,3 +11,4 @@ timed get = w
 worker thread name = no worker
 tryUnfork outside = true
 pool quiet = true
+invoke chain = 600

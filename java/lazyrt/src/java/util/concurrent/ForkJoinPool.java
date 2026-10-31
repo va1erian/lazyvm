@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import lazy.internal.Turnstile;
 
 /** The public face; {@link ForkJoinCore} holds the queues, the workers and the run state. */
 public class ForkJoinPool extends AbstractExecutorService {
@@ -122,7 +123,7 @@ public class ForkJoinPool extends AbstractExecutorService {
             throw new NullPointerException();
         }
         core.pushExternal(task instanceof ForkJoinTask<?> ? (ForkJoinTask<?>) task
-                : new ForkJoinTask.Adapted<Void>(Executors.<Void>callable(task, null), ForkJoinTask.Adapted.EXECUTED));
+                : new AdaptedTask<Void>(Executors.<Void>callable(task, null), AdaptedTask.EXECUTED));
     }
 
     public <T> ForkJoinTask<T> submit(ForkJoinTask<T> task) {
@@ -263,7 +264,7 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = Turnstile.deadline(unit.toNanos(timeout));
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -283,10 +284,15 @@ public class ForkJoinPool extends AbstractExecutorService {
         }
         long start = System.nanoTime();
         while (!core.isQuiescent()) {
-            if (System.nanoTime() - start >= left) {
+            // What it runs can throw at it.
+            ForkJoinTask<?> t = core.takeForAssist();
+            if (t != null) {
+                t.runAssisting();
+            } else if (System.nanoTime() - start >= left) {
                 return false;
+            } else {
+                Thread.yield();
             }
-            Thread.yield();
         }
         return true;
     }
@@ -298,23 +304,23 @@ public class ForkJoinPool extends AbstractExecutorService {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
         try {
             if (w != null) {
-                w.core.beginBlock();
+                w.core.beginBlock(w);
             }
             while (!blocker.isReleasable() && !blocker.block()) {
                 continue;
             }
         } finally {
             if (w != null) {
-                w.core.endBlock();
+                w.core.endBlock(w);
             }
         }
     }
 
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-        return new ForkJoinTask.Adapted<T>(Executors.callable(runnable, value), ForkJoinTask.Adapted.RUNNABLE);
+        return new AdaptedTask<T>(Executors.callable(runnable, value), AdaptedTask.RUNNABLE);
     }
 
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
-        return new ForkJoinTask.Adapted<T>(callable, ForkJoinTask.Adapted.CALLABLE);
+        return new AdaptedTask<T>(callable, AdaptedTask.CALLABLE);
     }
 }

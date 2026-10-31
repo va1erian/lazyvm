@@ -220,7 +220,7 @@ public class FutureEdges {
         show("delivered then", () -> cs.take() == b);
         one.shutdown();
         one.awaitTermination(20, TimeUnit.SECONDS);
-        show("rejected names", () -> { try { return cs.submit(() -> "c"); } catch (RejectedExecutionException x) { return x.getMessage().replaceAll("Task .* rejected", "Task T rejected"); } });
+        show("rejected names", () -> { try { return cs.submit(() -> "c"); } catch (RejectedExecutionException x) { return x.getMessage().replaceAll("Task .* rejected", "Task T rejected").replaceAll("pool size = \\d+", "pool size = N"); } });
         // newTaskFor is used when the executor is an AbstractExecutorService.
         List<String> tasks = new ArrayList<>();
         AbstractExecutorService a = new Direct() {

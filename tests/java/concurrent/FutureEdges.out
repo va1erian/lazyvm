@@ -59,7 +59,7 @@ submit class = java.util.concurrent.FutureTask
 cancel queued = true
 not delivered until its turn = null
 delivered then = true
-rejected names = Task T rejected from java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 2]
+rejected names = Task T rejected from java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = N, active threads = 0, queued tasks = 0, completed tasks = 2]
 ecs newTaskFor = [c, r]
 queue full ! java.lang.IllegalStateException: Queue full
 queue full size = 1

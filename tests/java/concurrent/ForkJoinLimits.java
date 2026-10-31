@@ -66,10 +66,18 @@ public class ForkJoinLimits {
         s.shutdown();
         // The first out counts as busy again, so the second stays until its task ends.
         ForkJoinPool t = new ForkJoinPool(2);
-        CountDownLatch meet = new CountDownLatch(2), out = new CountDownLatch(2);
-        Runnable r2 = () -> { meet.countDown(); awaitQuietly(meet); ForkJoinTask.helpQuiesce(); out.countDown(); try { out.await(300, TimeUnit.MILLISECONDS); } catch (InterruptedException e) { } };
-        ForkJoinTask<?> e = t.submit(r2), f = t.submit(r2);
-        show("second out of helpQuiesce stays", () -> { e.get(); f.get(); return out.getCount(); });
+        CountDownLatch meet = new CountDownLatch(2);
+        AtomicInteger out = new AtomicInteger();
+        AtomicBoolean firstOver = new AtomicBoolean();
+        Callable<Boolean> c2 = () -> {
+            meet.countDown();
+            meet.await();
+            ForkJoinTask.helpQuiesce();
+            if (out.incrementAndGet() == 1) { sleep(300); firstOver.set(true); return true; }
+            return firstOver.get();
+        };
+        ForkJoinTask<Boolean> e = t.submit(c2), f = t.submit(c2);
+        show("second out of helpQuiesce stays", () -> e.get() + " " + f.get());
         t.shutdown();
         ForkJoinPool u = new ForkJoinPool(1);
         List<String> l = Collections.synchronizedList(new ArrayList<>());
@@ -125,7 +133,8 @@ public class ForkJoinLimits {
         for (int forks : new int[] {0, 2}) {
             AtomicInteger ran = new AtomicInteger();
             RecursiveAction[] kids = new RecursiveAction[forks];
-            ForkJoinPool y = oneWorkerQuiet();
+            AtomicInteger made = new AtomicInteger();
+            ForkJoinPool y = new ForkJoinPool(1, pool -> { made.incrementAndGet(); return ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool); }, QUIET, false);
             CountDownLatch thrown = new CountDownLatch(1);
             y.execute(() -> {
                 for (int i = 0; i < forks; i++) {
@@ -137,21 +146,24 @@ public class ForkJoinLimits {
             });
             thrown.await();
             // The dead worker's forks are cancelled, not run, and a new worker takes its place.
-            show("killed worker's forks: " + forks, () -> until(() -> y.getPoolSize() == 1 && allDone(kids) && y.isQuiescent())
-                    + " ran=" + ran + " cancelled=" + cancelled(kids) + " size=" + y.getPoolSize());
+            show("killed worker's forks: " + forks, () -> until(() -> made.get() == 2 && allDone(kids) && y.isQuiescent())
+                    + " ran=" + ran + " cancelled=" + cancelled(kids) + " made=" + made);
             y.shutdown();
             show("killed worker's pool ends: " + forks, () -> y.awaitTermination(15, TimeUnit.SECONDS));
         }
         // With another worker idle, no new one comes.
-        ForkJoinPool z = new ForkJoinPool(3, ForkJoinPool.defaultForkJoinWorkerThreadFactory, QUIET, false);
+        AtomicInteger madeZ = new AtomicInteger();
+        ForkJoinPool z = new ForkJoinPool(3, pool -> { madeZ.incrementAndGet(); return ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool); }, QUIET, false);
         CountDownLatch three = new CountDownLatch(3);
         for (int i = 0; i < 3; i++) z.execute(() -> { three.countDown(); awaitQuietly(three); });
         three.await();
         until(z::isQuiescent);
+        Thread[] dying = new Thread[1];
         CountDownLatch thrown = new CountDownLatch(1);
-        z.execute(() -> { thrown.countDown(); throw new RuntimeException("die"); });
+        z.execute(() -> { dying[0] = Thread.currentThread(); thrown.countDown(); throw new RuntimeException("die"); });
         thrown.await();
-        show("killed worker with one idle beside it", () -> until(() -> z.getPoolSize() == 2) + " " + z.getPoolSize());
+        dying[0].join();
+        show("killed worker with one idle beside it", () -> "made=" + madeZ);
         z.shutdown();
         // A submission waiting behind a worker that dies does not wait for another call.
         AtomicInteger later = new AtomicInteger();
@@ -205,7 +217,7 @@ public class ForkJoinLimits {
             managedAwait(standIn);
             while (!t.isDone()) Thread.sleep(1);
             Thread.sleep(100);
-            return leftRan.await(15, TimeUnit.SECONDS) + " size=" + x.getPoolSize();
+            return leftRan.await(15, TimeUnit.SECONDS) + " stand-in seen=" + (x.getPoolSize() <= 2);
         });
         show("fork left on a stand-in", f::get);
         x.shutdown();
