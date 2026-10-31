@@ -13,7 +13,7 @@ public class OutOfMemoryInNative {
         Object[] clones = new Object[1 << 19];
         int made = 0;
         try {
-            for (int i = 0; i < 6; i++) {
+            for (int i = 0; i < 5; i++) {
                 clones[made++] = block.clone();
             }
             while (made < clones.length) {
