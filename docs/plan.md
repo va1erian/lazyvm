@@ -418,12 +418,12 @@ platform completions into `CompletableFuture`.
       `AtomicArrays`, `AtomicPairs`, `AtomicAdders`, `AtomicUpdaters`,
       `AtomicUpdaterErrors`, `AtomicUpdaterAccess`, `AtomicApi` and
       `tests/java/lazy/atomics/Intrinsics`.
-- [ ] S6-04 `java.util.concurrent`: locks (`ReentrantLock`, `Condition`,
+- [x] S6-04 `java.util.concurrent`: locks (`ReentrantLock`, `Condition`,
       `ReentrantReadWriteLock`, `LockSupport`), executors, scheduled
       executors, `ConcurrentHashMap`, `CopyOnWriteArrayList`, blocking queues,
       `CountDownLatch`, `CyclicBarrier`, `Semaphore`, and a simple `ForkJoinPool`.
       Check: `tests/java/concurrent/*` (each prints only deterministic results).
-- [ ] S6-05 `CompletableFuture` and `CompletionStage`: every method in the
+- [x] S6-05 `CompletableFuture` and `CompletionStage`: every method in the
       Javadoc, the async variants on `ForkJoinPool.commonPool()` or a given
       executor, `exceptionally`, `handle`, `allOf`/`anyOf`, and cancellation.
       The public completion methods (`complete`, `completeExceptionally`,

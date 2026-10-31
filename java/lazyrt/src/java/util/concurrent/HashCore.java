@@ -238,11 +238,17 @@ final class HashCore<K, V> {
                 try {
                     other = earlier == null ? null : mine.listed ? claims.joined(mine, earlier) : earlier[0];
                     if (other == null) {
+                        // No longer needed, and a deep recursion of one hash would keep them all.
+                        earlier = null;
                         mine.open = true;
                         return run(key, hash, step);
                     }
                 } finally {
-                    // Still itself: a key's equals threw before anything was found.
+                    // Still itself: a key's equals threw before anything was found. It may have opened
+                    // the claim by writing the key, but this op never learned that no earlier one is running.
+                    if (other == mine) {
+                        mine.open = false;
+                    }
                     if (other == null || other == mine) {
                         claims.leave(mine);
                     }

@@ -1300,8 +1300,9 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   settled by the other", "many requests against one shutdown, shuffled", "anyOf of one future, many times"; quadratic, these run out the test's time).
 - Out of stack inside a firing: the error reaches the caller of `complete`, and the entry being fired goes back on the list, to be run by the next visitor
   (`lazy/internal/StageOverflow`: "pending after a visit"; `CompletableFutureRoots`: "out of stack in a firing, then a visit" holds what the oracle also keeps to, at most
+  one lost).
   A task with no source that ran out of stack before its function began is run in full by the next visitor, wherever the stack ended, to the slot (`lazy/internal/StageOverflow`: "sourceless tasks pending after a rerun").
-  one lost). A function that overflows fails its own stage when there is stack left to say
+  A function that overflows fails its own stage when there is stack left to say
   so; when there is not, as making the outcome can overflow too, the next visitor settles the stage from how the function ended (`lazy/internal/StageOverflow`: "returns lost"). A function runs at most
   once and an executor is called at most once for a firing, wherever the stack ends ("out of stack after a function, then a visit", "out of stack after a
   handover, then a visit"; both sweep the end of the stack and print only that it held, so no line depends on a frame count). An executor found to have
