@@ -49,7 +49,7 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             heap_limit: 256 << 20,
-            max_frames: 4096,
+            max_frames: 16384,
             max_frame_slots: 4 << 20,
             max_nesting: 1024,
             assertions: false,
