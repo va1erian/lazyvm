@@ -47,6 +47,13 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     private boolean ended;
     /** The entry on {@code second}'s list. */
     private OtherSide otherSide;
+    /** The function has run and left {@code returned} or {@code threw}, not yet made into an outcome. */
+    private boolean called;
+    private Object returned;
+    private Throwable threw;
+    /** The executor has been called: it may hold the task, whatever came of the call. */
+    private boolean handedOver;
+    private Throwable rejection;
 
     StageStep(int action, Object fn, Executor executor, CompletableFuture<?> first, CompletableFuture<?> second,
             boolean either, CompletableFuture<?> target) {
@@ -65,7 +72,7 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     }
 
     /** An executor named by the caller; naming the common pool means the same as naming none. */
-    static Executor screen(Executor given) {
+    static Executor namedExecutor(Executor given) {
         if (given == null) {
             throw new NullPointerException();
         }
@@ -133,22 +140,26 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
             }
             return handOver();
         } catch (StackOverflowError e) {
-            // Out of stack before the function was reached: compute catches what it throws. The list
-            // takes this back, so the next visitor does the work (CompletableFuture.fireLinks).
+            // The list takes this back, so the next visitor goes on (CompletableFuture.fireLinks) from
+            // what is kept: it does not call a function or an executor a second time.
             fired = false;
             throw e;
         }
     }
 
     private CompletableFuture<?> handOver() {
-        try {
-            executor.execute(this);
-            return null;
-        } catch (Throwable t) {
-            boolean settled = target.settle(StageOutcome.thrown(t));
-            leaveSources();
-            return settled ? target : null;
+        if (!handedOver) {
+            handedOver = true;
+            try {
+                executor.execute(this);
+                return null;
+            } catch (Throwable t) {
+                rejection = t;
+            }
         }
+        boolean settled = target.settle(StageOutcome.thrown(rejection));
+        leaveSources();
+        return settled ? target : null;
     }
 
     /** Executor entry point. An executor that calls it again finds the target settled, as a rule. */
@@ -249,70 +260,96 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     /** The target's outcome, or null when it is left to a compose's inner stage. */
     private StageOutcome compute() {
         try {
-            if (first == null) {
-                return StageOutcome.of(start());
-            }
-            if (dropsFunction()) {
-                StageOutcome failed = failedInput();
-                if (failed != null) {
-                    return failed.inherited();
+            if (!called) {
+                StageOutcome noCall = first == null ? null : withoutFunction();
+                if (noCall != null) {
+                    return noCall;
                 }
+                call();
             }
-            return dispatch(input());
+            return fromCall();
         } catch (Throwable t) {
             return StageOutcome.thrown(t);
         }
     }
 
-    private Object start() {
-        if (action == SUPPLY) {
-            return ((Supplier<?>) fn).get();
+    /** The outcome if the sources leave the function out, or there is none. */
+    private StageOutcome withoutFunction() {
+        StageOutcome failed = dropsFunction() ? failedInput() : null;
+        if (failed != null) {
+            return failed.inherited();
         }
-        ((Runnable) fn).run();
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private StageOutcome dispatch(StageOutcome x) {
+        StageOutcome x = input();
         switch (action) {
-            case APPLY:
-                return StageOutcome.of(((Function<Object, Object>) fn).apply(x.value));
-            case ACCEPT:
-                ((Consumer<Object>) fn).accept(x.value);
-                return StageOutcome.NULL;
-            case RUN:
-                ((Runnable) fn).run();
-                return StageOutcome.NULL;
-            case COMBINE:
-                return StageOutcome.of(((BiFunction<Object, Object, Object>) fn).apply(x.value, second.outcome.value));
-            case ACCEPT_BOTH:
-                ((BiConsumer<Object, Object>) fn).accept(x.value, second.outcome.value);
-                return StageOutcome.NULL;
-            case COMPOSE:
-                return compose(((Function<Object, CompletionStage<?>>) fn).apply(x.value));
-            case WHEN:
-                return when(x);
-            case HANDLE:
-                return StageOutcome.of(((BiFunction<Object, Object, Object>) fn).apply(x.value, x.failure));
-            case RECOVER:
-                return x.failure == null ? x : StageOutcome.of(((Function<Object, Object>) fn).apply(x.failure));
+            case PASS:
+                return x;
             case ALL:
                 return StageOutcome.NULL;
+            case RECOVER:
+                return x.failure == null ? x : null;
             default:
-                return x;
+                return null;
         }
     }
 
+    /**
+     * Runs the function and keeps how it ended, which takes no frame: making an outcome of it can
+     * run out of stack, and the next visitor must then find it here and not run the function again.
+     */
     @SuppressWarnings("unchecked")
-    private StageOutcome when(StageOutcome x) {
+    private void call() {
+        StageOutcome x = first == null ? null : input();
+        threw = null;
         try {
-            ((BiConsumer<Object, Object>) fn).accept(x.value, x.failure);
-        } catch (Throwable t) {
-            if (x.failure == null) {
-                return StageOutcome.thrown(t);
+            switch (action) {
+                case SUPPLY:
+                    returned = ((Supplier<?>) fn).get();
+                    break;
+                case APPLY:
+                    returned = ((Function<Object, Object>) fn).apply(x.value);
+                    break;
+                case ACCEPT:
+                    ((Consumer<Object>) fn).accept(x.value);
+                    break;
+                case RUN:
+                    ((Runnable) fn).run();
+                    break;
+                case COMBINE:
+                    returned = ((BiFunction<Object, Object, Object>) fn).apply(x.value, second.outcome.value);
+                    break;
+                case ACCEPT_BOTH:
+                    ((BiConsumer<Object, Object>) fn).accept(x.value, second.outcome.value);
+                    break;
+                case COMPOSE:
+                    returned = ((Function<Object, CompletionStage<?>>) fn).apply(x.value);
+                    break;
+                case WHEN:
+                    // Passes on what it was given, as that was when it ran.
+                    returned = x;
+                    ((BiConsumer<Object, Object>) fn).accept(x.value, x.failure);
+                    break;
+                case HANDLE:
+                    returned = ((BiFunction<Object, Object, Object>) fn).apply(x.value, x.failure);
+                    break;
+                default:
+                    returned = ((Function<Object, Object>) fn).apply(x.failure);
+                    break;
             }
+        } catch (Throwable t) {
+            threw = t;
         }
-        return x.inherited();
+        called = true;
+    }
+
+    private StageOutcome fromCall() {
+        if (action == WHEN) {
+            StageOutcome x = (StageOutcome) returned;
+            return threw != null && x.failure == null ? StageOutcome.thrown(threw) : x.inherited();
+        }
+        if (threw != null) {
+            return StageOutcome.thrown(threw);
+        }
+        return action == COMPOSE ? compose((CompletionStage<?>) returned) : StageOutcome.of(returned);
     }
 
     private StageOutcome compose(CompletionStage<?> stage) {
@@ -320,13 +357,17 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
         if (inner == null) {
             throw new NullPointerException();
         }
+        StageOutcome done;
         synchronized (CompletableFuture.LOCK) {
-            if (inner.outcome != null) {
-                return inner.outcome.inherited();
+            done = inner.outcome;
+            if (done == null) {
+                new StageStep(PASS, null, null, inner, null, false, target).addTo(inner);
+                // Used up: an executor that runs this task again calls the function again.
+                called = false;
+                return null;
             }
-            new StageStep(PASS, null, null, inner, null, false, target).addTo(inner);
-            return null;
         }
+        return done.inherited();
     }
 
     private final class OtherSide extends StageLink {

@@ -105,7 +105,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier, Executor executor) {
-        return started(StageStep.SUPPLY, supplier, StageStep.screen(executor));
+        return started(StageStep.SUPPLY, supplier, StageStep.namedExecutor(executor));
     }
 
     public static CompletableFuture<Void> runAsync(Runnable runnable) {
@@ -113,7 +113,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public static CompletableFuture<Void> runAsync(Runnable runnable, Executor executor) {
-        return started(StageStep.RUN, runnable, StageStep.screen(executor));
+        return started(StageStep.RUN, runnable, StageStep.namedExecutor(executor));
     }
 
     private static <U> CompletableFuture<U> started(int action, Object fn, Executor executor) {
@@ -325,7 +325,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public <U> CompletableFuture<U> thenApplyAsync(Function<? super T, ? extends U> fn, Executor executor) {
-        return after(StageStep.APPLY, fn, StageStep.screen(executor));
+        return after(StageStep.APPLY, fn, StageStep.namedExecutor(executor));
     }
 
     public CompletableFuture<Void> thenAccept(Consumer<? super T> action) {
@@ -337,7 +337,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public CompletableFuture<Void> thenAcceptAsync(Consumer<? super T> action, Executor executor) {
-        return after(StageStep.ACCEPT, action, StageStep.screen(executor));
+        return after(StageStep.ACCEPT, action, StageStep.namedExecutor(executor));
     }
 
     public CompletableFuture<Void> thenRun(Runnable action) {
@@ -349,7 +349,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public CompletableFuture<Void> thenRunAsync(Runnable action, Executor executor) {
-        return after(StageStep.RUN, action, StageStep.screen(executor));
+        return after(StageStep.RUN, action, StageStep.namedExecutor(executor));
     }
 
     public <U, V> CompletableFuture<V> thenCombine(CompletionStage<? extends U> other,
@@ -364,7 +364,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
 
     public <U, V> CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other,
             BiFunction<? super T, ? super U, ? extends V> fn, Executor executor) {
-        return afterTwo(StageStep.COMBINE, other, false, fn, StageStep.screen(executor));
+        return afterTwo(StageStep.COMBINE, other, false, fn, StageStep.namedExecutor(executor));
     }
 
     public <U> CompletableFuture<Void> thenAcceptBoth(CompletionStage<? extends U> other,
@@ -379,7 +379,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
 
     public <U> CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> other,
             BiConsumer<? super T, ? super U> action, Executor executor) {
-        return afterTwo(StageStep.ACCEPT_BOTH, other, false, action, StageStep.screen(executor));
+        return afterTwo(StageStep.ACCEPT_BOTH, other, false, action, StageStep.namedExecutor(executor));
     }
 
     public CompletableFuture<Void> runAfterBoth(CompletionStage<?> other, Runnable action) {
@@ -391,7 +391,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public CompletableFuture<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action, Executor executor) {
-        return afterTwo(StageStep.RUN, other, false, action, StageStep.screen(executor));
+        return afterTwo(StageStep.RUN, other, false, action, StageStep.namedExecutor(executor));
     }
 
     public <U> CompletableFuture<U> applyToEither(CompletionStage<? extends T> other, Function<? super T, U> fn) {
@@ -404,7 +404,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
 
     public <U> CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn,
             Executor executor) {
-        return afterTwo(StageStep.APPLY, other, true, fn, StageStep.screen(executor));
+        return afterTwo(StageStep.APPLY, other, true, fn, StageStep.namedExecutor(executor));
     }
 
     public CompletableFuture<Void> acceptEither(CompletionStage<? extends T> other, Consumer<? super T> action) {
@@ -417,7 +417,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
 
     public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action,
             Executor executor) {
-        return afterTwo(StageStep.ACCEPT, other, true, action, StageStep.screen(executor));
+        return afterTwo(StageStep.ACCEPT, other, true, action, StageStep.namedExecutor(executor));
     }
 
     public CompletableFuture<Void> runAfterEither(CompletionStage<?> other, Runnable action) {
@@ -429,7 +429,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action, Executor executor) {
-        return afterTwo(StageStep.RUN, other, true, action, StageStep.screen(executor));
+        return afterTwo(StageStep.RUN, other, true, action, StageStep.namedExecutor(executor));
     }
 
     public <U> CompletableFuture<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn) {
@@ -442,7 +442,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
 
     public <U> CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn,
             Executor executor) {
-        return after(StageStep.COMPOSE, fn, StageStep.screen(executor));
+        return after(StageStep.COMPOSE, fn, StageStep.namedExecutor(executor));
     }
 
     public CompletableFuture<T> whenComplete(BiConsumer<? super T, ? super Throwable> action) {
@@ -454,7 +454,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public CompletableFuture<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action, Executor executor) {
-        return after(StageStep.WHEN, action, StageStep.screen(executor));
+        return after(StageStep.WHEN, action, StageStep.namedExecutor(executor));
     }
 
     public <U> CompletableFuture<U> handle(BiFunction<? super T, Throwable, ? extends U> fn) {
@@ -466,7 +466,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
     }
 
     public <U> CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor) {
-        return after(StageStep.HANDLE, fn, StageStep.screen(executor));
+        return after(StageStep.HANDLE, fn, StageStep.namedExecutor(executor));
     }
 
     public CompletableFuture<T> exceptionally(Function<Throwable, ? extends T> fn) {

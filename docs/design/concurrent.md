@@ -54,6 +54,7 @@ the label of a line of its golden. Change the rule and that line should change.
 | `CompletableFutureReaders` | threads blocked in `get` and `join`: counts, release, interrupts, pool workers, races |
 | `CompletableFutureNoCommonEdges` | a common pool below parallelism two, named as an executor |
 | `CompletableFutureRoots` | what a firing has left and who can reach it, what a task does with each source, wide fans, running out of stack in a firing |
+| `CompletableFutureNoHeap` | a function that leaves no heap for its failure to be wrapped in |
 | `CompletableFutureInterface` | every `CompletionStage` method called through the interface type |
 | `ConcurrentLeftovers` | `LinkedBlockingDeque.offer(e, t, u)` and `KeySetView.forEach(Consumer)`, which no other test reached |
 | `Contention` | totals under threads: exclusion, permits, no lost or repeated element |
@@ -1253,7 +1254,17 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   future, in any order, and `anyOf` of one future 20000 times, are linear (`CompletableFutureRoots`: "wide either, settled by the receiver", "wide either,
   settled by the other", "many requests against one shutdown, shuffled", "anyOf of one future, many times"; quadratic, these run out the test's time).
 - Out of stack inside a firing: the error reaches the caller of `complete`, and the entry being fired goes back on the list, to be run by the next visitor
-  (`CompletableFutureRoots`: "out of stack in a firing, then a visit"). A function that overflows is only that function's failure.
+  (`CompletableFutureRoots`: "out of stack in a firing, then a visit"). A function that overflows fails its own stage when there is stack left to say
+  so; when there is not, as making the outcome can overflow too, the next visitor settles the stage from how the function ended. A function runs at most
+  once and an executor is called at most once for a firing, wherever the stack ends ("out of stack after a function, then a visit", "out of stack after a
+  handover, then a visit"; both sweep the end of the stack and print only that it held, so no line depends on a frame count). An executor found to have
+  overflowed counts as a rejection, even if it was the call to it that did not fit.
+- Out of heap is not given back: a function that throws with no heap left for the wrapping sends `OutOfMemoryError` to the caller of `complete`, the
+  entry is gone and the stage stays pending, after any visit too (`CompletableFutureNoHeap`).
+- A task an executor runs twice is not the case above: a compose left waiting for its inner stage calls its function again and joins the inner stage's
+  list again (`CompletableFutureRoots`: "task of a compose left pending, run again").
+- `LOCK` holds no user code. A compose reads a done inner stage under it and wraps the failure outside it, as the wrapping calls the failure's
+  `toString` (`CompletableFutureRoots`: "other stages during a compose's toString of a failure").
 - Long chains of stages linked by the API do not exhaust the stack: 20000 chained `thenApply` and `thenCompose`, and a fan of 5000
   dependents, settle on the default thread stack ("deep chain", "deep compose", "wide fan"). A failure passing through 20000 stages
   stays a single `CompletionException` over `X` ("deep failure"). One native or Java frame per stage will not pass this, since
@@ -1338,8 +1349,15 @@ being kept. Neither was: both are now what the oracle does.
 - **`CompletableFuture`, what is left**: the class of a task handed to an executor (on the oracle it is a `ForkJoinTask`; here it is not, and it
   is only promised to be a `Runnable` marked `AsynchronousCompletionTask`). How deep user recursion through the API goes: a callback completing
   the next future, a `thenCompose` over done stages, or a chain with a direct executor costs about 5 to 9 frames per level, so LazyVM's 4094 frames end
-  at about 450 levels (800 with a direct executor) where the oracle's 22523 reach further (`StackOverflowError` is caught as any callback's failure, and
-  stages may stay pending). The order in which readers wake when nothing holds them, and who of a reader and a completer takes the next entry.
+  sooner than the oracle's 22523 (`StackOverflowError` is caught as any callback's failure, and stages may stay pending). By probe: a `thenCompose` over
+  done stages, recursing, works at 400 levels here and overflows at 600, where the oracle works at 2000 and overflows at 5000. A chain of `*Async` with a
+  direct executor settles at 700 on both; at 1000 its last stage is ok on the oracle and failed or pending here, depending on the frames below the
+  `complete`; at 2000 it is pending on the oracle and failed or pending here. The order in which readers wake when nothing holds them, and who of a
+  reader and a completer takes the next entry.
+- **`CompletableFuture`, out of stack in a firing**: on the oracle a stage whose firing ran out of stack mostly stays pending after a visit (340 of 880 in one
+  sweep), and its function is not run again. Here the visit settles it, by the rule in the section above. Only that the function ran once is pinned. The line
+  "out of stack in a firing, then a visit: pending" (`CompletableFutureRoots`) reads 0 on the oracle with its default flags and needs that test's own
+  warm-up: with `-Xint` or `-XX:TieredStopAtLevel=1` it reads 1 every time, and a shorter sweep or other lines before it flip it too.
 - **`CompletableFuture`, a race and no golden**: an obtrude racing an attach must not lose the dependent, so the write of the outcome is under the lock
   as a first settlement's is. A race has no stable line to bless. It is only checked by a probe, on the order of 2 million attaches with none lost.
 - **A monitor over the whole collection, and user code.** `ConcurrentSkipListMap` and `ConcurrentSkipListSet` are a `TreeMap` under one monitor, and call `compareTo` or the

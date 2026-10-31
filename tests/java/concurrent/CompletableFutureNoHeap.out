@@ -1,0 +1,4 @@
+room: complete threw null, visit threw null, done at once true, after a visit true, runs 1, dependents 0
+no heap: complete threw java.lang.OutOfMemoryError: Java heap space, visit threw null, done at once false, after a visit false, runs 1, dependents 0
+no heap: complete threw java.lang.OutOfMemoryError: Java heap space, visit threw null, done at once false, after a visit false, runs 1, dependents 0
+no heap: complete threw java.lang.OutOfMemoryError: Java heap space, visit threw null, done at once false, after a visit false, runs 1, dependents 0

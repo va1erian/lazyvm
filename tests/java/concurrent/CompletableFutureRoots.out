@@ -16,6 +16,7 @@ two levels below, a visit to the root = 1 0 0 [] [other on visitor]
 root's list under what moved onto it = [m0, s=2, m1, s=1, old of s, s=0]
 step finds its target settled, in the target's own firing = [in, other, out]
 handed over, then found again through the other list = [handed 1, in, other, out] 0 0
+task of a compose left pending, run again = 2 2 false i
 task of a compose left pending does not help = [task ran, sibling] 0 true true
 task end, either, receiver pending, through the other = [fn=1, sib0=1, sib1=1, own=0] 0
 task end, either, other pending, through the receiver = [fn=1, sib=0] 0
@@ -32,3 +33,6 @@ wide either, settled by the other = 20000 0 0
 many requests against one shutdown, shuffled = 20000 9999 0
 anyOf of one future, many times = 11808 1 0
 out of stack in a firing, then a visit: pending = 0
+out of stack after a function, then a visit = ran at most once in every trial
+out of stack after a handover, then a visit = queued and ran at most once in every trial
+other stages during a compose's toString of a failure = true
