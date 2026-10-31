@@ -51,7 +51,7 @@ impl Default for Options {
             heap_limit: 256 << 20,
             max_frames: 16384,
             max_frame_slots: 4 << 20,
-            max_nesting: 1024,
+            max_nesting: 2400,
             assertions: false,
             trace_interp: false,
             verbose_class: false,

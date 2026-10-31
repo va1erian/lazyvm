@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Library classes first used at the bottom of an overflowing stack, where they
@@ -68,6 +69,26 @@ public class StackOverflowFirstUse {
         }
     }
 
+    static int syntaxErrors;
+
+    /**
+     * Too near the end of the stack for a split, which says nothing about its pattern. Only this one
+     * form is stable: the oracle takes `compile` of any pattern for a syntax error at some frames,
+     * but not this (docs/regex.md).
+     */
+    static void splitting(int depth) {
+        try {
+            splitting(depth + 1);
+        } catch (StackOverflowError e) {
+            try {
+                "a,b".split(",");
+            } catch (PatternSyntaxException x) {
+                syntaxErrors++;
+            }
+            throw e;
+        }
+    }
+
     static void plainRecursion() {
         plainRecursion();
     }
@@ -96,6 +117,12 @@ public class StackOverflowFirstUse {
         System.out.println("format works: " + String.format("%s %d", new ArrayList<String>(), 1));
         run("regex", () -> matching(0));
         System.out.println("regex works: " + matched);
+
+        // Ready first: on the oracle a class first needed down there stays broken.
+        "a,b".split(",");
+        new PatternSyntaxException("", "", 0).getMessage();
+        run("split", () -> splitting(0));
+        System.out.println("split, syntax errors: " + syntaxErrors);
 
         Thread t = new Thread(() -> run("on a thread", () -> formatting(0)));
         t.start();

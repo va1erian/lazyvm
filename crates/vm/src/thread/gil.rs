@@ -387,7 +387,6 @@ impl Gil {
 
     fn wait_turn<'a>(&'a self, mut slot: MutexGuard<'a, Slot>, me: usize) -> Vm {
         self.waiting.store(true, Ordering::Relaxed);
-        self.call_watch(&mut slot);
         let turn = Arc::clone(&slot.seats[me].turn);
         loop {
             if slot.vm.is_some() && slot.next_up() == Some(me) {
@@ -396,6 +395,8 @@ impl Gil {
                 self.waiting.store(slot.anyone_in_line(), Ordering::Relaxed);
                 return vm;
             }
+            // Only now: a lone thread back from a sleep needs no one to time it.
+            self.call_watch(&mut slot);
             // What this thread's arrival, or the time that passed, changed.
             if let Some(next) = slot.to_notify(Some(me)) {
                 next.notify_one();

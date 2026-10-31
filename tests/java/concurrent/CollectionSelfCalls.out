@@ -1,4 +1,6 @@
 built: putAll
+source of a new map = 1 calls [size, entrySet]
+source of putAll = 0 calls [size, entrySet]
 toString of a map holding itself = {a=(this Map)}
 toString of a map keyed by itself = {(this Map)=1}
 map putAll = true calls [containsKey, get]

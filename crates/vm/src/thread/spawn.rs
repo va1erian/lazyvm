@@ -8,7 +8,7 @@ use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
 /// Stack reserved for a started thread. A nested call from Rust into Java
-/// was measured at under 8 KiB of stack, so `Options::max_nesting` (1024)
+/// was measured at under 8 KiB of stack, so `Options::max_nesting` (2400)
 /// fits with a wide margin, as on the launcher's bigger main thread.
 pub const THREAD_STACK_BYTES: usize = 64 << 20;
 /// The `sysexits.h` status for an internal VM failure, as the launcher uses.

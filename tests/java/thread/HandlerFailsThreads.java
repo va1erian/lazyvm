@@ -53,5 +53,15 @@ public class HandlerFailsThreads {
             System.err.print("in the handler");
             throw new IllegalArgumentException();
         });
+        // The line about it goes out in modified UTF-8: a pair as two surrogates, a NUL in two bytes.
+        Thread odd = new Thread(() -> {
+            throw new RuntimeException("x");
+        }, "pair 😀 lone \uD83D nul \u0000.");
+        odd.setUncaughtExceptionHandler((t, e) -> {
+            throw new IllegalStateException();
+        });
+        odd.start();
+        odd.join();
+        System.out.println("odd name ended");
     }
 }

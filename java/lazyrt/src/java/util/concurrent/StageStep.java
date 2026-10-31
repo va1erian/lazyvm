@@ -266,6 +266,7 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
 
     /** The target's outcome, or null when it is left to a compose's inner stage. */
     private StageOutcome compute() {
+        boolean claimed = false;
         try {
             if (!called) {
                 StageOutcome noCall = first == null ? null : withoutFunction();
@@ -275,10 +276,15 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
                 if (!mayCall()) {
                     return null;
                 }
+                claimed = true;
                 call();
             }
             return fromCall();
         } catch (Throwable t) {
+            // call's frame is the larger, so the stack can end between the two: the function has not run.
+            if (claimed && !called) {
+                calling = false;
+            }
             return StageOutcome.thrown(t);
         }
     }

@@ -1,0 +1,4 @@
+main invoke: java.lang.StackOverflowError past 2000: true
+main newInstance: java.lang.StackOverflowError past 2000: true
+thread invoke: java.lang.StackOverflowError past 2000: true
+thread newInstance: java.lang.StackOverflowError past 2000: true

@@ -8,5 +8,7 @@ format overflowed, caught in main
 format works: [] 1
 regex overflowed, caught in main
 regex works: true
+split overflowed, caught in main
+split, syntax errors: 0
 on a thread overflowed, caught in main
 plain overflowed, caught in main

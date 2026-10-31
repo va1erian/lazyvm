@@ -372,7 +372,17 @@ The oracle is exponential on `(?:a|a*)*b(?=c)` too (0.23 s on 16 `a`, 7.5 s on
   a pattern nested too deeply to compile raises `PatternSyntaxException`
   ("Stack overflow during pattern compilation"), as on the oracle, with the
   index of the `(` of the deepest group (the oracle's index depends on its
-  stack); the depth where that happens differs (see Cost and limits).
+  stack); the depth where that happens differs (see Cost and limits). Only a
+  pattern nested 8 levels or more is reported so: any other that overflows was
+  merely started near the end of the stack, and gets the `StackOverflowError`.
+  So a library class whose initializer uses a pattern goes back to not being
+  initialized (`lazy/internal/InitOverflow`, threads.md). Different from the oracle,
+  which has no such turning point. With its error class ready, walking back up from the
+  end of a stack, even `Pattern.compile("[0-9]+")` gives `StackOverflowError` for
+  some frames, then `PatternSyntaxException` for some (6 to 58 in the probe `PB3`, more
+  or fewer as it compiles), then works, and likewise `"abc".matches("a.c")`. Only
+  `"a,b".split(",")`, which needs no pattern there, is free of it: that one is
+  pinned (`StackOverflowFirstUse`, "split, syntax errors").
 - **Exponential blow-up.** A back reference, `\G`, or a capture that outlives a
   failed path (a capturing group inside a lookaround or an atomic group, which
   includes a possessive repeat of a group, or a capturing possessive repeat of

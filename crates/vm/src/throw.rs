@@ -1,5 +1,7 @@
 //! Creating exception objects and recording stack traces.
 
+use classfile::encode_mutf8;
+
 use crate::class::{ClassId, MethodRef};
 use crate::objects::ARRAY_LIMIT;
 use crate::value::{Ref, Value};
@@ -180,17 +182,20 @@ impl Vm {
         };
         let name = match self.current_thread() {
             Some(thread) => match self.field_by_name(thread, "name", "Ljava/lang/String;")? {
-                Value::Ref(Some(name)) => self.string_to_rust(name)?,
-                _ => String::new(),
+                Value::Ref(Some(name)) => self.string_utf16(name)?,
+                _ => Vec::new(),
             },
             // Java has never asked for the main thread's object.
-            None => "main".to_owned(),
+            None => "main".encode_utf16().collect(),
         };
-        let line = format!(
-            "\nException: {class} thrown from the UncaughtExceptionHandler in thread \"{name}\"\n"
-        );
-        // Nothing is left to tell if stderr itself fails.
-        let _ = platform::write(platform::Stream::Err, line.as_bytes());
+        let start =
+            format!("\nException: {class} thrown from the UncaughtExceptionHandler in thread \"");
+        let mut line: Vec<u16> = start.encode_utf16().collect();
+        line.extend(name);
+        line.extend("\"\n".encode_utf16());
+        // Modified UTF-8, as on the oracle (`HF`, threads.md). Nothing is left
+        // to tell if stderr itself fails.
+        let _ = platform::write(platform::Stream::Err, &encode_mutf8(&line));
         Ok(())
     }
 

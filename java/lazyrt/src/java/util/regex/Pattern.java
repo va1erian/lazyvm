@@ -59,9 +59,12 @@ public final class Pattern implements java.io.Serializable {
         try {
             build(parser);
         } catch (StackOverflowError e) {
-            // Observed on the oracle (RegexLimits): a pattern nested too deeply fails to compile
-            // with a syntax error, not with the StackOverflowError of the parser.
-            throw parser.stackOverflow();
+            // Observed on the oracle (RegexLimits): a pattern nested too deeply fails to compile with
+            // a syntax error. One that merely started near the end of the stack gets the shortage.
+            if (parser.nestedDeeply()) {
+                throw parser.stackOverflow();
+            }
+            throw e;
         }
     }
 

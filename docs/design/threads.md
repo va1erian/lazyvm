@@ -58,8 +58,9 @@ the next poll honours by looking at the clock at once. It sleeps with
 this holds on every platform: a slice ends within about a slice's length plus the
 one native that is running, which nothing can interrupt. The flag is read only on
 the path taken with threads in line, so one thread pays nothing, and the watch
-starts when a thread first joins the line. With the line empty for 8 looks in a
-row it sleeps until someone joins: rousing it takes a system call, which threads
+starts when a thread first has to wait for the VM: one that finds it free, as a
+lone thread back from a sleep does, calls nobody. With the line empty for 8 looks in a
+row it sleeps until someone has to wait: rousing it takes a system call, which threads
 that only hop on a lock must not pay at each hop. While it times, it wakes about
 once per slice, 200 times a second, and takes the slot's mutex once. Inside LazyOS, `Thread.sleep(1)` beside `arraycopy` of 16 MB takes 10.4 ms on average, and of 1 MB 8.1 ms.
 If it cannot be started, slices are as long as the polls make them. `gil_tests.rs` pins that a
@@ -252,10 +253,10 @@ Java monitors are not OS locks: a thread blocked on one has released the VM.
   joiners). The VM then drops the entry.
 - `join` is Java: `wait` on the thread object while it is alive.
 - A started thread's stack is 64 MiB (`THREAD_STACK_BYTES`), a quarter of the
-  main thread's, with the same `Options::max_nesting` (1024) for calls from
-  Rust into Java: one such call was measured at under 8 KiB of stack, so
-  1000-deep reflective recursion works on a started thread too
-  (`DeepThread`).
+  main thread's, with the same `Options::max_nesting` (2400, decisions.md D15) for
+  calls from Rust into Java: one such call was measured at under 8 KiB of stack, and 3.6 MiB
+  for all 2400 on Windows, so reflective recursion goes as deep on a started thread
+  (`DeepThread`, `lazy/internal/CallNesting`).
 - Java frames use no OS stack, and each thread may have 16384
   (`Options::max_frames`, decisions.md D15; `-Xss` sets it, at 16384 per MiB, so
   `-Xss1m` is the default). A frame of a small method costs about 245 bytes of Rust
@@ -387,17 +388,21 @@ such as classes, the slot table and the thread table.
   (`OutOfMemoryErrors`, "stayed within the limit"). One that fails for lack of memory,
   or of stack, goes back to not being initialized, so the next use tries again: it
   would otherwise be broken for good, while on the oracle such classes are mostly
-  initialized at startup. A `println` as the first output, in a handler at the bottom
+  initialized at startup. That takes the shortage arriving as such: a plain pattern
+  compiled near the end of the stack gets the `StackOverflowError`, not a syntax error
+  (`lazy/internal/InitOverflow`, and docs/regex.md for the oracle's band of syntax errors). A `println` as the first output, in a handler at the bottom
   of a stack overflow, would have ended the program with no output at all
   (`StackOverflowFirstUse`). Only library code can tell, and JVMS 5.5 steps 10 to 12 still hold for a
   program's own classes: an initializer that runs out of memory throws that error and
   leaves its class erroneous, and later uses throw `NoClassDefFoundError`, as on the
   oracle (`Fails`, `FailsToo` in `OutOfMemory`).
 - **The handler**: an `OutOfMemoryError` makes 64 KiB more available, counted from
-  the limit or from what the heap holds if a native took it past that, until a
-  collection gets back under the limit, as a handler usually reports what it
-  caught (`OutOfMemoryHandlerRoom`, and `the_handler_has_room_wherever_a_native_took_the_heap`
-  in the heap's tests). On the oracle, slack in its generations gives the same. It is one
+  the limit or from what the heap holds if a native took it past that, as a handler
+  usually reports what it caught. Each collection brings that down to 64 KiB past what
+  it found live, and at most to the limit: so a native's peak does not stay available to
+  bytecode (`OutOfMemoryHandlerRoom`, and in the heap's tests
+  `the_handler_has_room_wherever_a_native_took_the_heap`,
+  `the_handler_room_follows_what_a_collection_finds_live`). On the oracle, slack in its generations gives the same. It is one
   fixed amount: a loop that catches the error and retains more runs out, and
   so does a handler reached after library code swallowed earlier errors
   (`Retain composeDone` gets a second, uncaught `OutOfMemoryError` there).

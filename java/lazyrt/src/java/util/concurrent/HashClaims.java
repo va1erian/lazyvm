@@ -8,9 +8,10 @@ package java.util.concurrent;
  * <p>What holds:
  * <ul>
  * <li>Ops on equal keys never run together, except on one thread. A thread lists its claim before it
- * compares keys, with that claim's monitor held, and compares only with claims listed before it. Of two
- * overlapping ops the later therefore sees the earlier's claim, and joins it instead of running. And so
- * no number of later arrivals, of any key, can make a comparing thread start over.
+ * compares keys, with that claim's monitor held, and in the same step of the guard takes the list of
+ * those of its hash already there, which is all it ever compares with. Of two overlapping ops the later
+ * therefore sees the earlier's claim, and joins it instead of running. And so no number of later
+ * arrivals, of any key, can make a comparing thread start over.
  * <li>A waiter is not a claim. Having found the claim of an equal key, a thread gives its own up, and
  * whoever had stopped behind that one looks again. So there is no queue of claims, and a thread going
  * straight from one op to the next finds the key free, as it would a monitor it had just left. The VM's
@@ -21,15 +22,17 @@ package java.util.concurrent;
  * </ul>
  */
 final class HashClaims {
-    /** A lock on one key, listed for as long as anyone holds it or will. Who runs in it holds its monitor. */
+    /**
+     * A lock on one key, listed for as long as anyone holds it or will. Who runs in it holds its monitor.
+     * Its fields are not private, so that {@link #leave} takes no accessor call.
+     */
     static final class Claim {
         final int hash;
         final Object key;
-        /** Its place among all stakes while it is listed; else 0. */
-        private long order;
-        private Claim next;
+        boolean listed;
+        Claim next;
         /** Who will still enter it, its first holder included. */
-        private int users = 1;
+        int users = 1;
         /** Its first holder found no earlier claim on the key. Until then nobody runs in it. */
         boolean open;
 
@@ -43,7 +46,6 @@ final class HashClaims {
     private Claim[] slots;
     /** Read before {@link #mayHold}, to spare that call on a map with no claims. */
     int count;
-    private long staked;
 
     HashClaims(Object guard) {
         this.guard = guard;
@@ -62,32 +64,39 @@ final class HashClaims {
     }
 
     /**
-     * Lists the claim, and answers null if there is no other of its hash, the usual case, or the claim
-     * itself if it has keys to compare with. But an open claim on the very key object takes no compare,
-     * and no equal key can be running elsewhere: that one is joined and answered, and the claim stays out.
+     * Lists the claim, and answers the claims of its hash that were already listed, or null if there are
+     * none, the usual case. But an open claim on the very key object takes no compare, and no equal key
+     * can be running elsewhere: that one is joined and answered alone, and {@code mine} is not listed.
      * Running out of memory here leaves things as they were.
      */
-    Claim stake(Claim mine) {
+    Claim[] stake(Claim mine) {
         synchronized (guard) {
             if (slots == null || count == slots.length) {
                 grow();
             }
             int at = mine.hash & (slots.length - 1);
-            Claim answer = null;
+            int same = 0;
             for (Claim c = slots[at]; c != null; c = c.next) {
                 if (c.hash == mine.hash) {
                     if (c.key == mine.key && c.open) {
+                        Claim[] only = {c};
                         c.users++;
-                        return c;
+                        return only;
                     }
-                    answer = mine;
+                    same++;
                 }
             }
-            mine.order = ++staked;
+            Claim[] earlier = same == 0 ? null : new Claim[same];
+            for (Claim c = slots[at]; c != null && same > 0; c = c.next) {
+                if (c.hash == mine.hash) {
+                    earlier[--same] = c;
+                }
+            }
+            mine.listed = true;
             mine.next = slots[at];
             slots[at] = mine;
             count++;
-            return answer;
+            return earlier;
         }
     }
 
@@ -107,12 +116,14 @@ final class HashClaims {
     }
 
     /**
-     * Called after {@link #stake} from the same frame, and this frame is no larger and calls nothing,
-     * so that having got that far, a thread out of stack can still leave, and no claim outlasts its op.
+     * The one call that must not run out of stack: called after {@link #stake} from the same frame, it
+     * calls nothing and its frame is no larger, so that a thread that got as far as listing a claim can
+     * still leave, and no claim outlasts its op. Only {@link #join} calls it from deeper, and if that
+     * fails, the caller of {@link #joined} is still there to leave.
      */
     void leave(Claim c) {
         synchronized (guard) {
-            if (--c.users > 0 || c.order == 0) {
+            if (--c.users > 0 || !c.listed) {
                 return;
             }
             int at = c.hash & (slots.length - 1);
@@ -125,7 +136,7 @@ final class HashClaims {
                 }
                 before.next = c.next;
             }
-            c.order = 0;
+            c.listed = false;
             count--;
         }
     }
@@ -135,34 +146,19 @@ final class HashClaims {
      * there is none. The thread's own come first: another's may hold only a thread still comparing,
      * which this thread may be holding up by a lock of its own.
      */
-    Claim joined(Claim mine) {
-        Claim c = joinFirstEqual(mine, true);
-        return c != null ? c : joinFirstEqual(mine, false);
+    Claim joined(Claim mine, Claim[] earlier) {
+        Claim c = joinFirstEqual(mine, earlier, true);
+        return c != null ? c : joinFirstEqual(mine, earlier, false);
     }
 
-    private Claim joinFirstEqual(Claim mine, boolean held) {
+    private Claim joinFirstEqual(Claim mine, Claim[] earlier, boolean held) {
         Object key = mine.key;
-        long at = mine.order;
-        for (Claim c = before(mine.hash, at); c != null; c = before(mine.hash, at)) {
-            at = c.order;
+        for (Claim c : earlier) {
             if (Thread.holdsLock(c) == held && (key == c.key || key.equals(c.key)) && join(mine, c, held)) {
                 return c;
             }
         }
         return null;
-    }
-
-    /** The latest claim of this hash staked before {@code order}. By number, as links change when the list grows. */
-    private Claim before(int hash, long order) {
-        synchronized (guard) {
-            Claim best = null;
-            for (Claim c = slots[hash & (slots.length - 1)]; c != null; c = c.next) {
-                if (c.hash == hash && c.order < order && (best == null || c.order > best.order)) {
-                    best = c;
-                }
-            }
-            return best;
-        }
     }
 
     /**
@@ -172,13 +168,13 @@ final class HashClaims {
      */
     private boolean join(Claim mine, Claim other, boolean held) {
         synchronized (guard) {
-            if (other.order == 0) {
+            if (!other.listed) {
                 return false;
             }
             // Out of the list now, though some may have stopped behind it. They find it not open.
+            mine.open = false;
             mine.users = 1;
             leave(mine);
-            mine.open = false;
             other.users++;
             other.open |= held;
             return true;

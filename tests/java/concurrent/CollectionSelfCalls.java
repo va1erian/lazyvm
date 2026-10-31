@@ -55,8 +55,17 @@ public class CollectionSelfCalls {
         @Override public void putAll(Map<? extends String, ? extends Integer> m) { System.out.println("built: putAll"); super.putAll(m); }
         @Override public Integer put(String k, Integer v) { System.out.println("built: put"); return super.put(k, v); }
     }
+    /** What a map takes from its source when built from it or given it to put in. */
+    static class Source extends AbstractMap<String,Integer> {
+        final Map<String,Integer> m = Collections.singletonMap("a", 1);
+        public int size() { log.add("size"); return m.size(); }
+        public boolean isEmpty() { log.add("isEmpty"); return m.isEmpty(); }
+        public Set<Map.Entry<String,Integer>> entrySet() { log.add("entrySet"); return m.entrySet(); }
+    }
     public static void main(String[] a) {
         new Built(Collections.singletonMap("a", 1));
+        show("source of a new map", () -> new ConcurrentHashMap<>(new Source()).size());
+        show("source of putAll", () -> { new ConcurrentHashMap<String,Integer>().putAll(new Source()); return 0; });
         ConcurrentHashMap<Object,Object> own = new ConcurrentHashMap<>();
         own.put("a", own);
         System.out.println("toString of a map holding itself = " + own);

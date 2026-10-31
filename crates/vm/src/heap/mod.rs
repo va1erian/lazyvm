@@ -71,8 +71,8 @@ pub struct Heap {
     free: Vec<u32>,
     live_bytes: usize,
     limit: usize,
-    /// Where an allocating bytecode fails: the limit, plus `HANDLER_ROOM` from
-    /// an `OutOfMemoryError` until a collection brings the heap under the limit.
+    /// Where an allocating bytecode fails: the limit, plus `HANDLER_ROOM` from an
+    /// `OutOfMemoryError`, past what a collection finds live, down to the limit again.
     room: usize,
     next_gc: usize,
     /// The running thread is making a shared `OutOfMemoryError` (`Vm::vm_oom`),
@@ -272,9 +272,11 @@ impl Heap {
             }
         }
         self.live_bytes = live;
-        if live < self.limit {
-            self.room = self.limit;
-        }
+        // Room taken at a native's peak must not outlast that peak: bytecode
+        // could then fill the heap back up to it.
+        self.room = self
+            .limit
+            .max(self.room.min(live.saturating_add(HANDLER_ROOM)));
         // Live data can be over the limit (`alloc`). The next collection must
         // still be some way off, or every instruction would run one.
         self.next_gc = live

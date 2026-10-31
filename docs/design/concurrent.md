@@ -3,7 +3,9 @@
 This page is the brief for whoever implements `java.util.concurrent` and
 `java.util.concurrent.locks` in `lazyrt`. It holds only what can be seen from
 outside: results, exceptions, messages, `toString` forms and orderings. It says
-nothing about how a class should be built. Implement from this page and the
+nothing about how a class should be built, except for the "Design notes" section at
+the end, which records why lazyrt's classes are as they are, and which an implementer
+of the rules above can ignore. Implement from this page and the
 [Java SE 8 Javadoc](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/package-summary.html)
 alone. The clean-room rule (`CLAUDE.md`, rule 1) is the hard edge here: these
 classes are famous, so do not recall their source, and choose your own
@@ -556,20 +558,7 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   present, and answers what the compute produced ("computeIfAbsent of a present key waits for its compute", "and
   answers what it computed"). Nothing here looks at the flag ("flag kept by
   compute").
-- How that holds, with what can be measured but has no stable line. A compute runs in a claim, a lock on its key found by hash: only claims of a write's own hash cost it anything, and with none it takes no claim at all ("put of a present key
-  beside another compute: equals 1"). A thread lists its claim, then compares keys with those listed before it, so later arrivals of any key do not send it back. Finding an equal key it gives its own claim up and blocks on that one's monitor:
-  so a waiter is not in anyone's way, a thread going straight on to its next write of the key finds it free, and the VM's rule for monitors (threads.md, "Fairness") is the whole answer to starvation.
-  Before this each waiter was itself a claim in a first-in-first-out list. That could hang a recursive update, and each operation on a contended key became a thread switch. Microseconds per operation, three builds side by side on one machine (first: no list by age; list: the first-in-first-out one; now):
-
-  | | first | list | now |
-  |---|---|---|---|
-  | 8 threads `merge` one key | 10.2 | 21.2 | 10.2 |
-  | 8 threads, mixed writes per key | 36.6 | 85.3 | 39.2 |
-  | `put`, one long compute elsewhere | 3.7 | 8.4 | 3.5 |
-  | `put`, 1000 computes elsewhere | 61 | 222 | 4.1 |
-  | one thread, `merge` of 1000 words | 10.0 | 11.3 | 10.8 |
-  | one thread, `put` of a present key | 3.8 | 4.2 | 3.6 |
-
+- A running compute holds up only writers of an equal key. With none of its hash running, a write costs what it would alone ("put of a present key beside another compute: equals 1"). A thread that keeps writing a key does not make others wait for it longer than a monitor would. How, and what it costs: "Design notes".
 - A conditional `replace` or `remove` that lost its first try to a writer takes a claim, so its value's `equals` runs at most twice, however long a writer goes on (`CollectionClaims`: "replace(k, equal, new), a writer storing equal values", "remove(k, equal), ...").
 - A running `compute` does not make a writer of another bin start over, nor any number of them one after another: such a writer
   gets through in one search or two (`CollectionPins`: "put, a new compute of another bin at each equals, ..."). No write here goes back to the start for what cannot
@@ -1056,7 +1045,7 @@ One script, run on both; rules hold for both unless noted.
   parallelism ("runs to parallelism", "never above parallelism").
 - Chains of forks and joins go deep with no overflow, at any parallelism ("deep 800", and in `ForkJoinLimits` "chain 350 with 4 extra frames at 1" to "chain 800 with 0 extra frames at 2"), as does recursion through `invokeAll`, which runs a task in the caller ("invokeAll two deep 1000", "invokeAll many deep 1000"), and recursion through `invoke` or `invokeAll` on a thread outside any pool ("invoke chain 800 outside a pool" to "invoke chain 1400 on another pool's worker").
   A task runs on its caller's stack: `invoke` always runs it on the calling thread, and a `join` or `get` does so if the task is still queued. Only a task another worker took is waited for, and then the pool compensates. So however deep the caller is, the task has all it has: monitors, locks, a class being initialized, `ThreadLocal`s, the thread itself and its interrupt flag (`ForkJoinStacks`: "deep invoke, monitor held" to "deep invoke on a worker, monitor held"). It needs no worker to come ("deep join, next worker stuck in onStart", "deep join, factory stuck", `ForkJoinRunaway`: "chain 600, factory ...", "invoke chain 600, factory ...", `ForkJoinNoWorkers`: "invoke chain"), a timed `get` keeps its limit there ("deep timed get keeps its limit"), and other tasks and chains take nothing from its depth ("chain 1000 with older siblings at ...", "16 chains of 1400"). A thread has 16384 frames, inside the range the oracle reaches.
-- So runaway recursion ends in a plain `StackOverflowError` on the stack it started on, with few workers, and the pool goes on working (`ForkJoinRunaway`: "runaway forks", "few workers for it", "pool ends", "runaway invokes", "overflow then a task"; `lazy/internal/ForkJoinOverflow`: "runaway at ..." up to a parallelism of 1000, "chain of a million"). A pool call that overflows, at any depth down to the end of a stack, leaves the counts right and the pool alive (`ForkJoinRunaway`: "helpQuiesce at ...", "awaitQuiescence at ..."; `lazy/internal/ForkJoinOverflow`: "quietlyJoin at 1" to "helpQuiesce beside a busy worker at 2"). Worst measured here: see "Cost and thread count" under "What is not pinned".
+- So runaway recursion ends in a plain `StackOverflowError` on the stack it started on, with few workers as long as nothing waits between a fork and its join (a chain that does: "Cost and thread count" under "What is not pinned"), and the pool goes on working (`ForkJoinRunaway`: "runaway forks", "few workers for it", "pool ends", "runaway invokes", "overflow then a task"; `lazy/internal/ForkJoinOverflow`: "runaway at ..." up to a parallelism of 1000, "chain of a million"). A pool call that overflows, at any depth down to the end of a stack, leaves the counts right and the pool alive (`ForkJoinRunaway`: "helpQuiesce at ...", "awaitQuiescence at ..."; `lazy/internal/ForkJoinOverflow`: "quietlyJoin at 1" to "helpQuiesce beside a busy worker at 2"). Worst measured here: see "Cost and thread count" under "What is not pinned".
 - `ManagedBlocker`: `isReleasable` true skips `block`; `block` repeats until true ("outside pool blocker", "releasable
   skips block", "inside pool blocker"). A blocker inside a blocker counts once, so the running count never reads below 0 ("nested blockers").
 
@@ -1384,9 +1373,9 @@ being kept. Neither was: both are now what the oracle does.
 - **Cost and thread count of `ForkJoinPool`**: only one thread runs Java at a time here, so more workers cannot go faster, and they are not made while the running ones may still be using the processor. A queued task that the running workers leave alone gets a worker at once when
   none of them can be running, and otherwise after up to 160 ms. So CPU-bound work runs on fewer threads than the parallelism for a long while (about 10 where the oracle has 23), and tasks that spin on each other start one by one. Neither shows in `getParallelism`, which is exact.
   N tasks at parallelism N that spin on each other take about 0.56 s each here where the oracle shares processors: N=64 met in 36 s against 3.4 s.
-  `getPoolSize` during deep joins differs too (2 or 3 here at any parallelism, 4 to 5 and up to the parallelism on the oracle). Where the stack ends differs as well, and only depths the oracle reaches in every run are pinned. A plain fork and join takes 5 frames per level here, with a task's bridge method, so a chain passes at 3000 levels and overflows at 4000 (the oracle's cold limit lies between 1500 and 2000, higher once compiled). A level through `invokeAll` takes 6: it passes at 2700 and overflows at 3000 (the oracle passes at 1400 and overflows at 2000), at parallelism 1 and 2, in a pool or outside one. `invoke` from outside a pool passes at 2000 on both. Runaway recursion costs about 20 ms here, against a few on the oracle.
+  `getPoolSize` during deep joins differs too: 2 or 3 here at any parallelism when nothing waits between a fork and its join, as a joiner then runs its child itself; 4 to 5 and up to the parallelism on the oracle. But a level that forks, waits until a thief has started the child, and only then joins (the probe `StealChain`) blocks a worker at every level, and each blocked worker is replaced: at parallelism 8 and depth 3000 that took 3001 workers and 30 s here, where the oracle stopped with a `StackOverflowError` after 4 s and 9 workers. About 60 KB per thread, with no bound here but `MAX_WORKERS`. Where the stack ends differs as well, and only depths the oracle reaches in every run are pinned. A plain fork and join takes 5 frames per level here, with a task's bridge method, so a chain passes at 3000 levels, and whether it overflows from 4000 on depends on who takes what when (6000 has passed). A level through `invokeAll` in a `RecursiveTask` takes 6: it passes at 2700 and overflows at 3000 (the oracle passes at 1400 and overflows at 2000), at parallelism 1 and 2, in a pool or outside one; a `RecursiveAction` level takes less, and passed 3000. `invoke` from outside a pool passes at 2000 on both. Runaway recursion costs about 20 ms here, against a few on the oracle.
   fib(25) with a threshold of 2 took 0.85 to 1.3 s and a mergesort of 300,000 elements 1.1 to 1.5 s, at parallelism 1, at 24 and on the common pool alike, with 12 or 13 workers at the most; 2000 idle workers ended in about 0.1 s.
-- **After an overflow on the oracle**: its pools sometimes hang in a call on the pool: 3 runs of 24 of `ForkJoinRunaway`, in any of its runaways. Each runaway there is a risk, so it has few of them, at low parallelism, and `lazy/internal/ForkJoinOverflow` has the rest: at a parallelism of 8 or 24 the oracle hung in 3 of 5 tries, and a `join` at the end of a stack leaves its pool not ending on `shutdown`, in every run. A run that hangs says so with a `--- hung` line and stops, and `tools/golden.py` refuses it, so a bless may take a second go. `ForkJoinStacks` has no overflow, and passed on the oracle 12 runs of 12. Its chains through a factory that gives no worker can hang rather than overflow at a depth of 100000, and can go through at 3000 once compiled. A class first needed at the end of a stack stays broken for the run, so `ForkJoinRunaway` puts the classes in use first. A runaway that forks two tasks a level leaves very many queued on either VM, so the pool does not end on `shutdown` while workers go on running them; only `shutdownNow` ends it.
+- **After an overflow on the oracle**: its pools sometimes hang in a call on the pool: roughly one run in ten of `ForkJoinRunaway` (3 of 24, later 2 of 24), in any of its runaways. Each runaway there is a risk, so it has few of them, at low parallelism, and `lazy/internal/ForkJoinOverflow` has the rest: at a parallelism of 8 or 24 the oracle hung in 3 of 5 tries, and a `join` at the end of a stack leaves its pool not ending on `shutdown`, in every run. A run that hangs says so with a `--- hung` line and stops, and `tools/golden.py` refuses it, so a bless may take a second go. `ForkJoinStacks` has no overflow, and passed on the oracle 12 runs of 12. Its chains through a factory that gives no worker can hang rather than overflow at a depth of 100000, and can go through at 3000 once compiled. A class first needed at the end of a stack stays broken for the run, so `ForkJoinRunaway` puts the classes in use first. A runaway that forks two tasks a level leaves very many queued on either VM, so the pool does not end on `shutdown` while workers go on running them; only `shutdownNow` ends it.
 - **Workers in odd ways on the oracle**: a worker the user starts on a new pool can leave that pool's submissions waiting for good, and its pool never ends; here it just works, which is why the pinned line uses a pool in use. A fork in `onStart` never runs on the oracle, not even at the end (it reads as not done and `getQueuedTaskCount` as 0), and here it runs. A factory that starts its worker itself gives `IllegalThreadStateException` to the caller on both, after that the oracle's counts go negative or it hangs, and here they stay right. A pool whose factory hands out another pool's worker never ends on the oracle, and it does after `shutdownNow` here, as it has no workers.
 - **Second call while a worker cannot be made**: with two tasks submitted at once and a factory that fails from its second call, the oracle throws to the second caller at once. Here the first worker is still on its way, so that call makes none and returns, and the worker gets the failure when it asks for a helper. The task it had taken is lost on both, as is the worker. Not simple to match, as a scout in place is what spares LazyVM its extra threads.
 - **A queue that throws at `shutdownNow` with no worker**: the throw reaches the caller on both, and the oracle's pool then never ends. Here it ends.
@@ -1414,7 +1403,7 @@ being kept. Neither was: both are now what the oracle does.
   elements once elements it had not reached are taken (a, b; `next`; `poll`; `add` c: it hands out only b). Here it goes on
   following the queue, like the other FIFO queues on the oracle (b, then c).
 - **Different on purpose**: a function given to `ConcurrentHashMap.computeIfAbsent` that updates *other* keys of the same
-  map can hang the oracle, depending on bins. Here it works.
+  map can hang the oracle, depending on bins. Here it works, unless two threads do so in a cycle (next entries, "Deadlocks on `ConcurrentHashMap`").
 - **`CompletableFuture`, different on purpose**: a `cancel` that loses on the oracle asks `isCancelled()` virtually for its answer. Here it does
   not, by the owner rule at the top of its section, which goes further than the oracle: a subclass overriding `isCancelled` sees a difference, and no test holds it.
 - **`CompletableFuture`, what is left**: the class of a task handed to an executor (on the oracle it is a `ForkJoinTask`; here it is not, and it
@@ -1432,7 +1421,9 @@ being kept. Neither was: both are now what the oracle does.
   comparator holding it, so if one thread holds lock L and calls the map while another's comparator waits for L, both stay there, where the oracle goes on. Comparators and keys
   of these two classes must not block. The same holds for the sink of a `drainTo` on the linked and priority queues: on the oracle an `offer` still runs while `add` of a `LinkedBlockingQueue` or
   `LinkedTransferQueue` sink is stopped; here it waits. And for `PriorityBlockingQueue`'s `contains`, `remove(Object)`, which the oracle shuts out too. No test holds these.
-- **A hold-up the oracle does not have**: a `ConcurrentHashMap` writer can block on another thread's claim while that thread is still comparing keys, if their keys are equal. One narrow shape deadlocks: a thread holding a claim on a different key of the same hash writes, while the comparer's `equals` needs a lock that thread holds. It takes two keys of one hash and an `equals` that takes a lock. No test holds it.
+- **Deadlocks on `ConcurrentHashMap`**, which no test holds, as a hang is no line. Measured with the probes `Cycle` and `Shapes2`, with latches so that each thread is where it should be:
+  - A cycle, no user lock needed: two threads compute keys A and B, each function calling `compute` on the other key. Here it hangs for any two keys, as a thread stays in its own compute while it waits for the other's. On the oracle it hangs only if they are in different bins; in one bin, or with one hash, it ends.
+  - A writer can block on another thread's claim while that thread is still comparing keys. T3 is in `compute(A)`; T2 is in `compute(B)`, with A and B of one hash, and `B.equals` needs a lock L; T1 holds L and calls `put` with a key equal to B. No thread holding a claim is needed for T1 to wait. If T2 compares first, this hangs here in 8 runs of 8, and in 0 of 8 on the oracle. If T1 is there first, it hangs in 0 of 8 here, and in 8 of 8 on the oracle.
 - **Less blocking than the oracle, on purpose.** While one `ConcurrentHashMap` writer sits in a key's `equals`, a writer of the same bin runs here, where the oracle
   blocks it; only the end state is pinned ("put against put ..."). A running `compute` holds up only writers of an equal key, not those of other keys in its bin, nor of keys in one slot; those block on the oracle. While a `LinkedBlockingQueue`, `ArrayBlockingQueue` or `LinkedBlockingDeque` runs `equals` for `contains` or `remove(Object)`, other calls
   run here, and wait on the oracle. A search that lost to a write runs `equals` again, and a write beside a compute of its own hash searches again in a claim, comparing keys with the claims there, so a key may see more calls than on the oracle. A walk of an outgrown table looks each key up by its stored hash, so where keys share a whole hash it may call their `equals` or `compareTo`, which the oracle does not.
@@ -1442,13 +1433,15 @@ being kept. Neither was: both are now what the oracle does.
   the key again. Sub-lists are not for threads sharing, and no test holds it.
 - **Long bins, the details**: which insertion turns a bin into a tree, and the number of `compareTo` calls (the oracle grows a small table first, here a chain of 16 turns at once). So the
   insertion that sees a throwing `compareTo` differs: on both the key is then in the map and the exception reaches the caller, but the oracle's size does not count it. A key class whose `compareTo` orders two
-  keys that `equals` calls the same may store that key twice once its bin is long; so may two classes of one name from different class loaders, whose keys here are not kept apart in a tree, and such a tree can miss a present key after a removal, since `BinTreap`'s class order ties them. lazyrt's `ClassLoader` has no `defineClass`, so neither can happen yet: deal with this when loaders arrive. Whether a search of a present key reaches a throwing `compareTo` before it finds the key. A long bin's iteration order.
+  keys that `equals` calls the same may store that key twice once its bin is long; so may two classes of one name from different class loaders, whose keys here are not kept apart in a tree, and such a tree can miss a present key after a removal, since their classes tie in its order. lazyrt's `ClassLoader` has no `defineClass`, so neither can happen yet: deal with this when loaders arrive. Whether a search of a present key reaches a throwing `compareTo` before it finds the key. A long bin's iteration order.
 - **Allowed by weak consistency, and different**: a `ConcurrentLinkedDeque` or `LinkedBlockingDeque` iterator whose element has left, with changes at both ends since. It never repeats an element or misses one that stayed
   ("broken promises"), but it can differ from the oracle in which newer elements it hands out. An iterator goes on from where its element stood, or starts again at its own end if that element had nothing behind it when it left (`QueueIdleIterators`: "... then newer at its end"); the oracle also starts again if everything behind it left later, and a `ConcurrentLinkedDeque` there depends on the deque's history (going backward: a; `pollLast`; `addLast` b hands out only a; going forward, a, c; `pollFirst`; `addFirst` b hands out a, c on a new deque and a, b, c on a used one), so only `LinkedBlockingDeque` is pinned. Here both go on to the newer element. A `LinkedBlockingQueue` iterator whose held element was taken by `remove(Object)`: the oracle ends after that element (a; iterator; `remove` a; `add` b hands out only a); here it goes on to the newer one (a, b). A `ConcurrentLinkedDeque` used as a queue, likewise, when everything added after that element has left too (a; iterator; `remove` a; `add` b; `poll`; `add` c hands out a on the oracle, a, c here), which is what the random differential probe found on it.
 - **Allowed by weak consistency, and different**: `ConcurrentHashMap` bulk operations, `replaceAll` included, may go on to a key an earlier callback removed, since a walk holds its next pair (`replaceAll` with a function removing
   the other of two keys ends with 0 keys here, 1 on the oracle). `contains` of a linked queue may answer true for an element that left while `equals` was stopped, for the same reason.
 - **A stray permit on the oracle**: a `transfer` called with the flag set leaves a permit on the oracle, so the next park returns at once. Here it does not, and no test holds it.
-- **Not tested at all**: serialization of these classes; what a `ConcurrentHashMap` recursive update leaves in the map; that no claim stays after running out of stack or memory, which only a probe looking inside can see; `ThreadPoolExecutor.finalize`;
+- **`System.exit` on a truly full heap**: with the handler's room used up as well, it exits with status 1 here and not with the code given (the probe `FullExit`). A plain catch of the `OutOfMemoryError` followed by `exit` gives the code on both.
+- **`System.err.close()`** does not silence the line about a handler that failed ("Exception: ... thrown from the UncaughtExceptionHandler"), since it does not close the real stream. The oracle prints nothing then (the probe `HF`, "seterrclosed").
+- **Not tested at all**: serialization of these classes; what a `ConcurrentHashMap` recursive update leaves in the map, beyond two lines of `CollectionClaims` ("end {k=2}", "end {k=9}"); that no claim stays after running out of stack or memory, which only a probe looking inside can see (`SoeHash`, `SoeC`); `ThreadPoolExecutor.finalize`;
   the `Spliterator` and stream members listed as deferred below.
 - **Out of scope for S6-04**: `AbstractQueuedSynchronizer`, `AbstractQueuedLongSynchronizer`, `AbstractOwnableSynchronizer`,
   `StampedLock`, `CountedCompleter`. They are public SE 8 types, but the plan does not name them. Build none of them for their
@@ -2956,3 +2949,41 @@ Nothing else in these packages exists.
 - [ ] `public String toString()`
 - [ ] `public boolean isHeldByCurrentThread()`
 - [ ] `public int getHoldCount()`
+
+## Design notes
+
+Not rules: why lazyrt is built as it is, for whoever changes it. The rest of this page holds without any of this.
+
+### `ConcurrentHashMap`: claims
+
+What the map section holds, and has no stable line. A compute runs in a claim, a lock on its key found by hash: only claims of a write's own hash cost it anything, and with none it takes no claim at all.
+A thread lists its claim and, in that same step, takes the list of those of its hash already there. Those are all it compares with, so later arrivals of any key do not send it back. Finding an equal key it gives its own claim up and blocks on that one's monitor:
+so a waiter is not in anyone's way, a thread going straight on to its next write of the key finds it free, and the VM's rule for monitors (threads.md, "Fairness") is the whole answer to starvation.
+Before this each waiter was itself a claim in a first-in-first-out list. That could hang a recursive update, and each operation on a contended key became a thread switch. Microseconds per operation, three builds side by side on one machine (first: no list by age; list: the first-in-first-out one; now):
+
+| | first | list | now |
+|---|---|---|---|
+| 8 threads `merge` one key | 10.2 | 21.2 | 10.2 |
+| 8 threads, mixed writes per key | 36.6 | 85.3 | 39.2 |
+| `put`, one long compute elsewhere | 3.7 | 8.4 | 3.5 |
+| `put`, 1000 computes elsewhere | 61 | 222 | 4.1 |
+| one thread, `merge` of 1000 words | 10.0 | 11.3 | 10.8 |
+| one thread, `put` of a present key | 3.8 | 4.2 | 3.6 |
+
+An earlier form walked the list again for each compare, by a number each claim kept while it was listed; a thread could read that number just after the claim left, find 0, and so skip every older claim, and two threads then computed equal keys together and lost updates. The list taken in one step has no such gap, and costs no more. Nothing but a switch between two bytecodes shows it, so it has no line: the probe `ClaimRace2` (arguments `3 4 180` and `5 6 180`) found it in about 20 to 40 s, in 3 runs of 4, and finds nothing now. Microseconds per operation, old and new alternating on one machine:
+
+| | old | new |
+|---|---|---|
+| one thread, `put` of a present key | 4.1 | 4.2 |
+| one thread, `merge` of 1000 words | 11.8 | 10.4 |
+| 2 threads `merge` one key | 7.5 | 7.6 |
+| 8 threads `merge` one key | 11.3 | 10.8 |
+| 8 threads, mixed writes per key | 43.1 | 40.8 |
+
+A compute on the very key object of an open claim joins that claim without listing its own: without that, 8 threads doing `merge` on one key took 14.5, about 30% more.
+
+`leave` is what must not run out of stack, or a claim would stay for good. It takes the same frame as `stake`, has no larger a frame and calls nothing, so a thread that listed a claim can always leave it (`SoeHash`, `SoeC`: no claim left at any depth). A claim's fields are not private for this reason: an accessor would be a call.
+
+### `ConcurrentHashMap`: long bins
+
+A bin that gets long becomes a `BinTreap`, whose order among keys of one hash goes by `lazy.internal.KeyOrder`; keys of two classes it cannot tell apart tie, hence what "Long bins, the details" says about class loaders.

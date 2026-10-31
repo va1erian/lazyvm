@@ -17,7 +17,7 @@ use std::fmt;
 use std::sync::Arc;
 
 pub use attr::{BootstrapMethod, Code, Handler, RawAttribute};
-pub use cpool::{Constant, ConstantPool, MemberRef, decode_mutf8, decode_mutf8_utf16};
+pub use cpool::{Constant, ConstantPool, MemberRef, decode_mutf8, decode_mutf8_utf16, encode_mutf8};
 use reader::Reader;
 
 pub const ACC_PUBLIC: u16 = 0x0001;

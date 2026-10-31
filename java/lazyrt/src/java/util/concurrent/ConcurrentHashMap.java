@@ -92,6 +92,8 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
     }
 
     public void putAll(Map<? extends K, ? extends V> m) {
+        // Its answer is of no use here, but a source can see the call (`CollectionSelfCalls`).
+        m.size();
         for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
             core.put(e.getKey(), Objects.requireNonNull(e.getValue()), false);
         }

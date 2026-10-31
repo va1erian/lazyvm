@@ -232,21 +232,19 @@ final class HashCore<K, V> {
         int hash = mix(key);
         for (;;) {
             HashClaims.Claim mine = new HashClaims.Claim(hash, key);
-            HashClaims.Claim other;
+            HashClaims.Claim other = mine;
             synchronized (mine) {
-                other = claims.stake(mine);
-                if (other == null || other == mine) {
-                    try {
-                        other = other == null ? null : claims.joined(mine);
-                        if (other == null) {
-                            mine.open = true;
-                            return run(key, hash, step);
-                        }
-                    } finally {
-                        // Still itself: a key's equals threw before anything was found.
-                        if (other == null || other == mine) {
-                            claims.leave(mine);
-                        }
+                HashClaims.Claim[] earlier = claims.stake(mine);
+                try {
+                    other = earlier == null ? null : mine.listed ? claims.joined(mine, earlier) : earlier[0];
+                    if (other == null) {
+                        mine.open = true;
+                        return run(key, hash, step);
+                    }
+                } finally {
+                    // Still itself: a key's equals threw before anything was found.
+                    if (other == null || other == mine) {
+                        claims.leave(mine);
                     }
                 }
             }

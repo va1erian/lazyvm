@@ -335,6 +335,13 @@ here, and a regex golden (`RegexLimitsSizes`, "nesting 20000") needs an overflow
   method, so about 4 MB for a thread at the limit, and only for threads that go there.
   Figures are in threads.md, "Thread lifecycle". The limit of 4M slots per thread
   bounds a thread with very large frames as before.
+- **Calls from Rust into Java** do use OS stack, so they have a limit of their own,
+  `Options::max_nesting`: 2400. That is what recursion through `Method.invoke` reaches:
+  2146 to 2334 on the oracle in 12 runs, main thread or started; `DeepThread` pins 2000, and
+  `lazy/internal/CallNesting` the end of it. All 2400 nests took MEASURED_NATIVE,
+  of a 64 MiB stack on a started thread and 256 MiB on the main one. Those stacks are
+  reserved in full on every platform (`Builder::stack_size`; musl maps what it is asked,
+  and LazyOS fills that map on demand), so raising this limit costs a thread only what it uses.
 - **`-Xss<size>`** sets the limit at 16384 frames per MiB, between 256 and 1048576 frames.
   So `-Xss1m` is the default, as on the oracle: interpreted, its depth with `-Xss1m` is
   the depth with no flag (10450 for a small method), and 2m and 512k double and halve it.
