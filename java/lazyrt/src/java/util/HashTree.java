@@ -111,7 +111,7 @@ final class HashTree {
                     }
                 }
                 // Spec 1.H6 steps 3 and 4.
-                r = KeyOrder.tieBreak(k, p.key);
+                r = KeyOrder.anySide(k, p.key);
             }
             HashMap.Cell<K, V> next = child(p, r < 0);
             if (next == null) {

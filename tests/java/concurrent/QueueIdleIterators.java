@@ -11,6 +11,7 @@ import java.util.concurrent.*;
  */
 public class QueueIdleIterators {
     static final int CYCLES = 60000;
+    static final int QUEUE_CYCLES = 120000;
 
     /** Traffic at the two ends, then in the middle, past one idle iterator of each direction. */
     static void traffic(Deque<byte[]> q) {
@@ -40,10 +41,11 @@ public class QueueIdleIterators {
         System.out.println(idle.hasNext() + " " + idleBack.hasNext() + " " + idleTail.hasNext());
     }
 
+    /** Long enough that the emptied nodes alone, with no element, would not fit on this heap. */
     static void queueTraffic(Queue<byte[]> q) {
         q.offer(new byte[10]);
         Iterator<byte[]> idle = q.iterator();
-        for (int i = 0; i < CYCLES; i++) {
+        for (int i = 0; i < QUEUE_CYCLES; i++) {
             q.offer(new byte[10]);
             q.poll();
         }

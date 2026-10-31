@@ -41,7 +41,7 @@ abstract class HashWalk<K, V, E> implements Iterator<E>, java.util.Enumeration<E
                     n = enterBin();
                 }
             }
-            V v = core.isCurrent(table) ? n.value : core.get(n.key);
+            V v = core.isCurrent(table) ? n.value : core.valueNow(n);
             if (v != null) {
                 upcoming = n;
                 upcomingValue = v;

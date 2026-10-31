@@ -69,6 +69,8 @@ the label of a line of its golden. Change the rule and that line should change.
 | `CollectionEdges` | the collections: range bounds, view identity, bulk entries, a running compute, what counts as a copy-on-write, hand-off order |
 | `CollectionUserCode` | a key's `equals` or `compareTo` that blocks: who can still run, and that a search still stands when its write comes |
 | `LongBins` | `ConcurrentHashMap` with many keys of one hash: cost, every kind of key, growth, iterators, a `compareTo` that throws |
+| `CollectionClaims` | `ConcurrentHashMap`: updates of the map from inside a compute with another thread stopped behind it, conditional writes against a writer, what a write beside a compute costs in key calls |
+| `CollectionSelfCalls` | which public methods of `ConcurrentHashMap` and `CopyOnWriteArrayList` a subclass sees called by which |
 | `CollectionPins` | `ConcurrentHashMap`: the order of a small map, the views and null, what `clear` waits for, a writer beside other computes; the copy-on-write list's second look; far negative timeouts of the linked queues |
 | `QueueIdleIterators` | an idle iterator keeps nothing that passes through the queue; the weak iterator's promise under random changes |
 | `ThreadPoolEdges` | `ThreadPoolExecutor`: hooks that throw, the `terminated` hook, odd factories and queues, late resizing |
@@ -505,8 +507,8 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
 - `compute`, `computeIfAbsent`, `computeIfPresent`, `merge`: a null result removes or
   leaves absent; an exception from the function reaches the caller and leaves the
   mapping unchanged ("compute ..." lines, "unchanged"). A function that recursively
-  updates the same map is undefined: no test touches it, and any failure mode other
-  than corruption is acceptable.
+  updates the same map is undefined in its result, but it ends, whoever has stopped behind it, as on the oracle (`CollectionClaims`: "... inside compute, a put queued",
+  "... inside compute, a compute queued"), and a thread that holds a key waits for nobody who only wants it ("put of an equal key inside compute, another's compute stopped on a lock the first holds").
 - Key view and value view reject `add` and `addAll` with
   `UnsupportedOperationException`. The entry set's `add(e)` writes `e`'s value and
   answers true only when the key was new, so it is false for an existing key even
@@ -554,13 +556,30 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   present, and answers what the compute produced ("computeIfAbsent of a present key waits for its compute", "and
   answers what it computed"). Nothing here looks at the flag ("flag kept by
   compute").
+- How that holds, with what can be measured but has no stable line. A compute runs in a claim, a lock on its key found by hash: only claims of a write's own hash cost it anything, and with none it takes no claim at all ("put of a present key
+  beside another compute: equals 1"). A thread lists its claim, then compares keys with those listed before it, so later arrivals of any key do not send it back. Finding an equal key it gives its own claim up and blocks on that one's monitor:
+  so a waiter is not in anyone's way, a thread going straight on to its next write of the key finds it free, and the VM's rule for monitors (threads.md, "Fairness") is the whole answer to starvation.
+  Before this each waiter was itself a claim in a first-in-first-out list. That could hang a recursive update, and each operation on a contended key became a thread switch. Microseconds per operation, three builds side by side on one machine (first: no list by age; list: the first-in-first-out one; now):
+
+  | | first | list | now |
+  |---|---|---|---|
+  | 8 threads `merge` one key | 10.2 | 21.2 | 10.2 |
+  | 8 threads, mixed writes per key | 36.6 | 85.3 | 39.2 |
+  | `put`, one long compute elsewhere | 3.7 | 8.4 | 3.5 |
+  | `put`, 1000 computes elsewhere | 61 | 222 | 4.1 |
+  | one thread, `merge` of 1000 words | 10.0 | 11.3 | 10.8 |
+  | one thread, `put` of a present key | 3.8 | 4.2 | 3.6 |
+
+- A conditional `replace` or `remove` that lost its first try to a writer takes a claim, so its value's `equals` runs at most twice, however long a writer goes on (`CollectionClaims`: "replace(k, equal, new), a writer storing equal values", "remove(k, equal), ...").
 - A running `compute` does not make a writer of another bin start over, nor any number of them one after another: such a writer
   gets through in one search or two (`CollectionPins`: "put, a new compute of another bin at each equals, ..."). No write here goes back to the start for what cannot
   change its answer, whatever other threads keep doing. So a slow `equals` or `compareTo` delays only its own thread.
 - `clear` waits for each `compute` running when it is called, not for those that start later, and the map is then empty, whatever the compute answered (`CollectionPins`:
   "clear of a present key during a compute", "clear, key absent during a compute", "key view clear during a compute", "... at the end"). A writer of another bin goes on meanwhile ("a put to a later bin
-  meanwhile"). A `clear` inside a compute function does not wait for its own thread: if the key had a value, the function's answer is returned and not kept; if it had none, the answer is mapped ("clear
+  meanwhile"). A `clear` inside a compute function waits neither for its own thread nor for a thread stopped behind it (`CollectionClaims`: "clear inside compute, a put queued" and what stays, "keySet clear inside compute, a compute queued"): if the key had a value, the function's answer is returned and not kept; if it had none, the answer is mapped ("clear
   inside compute", "clear inside computeIfAbsent", "clear inside computeIfPresent", "clear inside merge", "clear inside compute of a new key").
+- A subclass sees the calls the oracle makes (`CollectionSelfCalls`, each line): `containsKey` and `getOrDefault` call `get`; `putAll`, `toString`, the `forEach` family and the views' `add` call none of the overridable writers or views; a map built from another calls `putAll`. Likewise
+  the list: `isEmpty` calls `size`; `contains` and `addIfAbsent` call neither `indexOf` nor `add`. A walk of a table the map has outgrown asks no key for its hash again ("walk of an outgrown table").
 - A long bin is read from what its slot holds and nothing else, so a walk does not fail however the bin is emptied under it ("long bin emptied under walkers, failures": a race, so
   this line can only catch a return of that failure some of the time). A value that left the map is not kept alive by the chain its bin once was ("value removed from a bin that
   became a tree is collected").
@@ -801,7 +820,7 @@ One script, run on both; rules hold for both unless noted.
   `equals` ("... contains, equals stopped, offer", "... remove, equals stopped, poll"). If the element it was looking for has left by then, `remove` answers false
   ("... remove, equals stopped, that element polled", "... remove of the second, equals stopped at the first, removed by another").
 - An iterator left idle does not keep what passes through the queue after it, whether at the head, the tail or in the middle: each of those "traffic" lines runs out
-  of memory otherwise. Under any mix of changes it hands out nothing twice and every element that stayed ("broken promises").
+  of memory otherwise, also if only the emptied nodes stayed (120000 of the queue's cycles; 100000 objects of two fields fill the test's 3 MB). Under any mix of changes it hands out nothing twice and every element that stayed ("broken promises").
 - A far negative timeout is a past time like any other, here too: `poll`, `offer`, `pollFirst`, `pollLast` and `tryTransfer` answer at once at the most negative nanoseconds and days
   (`CollectionPins`: "LinkedBlockingQueue poll at ...", "LinkedBlockingQueue offer at ...", "LinkedBlockingDeque pollFirst at ...", "LinkedTransferQueue tryTransfer at ...", "... most negative days").
 
@@ -1415,20 +1434,20 @@ being kept. Neither was: both are now what the oracle does.
   `LinkedTransferQueue` sink is stopped; here it waits. And for `PriorityBlockingQueue`'s `contains`, `remove(Object)`, which the oracle shuts out too. No test holds these.
 - **Less blocking than the oracle, on purpose.** While one `ConcurrentHashMap` writer sits in a key's `equals`, a writer of the same bin runs here, where the oracle
   blocks it; only the end state is pinned ("put against put ..."). A running `compute` holds up only writers of an equal key, not those of other keys in its bin, nor of keys in one slot; those block on the oracle. While a `LinkedBlockingQueue`, `ArrayBlockingQueue` or `LinkedBlockingDeque` runs `equals` for `contains` or `remove(Object)`, other calls
-  run here, and wait on the oracle. A search that lost to a write runs `equals` again, and a write while a compute runs elsewhere searches twice, so a key may see more calls than on the oracle.
+  run here, and wait on the oracle. A search that lost to a write runs `equals` again, and a write beside a compute of its own hash searches again in a claim, comparing keys with the claims there, so a key may see more calls than on the oracle. A walk of an outgrown table looks each key up by its stored hash, so where keys share a whole hash it may call their `equals` or `compareTo`, which the oracle does not.
 - **`ConcurrentHashMap.clear` is one moment here**: it waits, then empties everything at once. On the oracle it goes bin by bin, so a write to a bin it has passed stays, while it waits for a compute further on. Only a
   write to a bin it has not reached is pinned ("a put to a later bin meanwhile").
 - **A sub-list written through by another thread during its `remove(Object)`**: the oracle then removes by the index it found, whichever element is there now, and may answer true and leave the key in. Here the second look finds
   the key again. Sub-lists are not for threads sharing, and no test holds it.
 - **Long bins, the details**: which insertion turns a bin into a tree, and the number of `compareTo` calls (the oracle grows a small table first, here a chain of 16 turns at once). So the
   insertion that sees a throwing `compareTo` differs: on both the key is then in the map and the exception reaches the caller, but the oracle's size does not count it. A key class whose `compareTo` orders two
-  keys that `equals` calls the same may store that key twice once its bin is long; so may two classes of one name from different class loaders, whose keys here are not kept apart in a tree. Whether a search of a present key reaches a throwing `compareTo` before it finds the key. A long bin's iteration order.
+  keys that `equals` calls the same may store that key twice once its bin is long; so may two classes of one name from different class loaders, whose keys here are not kept apart in a tree, and such a tree can miss a present key after a removal, since `BinTreap`'s class order ties them. lazyrt's `ClassLoader` has no `defineClass`, so neither can happen yet: deal with this when loaders arrive. Whether a search of a present key reaches a throwing `compareTo` before it finds the key. A long bin's iteration order.
 - **Allowed by weak consistency, and different**: a `ConcurrentLinkedDeque` or `LinkedBlockingDeque` iterator whose element has left, with changes at both ends since. It never repeats an element or misses one that stayed
   ("broken promises"), but it can differ from the oracle in which newer elements it hands out. An iterator goes on from where its element stood, or starts again at its own end if that element had nothing behind it when it left (`QueueIdleIterators`: "... then newer at its end"); the oracle also starts again if everything behind it left later, and a `ConcurrentLinkedDeque` there depends on the deque's history (going backward: a; `pollLast`; `addLast` b hands out only a; going forward, a, c; `pollFirst`; `addFirst` b hands out a, c on a new deque and a, b, c on a used one), so only `LinkedBlockingDeque` is pinned. Here both go on to the newer element. A `LinkedBlockingQueue` iterator whose held element was taken by `remove(Object)`: the oracle ends after that element (a; iterator; `remove` a; `add` b hands out only a); here it goes on to the newer one (a, b). A `ConcurrentLinkedDeque` used as a queue, likewise, when everything added after that element has left too (a; iterator; `remove` a; `add` b; `poll`; `add` c hands out a on the oracle, a, c here), which is what the random differential probe found on it.
 - **Allowed by weak consistency, and different**: `ConcurrentHashMap` bulk operations, `replaceAll` included, may go on to a key an earlier callback removed, since a walk holds its next pair (`replaceAll` with a function removing
   the other of two keys ends with 0 keys here, 1 on the oracle). `contains` of a linked queue may answer true for an element that left while `equals` was stopped, for the same reason.
 - **A stray permit on the oracle**: a `transfer` called with the flag set leaves a permit on the oracle, so the next park returns at once. Here it does not, and no test holds it.
-- **Not tested at all**: serialization of these classes; `ConcurrentHashMap` recursive updates; `ThreadPoolExecutor.finalize`;
+- **Not tested at all**: serialization of these classes; what a `ConcurrentHashMap` recursive update leaves in the map; that no claim stays after running out of stack or memory, which only a probe looking inside can see; `ThreadPoolExecutor.finalize`;
   the `Spliterator` and stream members listed as deferred below.
 - **Out of scope for S6-04**: `AbstractQueuedSynchronizer`, `AbstractQueuedLongSynchronizer`, `AbstractOwnableSynchronizer`,
   `StampedLock`, `CountedCompleter`. They are public SE 8 types, but the plan does not name them. Build none of them for their

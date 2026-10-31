@@ -1,7 +1,6 @@
 package java.util.concurrent;
 
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.function.Function;
 
 /**
@@ -15,12 +14,9 @@ import java.util.function.Function;
  * stay cheap.
  *
  * <p>A computing function runs with no table lock, so other keys go on being read and written, and
- * the function may itself use the map. Instead the computation holds a claim on its key ({@link HashClaims}): a
- * writer of that key blocks on the claim's monitor until it ends, as a {@code BLOCKED} thread. Claims
- * go in a list, newest first, and each waits only for those older than itself, so no number of later
- * ones can hold it up. A plain writer that finds any claim in the list makes one too, and that is
- * its way past them. A thread never waits for its own claim, so a recursive update of a key is only a
- * lost update.
+ * the function may itself use the map. Instead it runs in a claim on its key ({@link HashClaims}), and
+ * a write outside any claim lands only if, at that moment and under this monitor, no claim of its hash
+ * is listed; else it runs in a claim too. So what a write costs depends only on what it collides with.
  */
 final class HashCore<K, V> {
     static final class Node<K, V> {
@@ -36,50 +32,19 @@ final class HashCore<K, V> {
         }
     }
 
-    /** What a writer learned with nothing held, and what {@link #current} needs to see it still stands. */
-    private static final class Probe<K, V> {
-        final Object[] table;
-        final int hash;
-        final int slot;
-        Node<K, V> found;
-        V old;
-        /** The write depends on {@code old} being still the value, as a conditional one does. */
-        boolean exact;
-        /** In a chain: its last node when the search passed it, and how long it was. */
-        Node<K, V> last;
-        int length;
-        /** In a long bin: the root searched, the root to publish, and the entry that one adds. */
-        BinTreap<K, V> root;
-        BinTreap<K, V> changed;
-        Node<K, V> entry;
-        /** What user code said in this write's earlier searches of a long bin. None in the first. */
-        IdentityHashMap<Node<K, V>, Integer> told;
-
-        Probe(Object[] table, int hash, Probe<K, V> before) {
-            this.table = table;
-            this.hash = hash;
-            this.slot = hash & (table.length - 1);
-            if (before != null) {
-                told = before.told != null ? before.told : new IdentityHashMap<>();
-            }
-        }
-    }
-
-    // What a write means to do in a long bin, which decides what its search has to build.
-    private static final int FIND = 0;
-    private static final int ADD = 1;
-    private static final int CUT = 2;
-
     private static final int MIN_SLOTS = 16;
     private static final int MAX_SLOTS = 1 << 30;
     private static final int LONG_BIN = 16;
+    private static final long ANY_ERA = 0;
 
     /** Null until the first write, so that a large capacity costs nothing until it is used. */
     private Object[] table;
     private final int firstSlots;
     private int size;
+    /** How many {@code clear}s there were, from 1: a probe's era of 0 is {@link #ANY_ERA}. */
+    private long wipes = 1;
     /** Written with this object's monitor held, so that a commit sees them and its bin together. */
-    private final HashClaims claims = new HashClaims();
+    private final HashClaims claims = new HashClaims(this);
 
     HashCore(int capacity) {
         int slots = MIN_SLOTS;
@@ -119,6 +84,7 @@ final class HashCore<K, V> {
         return (BinTreap<K, V>) slot;
     }
 
+    @SuppressWarnings("unchecked")
     private Node<K, V> find(Object key, int hash) {
         Object[] t = table;
         if (t == null) {
@@ -128,7 +94,8 @@ final class HashCore<K, V> {
         if (slot instanceof BinTreap) {
             return BinTreap.find(HashCore.<K, V>tree(slot), hash, key, null);
         }
-        for (Node<K, V> n = chain(slot); n != null; n = n.next) {
+        // Cast in place: on these paths a call is a tenth of the whole.
+        for (Node<K, V> n = (Node<K, V>) slot; n != null; n = n.next) {
             if (n.hash == hash && (n.key == key || key.equals(n.key))) {
                 return n;
             }
@@ -141,97 +108,36 @@ final class HashCore<K, V> {
         return n == null ? null : n.value;
     }
 
-    boolean computing() {
-        return claims.any();
+    /** The value now mapped, for a node of a table the map has left: its stored hash spares a hashCode call. */
+    V valueNow(Node<K, V> old) {
+        Node<K, V> n = find(old.key, old.hash);
+        return n == null ? null : n.value;
     }
 
-    /**
-     * The search behind every write. Runs user code, so it holds nothing. A write searching again,
-     * after {@code before} lost to another write, asks user code only about what is new to it, so
-     * that the search gets shorter and fits between those writes, however long the code takes.
-     */
-    private Probe<K, V> look(Object key, int hash, int aim, Probe<K, V> before) {
-        Object[] t = table != null ? table : tableToWrite();
-        Probe<K, V> p = new Probe<>(t, hash, before);
-        Object slot = t[p.slot];
-        if (slot instanceof BinTreap) {
-            lookInLongBin(p, HashCore.<K, V>tree(slot), key, hash, aim);
-        } else {
-            for (Node<K, V> n = chain(slot); n != null && p.found == null; n = n.next) {
-                if (n.hash == hash && (n.key == key || key.equals(n.key))) {
-                    p.found = n;
-                } else {
-                    p.last = n;
-                    p.length++;
-                }
-            }
+    /** The mapped value, or null also if a write to the key may be under way, which only a claim can wait for. */
+    V getUnclaimed(Object key) {
+        int hash = mix(key);
+        if (claims.count != 0 && claims.mayHold(hash)) {
+            return null;
         }
-        if (p.found != null) {
-            p.old = p.found.value;
-        }
-        return p;
+        Node<K, V> n = find(key, hash);
+        return n == null ? null : n.value;
     }
 
-    private void lookInLongBin(Probe<K, V> p, BinTreap<K, V> root, Object key, int hash, int aim) {
-        p.root = root;
-        if (aim == FIND) {
-            p.found = BinTreap.find(root, hash, key, p.told);
-            return;
-        }
-        @SuppressWarnings("unchecked")
-        BinTreap.Descent<K, V> d = new BinTreap.Descent<>(hash, key, aim == ADD ? new Node<>(hash, (K) key, null) : null, p.told);
-        p.changed = aim == ADD ? d.add(root) : d.cut(root);
-        p.found = d.found;
-        p.entry = d.entry;
-    }
-
-    /**
-     * With the monitor held: whether the search's answer is still true. It only asks what could have
-     * changed the answer, so writes of other keys in the bin do not send a search back to the start.
-     */
-    private boolean current(Probe<K, V> p) {
-        if (p.table != table) {
-            return false;
-        }
-        Object slot = p.table[p.slot];
-        if (slot instanceof BinTreap || p.root != null) {
-            return slot == p.root;
-        }
-        Node<K, V> n = chain(slot);
-        if (p.found != null) {
-            while (n != null && n != p.found) {
-                n = n.next;
-            }
-            return n != null;
-        }
-        return nothingNewOfHash(p, n);
-    }
-
-    /**
-     * Keys only join at the end, so what lies behind the search's last node is new, and only a new
-     * node of this hash could be the key. Leaves the chain's real end in {@code p.last} for the insert.
-     */
-    private boolean nothingNewOfHash(Probe<K, V> p, Node<K, V> first) {
-        boolean behind = p.last == null;
-        Node<K, V> end = null;
-        for (Node<K, V> n = first; n != null; n = n.next) {
-            if (behind && n.hash == p.hash) {
-                return false;
-            }
-            behind |= n == p.last;
-            end = n;
-        }
-        p.last = end;
-        return behind;
+    private HashProbe<K, V> look(Object key, int hash, int aim, HashProbe<K, V> before) {
+        return new HashProbe<>(table != null ? table : tableToWrite(), key, hash, aim, before);
     }
 
     /**
      * Applies a write of {@code value} (null removes) if the search still stands; else search again.
-     * With {@code watch}, also if no computation that might be of this key has started since the
-     * search, as the writer has made no claim for it to see.
+     * With {@code watch}, also if no claim that might be on this key is listed, as the writer has none.
+     * A write outdated by a {@code clear} goes nowhere, and has nothing more to do.
      */
-    private synchronized boolean commit(Probe<K, V> p, K key, V value, boolean watch) {
-        if ((watch && claims.mayHold(p.hash)) || !current(p) || (p.exact && p.found.value != p.old)) {
+    private synchronized boolean commit(HashProbe<K, V> p, K key, V value, boolean watch) {
+        if (p.era != ANY_ERA && p.era != wipes) {
+            return true;
+        }
+        if ((watch && claims.count != 0 && claims.mayHold(p.hash)) || !p.stands(table) || (p.exact && p.found.value != p.old)) {
             return false;
         }
         if (p.found == null) {
@@ -249,17 +155,22 @@ final class HashCore<K, V> {
 
     V put(K key, V value, boolean onlyIfAbsent) {
         int hash = mix(key);
-        Probe<K, V> p = null;
-        while (!claims.any()) {
-            p = look(key, hash, ADD, p);
+        HashProbe<K, V> p = null;
+        do {
+            p = look(key, hash, HashProbe.ADD, p);
             if (p.found != null && onlyIfAbsent) {
+                if (claims.count != 0 && claims.mayHold(hash)) {
+                    break;
+                }
                 return p.old;
             }
             if (commit(p, key, value, true)) {
-                treeIfLong(p, hash);
+                if (p.found == null) {
+                    treeIfLong(p, hash);
+                }
                 return p.old;
             }
-        }
+        } while (claims.count == 0 || !claims.mayHold(hash));
         Object[] was = new Object[1];
         atomically(key, old -> {
             was[0] = old;
@@ -277,12 +188,12 @@ final class HashCore<K, V> {
     @SuppressWarnings("unchecked")
     V change(Object key, V update, Object expected) {
         int hash = mix(key);
-        Probe<K, V> p = null;
-        while (!claims.any()) {
+        HashProbe<K, V> p = null;
+        while (claims.count == 0 || !claims.mayHold(hash)) {
             if (table == null) {
                 return null;
             }
-            p = look(key, hash, update == null ? CUT : FIND, p);
+            p = look(key, hash, update == null ? HashProbe.CUT : HashProbe.FIND, p);
             if (p.found == null) {
                 return null;
             }
@@ -292,6 +203,10 @@ final class HashCore<K, V> {
             p.exact = expected != null;
             if (commit(p, p.found.key, update, true)) {
                 return p.old;
+            }
+            // Lost to a write. Asking the value's equals again could go on as long as that writer does.
+            if (expected != null) {
+                break;
             }
         }
         Object[] was = new Object[1];
@@ -315,53 +230,78 @@ final class HashCore<K, V> {
      */
     V atomically(K key, Function<? super V, ? extends V> step) {
         int hash = mix(key);
-        HashClaims.Claim mine = new HashClaims.Claim(hash, key);
-        synchronized (mine) {
-            stake(mine);
-            try {
-                mine.awaitOlder();
-                mine.wiped = false;
-                V old = get(key);
-                V fresh = step.apply(old);
-                // A clear since then took the entry with it. So this ran before the clear: its answer
-                // stands, and goes nowhere. Finding no entry, it can as well have run after.
-                if (old == null || !mine.wiped) {
-                    store(key, hash, fresh);
+        for (;;) {
+            HashClaims.Claim mine = new HashClaims.Claim(hash, key);
+            HashClaims.Claim other;
+            synchronized (mine) {
+                other = claims.stake(mine);
+                if (other == null || other == mine) {
+                    try {
+                        other = other == null ? null : claims.joined(mine);
+                        if (other == null) {
+                            mine.open = true;
+                            return run(key, hash, step);
+                        }
+                    } finally {
+                        // Still itself: a key's equals threw before anything was found.
+                        if (other == null || other == mine) {
+                            claims.leave(mine);
+                        }
+                    }
                 }
-                return fresh;
-            } finally {
-                release(mine);
+            }
+            synchronized (other) {
+                try {
+                    // Not open: the thread that listed it gave it up as well, so look again.
+                    if (other.open) {
+                        return run(key, hash, step);
+                    }
+                } finally {
+                    claims.leave(other);
+                }
             }
         }
     }
 
-    private synchronized void stake(HashClaims.Claim mine) {
-        claims.add(mine);
+    private V run(K key, int hash, Function<? super V, ? extends V> step) {
+        long era = wipes;
+        HashProbe<K, V> p = table == null ? null : look(key, hash, HashProbe.FIND, null);
+        V old = p == null ? null : p.old;
+        V fresh = step.apply(old);
+        // A clear since then took the entry with it. So this ran before the clear: its answer
+        // stands, and goes nowhere. Finding no entry, it can as well have run after.
+        store(key, hash, fresh, p, old == null ? ANY_ERA : era);
+        return fresh;
     }
 
-    private synchronized void release(HashClaims.Claim mine) {
-        claims.remove(mine);
-    }
-
-    /** A computation's write: its claim keeps other writers of the key out, so none is waited for. */
-    private void store(K key, int hash, V value) {
+    /**
+     * A computation's write: its claim keeps other writers of the key out, so none is waited for.
+     * What {@code p} found in a chain serves any write; in a long bin that search built no change.
+     */
+    private void store(K key, int hash, V value, HashProbe<K, V> p, long era) {
         if (value == null && table == null) {
             return;
         }
-        Probe<K, V> p = null;
+        boolean search = p == null || p.root != null;
         for (;;) {
-            p = look(key, hash, value == null ? CUT : ADD, p);
+            if (search) {
+                p = look(key, hash, value == null ? HashProbe.CUT : HashProbe.ADD, p);
+            }
+            p.era = era;
             if (value == null && p.found == null) {
                 return;
             }
             if (commit(p, key, value, false)) {
-                treeIfLong(p, hash);
+                if (p.found == null) {
+                    treeIfLong(p, hash);
+                }
                 return;
             }
+            search = true;
         }
     }
 
-    private void insert(Probe<K, V> p, K key, V value) {
+    private void insert(HashProbe<K, V> p, K key, V value) {
         Object[] t = p.table;
         if (p.root != null) {
             p.entry.value = value;
@@ -377,8 +317,8 @@ final class HashCore<K, V> {
         }
     }
 
-    private void treeIfLong(Probe<K, V> p, int hash) {
-        if (p.found == null && p.root == null && p.length + 1 >= LONG_BIN) {
+    private void treeIfLong(HashProbe<K, V> p, int hash) {
+        if (p.root == null && p.length + 1 >= LONG_BIN) {
             toTree(hash);
         }
     }
@@ -405,6 +345,7 @@ final class HashCore<K, V> {
     }
 
     /** New nodes too: a reader or iterator on the old table keeps a table that no longer changes. */
+    @SuppressWarnings("unchecked")
     private void grow(Object[] old) {
         Object[] t = new Object[old.length << 1];
         Object[] tails = new Object[t.length];
@@ -416,13 +357,13 @@ final class HashCore<K, V> {
                 t[i + old.length] = BinTreap.half(root, old.length, old.length);
                 continue;
             }
-            for (Node<K, V> n = chain(slot); n != null; n = n.next) {
+            for (Node<K, V> n = (Node<K, V>) slot; n != null; n = n.next) {
                 int to = n.hash & (t.length - 1);
                 Node<K, V> copy = new Node<>(n.hash, n.key, n.value);
                 if (tails[to] == null) {
                     t[to] = copy;
                 } else {
-                    HashCore.<K, V>chain(tails[to]).next = copy;
+                    ((Node<K, V>) tails[to]).next = copy;
                 }
                 tails[to] = copy;
             }
@@ -430,7 +371,7 @@ final class HashCore<K, V> {
         table = t;
     }
 
-    private void unlink(Probe<K, V> p) {
+    private void unlink(HashProbe<K, V> p) {
         Object[] t = p.table;
         Node<K, V> gone = p.found;
         Object slot = t[p.slot];
@@ -450,10 +391,10 @@ final class HashCore<K, V> {
 
     /**
      * Waits out the computations running now, but not those that start later, or it might never end:
-     * those it wipes under count as having run before it, see {@link #atomically}.
+     * those it wipes under count as having run before it, see {@link #run}.
      */
     void clear() {
-        claims.awaitOthers();
+        claims.awaitRunning();
         wipe();
     }
 
@@ -465,7 +406,7 @@ final class HashCore<K, V> {
             }
         }
         size = 0;
-        claims.markWiped();
+        wipes++;
     }
 
     /** The table as a walk starts on it, never null. */

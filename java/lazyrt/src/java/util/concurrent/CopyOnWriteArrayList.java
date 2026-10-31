@@ -56,11 +56,12 @@ public class CopyOnWriteArrayList<E> implements List<E>, RandomAccess, Cloneable
     }
 
     public boolean isEmpty() {
-        return array.length == 0;
+        return size() == 0;
     }
 
     public boolean contains(Object o) {
-        return indexOf(o) >= 0;
+        Object[] a = array;
+        return indexIn(o, a, 0, a.length) >= 0;
     }
 
     public int indexOf(Object o) {
@@ -150,12 +151,17 @@ public class CopyOnWriteArrayList<E> implements List<E>, RandomAccess, Cloneable
 
     public boolean add(E e) {
         synchronized (mu) {
-            Object[] a = array;
-            Object[] b = Arrays.copyOf(a, a.length + 1);
-            b[a.length] = e;
-            array = b;
-            return true;
+            return append(e);
         }
+    }
+
+    /** With {@code mu} held. Not by way of {@code add}: a subclass overriding that sees no other method call it. */
+    private boolean append(E e) {
+        Object[] a = array;
+        Object[] b = Arrays.copyOf(a, a.length + 1);
+        b[a.length] = e;
+        array = b;
+        return true;
     }
 
     public void add(int index, E element) {
@@ -234,7 +240,7 @@ public class CopyOnWriteArrayList<E> implements List<E>, RandomAccess, Cloneable
         }
         synchronized (mu) {
             Object[] b = array;
-            return (b == a || indexAgain(e, a, a.length, b, 0, b.length) < 0) && add(e);
+            return (b == a || indexAgain(e, a, a.length, b, 0, b.length) < 0) && append(e);
         }
     }
 

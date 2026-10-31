@@ -24,10 +24,11 @@ import java.util.function.ToLongFunction;
 /**
  * The public face of a {@link HashCore}. Bulk operations run on the calling thread whatever the
  * threshold: only one thread runs at a time here, so splitting them would gain nothing. They all
- * reduce to the four folds in {@link HashBulk}.
+ * reduce to the four folds in {@link HashBulk}. Which public methods call which is what a subclass
+ * sees, so it follows what was observed (`CollectionSelfCalls`).
  */
 public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V>, java.io.Serializable {
-    private final HashCore<K, V> core;
+    final HashCore<K, V> core;
     private final HashBulk<K, V> bulk;
     private KeySetView<K, V> keys;
     private Collection<V> values;
@@ -78,18 +79,11 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
     }
 
     public boolean containsKey(Object key) {
-        return core.get(key) != null;
+        return get(key) != null;
     }
 
     public boolean containsValue(Object value) {
-        Objects.requireNonNull(value);
-        for (Iterator<V> it = valueWalk(); it.hasNext();) {
-            V v = it.next();
-            if (v == value || value.equals(v)) {
-                return true;
-            }
-        }
-        return false;
+        return HashViews.holds(valueWalk(), Objects.requireNonNull(value));
     }
 
     public V put(K key, V value) {
@@ -99,7 +93,7 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
 
     public void putAll(Map<? extends K, ? extends V> m) {
         for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
-            put(e.getKey(), e.getValue());
+            core.put(e.getKey(), Objects.requireNonNull(e.getValue()), false);
         }
     }
 
@@ -145,15 +139,11 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
     }
 
     public int hashCode() {
-        int h = 0;
-        for (Iterator<Map.Entry<K, V>> it = entryWalk(); it.hasNext();) {
-            h += it.next().hashCode();
-        }
-        return h;
+        return HashViews.hashes(entryWalk());
     }
 
     public String toString() {
-        return super.toString();
+        return HashViews.text(this);
     }
 
     public boolean equals(Object o) {
@@ -184,12 +174,20 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
     }
 
     public V getOrDefault(Object key, V defaultValue) {
-        V v = core.get(key);
+        V v = get(key);
         return v != null ? v : defaultValue;
     }
 
     public void forEach(BiConsumer<? super K, ? super V> action) {
-        forEach(Long.MAX_VALUE, action);
+        each(action);
+    }
+
+    void each(BiConsumer<? super K, ? super V> action) {
+        Objects.requireNonNull(action);
+        bulk.visit((k, v) -> {
+            action.accept(k, v);
+            return null;
+        });
     }
 
     public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
@@ -204,29 +202,32 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
     }
 
     public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(mappingFunction);
-        // Present and nobody computing: the common case needs no claim. A running compute is waited for.
-        V v = core.computing() ? null : core.get(key);
+        if (key == null || mappingFunction == null) {
+            throw new NullPointerException();
+        }
+        // Present and no claim of its hash: the common case needs none of its own. A running compute is waited for.
+        V v = core.getUnclaimed(key);
         return v != null ? v : core.atomically(key, old -> old != null ? old : mappingFunction.apply(key));
     }
 
     public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(remappingFunction);
+        if (key == null || remappingFunction == null) {
+            throw new NullPointerException();
+        }
         return core.atomically(key, old -> old == null ? null : remappingFunction.apply(key, old));
     }
 
     public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(remappingFunction);
+        if (key == null || remappingFunction == null) {
+            throw new NullPointerException();
+        }
         return core.atomically(key, old -> remappingFunction.apply(key, old));
     }
 
     public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(value);
-        Objects.requireNonNull(remappingFunction);
+        if (key == null || value == null || remappingFunction == null) {
+            throw new NullPointerException();
+        }
         return core.atomically(key, old -> old == null ? value : remappingFunction.apply(old, value));
     }
 
@@ -260,11 +261,7 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
     }
 
     public void forEach(long parallelismThreshold, BiConsumer<? super K, ? super V> action) {
-        Objects.requireNonNull(action);
-        bulk.visit((k, v) -> {
-            action.accept(k, v);
-            return null;
-        });
+        each(action);
     }
 
     public <U> void forEach(long parallelismThreshold, BiFunction<? super K, ? super V, ? extends U> transformer, Consumer<? super U> action) {
@@ -304,7 +301,7 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
 
     public void forEachKey(long parallelismThreshold, Consumer<? super K> action) {
         Objects.requireNonNull(action);
-        forEach(parallelismThreshold, (k, v) -> action.accept(k));
+        each((k, v) -> action.accept(k));
     }
 
     public <U> void forEachKey(long parallelismThreshold, Function<? super K, ? extends U> transformer, Consumer<? super U> action) {
@@ -349,7 +346,7 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
 
     public void forEachValue(long parallelismThreshold, Consumer<? super V> action) {
         Objects.requireNonNull(action);
-        forEach(parallelismThreshold, (k, v) -> action.accept(v));
+        each((k, v) -> action.accept(v));
     }
 
     public <U> void forEachValue(long parallelismThreshold, Function<? super V, ? extends U> transformer, Consumer<? super U> action) {
@@ -394,7 +391,7 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
 
     public void forEachEntry(long parallelismThreshold, Consumer<? super Map.Entry<K, V>> action) {
         Objects.requireNonNull(action);
-        forEach(parallelismThreshold, (k, v) -> action.accept(bulk.entry(k, v)));
+        each((k, v) -> action.accept(bulk.entry(k, v)));
     }
 
     public <U> void forEachEntry(long parallelismThreshold, Function<Map.Entry<K, V>, ? extends U> transformer, Consumer<? super U> action) {
@@ -466,7 +463,7 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
             if (value == null) {
                 throw new UnsupportedOperationException();
             }
-            return map.putIfAbsent(e, value) == null;
+            return map.core.put(e, value, true) == null;
         }
 
         public boolean addAll(Collection<? extends K> c) {
@@ -489,7 +486,8 @@ public class ConcurrentHashMap<K, V> extends AbstractMap<K, V> implements Concur
         }
 
         public void forEach(Consumer<? super K> action) {
-            map.forEachKey(Long.MAX_VALUE, action);
+            Objects.requireNonNull(action);
+            map.each((k, v) -> action.accept(k));
         }
 
         public ConcurrentHashMap<K, V> getMap() {
