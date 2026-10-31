@@ -14,7 +14,7 @@ pub const USAGE: &str = "usage: lazyvm [options] <main class> [args...]
   -Xbootclasspath:<path>   the class library (default: LAZYVM_BOOTCLASSPATH, or lazyrt next to lazyvm)
   -D<name>=<value>         set a system property
   -Xmx<size>               heap limit, e.g. 256m
-  -Xss<size>               stack size, e.g. 1m (sets the frame limit)
+  -Xss<size>               stack size, e.g. 1m, the default (16384 frames per MiB)
   -verbose:class           print each class as it loads
   -Xtrace:interp           print every instruction (slow)
   -version                 print the version";
@@ -154,8 +154,8 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
             }
             _ if a.starts_with("-Xmx") => options.heap_limit = parse_size(&a[4..])?,
             _ if a.starts_with("-Xss") => {
-                // About 128 bytes of native stack per interpreted frame in HotSpot terms.
-                options.max_frames = (parse_size(&a[4..])? / 128).clamp(256, 1 << 20);
+                // 1m is the default, as it is on the oracle (decisions.md D15).
+                options.max_frames = (parse_size(&a[4..])? / 64).clamp(256, 1 << 20);
             }
             _ if a.starts_with("-verbose") => {}
             _ => return Err(format!("unknown option {a}")),

@@ -4,7 +4,7 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use super::{Gil, Line, SLICE, Slot};
+use super::{Gil, Line, POLLS_PER_LOOK, SLICE, Slot, Watch};
 use crate::Vm;
 
 fn line(slice_spent: bool, slice_was_woken: bool) -> Slot {
@@ -25,6 +25,7 @@ fn line(slice_spent: bool, slice_was_woken: bool) -> Slot {
         slice_start,
         slice_was_woken,
         served_at: now,
+        watch: Watch::Absent,
     }
 }
 
@@ -172,4 +173,62 @@ fn a_release_kept_for_a_thread_on_its_way_tells_the_first_preempted() {
     name(&mut slot, 2);
     let turn = slot.to_notify(None);
     assert!(turn.is_some_and(|t| Arc::ptr_eq(&t, &slot.seats[1].turn)));
+}
+
+/// Polls this slow, at a thousand a second, as `System.arraycopy` of a megabyte
+/// in a loop: how many a holder gets through before it sees its slice is over.
+/// The count alone would take `POLLS_PER_LOOK` of them.
+fn slow_polls_until_slice_over(gil: &Gil) -> u32 {
+    let mut polls_to_look = POLLS_PER_LOOK;
+    let mut polls = 0;
+    loop {
+        std::thread::sleep(Duration::from_millis(1));
+        polls += 1;
+        if gil.time_to_look(&mut polls_to_look) && gil.slice_is_over() {
+            return polls;
+        }
+    }
+}
+
+fn wait_in_line(gil: &Arc<Gil>, thread: usize) -> std::thread::JoinHandle<()> {
+    let waiter = Arc::clone(gil);
+    let handle = std::thread::spawn(move || {
+        let vm = waiter.acquire(thread, Line::Preempted);
+        waiter.release(vm);
+    });
+    while !gil.lock().preempted.contains(&thread) {
+        std::thread::yield_now();
+    }
+    handle
+}
+
+/// Gives the VM up, for the thread in line, and takes it back after that thread
+/// has been and gone.
+fn let_waiter_through(gil: &Arc<Gil>, waiter: std::thread::JoinHandle<()>) {
+    gil.release(Vm::placeholder(Arc::clone(gil)));
+    waiter.join().unwrap();
+    drop(gil.acquire(0, Line::Preempted));
+}
+
+#[test]
+fn a_holder_with_slow_polls_is_told_when_its_slice_is_over() {
+    let gil = Gil::new();
+    let waiter = wait_in_line(&gil, 1);
+    let polls = slow_polls_until_slice_over(&gil);
+    assert!(polls < POLLS_PER_LOOK / 2, "{polls} polls");
+    let_waiter_through(&gil, waiter);
+}
+
+#[test]
+fn the_watch_sleeps_with_the_line_empty_and_comes_back_for_the_next_waiter() {
+    let gil = Gil::new();
+    let waiter = wait_in_line(&gil, 1);
+    let_waiter_through(&gil, waiter);
+    while gil.lock().watch != Watch::Asleep {
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let waiter = wait_in_line(&gil, 1);
+    let polls = slow_polls_until_slice_over(&gil);
+    assert!(polls < POLLS_PER_LOOK / 2, "{polls} polls");
+    let_waiter_through(&gil, waiter);
 }

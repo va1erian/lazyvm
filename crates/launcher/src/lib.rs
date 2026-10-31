@@ -225,8 +225,13 @@ fn finish(vm: &mut Vm, result: Result<(), VmError>) -> Ended {
         Err(e) => return Ended::Exit(internal(&e.to_string())),
     };
     match report_uncaught(vm, ex) {
-        Ok(()) | Err(VmError::Throw(_)) => Ended::Main(ExitCode::from(1)),
+        Ok(()) => Ended::Main(ExitCode::from(1)),
         Err(VmError::Exit(code)) => Ended::Exit(ExitCode::from(code as u8)),
+        // With the heap full, the error can come before the handler starts.
+        Err(e) if e.is_catchable() => match vm.report_handler_failure(&e) {
+            Ok(()) => Ended::Main(ExitCode::from(1)),
+            Err(e) => Ended::Exit(internal(&e.to_string())),
+        },
         Err(e) => Ended::Exit(internal(&e.to_string())),
     }
 }

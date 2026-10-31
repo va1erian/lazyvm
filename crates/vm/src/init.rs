@@ -42,12 +42,14 @@ impl Vm {
         let from_boot = self.class(class).from_boot;
         let result = self.initialize_steps(class);
         // Steps 10 and 12: record the outcome and wake the waiters. A library
-        // class left erroneous by a passing shortage would be broken for good,
-        // and on the oracle such classes are mostly initialized at startup, so
-        // the next use tries again. Not JVMS 5.5, but only library code can tell.
+        // class left erroneous by a passing shortage of heap or stack would be
+        // broken for good, and on the oracle such classes are mostly initialized
+        // at startup, so the next use tries again. Not JVMS 5.5, and the retry
+        // runs its initializer again, with any program code that one calls (a
+        // factory named by a property), where the oracle's class stays failed.
         self.class_mut(class).state = match &result {
             Ok(()) => InitState::Initialized,
-            Err(e) if from_boot && self.is_heap_shortage(e) => InitState::Linked,
+            Err(e) if from_boot && self.is_passing_shortage(e) => InitState::Linked,
             Err(_) => InitState::Failed,
         };
         let mut waiters = std::mem::take(&mut self.threads.init_waiters);

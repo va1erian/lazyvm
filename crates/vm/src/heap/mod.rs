@@ -121,18 +121,24 @@ impl Heap {
     }
 
     /// An `OutOfMemoryError` is being thrown. Its handler must be able to do a
-    /// little, say report it, though nothing could be freed; the room is one
-    /// fixed amount, so a loop catching the error still ends up with none.
+    /// little, say report it, though nothing could be freed, and wherever a
+    /// native took the heap. The room is one fixed amount until a collection
+    /// gets under the limit, so a loop catching the error still ends up with none.
     pub(crate) fn give_handler_room(&mut self) {
-        self.room = self.limit.saturating_add(HANDLER_ROOM);
+        if self.room == self.limit {
+            let used = self.limit.max(self.live_bytes);
+            self.room = used.saturating_add(HANDLER_ROOM);
+        }
     }
 
     /// Allocates an object. Fails with `OutOfMemoryError` only past twice the
-    /// limit: natives cannot collect, so they may overshoot until the next
-    /// safe point, while the allocating bytecodes collect first.
+    /// limit, or the handler's room if that is more: natives cannot collect, so
+    /// they may overshoot until the next safe point, while the allocating
+    /// bytecodes collect first.
     pub fn alloc(&mut self, object: Object) -> Result<Ref, VmError> {
         let bytes = object.bytes();
-        if self.live_bytes.saturating_add(bytes) > self.limit.saturating_mul(2) && !self.unlimited {
+        let most = self.limit.saturating_mul(2).max(self.room);
+        if self.live_bytes.saturating_add(bytes) > most && !self.unlimited {
             return Err(VmError::OutOfMemory);
         }
         self.live_bytes += bytes;

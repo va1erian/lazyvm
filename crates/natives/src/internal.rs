@@ -64,6 +64,15 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(VM_CLASS, "stackHalfUsed", "()Z", |vm, _| {
         ret_bool(vm.frames.len() >= vm.options.max_frames / 2)
     });
+    vm.register_native(
+        VM_CLASS,
+        "handlerFailed",
+        "(Ljava/lang/Throwable;)V",
+        |vm, a| {
+            vm.report_handler_failure(&VmError::Throw(obj(a, 0)?))?;
+            ret_void()
+        },
+    );
     vm.register_native(VM_CLASS, "entropy", "()J", |_, _| {
         Ok(Some(Value::Long(platform::entropy())))
     });

@@ -56,6 +56,9 @@ public final class VM {
     /** The generated class implementing an annotation type: a subclass of AnnotationBase. */
     static native Class<?> annotationClass(Class<?> annotationType);
 
+    /** Reports what the running thread's uncaught exception handler threw, with no use of the heap. */
+    public static native void handlerFailed(Throwable thrown);
+
     /**
      * Called by the VM when an exception escapes the main thread: it goes to
      * the thread's handler, as for any other thread.
@@ -65,9 +68,12 @@ public final class VM {
         try {
             current.getUncaughtExceptionHandler().uncaughtException(current, t);
         } catch (Throwable u) {
-            System.err.print("\nException: " + u.getClass().getName()
-                    + " thrown from the UncaughtExceptionHandler in thread \"" + current.getName() + "\"\n");
+            handlerFailed(u);
         }
-        System.err.flush();
+        try {
+            System.err.flush();
+        } catch (Throwable u) {
+            // What is written stays written; with the heap full there may be no more to do.
+        }
     }
 }
