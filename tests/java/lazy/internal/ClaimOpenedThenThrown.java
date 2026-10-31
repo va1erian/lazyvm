@@ -18,7 +18,7 @@ public class ClaimOpenedThenThrown {
     static volatile Thread behind;
     static volatile String seenBehind = "never ran";
 
-    static final class Key {
+    static class Key {
         final int id;
 
         Key(int id) {
@@ -44,9 +44,14 @@ public class ClaimOpenedThenThrown {
         }
     }
 
-    static Thread daemon(Runnable r) {
+    static Thread unstarted(Runnable r) {
         Thread t = new Thread(r);
         t.setDaemon(true);
+        return t;
+    }
+
+    static Thread daemon(Runnable r) {
+        Thread t = unstarted(r);
         t.start();
         return t;
     }
@@ -73,7 +78,7 @@ public class ClaimOpenedThenThrown {
 
         Key key = new Key(1);
         writing = key;
-        writer = daemon(() -> {
+        writer = unstarted(() -> {
             try {
                 map.compute(key, (k, v) -> 5);
                 System.out.println("the writer returned");
@@ -81,6 +86,7 @@ public class ClaimOpenedThenThrown {
                 System.out.println("the writer got: " + e.getMessage());
             }
         });
+        writer.start();
         writer.join();
 
         // Now it must have moved on to the first op's claim, and stay there.
@@ -91,5 +97,55 @@ public class ClaimOpenedThenThrown {
         behind.join();
         System.out.println("the one behind " + seenBehind);
         System.out.println("size " + map.size());
+        manyBehind();
+    }
+
+    /** The same with no write in the equals, and several stopped behind: they must all get through. */
+    static void manyBehind() throws Exception {
+        map.clear();
+        CountDownLatch in = new CountDownLatch(1);
+        CountDownLatch go = new CountDownLatch(1);
+        Thread other = daemon(() -> map.compute(new Key(2), (k, v) -> {
+            in.countDown();
+            try {
+                go.await();
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
+            return 1;
+        }));
+        in.await();
+        Thread[] behindIt = new Thread[6];
+        Key shared = new Key(1) {
+            @Override public boolean equals(Object o) {
+                if (Thread.currentThread() == writer) {
+                    for (int i = 0; i < behindIt.length; i++) {
+                        behindIt[i] = daemon(() -> map.merge(this, 1, Integer::sum));
+                        awaitBlocked(behindIt[i]);
+                    }
+                    throw new IllegalStateException("from equals");
+                }
+                return o == this;
+            }
+        };
+        writer = unstarted(() -> {
+            try {
+                map.compute(shared, (k, v) -> 5);
+            } catch (IllegalStateException e) {
+                System.out.println("many behind, the writer got: " + e.getMessage());
+            }
+        });
+        writer.start();
+        writer.join();
+        go.countDown();
+        other.join();
+        for (Thread t : behindIt) {
+            t.join(20000);
+            if (t.isAlive()) {
+                System.out.println("one stayed behind a claim nobody holds");
+                return;
+            }
+        }
+        System.out.println("many behind, sum " + map.get(shared));
     }
 }

@@ -246,8 +246,10 @@ final class HashCore<K, V> {
                 } finally {
                     // Still itself: a key's equals threw before anything was found. It may have opened
                     // the claim by writing the key, but this op never learned that no earlier one is running.
+                    // Out of the list at once, as in a join, or those stopped behind it could keep it there.
                     if (other == mine) {
                         mine.open = false;
+                        mine.users = 1;
                     }
                     if (other == null || other == mine) {
                         claims.leave(mine);
