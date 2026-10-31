@@ -60,11 +60,18 @@ mod windows {
         if left > OS_TIMER_MARGIN {
             std::thread::park_timeout(left - OS_TIMER_MARGIN);
         } else if helper_started() {
-            pending().push((deadline, std::thread::current()));
+            let me = std::thread::current();
+            let id = me.id();
+            pending().push((deadline, me));
             MORE.notify_one();
-            // An entry left by an earlier unpark just wakes the thread once
-            // more, at a time no later than that wait's deadline.
             std::thread::park();
+            // Woken before its time, it takes its entry back. Left there, the
+            // entries of a thread hopping on short waits pile up, keep the
+            // helper yielding at their deadlines and wake it for nothing.
+            let mut list = pending();
+            if let Some(at) = list.iter().rposition(|(_, t)| t.id() == id) {
+                list.swap_remove(at);
+            }
         } else {
             std::thread::park_timeout(left);
         }

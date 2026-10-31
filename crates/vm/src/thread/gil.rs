@@ -21,11 +21,16 @@
 //!
 //! A switch wakes the one thread that goes next, on its own condition variable,
 //! and every step here takes constant time, however many threads wait.
+//!
+//! Counting polls times a slice well only while polls come quickly, and a poll
+//! can come after a copy of megabytes or a collection. So a helper thread, the
+//! watch, tells the holder when a slice with someone waiting has run out
+//! (threads.md, "Safepoints and time slices").
 
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::{Duration, Instant};
 
 use crate::Vm;
@@ -35,16 +40,39 @@ pub(crate) struct Gil {
     /// Set while a thread waits in line, so the holder has its slice to time.
     /// With none, a safepoint costs only the read of this flag.
     waiting: AtomicBool,
+    /// The watch saw the slice run out: the holder looks at the clock at its
+    /// next poll, whatever its count says.
+    look_now: AtomicBool,
+    /// What the watch sleeps on with the line empty (`Watch::Asleep`).
+    rouse: Condvar,
+    /// This lock, for the thread that keeps the watch.
+    this: Weak<Gil>,
 }
 
 /// How long threads may run bytecode while others wait.
 const SLICE: Duration = Duration::from_millis(5);
 
 /// How many safepoints a holder with threads in line passes between looks at
-/// the clock: a look is about 30 ns on Windows, and a safepoint comes every
-/// few nanoseconds to tens of them, so the slice is exact to some 50 us and
-/// the looks cost under 1% of the holder's time.
+/// the clock: a look is about 30 ns on Windows, and a safepoint usually comes every
+/// few nanoseconds to tens of them, so the slice is exact to some 50 us. All
+/// that sharing the VM costs is 2% to 4% of the time (threads.md).
 const POLLS_PER_LOOK: u32 = 1024;
+
+/// With no one in line for this many looks in a row, the watch stops timing
+/// and sleeps until someone joins the line. Rousing it takes a system call, so
+/// threads that only hand a lock back and forth must not do it at each hop.
+const IDLE_LOOKS: u32 = 8;
+
+/// What the thread keeping the watch is doing.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Watch {
+    /// Not there: no thread has waited yet.
+    Absent,
+    /// The OS would not start it, and a switch should not ask again each time.
+    Refused,
+    Timing,
+    Asleep,
+}
 
 /// Which part of the line a thread joins.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -83,6 +111,7 @@ struct Slot {
     slice_was_woken: bool,
     /// When the holder got the VM.
     served_at: Instant,
+    watch: Watch,
 }
 
 impl Slot {
@@ -195,12 +224,16 @@ impl Slot {
     fn anyone_in_line(&self) -> bool {
         !self.preempted.is_empty() || !self.arrived.is_empty()
     }
+
+    fn slice_is_over(&self) -> bool {
+        self.slice_left().is_zero() && self.next_up().is_some()
+    }
 }
 
 impl Gil {
     /// A lock whose VM is held by its creator.
     pub(crate) fn new() -> Arc<Gil> {
-        Arc::new(Gil {
+        Arc::new_cyclic(|this| Gil {
             slot: Mutex::new(Slot {
                 vm: None,
                 seats: Vec::new(),
@@ -211,8 +244,12 @@ impl Gil {
                 slice_start: Instant::now(),
                 slice_was_woken: false,
                 served_at: Instant::now(),
+                watch: Watch::Absent,
             }),
             waiting: AtomicBool::new(false),
+            look_now: AtomicBool::new(false),
+            rouse: Condvar::new(),
+            this: Weak::clone(this),
         })
     }
 
@@ -260,8 +297,83 @@ impl Gil {
 
     /// Whether the holder's slice is spent with a thread there to take over.
     fn slice_is_over(&self) -> bool {
-        let slot = self.lock();
-        slot.slice_left().is_zero() && slot.next_up().is_some()
+        self.lock().slice_is_over()
+    }
+
+    /// Counts a poll by the holder: whether it should now see if the slice is
+    /// over. A stale `look_now` only costs one look.
+    fn time_to_look(&self, polls_to_look: &mut u32) -> bool {
+        *polls_to_look = polls_to_look.saturating_sub(1);
+        let look = *polls_to_look == 0 || self.look_now.load(Ordering::Relaxed);
+        if look {
+            *polls_to_look = POLLS_PER_LOOK;
+            self.look_now.store(false, Ordering::Relaxed);
+        }
+        look
+    }
+
+    /// A thread is joining the line, so someone must keep the watch. If the
+    /// thread cannot be started, slices are as long as the polls make them.
+    fn call_watch(&self, slot: &mut Slot) {
+        match slot.watch {
+            Watch::Timing | Watch::Refused => {}
+            Watch::Asleep => {
+                slot.watch = Watch::Timing;
+                self.rouse.notify_one();
+            }
+            Watch::Absent => {
+                let Some(gil) = self.this.upgrade() else {
+                    return;
+                };
+                let started = std::thread::Builder::new()
+                    .name("vm-watch".into())
+                    .stack_size(64 << 10)
+                    .spawn(move || gil.keep_watch());
+                slot.watch = match started {
+                    Ok(_) => Watch::Timing,
+                    Err(_) => Watch::Refused,
+                };
+            }
+        }
+    }
+
+    /// The watch's body. It holds the lock for good: a process has one VM, and
+    /// the thread ends with it. Unlike a look by the holder, this is on time
+    /// however long a poll takes, up to the lateness of a sleep (0.5 ms on
+    /// Windows, `timer.rs`), and it costs a wake-up per slice, in contention only.
+    fn keep_watch(&self) {
+        let mut idle_looks = 0;
+        loop {
+            let pause = self.look_for_holder(&mut idle_looks);
+            std::thread::sleep(pause);
+        }
+    }
+
+    /// Tells the holder if its slice is over, and says how long to sleep.
+    fn look_for_holder(&self, idle_looks: &mut u32) -> Duration {
+        let mut slot = self.lock();
+        *idle_looks = if slot.anyone_in_line() {
+            0
+        } else {
+            *idle_looks + 1
+        };
+        if *idle_looks >= IDLE_LOOKS {
+            *idle_looks = 0;
+            slot.watch = Watch::Asleep;
+            while slot.watch == Watch::Asleep {
+                slot = self
+                    .rouse
+                    .wait(slot)
+                    .unwrap_or_else(PoisonError::into_inner);
+            }
+        }
+        if slot.slice_is_over() {
+            self.look_now.store(true, Ordering::Relaxed);
+        }
+        match slot.slice_left() {
+            left if left.is_zero() => SLICE,
+            left => left,
+        }
     }
 
     /// The holder's slice is spent: gives the VM up and joins the preempted
@@ -275,6 +387,7 @@ impl Gil {
 
     fn wait_turn<'a>(&'a self, mut slot: MutexGuard<'a, Slot>, me: usize) -> Vm {
         self.waiting.store(true, Ordering::Relaxed);
+        self.call_watch(&mut slot);
         let turn = Arc::clone(&slot.seats[me].turn);
         loop {
             if slot.vm.is_some() && slot.next_up() == Some(me) {
@@ -348,17 +461,13 @@ impl Vm {
         }
     }
 
-    /// Threads are in line: every so often, see whether the slice is spent.
-    /// The holder times it itself, as a waiting thread's OS timer can be late
-    /// by a lot (15.6 ms on Windows).
+    /// Threads are in line: every so often, or when the watch says so, see
+    /// whether the slice is spent. The holder times it itself, as a waiting
+    /// thread's OS timer can be late by a lot (15.6 ms on Windows).
     #[cold]
     fn poll_slice(&mut self) {
-        self.polls_to_look = self.polls_to_look.saturating_sub(1);
-        if self.polls_to_look == 0 {
-            self.polls_to_look = POLLS_PER_LOOK;
-            if self.gil.slice_is_over() {
-                self.hand_over(|gil, vm, me| (gil.preempt(vm, me), ()));
-            }
+        if self.gil.time_to_look(&mut self.polls_to_look) && self.gil.slice_is_over() {
+            self.hand_over(|gil, vm, me| (gil.preempt(vm, me), ()));
         }
     }
 }

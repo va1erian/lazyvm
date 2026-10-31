@@ -400,7 +400,7 @@ The oracle is exponential on `(?:a|a*)*b(?=c)` too (0.23 s on 16 `a`, 7.5 s on
 ## Cost and limits
 
 Matching uses no Java frames per node (`Backtrack`), so neither the length of
-a pattern nor the number of iterations is bounded by the VM's 4096-frame limit
+a pattern nor the number of iterations is bounded by the VM's frame limit
 (`Options::max_frames`); the stack's own cap of 1048576 frames is:
 
 - Loops over one character class (`.*`, `\w+`, `[^,]*?`), and the same inside
@@ -414,17 +414,16 @@ a pattern nor the number of iterations is bounded by the VM's 4096-frame limit
   `(?:(a)b)*`) pushes a frame of 36 bytes for each decision and each node with
   state: about 120 bytes per iteration of `(?:(a)b)*`, up to the frame cap.
 - Group nesting is parsed with an explicit stack (the reviewer's `Deep8` probe,
-  at 300, 1000, 2000, 5000, 20000 and 200000 levels): here 2000 levels of any
-  group kind compile, `(`, `(?=`, `(?!`, `(?<=` and `(?<!` fail at 5000, and
+  at 300, 1000, 2000, 5000, 20000 and 200000 levels): here 5000 levels of any
+  group kind compile, `(`, `(?=`, `(?!`, `(?<=` and `(?<!` fail at 20000, and
   `(?:`, `(?>`, `(?i:` and `(?:x|` compile at 200000. The oracle at its default
   stack size (no `-Xss`) fails somewhere between 1000 and 5000 levels for every
   group kind; the exact level depends on what already ran in the same JVM (separate
   runs disagreed for `(?:`, `(?<!`, `(?>`, `(?!` and `(?<=`), so no finer figure
   is given. Inside a lookbehind body, quantified nesting such as `(?:..)?` or
-  `(?>..)?` fails earlier here than outside one (about 500 to 1400 levels,
-  depending on the shape); unquantified nesting does not. Nested character
-  classes recurse: here 2000 levels compile and 5000 fail, on the oracle 5000
-  compile and 20000 fail.
+  `(?>..)?` fails earlier here than outside one (`(?>..)?` compiles at 2000 levels
+  and fails at 5000); unquantified nesting does not. Nested character
+  classes recurse: here and on the oracle, 5000 levels compile and 20000 fail.
 - A class or alternation of ten thousand single characters is one sorted range
   table; ranges are merged, so lookups are a binary search.
 - Backtracking is exponential on patterns such as `(a+)+b` against `aaaa..c`.

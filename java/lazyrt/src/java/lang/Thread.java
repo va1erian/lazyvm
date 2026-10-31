@@ -212,8 +212,7 @@ public class Thread implements Runnable {
         try {
             getUncaughtExceptionHandler().uncaughtException(this, t);
         } catch (Throwable u) {
-            System.err.print("\nException: " + u.getClass().getName()
-                    + " thrown from the UncaughtExceptionHandler in thread \"" + getName() + "\"\n");
+            lazy.internal.VM.handlerFailed(u);
         }
     }
 

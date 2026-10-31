@@ -155,16 +155,43 @@ impl Vm {
         c.statics.get(slot).copied().ok_or_else(missing)
     }
 
-    /// Whether `e` is the heap running out, as an error or as its exception.
-    pub(crate) fn is_heap_shortage(&self, e: &VmError) -> bool {
+    /// Whether `e` is the heap or the stack running out, as an error or as its
+    /// exception: something that says nothing about the code it stopped.
+    pub(crate) fn is_passing_shortage(&self, e: &VmError) -> bool {
         match e {
             VmError::OutOfMemory => true,
-            VmError::Throw(r) => self
-                .heap
-                .class_of(*r)
-                .is_ok_and(|c| &*self.class(c).name == OOM),
+            VmError::Throw(r) => self.heap.class_of(*r).is_ok_and(|c| {
+                let name = &*self.class(c).name;
+                name == OOM || name == SOE
+            }),
             _ => false,
         }
+    }
+
+    /// Reports an exception that came out of the running thread's uncaught
+    /// exception handler, on stderr, as the oracle does. The heap may well be
+    /// full by then, so this allocates nothing in it.
+    pub fn report_handler_failure(&self, e: &VmError) -> VmResult<()> {
+        let class = match e {
+            VmError::Throw(r) => self.class(self.heap.class_of(*r)?).java_name(),
+            VmError::Pending { class, .. } => class.replace('/', "."),
+            VmError::Verify(_) => "java.lang.VerifyError".to_owned(),
+            _ => OOM.replace('/', "."),
+        };
+        let name = match self.current_thread() {
+            Some(thread) => match self.field_by_name(thread, "name", "Ljava/lang/String;")? {
+                Value::Ref(Some(name)) => self.string_to_rust(name)?,
+                _ => String::new(),
+            },
+            // Java has never asked for the main thread's object.
+            None => "main".to_owned(),
+        };
+        let line = format!(
+            "\nException: {class} thrown from the UncaughtExceptionHandler in thread \"{name}\"\n"
+        );
+        // Nothing is left to tell if stderr itself fails.
+        let _ = platform::write(platform::Stream::Err, line.as_bytes());
+        Ok(())
     }
 
     /// Creates `class` with its `(String)` constructor (`message` may be

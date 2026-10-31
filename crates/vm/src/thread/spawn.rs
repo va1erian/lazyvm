@@ -145,8 +145,8 @@ fn run_thread(gil: Arc<Gil>, me: usize) {
     match vm.run_java_thread() {
         Ok(()) => {}
         Err(VmError::Exit(code)) => vm.exit_process(code),
-        // `runByVm` handles every exception; one escaping it (say, an
-        // OutOfMemoryError in the handler) just ends the thread.
+        // `runByVm` handles every exception; one escaping it, from what it does
+        // after the handler, just ends the thread.
         Err(e) if e.is_catchable() => {}
         Err(e) => {
             eprintln!("lazyvm: internal error: {e}");
