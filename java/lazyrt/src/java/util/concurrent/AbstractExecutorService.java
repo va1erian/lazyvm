@@ -132,7 +132,7 @@ public abstract class AbstractExecutorService implements ExecutorService {
 
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
             throws InterruptedException {
-        // Not clamped: at the lowest timeout the sum wraps, and the wait has no limit, as on the oracle.
+        // Not clamped: at the lowest timeout the sum wraps, and if the clock moved the wait has no limit, as on the oracle.
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         List<Future<T>> futures = new ArrayList<Future<T>>(tasks.size());
         boolean finished = false;

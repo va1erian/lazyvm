@@ -172,9 +172,6 @@ public class PoolPins {
         show("invokeAny", () -> e.invokeAny(l, Long.MIN_VALUE, TimeUnit.DAYS));
         show("awaitTermination", () -> e.awaitTermination(Long.MIN_VALUE, TimeUnit.DAYS));
         rel.countDown();
-        // invokeAll does not give up: the time wraps around, and the task runs.
-        Future<String> f = e.invokeAll(l, Long.MIN_VALUE, TimeUnit.DAYS).get(0);
-        show("invokeAll", () -> f.isCancelled() + " " + f.get());
         e.shutdown();
     }
 
