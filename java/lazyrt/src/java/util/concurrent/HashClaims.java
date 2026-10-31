@@ -7,7 +7,8 @@ package java.util.concurrent;
  *
  * <p>What holds:
  * <ul>
- * <li>Ops on equal keys never run together, except on one thread. A thread lists its claim before it
+ * <li>Ops on equal keys never run together, except on one thread, and except for what a key's own
+ * {@code equals} writes while it compares: that goes straight through, or it could wait for itself. A thread lists its claim before it
  * compares keys, with that claim's monitor held, and in the same step of the guard takes the list of
  * those of its hash already there, which is all it ever compares with. Of two overlapping ops the later
  * therefore sees the earlier's claim, and joins it instead of running. And so no number of later
@@ -65,8 +66,8 @@ final class HashClaims {
 
     /**
      * Lists the claim, and answers the claims of its hash that were already listed, or null if there are
-     * none, the usual case. But an open claim on the very key object takes no compare, and no equal key
-     * can be running elsewhere: that one is joined and answered alone, and {@code mine} is not listed.
+     * none, the usual case. But an open claim on the very key object takes no compare, as it stands for
+     * that key: that one is joined and answered alone, and {@code mine} is not listed.
      * Running out of memory here leaves things as they were.
      */
     Claim[] stake(Claim mine) {
@@ -120,9 +121,18 @@ final class HashClaims {
      * calls nothing and its frame is no larger, so that a thread that got as far as listing a claim can
      * still leave, and no claim outlasts its op. Only {@link #join} calls it from deeper, and if that
      * fails, the caller of {@link #joined} is still there to leave.
+     *
+     * <p>{@code givingUp} says that the first holder is going without having found out whether it may
+     * run. Then the claim goes from the list now, in one step with closing it: if others could still
+     * stop behind a claim that is closed and listed, they could keep it listed for good, each looking
+     * again and stopping behind it before the last has left.
      */
-    void leave(Claim c) {
+    void leave(Claim c, boolean givingUp) {
         synchronized (guard) {
+            if (givingUp) {
+                c.open = false;
+                c.users = 1;
+            }
             if (--c.users > 0 || !c.listed) {
                 return;
             }
@@ -172,9 +182,7 @@ final class HashClaims {
                 return false;
             }
             // Out of the list now, though some may have stopped behind it. They find it not open.
-            mine.open = false;
-            mine.users = 1;
-            leave(mine);
+            leave(mine, true);
             other.users++;
             other.open |= held;
             return true;
