@@ -2,6 +2,7 @@ package java.util.concurrent;
 
 import java.util.ArrayList;
 import java.util.List;
+import lazy.internal.Turnstile;
 
 /**
  * The workers and run state of a {@link ThreadPoolExecutor}. One monitor guards the state, the
@@ -253,20 +254,32 @@ final class PoolWorkers {
         }
     }
 
+    /** The monitor is held. */
+    private void interruptOneIdle() {
+        for (Worker w : workers) {
+            if (!w.busy) {
+                w.thread.interrupt();
+                return;
+            }
+        }
+    }
+
     /** To be called after anything that may have ended the pool's last work. */
     void endIfDone() {
         if (state == RUNNING) {
             return;
         }
-        boolean empty = queue.isEmpty();
+        // Past a stop the queue no longer matters, even if asking it would throw.
+        boolean empty = state >= STOP || queue.isEmpty();
         synchronized (this) {
             if (state >= TERMINATING || state == SHUTDOWN && !empty) {
                 return;
             }
             if (!workers.isEmpty() || starting > 0 || draining > 0) {
-                // Someone may be waiting on a queue that was emptied by a remove.
+                // Someone may be waiting on a queue that was emptied by a remove. One is enough:
+                // it leaves and comes back here, which wakes the next.
                 if (empty) {
-                    interruptIdle();
+                    interruptOneIdle();
                 }
                 return;
             }
@@ -309,7 +322,7 @@ final class PoolWorkers {
     }
 
     boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = Turnstile.deadline(unit.toNanos(timeout));
         synchronized (this) {
             while (state != TERMINATED) {
                 long left = deadline - System.nanoTime();

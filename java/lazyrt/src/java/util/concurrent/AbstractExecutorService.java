@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import lazy.internal.Turnstile;
 
 /** Every entry point makes its future with {@code newTaskFor} and hands it to {@code execute}. */
 public abstract class AbstractExecutorService implements ExecutorService {
@@ -63,7 +64,7 @@ public abstract class AbstractExecutorService implements ExecutorService {
         if (tasks.isEmpty()) {
             throw new IllegalArgumentException();
         }
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         ExecutorCompletionService<T> finished = new ExecutorCompletionService<T>(this);
         List<Future<T>> started = new ArrayList<Future<T>>(tasks.size());
         Iterator<? extends Callable<T>> next = tasks.iterator();
@@ -131,6 +132,7 @@ public abstract class AbstractExecutorService implements ExecutorService {
 
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
             throws InterruptedException {
+        // Not clamped: at the lowest timeout the sum wraps, and the wait has no limit, as on the oracle.
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         List<Future<T>> futures = new ArrayList<Future<T>>(tasks.size());
         boolean finished = false;

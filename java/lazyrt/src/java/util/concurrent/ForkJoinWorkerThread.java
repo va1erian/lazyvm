@@ -16,6 +16,10 @@ public class ForkJoinWorkerThread extends Thread {
     volatile ForkJoinTask<?> awaited;
     /** Listed as idle. */
     volatile boolean parked;
+    /** Counted as live by the pool, whoever started the thread. */
+    boolean enlisted;
+    /** How many blockers it is inside; its own thread's alone. */
+    int blockDepth;
 
     protected ForkJoinWorkerThread(ForkJoinPool pool) {
         super((ThreadGroup) null, (Runnable) null, "ForkJoinWorker");
@@ -57,6 +61,7 @@ public class ForkJoinWorkerThread extends Thread {
         Throwable failure = null;
         boolean began = false;
         try {
+            core.enlist(this);
             onStart();
             began = true;
             core.workLoop(this);
