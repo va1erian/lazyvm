@@ -24,6 +24,7 @@ fn line(slice_spent: bool, slice_was_woken: bool) -> Slot {
         next_place: 0,
         slice_start,
         slice_was_woken,
+        served_at: now,
     }
 }
 
@@ -42,21 +43,67 @@ fn a_spent_slice_goes_to_the_side_that_did_not_have_it() {
     assert_eq!(slot.next_up(), Some(2));
 }
 
+/// A holder that had the whole slice to itself.
+fn busy_holder(slot: &mut Slot) {
+    slot.served_at = line(true, true).slice_start;
+}
+
 #[test]
-fn a_holder_preempted_alone_goes_after_a_waiting_woken_thread() {
+fn a_busy_holder_preempted_alone_goes_after_a_waiting_woken_thread() {
     let mut slot = line(true, true);
     slot.join(2, Line::Woken);
+    busy_holder(&mut slot);
     slot.preempt_holder(1);
+    assert_eq!(slot.preempted.front(), Some(&1));
     assert_eq!(slot.next_up(), Some(2));
 }
 
 #[test]
-fn a_holder_preempted_behind_another_goes_after_it() {
+fn a_busy_holder_preempted_behind_another_goes_after_it() {
+    let mut slot = line(true, true);
+    slot.join(3, Line::Preempted);
+    slot.join(2, Line::Woken);
+    busy_holder(&mut slot);
+    slot.preempt_holder(1);
+    assert_eq!(slot.next_up(), Some(3));
+    assert_eq!(slot.preempted.back(), Some(&1));
+}
+
+#[test]
+fn a_holder_that_shared_its_slice_stays_with_the_woken_threads() {
     let mut slot = line(true, true);
     slot.join(3, Line::Preempted);
     slot.join(2, Line::Woken);
     slot.preempt_holder(1);
-    assert_eq!(slot.next_up(), Some(3));
+    assert_eq!(slot.preempted.len(), 1, "only the thread that was there");
+    assert_eq!(slot.next_up(), Some(3), "the busy side's turn");
+    slot.serve(3);
+    slot.slice_start = line(true, true).slice_start;
+    assert_eq!(slot.next_up(), Some(2));
+    slot.serve(2);
+    slot.slice_start = line(true, true).slice_start;
+    assert_eq!(slot.next_up(), Some(1));
+}
+
+#[test]
+fn a_slice_since_it_blocked_makes_a_woken_thread_a_busy_one() {
+    let mut slot = line(true, true);
+    slot.join(1, Line::Woken);
+    slot.serve(1);
+    slot.slice_was_woken = true;
+    busy_holder(&mut slot);
+    slot.preempt_holder(1);
+    assert_eq!(slot.preempted.front(), Some(&1));
+    slot.preempted.clear();
+    slot.seat(1).ran = SLICE - Duration::from_micros(1);
+    slot.served_at = Instant::now();
+    slot.slice_was_woken = true;
+    slot.seat(1).ran += SLICE;
+    slot.preempt_holder(1);
+    assert_eq!(slot.preempted.front(), Some(&1), "added up over its turns");
+    slot.preempted.clear();
+    slot.join(1, Line::Woken);
+    assert_eq!(slot.seat(1).ran, Duration::ZERO, "blocking starts it afresh");
 }
 
 #[test]

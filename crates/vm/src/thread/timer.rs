@@ -97,3 +97,36 @@ mod windows {
         }
     }
 }
+
+#[cfg(all(test, windows))]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    /// The best of a few, so that a busy machine does not count: the system
+    /// tick (15.6 ms) never gives less than about 14 ms.
+    #[test]
+    fn a_short_wait_does_not_last_a_system_tick() {
+        let best = (0..8)
+            .map(|_| {
+                let start = Instant::now();
+                let deadline = start + Duration::from_millis(1);
+                while Instant::now() < deadline {
+                    super::park_until(deadline);
+                }
+                start.elapsed()
+            })
+            .min();
+        assert!(best.is_some_and(|b| b < Duration::from_millis(8)));
+    }
+
+    #[test]
+    fn a_wait_ends_early_when_unparked() {
+        let waiter = std::thread::current();
+        let start = Instant::now();
+        std::thread::scope(|s| {
+            s.spawn(|| waiter.unpark());
+            super::park_until(start + Duration::from_secs(60));
+        });
+        assert!(start.elapsed() < Duration::from_secs(30));
+    }
+}

@@ -139,7 +139,7 @@ fn thread_main(gil: Arc<Gil>, me: usize) {
 }
 
 fn run_thread(gil: Arc<Gil>, me: usize) {
-    let mut vm = gil.acquire(me, Line::Preempted);
+    let mut vm = gil.acquire(me, Line::Woken);
     vm.current = me;
     vm.resume_state(me);
     match vm.run_java_thread() {

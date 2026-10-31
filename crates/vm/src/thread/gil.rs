@@ -62,6 +62,8 @@ struct Seat {
     turn: Arc<Condvar>,
     /// Its place in the woken line, once named or arrived.
     place: Option<u64>,
+    /// VM time it had since it last blocked, up to its last switch.
+    ran: Duration,
 }
 
 struct Slot {
@@ -79,6 +81,8 @@ struct Slot {
     slice_start: Instant,
     /// Whether the running slice went to the woken line.
     slice_was_woken: bool,
+    /// When the holder got the VM.
+    served_at: Instant,
 }
 
 impl Slot {
@@ -136,19 +140,33 @@ impl Slot {
                     }
                     None => self.new_place(me),
                 };
+                self.seat(me).ran = Duration::ZERO;
                 self.arrived.push(Reverse((place, me)));
             }
         }
     }
 
-    /// `me`'s slice is spent and it goes to the preempted line. The next thread
-    /// is chosen among those that waited while the slice ran, which `me` did
-    /// not: alone in that line, it must not count as the side whose turn it is.
+    /// `me`'s slice is spent. Having shared it with other woken threads, and had
+    /// less than a slice since it blocked, it stays in the woken line: threads
+    /// handing a lock around would otherwise stop, whenever the slice ends in
+    /// the middle of one's turn, until it has come round all the busy threads.
+    /// Otherwise it is a busy thread, and goes behind them. The next thread is
+    /// chosen among those that waited while the slice ran, which `me` did not:
+    /// alone in the preempted line, it must not count as the side whose turn
+    /// it is.
     fn preempt_holder(&mut self, me: usize) {
+        let served_at = self.served_at;
+        let seat = self.seat(me);
+        seat.ran += served_at.elapsed();
+        if self.slice_was_woken && self.seats[me].ran < SLICE {
+            let place = self.new_place(me);
+            self.arrived.push(Reverse((place, me)));
+            return;
+        }
         if self.preempted.is_empty() {
             self.slice_was_woken = false;
         }
-        self.join(me, Line::Preempted);
+        self.preempted.push_back(me);
     }
 
     fn new_place(&mut self, thread: usize) -> u64 {
@@ -171,6 +189,7 @@ impl Slot {
             self.slice_start = Instant::now();
         }
         self.slice_was_woken = was_woken;
+        self.served_at = Instant::now();
     }
 
     fn anyone_in_line(&self) -> bool {
@@ -191,6 +210,7 @@ impl Gil {
                 next_place: 0,
                 slice_start: Instant::now(),
                 slice_was_woken: false,
+                served_at: Instant::now(),
             }),
             waiting: AtomicBool::new(false),
         })

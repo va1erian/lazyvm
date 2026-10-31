@@ -179,22 +179,18 @@ public class OutOfMemoryErrors {
         byte[] half = new byte[4 << 20];
         Object[] clones = new Object[8];
         fill();
-        String first = "used";
         try {
             for (int i = 0; i < clones.length; i++) {
                 clones[i] = half.clone();
             }
-            first = Base64.getEncoder().encodeToString(new byte[1]);
+            full.add(Base64.getEncoder().encodeToString(new byte[1]));
         } catch (Throwable e) {
-            first = "failed";
+            full = null;
         }
         full = null;
         clones = null;
         half = null;
-        System.gc();
         System.out.println("later use: " + Base64.getEncoder().encodeToString(new byte[] {1, 2}));
-        first = first.isEmpty() ? "" : "ok";
-        System.out.println(first);
     }
 
     public static void main(String[] args) {

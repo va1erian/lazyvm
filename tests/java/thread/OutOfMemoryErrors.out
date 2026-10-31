@@ -13,5 +13,4 @@ StackOverflowError: ran out true, other false
 initializer stayed within the limit: true
 constructor stayed within the limit: true
 later use: AQI=
-ok
 done
