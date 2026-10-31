@@ -463,8 +463,7 @@ impl Vm {
     /// thread's OS timer can be late by a lot (15.6 ms on Windows).
     #[cold]
     fn poll_slice(&mut self) {
-        let gil = Arc::clone(&self.gil);
-        if gil.time_to_look(&mut self.polls_to_look) && gil.slice_is_over() {
+        if self.gil.time_to_look(&mut self.polls_to_look) && self.gil.slice_is_over() {
             self.hand_over(|gil, vm, me| (gil.preempt(vm, me), ()));
         }
     }

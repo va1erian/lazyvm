@@ -61,19 +61,17 @@ public final class VM {
 
     /**
      * Called by the VM when an exception escapes the main thread: it goes to
-     * the thread's handler, as for any other thread.
+     * the thread's handler, as for any other thread. What comes out of this the
+     * VM reports itself (`handlerFailed`), as it may be for lack of memory before
+     * any handler has started.
      */
     static void uncaught(Throwable t) {
         Thread current = Thread.currentThread();
-        try {
-            current.getUncaughtExceptionHandler().uncaughtException(current, t);
-        } catch (Throwable u) {
-            handlerFailed(u);
-        }
+        current.getUncaughtExceptionHandler().uncaughtException(current, t);
         try {
             System.err.flush();
         } catch (Throwable u) {
-            // What is written stays written; with the heap full there may be no more to do.
+            // Not the handler's failure: with the heap full, this is all that went wrong.
         }
     }
 }

@@ -1,4 +1,3 @@
-throwing
 --- stderr ---
 
 Exception: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHandler in thread "main"

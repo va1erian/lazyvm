@@ -145,12 +145,9 @@ fn run_thread(gil: Arc<Gil>, me: usize) {
     match vm.run_java_thread() {
         Ok(()) => {}
         Err(VmError::Exit(code)) => vm.exit_process(code),
-        // `runByVm` handles every exception, but with the heap full, an error
-        // can still come out before the handler even starts. It just ends the
-        // thread, after saying so.
-        Err(e) if e.is_catchable() => {
-            let _ = vm.report_handler_failure(&e);
-        }
+        // `runByVm` handles every exception; one escaping it, from what it does
+        // after the handler, just ends the thread.
+        Err(e) if e.is_catchable() => {}
         Err(e) => {
             eprintln!("lazyvm: internal error: {e}");
             vm.exit_process(EXIT_INTERNAL)

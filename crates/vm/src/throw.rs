@@ -160,7 +160,6 @@ impl Vm {
     pub(crate) fn is_passing_shortage(&self, e: &VmError) -> bool {
         match e {
             VmError::OutOfMemory => true,
-            VmError::Pending { class, .. } => *class == OOM || *class == SOE,
             VmError::Throw(r) => self.heap.class_of(*r).is_ok_and(|c| {
                 let name = &*self.class(c).name;
                 name == OOM || name == SOE
