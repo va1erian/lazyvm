@@ -66,6 +66,7 @@ the label of a line of its golden. Change the rule and that line should change.
 | `CollectionEdges` | the collections: range bounds, view identity, bulk entries, a running compute, what counts as a copy-on-write, hand-off order |
 | `CollectionUserCode` | a key's `equals` or `compareTo` that blocks: who can still run, and that a search still stands when its write comes |
 | `LongBins` | `ConcurrentHashMap` with many keys of one hash: cost, every kind of key, growth, iterators, a `compareTo` that throws |
+| `CollectionPins` | `ConcurrentHashMap`: the order of a small map, the views and null, what `clear` waits for, a writer beside other computes; the copy-on-write list's second look; far negative timeouts of the linked queues |
 | `QueueIdleIterators` | an idle iterator keeps nothing that passes through the queue; the weak iterator's promise under random changes |
 | `ThreadPoolEdges` | `ThreadPoolExecutor`: hooks that throw, the `terminated` hook, odd factories and queues, late resizing |
 | `FutureEdges` | `FutureTask` re-entrancy, `invokeAll`/`invokeAny` check and failure order, `ExecutorCompletionService` delivery, `Executors` |
@@ -140,8 +141,12 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   `next()` or twice throws `IllegalStateException` ("remove before next", "remove
   twice", "double remove").
 - **G7, iteration order.** Fixed only where a rule says so. Tests never print
-  the iteration order or a multi-entry `toString` of `ConcurrentHashMap`, nor the
-  iterator or `toString` order of `PriorityBlockingQueue` or `DelayQueue`.
+  the iteration order or a multi-entry `toString` of `ConcurrentHashMap`, except one
+  narrow case: a small map that has not grown, with its keys in bins of their own, goes
+  in the oracle's order of those bins (`CollectionPins`: "small map of strings, in order",
+  "small map of ints, in order", "small keys in order"), because programs that print a small map
+  should read the same. Nor do they print the iterator or `toString` order of
+  `PriorityBlockingQueue` or `DelayQueue`.
 - **G8, `drainTo`** (every blocking queue): a null target throws
   `NullPointerException`, the queue itself as target throws
   `IllegalArgumentException` (both forms), `maxElements <= 0` returns 0 and moves
@@ -484,7 +489,9 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   "entry contains null"). Key-set `contains(null)` and `remove(null)`, and
   value-collection `contains(null)`, throw ("key contains null", "key remove null",
   "value contains null"). A null value in a source map or from `replaceAll` throws
-  ("source null value", "replaceAll to null", "putAll null value").
+  ("source null value", "replaceAll to null", "putAll null value"). Yet a null in the collection given to a view's
+  `containsAll`, or in a set a view is compared with, just means false (`CollectionPins`: "key view equals a set holding null",
+  "key view containsAll with null", "value view containsAll with null"), though `containsAll(null)` throws ("key view containsAll of null throws").
 - Constructors: negative capacity, non-positive load factor and non-positive
   concurrency level are `IllegalArgumentException`; capacity 0 is fine ("capacity
   negative", "capacity zero", "factor zero", "concurrency zero").
@@ -540,6 +547,16 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   present, and answers what the compute produced ("computeIfAbsent of a present key waits for its compute", "and
   answers what it computed"). Nothing here looks at the flag ("flag kept by
   compute").
+- A running `compute` does not make a writer of another bin start over, nor any number of them one after another: such a writer
+  gets through in one search or two (`CollectionPins`: "put, a new compute of another bin at each equals, ..."). No write here goes back to the start for what cannot
+  change its answer, whatever other threads keep doing. So a slow `equals` or `compareTo` delays only its own thread.
+- `clear` waits for each `compute` running when it is called, not for those that start later, and the map is then empty, whatever the compute answered (`CollectionPins`:
+  "clear of a present key during a compute", "clear, key absent during a compute", "key view clear during a compute", "... at the end"). A writer of another bin goes on meanwhile ("a put to a later bin
+  meanwhile"). A `clear` inside a compute function does not wait for its own thread: if the key had a value, the function's answer is returned and not kept; if it had none, the answer is mapped ("clear
+  inside compute", "clear inside computeIfAbsent", "clear inside computeIfPresent", "clear inside merge", "clear inside compute of a new key").
+- A long bin is read from what its slot holds and nothing else, so a walk does not fail however the bin is emptied under it ("long bin emptied under walkers, failures": a race, so
+  this line can only catch a return of that failure some of the time). A value that left the map is not kept alive by the chain its bin once was ("value removed from a bin that
+  became a tree is collected").
 - A capacity allocates nothing: any capacity up to `Integer.MAX_VALUE` is accepted, and reads, misses and `clear` on such a map work
   (`CollectionEdges`: "capacity ... costs nothing yet", "cleared").
 - A key's `equals` and `compareTo` and a value's `equals` may block without stopping writers of other bins, nor readers (`CollectionUserCode`:
@@ -643,6 +660,12 @@ pool's size otherwise depends on the machine. The launcher already passes `-D`.
   then for the list as it now is (`CollectionUserCode`: "list addIfAbsent, equals stopped, add", "list addIfAbsent, equals stopped, the same key added", "list remove,
   equals stopped, add", "list remove, equals stopped, that element removed", "set add, equals stopped, add"; a sub-list goes stale: "sub-list remove, equals stopped,
   parent written"). `addAllAbsent`, `removeIf`, `sort` and `replaceAll` keep other writers out while they run user code, as on the oracle.
+- If the array changed during that search there is one second look, and no third, so no number of writers can hold the call up (`CollectionPins`: "remove, a write at each equals",
+  "addIfAbsent, a write at each equals"). The second look does keep writers out, and asks `equals` only about the elements not at the index where the search saw them, and about the match
+  it had found ("remove, a new element before the match", "remove, a set before the match", "remove, an add behind the match", "remove, the match gone", "addIfAbsent, an add", "addIfAbsent, a
+  set", "addIfAbsent, shorter", "addIfAbsent, the key added"). A writer waiting for it reads `BLOCKED` here, `WAITING` on the oracle, as for any wait on this list's lock; no line shows the state.
+- A sub-list of size 0 answers `removeIf`, `removeAll` and `retainAll` with false even when stale; its other operations, and these on a sub-list with elements, throw
+  (`CollectionPins`: "stale empty sub-list removeIf", "stale empty sub-list removeAll", "stale empty sub-list retainAll", "stale sub-list removeIf", "stale empty sub-list size").
 - A source array of a narrower type does not narrow the list ("array source narrower than the list",
   "toArray is plain").
 - `CopyOnWriteArraySet` keeps insertion order ("insertion order", "from collection
@@ -772,6 +795,8 @@ One script, run on both; rules hold for both unless noted.
   ("... remove, equals stopped, that element polled", "... remove of the second, equals stopped at the first, removed by another").
 - An iterator left idle does not keep what passes through the queue after it, whether at the head, the tail or in the middle: each of those "traffic" lines runs out
   of memory otherwise. Under any mix of changes it hands out nothing twice and every element that stayed ("broken promises").
+- A far negative timeout is a past time like any other, here too: `poll`, `offer`, `pollFirst`, `pollLast` and `tryTransfer` answer at once at the most negative nanoseconds and days
+  (`CollectionPins`: "LinkedBlockingQueue poll at ...", "LinkedBlockingQueue offer at ...", "LinkedBlockingDeque pollFirst at ...", "LinkedTransferQueue tryTransfer at ...", "... most negative days").
 
 ## Synchronizers
 
@@ -1278,6 +1303,11 @@ being kept. Neither was: both are now what the oracle does.
 
 ## What is not pinned
 
+- **`Exchanger` at a far negative timeout, different on purpose**: the oracle hangs at a timeout that saturates to the most negative nanoseconds (`Long.MIN_VALUE` nanoseconds, or most negative days),
+  against its own Javadoc, and a hang cannot be blessed. Here it is a past time like any other: alone, `exchange` answers at once with `TimeoutException` (`tests/java/lazy/internal/ExchangerFarEnd`,
+  whose golden is hand-written).
+- **A non-fair timed attempt delaying a queued head**: such attempts can pass a head that was just woken, again and again, so that head takes longer to get in than on the oracle (in one probe the worst
+  wait was 716 ms against 15 ms). The head never starves. Accepted, and no test holds it.
 - **A non-fair newcomer behind an old queue head that could go** (`Turnstile`: it may overtake a head younger than one
   VM lock slice, 5 ms, and queues after that, unless it will wait less than a slice, or the head could not go anyway:
   those are in `TurnstileEdges`). This is how LazyVM keeps a thread looping on a lock from starving the others, and
@@ -1322,8 +1352,9 @@ being kept. Neither was: both are now what the oracle does.
   Tests print only the class.
 - **`invokeAny` with a null behind a quick task**: the first task may finish before the null is reached. Only a null in first place
   is tested.
-- **Order**: `ConcurrentHashMap` iteration (the table's spreading of hash codes was chosen so that bins come in the oracle's order, as observed on a random-keys probe, but the order inside a bin and the
-  first table of a small capacity differ), `PriorityBlockingQueue` and `DelayQueue` iterators and ties, non-fair lock order, and
+- **Order**: `ConcurrentHashMap` iteration beyond the narrow case of G7 (the table's spreading of hash codes makes bins come in the oracle's order, as observed: a map that has not grown matched on all
+  300 small key sets of a probe with this spreading and with no other tried; but the order inside a bin, of a map that has grown, and the first table of a small capacity differ. A chain long enough to become a tree here matches less
+  often: of 58 same-hash sets, 18 with trees from 16 keys, 12 from 8), `PriorityBlockingQueue` and `DelayQueue` iterators and ties, non-fair lock order, and
   non-fair queue hand-off order other than `SynchronousQueue`'s.
 - **Unstable on the oracle**: what a blocked `transfer` does when its element is taken out by `remove(Object)` or by
   an iterator. From run to run it returns, or throws `InterruptedException`, or a timed `tryTransfer` answers false. Here
@@ -1347,13 +1378,17 @@ being kept. Neither was: both are now what the oracle does.
   of these two classes must not block. The same holds for the sink of a `drainTo` on the linked and priority queues: on the oracle an `offer` still runs while `add` of a `LinkedBlockingQueue` or
   `LinkedTransferQueue` sink is stopped; here it waits. And for `PriorityBlockingQueue`'s `contains`, `remove(Object)`, which the oracle shuts out too. No test holds these.
 - **Less blocking than the oracle, on purpose.** While one `ConcurrentHashMap` writer sits in a key's `equals`, a writer of the same bin runs here, where the oracle
-  blocks it; only the end state is pinned ("put against put ..."). While a `LinkedBlockingQueue`, `ArrayBlockingQueue` or `LinkedBlockingDeque` runs `equals` for `contains` or `remove(Object)`, other calls
-  run here, and wait on the oracle. A search that lost to a write runs `equals` again, so a key may see more calls than on the oracle.
-- **Long bins, the details**: which insertion turns a bin into a tree, and the number of `compareTo` calls (the oracle grows a small table first, here a bin of 8 turns at once). So the
+  blocks it; only the end state is pinned ("put against put ..."). A running `compute` holds up only writers of an equal key, not those of other keys in its bin, nor of keys in one slot; those block on the oracle. While a `LinkedBlockingQueue`, `ArrayBlockingQueue` or `LinkedBlockingDeque` runs `equals` for `contains` or `remove(Object)`, other calls
+  run here, and wait on the oracle. A search that lost to a write runs `equals` again, and a write while a compute runs elsewhere searches twice, so a key may see more calls than on the oracle.
+- **`ConcurrentHashMap.clear` is one moment here**: it waits, then empties everything at once. On the oracle it goes bin by bin, so a write to a bin it has passed stays, while it waits for a compute further on. Only a
+  write to a bin it has not reached is pinned ("a put to a later bin meanwhile").
+- **A sub-list written through by another thread during its `remove(Object)`**: the oracle then removes by the index it found, whichever element is there now, and may answer true and leave the key in. Here the second look finds
+  the key again. Sub-lists are not for threads sharing, and no test holds it.
+- **Long bins, the details**: which insertion turns a bin into a tree, and the number of `compareTo` calls (the oracle grows a small table first, here a chain of 16 turns at once). So the
   insertion that sees a throwing `compareTo` differs: on both the key is then in the map and the exception reaches the caller, but the oracle's size does not count it. A key class whose `compareTo` orders two
-  keys that `equals` calls the same may store that key twice once its bin is long. Whether a search of a present key reaches a throwing `compareTo` before it finds the key. A long bin's iteration order.
+  keys that `equals` calls the same may store that key twice once its bin is long; so may two classes of one name from different class loaders, whose keys here are not kept apart in a tree. Whether a search of a present key reaches a throwing `compareTo` before it finds the key. A long bin's iteration order.
 - **Allowed by weak consistency, and different**: a `ConcurrentLinkedDeque` or `LinkedBlockingDeque` iterator whose element has left, with changes at both ends since. It never repeats an element or misses one that stayed
-  ("broken promises"), but it can differ from the oracle in which newer elements it hands out. An iterator goes on from where its element stood, or starts again at its own end if that element had nothing behind it when it left (`QueueIdleIterators`: "... then newer at its end"); the oracle also starts again if everything behind it left later, and a `ConcurrentLinkedDeque` there depends on the deque's history (going backward: a; `pollLast`; `addLast` b hands out only a; going forward, a, c; `pollFirst`; `addFirst` b hands out a, c on a new deque and a, b, c on a used one), so only `LinkedBlockingDeque` is pinned. Here both go on to the newer element.
+  ("broken promises"), but it can differ from the oracle in which newer elements it hands out. An iterator goes on from where its element stood, or starts again at its own end if that element had nothing behind it when it left (`QueueIdleIterators`: "... then newer at its end"); the oracle also starts again if everything behind it left later, and a `ConcurrentLinkedDeque` there depends on the deque's history (going backward: a; `pollLast`; `addLast` b hands out only a; going forward, a, c; `pollFirst`; `addFirst` b hands out a, c on a new deque and a, b, c on a used one), so only `LinkedBlockingDeque` is pinned. Here both go on to the newer element. A `LinkedBlockingQueue` iterator whose held element was taken by `remove(Object)`: the oracle ends after that element (a; iterator; `remove` a; `add` b hands out only a); here it goes on to the newer one (a, b). A `ConcurrentLinkedDeque` used as a queue, likewise, when everything added after that element has left too (a; iterator; `remove` a; `add` b; `poll`; `add` c hands out a on the oracle, a, c here), which is what the random differential probe found on it.
 - **Allowed by weak consistency, and different**: `ConcurrentHashMap` bulk operations, `replaceAll` included, may go on to a key an earlier callback removed, since a walk holds its next pair (`replaceAll` with a function removing
   the other of two keys ends with 0 keys here, 1 on the oracle). `contains` of a linked queue may answer true for an element that left while `equals` was stopped, for the same reason.
 - **A stray permit on the oracle**: a `transfer` called with the flag set leaves a permit on the oracle, so the next park returns at once. Here it does not, and no test holds it.

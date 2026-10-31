@@ -3,11 +3,11 @@ LinkedBlockingDeque forward, then newer at its end: a b c
 ConcurrentLinkedDeque head traffic: 1
 ConcurrentLinkedDeque other way: 1
 ConcurrentLinkedDeque middle traffic: 2
-true true
+true true true
 LinkedBlockingDeque head traffic: 1
 LinkedBlockingDeque other way: 1
 LinkedBlockingDeque middle traffic: 2
-true true
+true true true
 ConcurrentLinkedQueue traffic: 1 true
 LinkedBlockingQueue traffic: 1 true
 LinkedTransferQueue traffic: 1 true

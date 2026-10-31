@@ -276,11 +276,21 @@ public class HandoffQueues {
         show(mode + ": nothing was left behind", q::poll);
     }
 
-    /** A sender taking back its own element owes itself no wake-up: a later park still parks. */
+    /**
+     * A sender taking back its own element owes itself no wake-up: a later park still parks. Any park may return
+     * early, on any VM, so each of a few tries gets a timeout of its own: only a permit left by each of them stops all.
+     */
     static void noPermitLeft() throws Exception {
         LinkedTransferQueue<String> q = new LinkedTransferQueue<>();
         show("timed tryTransfer alone", () -> q.tryTransfer("a", 1, TimeUnit.MILLISECONDS));
-        show("no permit left by the timeout", HandoffQueues::parkWaits);
+        show("no permit left by the timeout", () -> {
+            boolean waited = parkWaits();
+            for (int tries = 0; tries < 5 && !waited; tries++) {
+                q.tryTransfer("a", 1, TimeUnit.MILLISECONDS);
+                waited = parkWaits();
+            }
+            return waited;
+        });
     }
 
     static boolean parkWaits() {

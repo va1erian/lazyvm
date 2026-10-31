@@ -1,16 +1,16 @@
-// VMARGS: -Xmx8m
+// VMARGS: -Xmx3m
 package concurrent;
 
 import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * An iterator left idle must not hold on to what passes through the queue after it: on an 8 MB heap each
+ * An iterator left idle must not hold on to what passes through the queue after it: on a 3 MB heap each
  * loop here would run out of memory if it did. The second part is the promise a weak iterator keeps while
  * the queue changes: no element twice, and every element that stayed throughout is seen.
  */
 public class QueueIdleIterators {
-    static final int CYCLES = 200000;
+    static final int CYCLES = 60000;
 
     /** Traffic at the two ends, then in the middle, past one idle iterator of each direction. */
     static void traffic(Deque<byte[]> q) {
@@ -22,6 +22,7 @@ public class QueueIdleIterators {
             q.poll();
         }
         System.out.println(q.getClass().getSimpleName() + " head traffic: " + q.size());
+        Iterator<byte[]> idleTail = q.descendingIterator();
         for (int i = 0; i < CYCLES; i++) {
             q.offerFirst(new byte[10]);
             q.pollLast();
@@ -36,7 +37,7 @@ public class QueueIdleIterators {
             middle = next;
         }
         System.out.println(q.getClass().getSimpleName() + " middle traffic: " + q.size());
-        System.out.println(idle.hasNext() + " " + idleBack.hasNext());
+        System.out.println(idle.hasNext() + " " + idleBack.hasNext() + " " + idleTail.hasNext());
     }
 
     static void queueTraffic(Queue<byte[]> q) {

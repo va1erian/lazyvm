@@ -97,8 +97,8 @@ final class HashCore<K, V> {
     }
 
     /**
-     * Seen on the oracle: of the mixes tried, only this one gives a map that has not grown the order
-     * of the oracle's, on all 300 small key sets of a probe (concurrent.md G7, `HashOrder`).
+     * What was observed: with this mix, and with no other tried, a map that has not grown iterates in
+     * the oracle's order, on all 300 small key sets of a probe (concurrent.md G7, `CollectionPins`).
      */
     private static int mix(Object key) {
         int h = key.hashCode();

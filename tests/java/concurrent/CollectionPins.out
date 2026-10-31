@@ -1,0 +1,85 @@
+small map of strings, in order = {bravo=5, golf=4, foxtrot=7, alpha=5, delta=5, hotel=5, echo=4, india=5, charlie=7}
+small map of ints, in order = {65538=1, 196614=3, 131076=2, 524288=8, 458766=7, 393228=6, 262152=4, 327690=5}
+small keys in order = [65538, 196614, 131076, 524288, 458766, 393228, 262152, 327690]
+key view equals a set holding null = false
+key view equals a set with null first = false
+key view containsAll with null = false
+key view containsAll, a null only = false
+value view containsAll with null = false
+entry view equals a set holding null = false
+key view contains null still throws = java.lang.NullPointerException
+value view contains null still throws = java.lang.NullPointerException
+key view containsAll of null throws = java.lang.NullPointerException
+clear of a present key during a compute = waits
+clear of a present key, a put to a later bin meanwhile = ran
+clear of a present key, at the end = {}
+clear, key absent during a compute = waits
+clear, key absent, a put to a later bin meanwhile = ran
+clear, key absent, at the end = {}
+key view clear during a compute = waits
+key view clear, a put to a later bin meanwhile = ran
+key view clear, at the end = {}
+clear inside compute of 0 = 100 {k0=100} 1
+clear inside computeIfAbsent of 0 = 100 {k0=100} 1
+clear inside computeIfPresent of 0 = null {} 0
+clear inside merge of 0 = 5 {k0=5} 1
+clear inside compute of a new key of 0 = 100 {new=100} 1
+clear inside compute of 1 = 100 {} 0
+clear inside computeIfAbsent of 1 = 0 {k0=0} 1
+clear inside computeIfPresent of 1 = 100 {} 0
+clear inside merge of 1 = 100 {} 0
+clear inside compute of a new key of 1 = 100 {new=100} 1
+clear inside compute of 3 = 100 {} 0
+clear inside computeIfAbsent of 3 = 0 {k0=0, k1=1, k2=2} 3
+clear inside computeIfPresent of 3 = 100 {} 0
+clear inside merge of 3 = 100 {} 0
+clear inside compute of a new key of 3 = 100 {new=100} 1
+put, a new compute of another bin at each equals, no compute running: equals calls at most 2 = true
+that put is in = 2
+put, a new compute of another bin at each equals, a compute of another bin already running: equals calls at most 2 = true
+that put is in = 2
+remove, a new element before the match = true, a writer waits, asked [first, second, k, late, first, second, k]
+remove, a new element before the match, list = [late, first, second, tail, w]
+remove, a set before the match = true, a writer waits, asked [first, second, k, late, k]
+remove, a set before the match, list = [first, late, tail, w]
+remove, an add behind the match = true, no second look, asked [first, second, k, k]
+remove, an add behind the match, list = [first, second, tail, late]
+remove, the match gone = false, a writer waits, asked [first, second, k, tail, late]
+remove, the match gone, list = [first, second, tail, late, w]
+addIfAbsent, an add = true, a writer waits, asked [first, second, late]
+addIfAbsent, an add, list = [first, second, late, k, w]
+addIfAbsent, a set = true, a writer waits, asked [first, second, late]
+addIfAbsent, a set, list = [first, late, k, w]
+addIfAbsent, shorter = true, no second look, asked [first, second]
+addIfAbsent, shorter, list = [first, k]
+addIfAbsent, the key added = false, no second look, asked [first, second, k]
+addIfAbsent, the key added, list = [first, second, k]
+remove, a write at each equals = true after 6 calls of equals
+addIfAbsent, a write at each equals = true after 4 calls of equals
+stale empty sub-list removeIf = false
+stale empty sub-list removeAll = false
+stale empty sub-list retainAll = false
+stale sub-list removeIf = java.util.ConcurrentModificationException
+stale empty sub-list size = java.util.ConcurrentModificationException
+value removed from a bin that became a tree is collected = true
+long bin emptied under walkers, failures = 0
+LinkedBlockingQueue poll at -9223372036854775808:  = null
+LinkedBlockingQueue offer at -9223372036854775808:  = false
+LinkedBlockingDeque pollFirst at -9223372036854775808:  = null
+LinkedBlockingDeque pollLast at -9223372036854775808:  = null
+LinkedTransferQueue poll at -9223372036854775808:  = null
+LinkedTransferQueue tryTransfer at -9223372036854775808:  = false
+LinkedBlockingQueue poll at -9223372036854775807:  = null
+LinkedBlockingQueue offer at -9223372036854775807:  = false
+LinkedBlockingDeque pollFirst at -9223372036854775807:  = null
+LinkedBlockingDeque pollLast at -9223372036854775807:  = null
+LinkedTransferQueue poll at -9223372036854775807:  = null
+LinkedTransferQueue tryTransfer at -9223372036854775807:  = false
+LinkedBlockingQueue poll at -4611686018427387903:  = null
+LinkedBlockingQueue offer at -4611686018427387903:  = false
+LinkedBlockingDeque pollFirst at -4611686018427387903:  = null
+LinkedBlockingDeque pollLast at -4611686018427387903:  = null
+LinkedTransferQueue poll at -4611686018427387903:  = null
+LinkedTransferQueue tryTransfer at -4611686018427387903:  = false
+LinkedBlockingQueue poll, most negative days = null
+LinkedTransferQueue tryTransfer, most negative days = false
