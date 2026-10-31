@@ -54,6 +54,8 @@ the label of a line of its golden. Change the rule and that line should change.
 | `CompletableFutureReaders` | threads blocked in `get` and `join`: counts, release, interrupts, pool workers, races |
 | `CompletableFutureNoCommonEdges` | a common pool below parallelism two, named as an executor |
 | `CompletableFutureRoots` | what a firing has left and who can reach it, what a task does with each source, wide fans, running out of stack in a firing |
+| `CompletableFutureNoHeap` | a function that leaves no heap for its failure to be wrapped in |
+| `lazy/internal/StageOverflow` | a visit finishes a firing that ran out of stack. Hand-written golden: the oracle can lose the entry |
 | `CompletableFutureInterface` | every `CompletionStage` method called through the interface type |
 | `ConcurrentLeftovers` | `LinkedBlockingDeque.offer(e, t, u)` and `KeySetView.forEach(Consumer)`, which no other test reached |
 | `Contention` | totals under threads: exclusion, permits, no lost or repeated element |
@@ -1249,6 +1251,8 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
 - **A step found settled.** A step fired with its target already settled goes on with the target's list, inside that firing ("step finds its target
   settled, in the target's own firing"), also on a second firing through another list while it is not yet run ("handed over, then found again
   through the other list"). Once a task has settled its target its entries do nothing more ("task's ended entry found again does nothing").
+- A `*Both` step fires only with both sources settled, so one found with its dependent settled leaves both lists at once ("both with a settled dependent, fired through
+  one list, leaves the other"), and one whose other source is pending stays there ("both with a settled dependent stays").
 - **Levels, more of them.** A stage settled by a rejection, a skip, a function that threw or a compose whose inner stage is done is settled
   as part of a firing, so first attached first ("level rejected", "level skip", "level whenComplete throws", "level compose, inner done"). A
   compose that ran as a task is settled by a task ("level compose task, inner done"). Attaching to a dependent from inside its own function
@@ -1278,7 +1282,19 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   future, in any order, and `anyOf` of one future 20000 times, are linear (`CompletableFutureRoots`: "wide either, settled by the receiver", "wide either,
   settled by the other", "many requests against one shutdown, shuffled", "anyOf of one future, many times"; quadratic, these run out the test's time).
 - Out of stack inside a firing: the error reaches the caller of `complete`, and the entry being fired goes back on the list, to be run by the next visitor
-  (`CompletableFutureRoots`: "out of stack in a firing, then a visit"). A function that overflows is only that function's failure.
+  (`lazy/internal/StageOverflow`: "pending after a visit"; `CompletableFutureRoots`: "out of stack in a firing, then a visit" holds what the oracle also keeps to, at most
+  one lost). A function that overflows fails its own stage when there is stack left to say
+  so; when there is not, as making the outcome can overflow too, the next visitor settles the stage from how the function ended (`lazy/internal/StageOverflow`: "returns lost"). A function runs at most
+  once and an executor is called at most once for a firing, wherever the stack ends ("out of stack after a function, then a visit", "out of stack after a
+  handover, then a visit"; both sweep the end of the stack and print only that it held, so no line depends on a frame count). An executor found to have
+  overflowed counts as a rejection, even if it was the call to it that did not fit.
+- Out of heap is not given back: a function that throws with no heap left for the wrapping sends `OutOfMemoryError` to the caller of `complete`, the
+  entry is gone and the stage stays pending, after any visit too (`CompletableFutureNoHeap`).
+- A task an executor runs twice is not the case above: a compose left waiting for its inner stage calls its function again and joins the inner stage's
+  list again (`CompletableFutureRoots`: "task of a compose left pending, run again"). A `supplyAsync` or `runAsync` task run again while its own function is in
+  progress does nothing ("supply task run again in its own function", "run task run again in its own function").
+- `LOCK` holds no user code. A compose reads a done inner stage under it and wraps the failure outside it, as the wrapping calls the failure's
+  `toString` (`CompletableFutureRoots`: "other stages during a compose's toString of a failure").
 - Long chains of stages linked by the API do not exhaust the stack: 20000 chained `thenApply` and `thenCompose`, and a fan of 5000
   dependents, settle on the default thread stack ("deep chain", "deep compose", "wide fan"). A failure passing through 20000 stages
   stays a single `CompletionException` over `X` ("deep failure"). One native or Java frame per stage will not pass this, since
@@ -1369,8 +1385,16 @@ being kept. Neither was: both are now what the oracle does.
 - **`CompletableFuture`, what is left**: the class of a task handed to an executor (on the oracle it is a `ForkJoinTask`; here it is not, and it
   is only promised to be a `Runnable` marked `AsynchronousCompletionTask`). How deep user recursion through the API goes: a callback completing
   the next future, a `thenCompose` over done stages, or a chain with a direct executor costs about 5 to 9 frames per level, so LazyVM's 4094 frames end
-  at about 450 levels (800 with a direct executor) where the oracle's 22523 reach further (`StackOverflowError` is caught as any callback's failure, and
-  stages may stay pending). The order in which readers wake when nothing holds them, and who of a reader and a completer takes the next entry.
+  sooner than the oracle's 22523 (`StackOverflowError` is caught as any callback's failure, and stages may stay pending). By probe: a `thenCompose` over
+  done stages, recursing, works at 400 levels here and overflows at 600, where the oracle works at 2000 and overflows at 5000. A chain of `*Async` with a
+  direct executor settles at 700 on both; at 1000 its last stage is ok on the oracle and failed or pending here, depending on the frames below the
+  `complete`; at 2000 it is pending on the oracle and failed or pending here. The order in which readers wake when nothing holds them, and who of a
+  reader and a completer takes the next entry.
+- **`CompletableFuture`, out of stack in a firing**: on the oracle a stage whose firing ran out of stack mostly stays pending after a visit (340 of 880 in one
+  sweep), and its function is not run again. Here the visit settles it, by the rule in the section above. How many entries the oracle loses depends on its JIT: none with
+  its default flags, as a rule, and one per firing with `-Xint` or `-XX:TieredStopAtLevel=1`, and the count also moves with the work done before. So the differential line
+  "out of stack in a firing, then a visit: pending" (`CompletableFutureRoots`) only bounds it, at most one. Losing one is what the oracle itself does, so no differential line
+  can see LazyVM lose one: `lazy/internal/StageOverflow`, with a hand-written golden, holds 0.
 - **`CompletableFuture`, a race and no golden**: an obtrude racing an attach must not lose the dependent, so the write of the outcome is under the lock
   as a first settlement's is. A race has no stable line to bless. It is only checked by a probe, on the order of 2 million attaches with none lost.
 - **A monitor over the whole collection, and user code.** `ConcurrentSkipListMap` and `ConcurrentSkipListSet` are a `TreeMap` under one monitor, and call `compareTo` or the
