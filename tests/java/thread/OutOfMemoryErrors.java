@@ -90,7 +90,7 @@ public class OutOfMemoryErrors {
                 + own.getSuppressed().length);
     }
 
-    static final Object[] kept = new Object[1 << 18];
+    static Object[] kept = new Object[1 << 18];
 
     static List<Object> full;
 
@@ -134,6 +134,7 @@ public class OutOfMemoryErrors {
         keepAll("NullPointerException", kept.length, () -> nothing.hashCode());
         keepAll("ArithmeticException", kept.length, () -> depth = 1 / (depth - depth));
         keepAll("StackOverflowError", 2000, OutOfMemoryErrors::recurse);
+        kept = null;
     }
 
     /** Named by a system property, so the library's initializer makes it. */
@@ -180,12 +181,15 @@ public class OutOfMemoryErrors {
         Object[] clones = new Object[8];
         fill();
         try {
-            for (int i = 0; i < clones.length; i++) {
-                clones[i] = half.clone();
-            }
-            full.add(Base64.getEncoder().encodeToString(new byte[1]));
+            clones[0] = half.clone();
+            clones[1] = half.clone();
+        } catch (OutOfMemoryError e) {
+            clones[2] = half;
+        }
+        try {
+            clones[3] = Base64.getEncoder();
         } catch (Throwable e) {
-            full = null;
+            clones[3] = e;
         }
         full = null;
         clones = null;

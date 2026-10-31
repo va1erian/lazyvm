@@ -102,11 +102,12 @@ mod windows {
 mod tests {
     use std::time::{Duration, Instant};
 
-    /// The best of a few, so that a busy machine does not count: the system
-    /// tick (15.6 ms) never gives less than about 14 ms.
+    /// The median, so that a busy machine and the first wait, which starts at
+    /// any point of a tick, do not count: waits of one system tick (15.6 ms)
+    /// that start right after the last take over 14 ms.
     #[test]
     fn a_short_wait_does_not_last_a_system_tick() {
-        let best = (0..8)
+        let mut waits: Vec<Duration> = (0..9)
             .map(|_| {
                 let start = Instant::now();
                 let deadline = start + Duration::from_millis(1);
@@ -115,8 +116,9 @@ mod tests {
                 }
                 start.elapsed()
             })
-            .min();
-        assert!(best.is_some_and(|b| b < Duration::from_millis(8)));
+            .collect();
+        waits.sort();
+        assert!(waits[4] < Duration::from_millis(8), "{waits:?}");
     }
 
     #[test]

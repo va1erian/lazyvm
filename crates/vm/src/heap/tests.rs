@@ -129,38 +129,3 @@ fn weak_referents_are_cleared_and_soft_ones_kept_until_asked() {
     assert_eq!(cleared, vec![soft]);
     assert!(heap.get(soft_target).is_err());
 }
-
-fn small_object() -> Object {
-    Object {
-        class: ClassId(0),
-        body: Body::Array(Array::new(array::ElemKind::Byte, 4096)),
-    }
-}
-
-/// However it is retained, what exception creation allocates stops at one fixed
-/// amount past the limit, and without a pass at the margin natives get.
-#[test]
-fn a_capped_pass_stops_at_the_overdraft() {
-    let limit = 4 << 20;
-    let mut heap = Heap::new(limit);
-    while heap.alloc(small_object()).is_ok() {}
-    assert!(heap.live_bytes() <= limit * 2);
-    let mut heap = Heap::new(limit);
-    heap.pass = Pass::Capped;
-    while heap.pass_covers(4112) {
-        assert!(heap.alloc(small_object()).is_ok());
-    }
-    assert!(heap.live_bytes() <= limit + OVERDRAFT);
-    assert!(heap.live_bytes() > limit + OVERDRAFT - 8192);
-}
-
-/// A limit below the overdraft gets the same amount, past the margin of natives.
-#[test]
-fn a_capped_pass_can_pass_the_margin_of_natives() {
-    let limit = 256 << 10;
-    let mut heap = Heap::new(limit);
-    heap.pass = Pass::Capped;
-    while heap.alloc(small_object()).is_ok() {}
-    assert!(heap.live_bytes() > limit * 2);
-    assert!(heap.live_bytes() <= limit + OVERDRAFT);
-}

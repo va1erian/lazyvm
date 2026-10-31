@@ -18,7 +18,6 @@ pub(crate) use gil::Gil;
 use gil::Line;
 pub(crate) use monitor::Monitors;
 
-use crate::heap::Pass;
 use crate::interp::Frame;
 use crate::value::Ref;
 use crate::{Vm, VmError, VmResult};
@@ -43,8 +42,7 @@ pub(crate) struct ThreadState {
     frame_slots: usize,
     nesting: u32,
     creating_exception: u32,
-    pass: Pass,
-    pass_base: usize,
+    unlimited: bool,
     loading: Vec<Arc<str>>,
 }
 
@@ -168,8 +166,7 @@ impl Vm {
             frame_slots: self.frame_slots,
             nesting: self.nesting,
             creating_exception: self.creating_exception,
-            pass: self.heap.pass,
-            pass_base: self.pass_base,
+            unlimited: self.heap.unlimited,
             loading: std::mem::take(&mut self.loading),
         };
         if let Some(e) = self.threads.get_mut(me) {
@@ -187,8 +184,7 @@ impl Vm {
         self.frame_slots = s.frame_slots;
         self.nesting = s.nesting;
         self.creating_exception = s.creating_exception;
-        self.heap.pass = s.pass;
-        self.pass_base = s.pass_base;
+        self.heap.unlimited = s.unlimited;
         self.loading = s.loading;
     }
 

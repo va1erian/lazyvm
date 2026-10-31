@@ -1,7 +1,6 @@
 //! Creating exception objects and recording stack traces.
 
 use crate::class::{ClassId, MethodRef};
-use crate::heap::Pass;
 use crate::objects::ARRAY_LIMIT;
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
@@ -95,7 +94,8 @@ impl Vm {
     }
 
     /// The `OutOfMemoryError` to throw (`OomErrors`). Inside another exception's
-    /// creation it is the shared one, so a shortage cannot nest.
+    /// creation it is the shared one, so a shortage cannot nest, and an exception
+    /// the heap has no room for turns into this one, as on Java 8.
     fn vm_oom(&mut self, message: &'static str) -> VmResult<Ref> {
         let shared = self.shared_oom(message)?;
         if self.creating_exception > 0 || self.oom.new_ones_made >= OomErrors::NEW_ONES {
@@ -118,7 +118,10 @@ impl Vm {
         if let Some(r) = *self.oom.shared(message) {
             return Ok(r);
         }
-        let r = self.with_pass(Pass::Open, |vm| vm.throw_new(OOM, Some(message)))?;
+        self.heap.unlimited = true;
+        let made = self.throw_new(OOM, Some(message));
+        self.heap.unlimited = false;
+        let r = made?;
         self.seal_vm_error(r, true)?;
         // Another thread may have made one while this one waited for a class.
         Ok(*self.oom.shared(message).get_or_insert(r))
@@ -180,7 +183,7 @@ impl Vm {
             )));
         }
         self.creating_exception += 1;
-        let result = self.past_limit(|vm| vm.construct_exception(class, message));
+        let result = self.construct_exception(class, message);
         self.creating_exception -= 1;
         result
     }

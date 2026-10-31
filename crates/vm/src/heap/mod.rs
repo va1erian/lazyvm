@@ -26,21 +26,6 @@ const MIN_GC_BYTES: usize = 4 << 20;
 const MIN_GC_STEP: usize = 64 << 10;
 /// What a handler of `OutOfMemoryError` may allocate past the limit.
 const HANDLER_ROOM: usize = 64 << 10;
-/// How far past the limit a `Pass` can take the heap, for the whole VM. The
-/// limit is only a count, so this is no memory set aside; the VM falls back
-/// on what needs none once it is spent (threads.md, "Out of memory").
-const OVERDRAFT: usize = 1 << 20;
-
-/// What the running thread may do past the heap limit (`Vm::past_limit`).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum Pass {
-    #[default]
-    None,
-    /// Up to `OVERDRAFT` past the limit.
-    Capped,
-    /// No bound: making the shared `OutOfMemoryError`s, a fixed amount.
-    Open,
-}
 
 #[derive(Debug)]
 pub enum Body {
@@ -90,8 +75,9 @@ pub struct Heap {
     /// an `OutOfMemoryError` until a collection brings the heap under the limit.
     room: usize,
     next_gc: usize,
-    /// The running thread's; it moves with the thread's state.
-    pub(crate) pass: Pass,
+    /// The running thread is making a shared `OutOfMemoryError` (`Vm::vm_oom`),
+    /// a fixed amount, and has no limit. This moves with the thread's state.
+    pub(crate) unlimited: bool,
     pub collections: u64,
 }
 
@@ -111,7 +97,7 @@ impl Heap {
             limit,
             room: limit,
             next_gc: MIN_GC_BYTES.min(limit),
-            pass: Pass::None,
+            unlimited: false,
             collections: 0,
         }
     }
@@ -134,16 +120,6 @@ impl Heap {
         self.live_bytes.saturating_add(bytes) > self.room
     }
 
-    /// Whether the running thread's pass covers allocating `bytes` more.
-    pub(crate) fn pass_covers(&self, bytes: usize) -> bool {
-        let after = self.live_bytes.saturating_add(bytes);
-        match self.pass {
-            Pass::None => false,
-            Pass::Capped => after <= self.limit.saturating_add(OVERDRAFT),
-            Pass::Open => true,
-        }
-    }
-
     /// An `OutOfMemoryError` is being thrown. Its handler must be able to do a
     /// little, say report it, though nothing could be freed; the room is one
     /// fixed amount, so a loop catching the error still ends up with none.
@@ -152,14 +128,11 @@ impl Heap {
     }
 
     /// Allocates an object. Fails with `OutOfMemoryError` only past twice the
-    /// limit and what the thread's pass covers: natives cannot collect, so they
-    /// may overshoot until the next safe point, while the allocating bytecodes
-    /// collect first.
+    /// limit: natives cannot collect, so they may overshoot until the next
+    /// safe point, while the allocating bytecodes collect first.
     pub fn alloc(&mut self, object: Object) -> Result<Ref, VmError> {
         let bytes = object.bytes();
-        if self.live_bytes.saturating_add(bytes) > self.limit.saturating_mul(2)
-            && !self.pass_covers(bytes)
-        {
+        if self.live_bytes.saturating_add(bytes) > self.limit.saturating_mul(2) && !self.unlimited {
             return Err(VmError::OutOfMemory);
         }
         self.live_bytes += bytes;

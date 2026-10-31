@@ -103,7 +103,11 @@ fn a_slice_since_it_blocked_makes_a_woken_thread_a_busy_one() {
     assert_eq!(slot.preempted.front(), Some(&1), "added up over its turns");
     slot.preempted.clear();
     slot.join(1, Line::Woken);
-    assert_eq!(slot.seat(1).ran, Duration::ZERO, "blocking starts it afresh");
+    assert_eq!(
+        slot.seat(1).ran,
+        Duration::ZERO,
+        "blocking starts it afresh"
+    );
 }
 
 #[test]

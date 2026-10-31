@@ -96,8 +96,6 @@ pub struct Vm {
     pub wk: WellKnown,
     /// Depth of nested `throw_new` calls, to stop runaway exception creation.
     pub(crate) creating_exception: u32,
-    /// `frames.len()` when the running thread's heap pass was given.
-    pub(crate) pass_base: usize,
     /// VM-made `OutOfMemoryError`s (`throw.rs`).
     pub(crate) oom: throw::OomErrors,
     /// Slots used by `frames`, checked against `Options::max_frame_slots`.
@@ -157,7 +155,6 @@ impl Vm {
             options,
             wk: WellKnown::default(),
             creating_exception: 0,
-            pass_base: 0,
             oom: throw::OomErrors::default(),
             frame_slots: 0,
             nesting: 0,
