@@ -19,6 +19,10 @@ const EXIT_INTERNAL: u8 = 70;
 #[cfg_attr(windows, allow(dead_code))]
 const VM_STACK_BYTES: usize = 256 << 20;
 
+/// Observed on Java 8: a smaller `-Xmx` is refused. The VM's own needs are less,
+/// but must not be near it (docs/design/threads.md, "Out of memory").
+const MIN_HEAP_BYTES: usize = 1 << 20;
+
 /// Natives registered after `natives::register_all`, by the binary.
 pub type Extra = &'static [fn(&mut Vm)];
 
@@ -45,6 +49,12 @@ pub fn main(extra: Extra) -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    if launch.options.heap_limit < MIN_HEAP_BYTES {
+        // On stdout, as on Java 8.
+        println!("Error occurred during initialization of VM");
+        println!("Too small initial heap");
+        return ExitCode::from(1);
+    }
     let code = match run_vm(launch, extra) {
         Ok(code) => code,
         Err(msg) => internal(&msg),

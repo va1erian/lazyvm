@@ -1,12 +1,51 @@
 //! Creating exception objects and recording stack traces.
 
 use crate::class::{ClassId, MethodRef};
+use crate::heap::Pass;
+use crate::objects::ARRAY_LIMIT;
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
 /// Nested exception creation deeper than this means the class library
 /// cannot construct its own exceptions; the VM gives up instead of looping.
 const MAX_EXCEPTION_NESTING: u32 = 8;
+
+/// Observed on Java 8: a trace holds the innermost 1024 frames at most.
+const MAX_TRACE: usize = 1024;
+/// Observed on Java 8: a trace of a VM-made `OutOfMemoryError` holds 32 at most.
+const OOM_TRACE: usize = 32;
+
+const OOM: &str = "java/lang/OutOfMemoryError";
+const SOE: &str = "java/lang/StackOverflowError";
+const HEAP_SPACE: &str = "Java heap space";
+
+/// The `OutOfMemoryError`s the VM makes. Observed on Java 8: the first two of
+/// the whole VM are new objects; after that each message has one shared object,
+/// with no trace. That object is also where exception creation ends up once the
+/// heap has nothing left, as it needs no memory (threads.md, "Out of memory").
+#[derive(Default)]
+pub(crate) struct OomErrors {
+    new_ones_made: u8,
+    heap_space: Option<Ref>,
+    array_limit: Option<Ref>,
+}
+
+impl OomErrors {
+    const NEW_ONES: u8 = 2;
+
+    pub(crate) fn roots(&self, out: &mut Vec<Ref>) {
+        out.extend(self.heap_space);
+        out.extend(self.array_limit);
+    }
+
+    fn shared(&mut self, message: &str) -> &mut Option<Ref> {
+        if message == HEAP_SPACE {
+            &mut self.heap_space
+        } else {
+            &mut self.array_limit
+        }
+    }
+}
 
 /// One recorded frame of a backtrace.
 #[derive(Clone, Copy, Debug)]
@@ -21,9 +60,18 @@ impl Vm {
         for _ in 0..MAX_EXCEPTION_NESTING {
             let attempt = match e {
                 VmError::Throw(r) => return Ok(r),
+                VmError::Pending {
+                    class: OOM,
+                    message: Some(ref m),
+                } if m == ARRAY_LIMIT => self.vm_oom(ARRAY_LIMIT),
                 VmError::Pending { class, ref message } => {
                     let message = message.clone();
-                    self.throw_new(class, message.as_deref())
+                    self.throw_new(class, message.as_deref()).and_then(|r| {
+                        if class == SOE {
+                            self.seal_vm_error(r, false)?;
+                        }
+                        Ok(r)
+                    })
                 }
                 VmError::Verify(ref m) => {
                     let m = m.clone();
@@ -31,7 +79,7 @@ impl Vm {
                 }
                 VmError::OutOfMemory => {
                     self.heap.give_handler_room();
-                    self.throw_new("java/lang/OutOfMemoryError", Some("Java heap space"))
+                    self.vm_oom(HEAP_SPACE)
                 }
                 other => return Err(other),
             };
@@ -44,6 +92,76 @@ impl Vm {
         Err(VmError::Internal(format!(
             "could not create an exception for {e}"
         )))
+    }
+
+    /// The `OutOfMemoryError` to throw (`OomErrors`). Inside another exception's
+    /// creation it is the shared one, so a shortage cannot nest.
+    fn vm_oom(&mut self, message: &'static str) -> VmResult<Ref> {
+        let shared = self.shared_oom(message)?;
+        if self.creating_exception > 0 || self.oom.new_ones_made >= OomErrors::NEW_ONES {
+            return Ok(shared);
+        }
+        self.oom.new_ones_made += 1;
+        match self.throw_new(OOM, Some(message)) {
+            Ok(r) => {
+                self.seal_vm_error(r, false)?;
+                Ok(r)
+            }
+            Err(e) if e.is_catchable() => Ok(shared),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Made at the first shortage, whatever the heap holds: it is one small
+    /// object, of library classes only, and it has to exist from then on.
+    fn shared_oom(&mut self, message: &'static str) -> VmResult<Ref> {
+        if let Some(r) = *self.oom.shared(message) {
+            return Ok(r);
+        }
+        let r = self.with_pass(Pass::Open, |vm| vm.throw_new(OOM, Some(message)))?;
+        self.seal_vm_error(r, true)?;
+        // Another thread may have made one while this one waited for a class.
+        Ok(*self.oom.shared(message).get_or_insert(r))
+    }
+
+    /// Observed on Java 8: a VM-made `OutOfMemoryError` or `StackOverflowError`
+    /// has a cause of null that cannot be set, and suppresses nothing. A shared
+    /// one's trace is empty and stays so.
+    fn seal_vm_error(&mut self, error: Ref, shared: bool) -> VmResult<()> {
+        const THROWABLE_ARRAY: &str = "[Ljava/lang/Throwable;";
+        const TRACE: &str = "[Ljava/lang/StackTraceElement;";
+        self.set_field_by_name(error, "cause", "Ljava/lang/Throwable;", Value::NULL)?;
+        self.set_field_by_name(error, "suppressed", THROWABLE_ARRAY, Value::NULL)?;
+        if shared {
+            let frozen = self.throwable_frozen_trace()?;
+            self.set_field_by_name(error, "stackTrace", TRACE, frozen)?;
+            self.set_field(error, self.wk.throwable_backtrace, Value::NULL)?;
+        }
+        Ok(())
+    }
+
+    /// `Throwable.FROZEN`, the mark of a trace that cannot be written.
+    fn throwable_frozen_trace(&self) -> VmResult<Value> {
+        let missing = || VmError::Internal("Throwable has no FROZEN".into());
+        let throwable = self.wk.throwable.ok_or_else(missing)?;
+        let (owner, i) = self
+            .lookup_field(throwable, "FROZEN", "[Ljava/lang/StackTraceElement;")
+            .ok_or_else(missing)?;
+        let c = self.class(owner);
+        let slot = c.fields[i].slot as usize;
+        c.statics.get(slot).copied().ok_or_else(missing)
+    }
+
+    /// Whether `e` is the heap running out, as an error or as its exception.
+    pub(crate) fn is_heap_shortage(&self, e: &VmError) -> bool {
+        match e {
+            VmError::OutOfMemory => true,
+            VmError::Throw(r) => self
+                .heap
+                .class_of(*r)
+                .is_ok_and(|c| &*self.class(c).name == OOM),
+            _ => false,
+        }
     }
 
     /// Creates `class` with its `(String)` constructor (`message` may be
@@ -103,7 +221,10 @@ impl Vm {
                 break;
             }
         }
+        let vm_oom = self.creating_exception > 0 && &*self.class(tclass).name == OOM;
+        let limit = if vm_oom { OOM_TRACE } else { MAX_TRACE };
         let mut out: Vec<TraceFrame> = frames
+            .take(limit)
             .map(|f| TraceFrame {
                 method: f.method,
                 pc: f.pc,

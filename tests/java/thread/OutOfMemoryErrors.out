@@ -1,0 +1,17 @@
+java.lang.OutOfMemoryError again=false message=Requested array size exceeds VM limit cause: Can't overwrite cause with java.lang.Error: c suppressed=0 trace=32 set=1 filled>0=true
+java.lang.OutOfMemoryError again=false message=Java heap space cause: Can't overwrite cause with java.lang.Error: c suppressed=0 trace=32 set=1 filled>0=true
+java.lang.OutOfMemoryError again=false message=Requested array size exceeds VM limit cause: Can't overwrite cause with java.lang.Error: c suppressed=0 trace=0 set=0 filled>0=false
+java.lang.OutOfMemoryError again=false message=Java heap space cause: Can't overwrite cause with java.lang.Error: c suppressed=0 trace=0 set=0 filled>0=false
+java.lang.OutOfMemoryError again=true message=Requested array size exceeds VM limit cause: Can't overwrite cause with java.lang.Error: c suppressed=0 trace=0 set=0 filled>0=false
+java.lang.OutOfMemoryError again=true message=Java heap space cause: Can't overwrite cause with java.lang.Error: c suppressed=0 trace=0 set=0 filled>0=false
+java.lang.StackOverflowError again=false message=null cause: Can't overwrite cause with java.lang.Error: c suppressed=0 trace=1024 set=1 filled>0=true
+java.lang.StackOverflowError again=false message=null cause: Can't overwrite cause with java.lang.Error: c suppressed=0 trace=1024 set=1 filled>0=true
+own: cause java.lang.Error: c suppressed 1
+NullPointerException: ran out true, other false
+ArithmeticException: ran out true, other false
+StackOverflowError: ran out true, other false
+initializer stayed within the limit: true
+constructor stayed within the limit: true
+later use: AQI=
+ok
+done

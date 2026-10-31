@@ -1,7 +1,7 @@
 //! Allocating objects and arrays, and class mirrors.
 
 use crate::class::{ClassId, ClassKind};
-use crate::heap::{Array, Body, Object, array::ElemKind};
+use crate::heap::{Array, Body, Object, Pass, array::ElemKind};
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
@@ -9,24 +9,42 @@ use crate::{Vm, VmError, VmResult};
 /// "Requested array size exceeds VM limit", whatever the heap.
 pub(crate) const MAX_ARRAY: usize = i32::MAX as usize - 2;
 
+pub(crate) const ARRAY_LIMIT: &str = "Requested array size exceeds VM limit";
+
 /// The error for an array longer than `MAX_ARRAY`.
 pub(crate) fn array_limit() -> VmError {
-    VmError::exception(
-        "java/lang/OutOfMemoryError",
-        "Requested array size exceeds VM limit",
-    )
+    VmError::exception("java/lang/OutOfMemoryError", ARRAY_LIMIT)
 }
 
 impl Vm {
-    /// Runs `f` with the heap limit lifted for the running thread. For VM work
-    /// that must not fail for lack of memory and allocates little: if it did,
-    /// the error it should report could not be made, or a library class would
-    /// stay broken (docs/design/threads.md, "Out of memory").
+    /// Runs `f` with a pass over the heap limit for the running thread. For VM
+    /// work that should not fail for lack of memory and allocates little: if it
+    /// did, the error it should report could not be made, or a library class
+    /// would stay broken (docs/design/threads.md, "Out of memory").
     pub(crate) fn past_limit<T>(&mut self, f: impl FnOnce(&mut Vm) -> T) -> T {
-        self.heap.past_limit += 1;
+        let pass = self.heap.pass.max(Pass::Capped);
+        self.with_pass(pass, f)
+    }
+
+    pub(crate) fn with_pass<T>(&mut self, pass: Pass, f: impl FnOnce(&mut Vm) -> T) -> T {
+        let saved = (self.heap.pass, self.pass_base);
+        self.heap.pass = pass;
+        self.pass_base = self.frames.len();
         let out = f(self);
-        self.heap.past_limit -= 1;
+        (self.heap.pass, self.pass_base) = saved;
         out
+    }
+
+    /// Whether a bytecode of the running thread may allocate `bytes` past the
+    /// limit: its pass covers them, and no program code has been entered since
+    /// the pass was given, as a library initializer can call into the program.
+    pub(crate) fn may_pass_limit(&self, bytes: usize) -> bool {
+        self.heap.pass_covers(bytes)
+            && self
+                .frames
+                .iter()
+                .skip(self.pass_base)
+                .all(|f| self.class(f.class).from_boot)
     }
 
     /// A new instance with default field values. The class must be an

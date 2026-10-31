@@ -20,8 +20,14 @@ pub fn register(vm: &mut Vm) {
 fn fill_in(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let this = obj(args, 0)?;
     let frames = vm.capture_backtrace(this)?;
-    let encoded = vm.encode_backtrace(&frames)?;
-    vm.set_field(this, vm.wk.throwable_backtrace, Value::Ref(Some(encoded)))?;
+    // With no room for a trace the exception goes without: a throwable must
+    // not fail because of how much it would like to report.
+    let encoded = match vm.encode_backtrace(&frames) {
+        Ok(array) => Some(array),
+        Err(VmError::OutOfMemory) => None,
+        Err(e) => return Err(e),
+    };
+    vm.set_field(this, vm.wk.throwable_backtrace, Value::Ref(encoded))?;
     ret_void()
 }
 

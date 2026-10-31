@@ -149,7 +149,7 @@ impl Vm {
     /// because every live reference is in a frame.
     fn ensure_room(&mut self, bytes: usize) -> VmResult<()> {
         if self.heap.would_exceed(bytes) {
-            if self.heap.past_limit > 0 {
+            if self.may_pass_limit(bytes) {
                 return Ok(());
             }
             self.collect_garbage();
