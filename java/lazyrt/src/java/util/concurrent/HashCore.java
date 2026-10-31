@@ -243,7 +243,8 @@ final class HashCore<K, V> {
                             return run(key, hash, step);
                         }
                     } finally {
-                        if (other == null) {
+                        // Still itself: a key's equals threw before anything was found.
+                        if (other == null || other == mine) {
                             claims.leave(mine);
                         }
                     }

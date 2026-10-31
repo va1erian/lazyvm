@@ -186,6 +186,112 @@ public class CollectionClaims {
         other.join();
     }
 
+    /** Two keys of one hash, whose {@code equals} throws when told to. */
+    static final class Throwing {
+        static boolean armed;
+        final int id;
+
+        Throwing(int id) {
+            this.id = id;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (armed) {
+                throw new IllegalStateException("equals");
+            }
+            return o instanceof Throwing && ((Throwing) o).id == id;
+        }
+
+        @Override
+        public int hashCode() {
+            return 7;
+        }
+    }
+
+    /** It reaches the writer, here or after the wait, and leaves nothing behind that stops the next writer. */
+    static void equalsThrowsBesideACompute() throws Exception {
+        ConcurrentHashMap<Throwing, Integer> m = new ConcurrentHashMap<>();
+        Throwing a = new Throwing(1);
+        Throwing b = new Throwing(2);
+        CountDownLatch in = new CountDownLatch(1);
+        CountDownLatch go = new CountDownLatch(1);
+        Thread computing = start(() -> m.compute(a, (k, v) -> {
+            in.countDown();
+            await(go);
+            return 1;
+        }));
+        await(in);
+        Throwing.armed = true;
+        Object[] thrown = {"nothing"};
+        Thread writer = start(() -> {
+            try {
+                m.put(b, 2);
+            } catch (IllegalStateException e) {
+                thrown[0] = e.getMessage();
+            }
+        });
+        stopped(writer);
+        go.countDown();
+        writer.join();
+        computing.join();
+        Throwing.armed = false;
+        System.out.println("put, equals throws beside a compute of its hash: threw " + thrown[0]);
+        Thread next = start(() -> m.put(b, 3));
+        next.join(LONG_ENOUGH_MS);
+        System.out.println("the next put of that key: " + (next.isAlive() ? "STUCK" : "finished, " + m.get(b)));
+    }
+
+    /** Equal keys that are different objects, whose {@code equals} takes a lock when told to. */
+    static final class Locking {
+        static final Object LOCK = new Object();
+        static boolean armed;
+        final int id;
+
+        Locking(int id) {
+            this.id = id;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (armed) {
+                synchronized (LOCK) {
+                    return o instanceof Locking && ((Locking) o).id == id;
+                }
+            }
+            return o instanceof Locking && ((Locking) o).id == id;
+        }
+
+        @Override
+        public int hashCode() {
+            return 11;
+        }
+    }
+
+    /** The thread that holds the key does not wait for one that only wants it, and waits for a lock this thread has. */
+    static void holderGoesFirst() throws Exception {
+        ConcurrentHashMap<Locking, Integer> m = new ConcurrentHashMap<>();
+        m.put(new Locking(1), 1);
+        CountDownLatch in = new CountDownLatch(1);
+        CountDownLatch go = new CountDownLatch(1);
+        Thread holder = start(() -> m.compute(new Locking(1), (k, v) -> {
+            synchronized (Locking.LOCK) {
+                in.countDown();
+                await(go);
+                m.put(new Locking(1), 5);
+            }
+            return 6;
+        }));
+        await(in);
+        Locking.armed = true;
+        Thread wanting = start(() -> m.compute(new Locking(1), (k, v) -> 7));
+        stopped(wanting);
+        go.countDown();
+        holder.join(LONG_ENOUGH_MS);
+        wanting.join(LONG_ENOUGH_MS);
+        System.out.println("put of an equal key inside compute, another's compute stopped on a lock the first holds: " + (holder.isAlive() || wanting.isAlive() ? "STUCK" : "finished"));
+    }
+
     /** A walk of a table the map has outgrown does not ask the keys for their hash again. */
     static void walkOfOutgrownTable() {
         ConcurrentHashMap<Counted, Integer> m = new ConcurrentHashMap<>();
@@ -208,6 +314,8 @@ public class CollectionClaims {
         againstWriter("replace(k, equal, new), a writer storing equal values", (m, v) -> m.replace("k", v, new Slow(1)));
         againstWriter("remove(k, equal), a writer storing equal values", (m, v) -> m.remove("k", v));
         besideACompute();
+        equalsThrowsBesideACompute();
+        holderGoesFirst();
         walkOfOutgrownTable();
     }
 }
