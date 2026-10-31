@@ -189,35 +189,52 @@ public class CopyOnWriteArrayList<E> implements List<E>, RandomAccess, Cloneable
 
     /**
      * This and {@code addIfAbsent} run the argument's {@code equals}, user code, with {@code mu} free:
-     * it may take a lock another writer holds. The answer stands only if the array is still that one.
+     * it may take a lock another writer holds. If the array changed meanwhile, the second look is at
+     * what changed only, and keeps writers out, as on the oracle: there is no third (concurrent.md).
      */
     public boolean remove(Object o) {
-        for (;;) {
-            Object[] a = array;
-            int at = indexIn(o, a, 0, a.length);
+        Object[] a = array;
+        int at = indexIn(o, a, 0, a.length);
+        if (at < 0) {
+            return false;
+        }
+        synchronized (mu) {
+            Object[] b = array;
+            if (b != a) {
+                at = indexAgain(o, a, at, b, 0, b.length);
+            }
             if (at < 0) {
                 return false;
             }
-            synchronized (mu) {
-                if (array == a) {
-                    array = spliced(a, at, 1, new Object[0]);
-                    return true;
-                }
-            }
+            array = spliced(b, at, 1, new Object[0]);
+            return true;
         }
     }
 
+    /**
+     * The first match in {@code b[from, to)}, after a search of {@code a} found no match below
+     * {@code known}: an element still at its index there keeps that answer, without asking again.
+     */
+    static int indexAgain(Object o, Object[] a, int known, Object[] b, int from, int to) {
+        for (int i = from; i < to; i++) {
+            if (i < known && a[i] == b[i]) {
+                continue;
+            }
+            if (o == null ? b[i] == null : o.equals(b[i])) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public boolean addIfAbsent(E e) {
-        for (;;) {
-            Object[] a = array;
-            if (indexIn(e, a, 0, a.length) >= 0) {
-                return false;
-            }
-            synchronized (mu) {
-                if (array == a) {
-                    return add(e);
-                }
-            }
+        Object[] a = array;
+        if (indexIn(e, a, 0, a.length) >= 0) {
+            return false;
+        }
+        synchronized (mu) {
+            Object[] b = array;
+            return (b == a || indexAgain(e, a, a.length, b, 0, b.length) < 0) && add(e);
         }
     }
 

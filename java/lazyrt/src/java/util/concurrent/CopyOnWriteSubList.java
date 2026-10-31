@@ -151,27 +151,29 @@ final class CopyOnWriteSubList<E> extends AbstractList<E> {
         }
     }
 
-    /** The argument's {@code equals} is user code, so it runs on what was seen, with {@code mu} free. */
+    /** The argument's {@code equals} is user code, so it runs on what was seen, as the parent's does. */
     public boolean remove(Object o) {
-        for (;;) {
-            Object[] a;
-            int to;
-            synchronized (mu) {
-                check();
-                a = seen;
-                to = offset + size;
+        Object[] a;
+        int to;
+        synchronized (mu) {
+            check();
+            a = seen;
+            to = offset + size;
+        }
+        int at = CopyOnWriteArrayList.indexIn(o, a, offset, to);
+        if (at < 0) {
+            return false;
+        }
+        synchronized (mu) {
+            check();
+            if (seen != a) {
+                at = CopyOnWriteArrayList.indexAgain(o, a, at, seen, offset, offset + size);
             }
-            int at = CopyOnWriteArrayList.indexIn(o, a, offset, to);
             if (at < 0) {
                 return false;
             }
-            synchronized (mu) {
-                check();
-                if (seen == a) {
-                    replace(at - offset, 1, NOTHING);
-                    return true;
-                }
-            }
+            replace(at - offset, 1, NOTHING);
+            return true;
         }
     }
 
@@ -257,6 +259,10 @@ final class CopyOnWriteSubList<E> extends AbstractList<E> {
     @SuppressWarnings("unchecked")
     private boolean keepOnly(Predicate<? super E> keep) {
         synchronized (mu) {
+            // An empty window answers without looking at the parent (concurrent.md).
+            if (size == 0) {
+                return false;
+            }
             check();
             Object[] kept = new Object[size];
             int n = 0;

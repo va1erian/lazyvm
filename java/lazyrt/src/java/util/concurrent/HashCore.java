@@ -1,22 +1,29 @@
 package java.util.concurrent;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.function.Function;
 
 /**
- * The table of {@link ConcurrentHashMap}. Readers take no lock: a resize builds a new table of new
- * nodes and publishes it in one write, so a chain a reader walks only ever loses a node, which
- * keeps its link and value. Writers hold this object's monitor, only for the table work: a key's
- * {@code equals}, {@code compareTo} and a value's {@code equals} are user code and may take locks, so
- * a writer runs them first, with nothing held, and then writes if what they looked at still stands.
- * A bin that gets long becomes a {@link BinTreap}, so colliding keys of an order stay cheap.
+ * The table of {@link ConcurrentHashMap}. A slot holds nothing, the first node of a chain, or the
+ * root of a {@link BinTreap}, so what a reader reads from a slot is all it needs. Readers take no
+ * lock: a resize builds a new table of new nodes and publishes it in one write, so a chain a reader
+ * walks only ever loses a node, which keeps its link and value. Writers hold this object's monitor,
+ * only for the table work: a key's {@code equals}, {@code compareTo} and a value's {@code equals} are
+ * user code and may take locks, so a writer runs them first, with nothing held, and then writes if
+ * what they looked at still stands. A bin that gets long becomes a tree, so colliding keys of an order
+ * stay cheap.
  *
  * <p>A computing function runs with no table lock, so other keys go on being read and written, and
- * the function may itself use the map. Instead the computation holds a {@link Claim} on its key: a
- * writer of that key blocks on the claim's monitor until it ends, as a {@code BLOCKED} thread. A
- * thread never waits for its own claim, so a recursive update of a key is only a lost update.
+ * the function may itself use the map. Instead the computation holds a claim on its key ({@link HashClaims}): a
+ * writer of that key blocks on the claim's monitor until it ends, as a {@code BLOCKED} thread. Claims
+ * go in a list, newest first, and each waits only for those older than itself, so no number of later
+ * ones can hold it up. A plain writer that finds any claim in the list makes one too, and that is
+ * its way past them. A thread never waits for its own claim, so a recursive update of a key is only a
+ * lost update.
  */
 final class HashCore<K, V> {
-    static class Node<K, V> {
+    static final class Node<K, V> {
         final int hash;
         final K key;
         V value;
@@ -29,35 +36,15 @@ final class HashCore<K, V> {
         }
     }
 
-    /** What a long bin's slot holds instead of a chain; the root is its one changing part. */
-    private static final class Bundle<K, V> extends Node<K, V> {
-        BinTreap<K, V> root;
-
-        Bundle(BinTreap<K, V> root) {
-            super(0, null, null);
-            this.root = root;
-        }
-    }
-
-    private static final class Claim {
-        final int hash;
-        final Object key;
-        final Thread thread = Thread.currentThread();
-        Claim next;
-
-        Claim(int hash, Object key) {
-            this.hash = hash;
-            this.key = key;
-        }
-    }
-
     /** What a writer learned with nothing held, and what {@link #current} needs to see it still stands. */
     private static final class Probe<K, V> {
-        final Node<K, V>[] table;
+        final Object[] table;
         final int hash;
         final int slot;
         Node<K, V> found;
         V old;
+        /** The write depends on {@code old} being still the value, as a conditional one does. */
+        boolean exact;
         /** In a chain: its last node when the search passed it, and how long it was. */
         Node<K, V> last;
         int length;
@@ -65,11 +52,16 @@ final class HashCore<K, V> {
         BinTreap<K, V> root;
         BinTreap<K, V> changed;
         Node<K, V> entry;
+        /** What user code said in this write's earlier searches of a long bin. None in the first. */
+        IdentityHashMap<Node<K, V>, Integer> told;
 
-        Probe(Node<K, V>[] table, int hash) {
+        Probe(Object[] table, int hash, Probe<K, V> before) {
             this.table = table;
             this.hash = hash;
             this.slot = hash & (table.length - 1);
+            if (before != null) {
+                told = before.told != null ? before.told : new IdentityHashMap<>();
+            }
         }
     }
 
@@ -80,13 +72,14 @@ final class HashCore<K, V> {
 
     private static final int MIN_SLOTS = 16;
     private static final int MAX_SLOTS = 1 << 30;
-    private static final int LONG_BIN = 8;
+    private static final int LONG_BIN = 16;
 
     /** Null until the first write, so that a large capacity costs nothing until it is used. */
-    private Node<K, V>[] table;
+    private Object[] table;
     private final int firstSlots;
     private int size;
-    private Claim claims;
+    /** Written with this object's monitor held, so that a commit sees them and its bin together. */
+    private final HashClaims claims = new HashClaims();
 
     HashCore(int capacity) {
         int slots = MIN_SLOTS;
@@ -96,21 +89,16 @@ final class HashCore<K, V> {
         firstSlots = slots;
     }
 
-    @SuppressWarnings("unchecked")
-    private static <K, V> Node<K, V>[] newTable(int slots) {
-        return (Node<K, V>[]) new Node<?, ?>[slots];
-    }
-
-    private synchronized Node<K, V>[] tableToWrite() {
+    private synchronized Object[] tableToWrite() {
         if (table == null) {
-            table = newTable(firstSlots);
+            table = new Object[firstSlots];
         }
         return table;
     }
 
     /**
-     * Not observable through the map's results, but the order of an iteration follows from it. This
-     * arithmetic keeps that order the one the oracle was seen to give, bin by bin (concurrent.md).
+     * Seen on the oracle: of the mixes tried, only this one gives a map that has not grown the order
+     * of the oracle's, on all 300 small key sets of a probe (concurrent.md G7, `HashOrder`).
      */
     private static int mix(Object key) {
         int h = key.hashCode();
@@ -121,16 +109,26 @@ final class HashCore<K, V> {
         return size;
     }
 
+    @SuppressWarnings("unchecked")
+    private static <K, V> Node<K, V> chain(Object slot) {
+        return (Node<K, V>) slot;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <K, V> BinTreap<K, V> tree(Object slot) {
+        return (BinTreap<K, V>) slot;
+    }
+
     private Node<K, V> find(Object key, int hash) {
-        Node<K, V>[] t = table;
+        Object[] t = table;
         if (t == null) {
             return null;
         }
-        Node<K, V> n = t[hash & (t.length - 1)];
-        if (n instanceof Bundle) {
-            return BinTreap.find(((Bundle<K, V>) n).root, hash, key);
+        Object slot = t[hash & (t.length - 1)];
+        if (slot instanceof BinTreap) {
+            return BinTreap.find(HashCore.<K, V>tree(slot), hash, key, null);
         }
-        for (; n != null; n = n.next) {
+        for (Node<K, V> n = chain(slot); n != null; n = n.next) {
             if (n.hash == hash && (n.key == key || key.equals(n.key))) {
                 return n;
             }
@@ -144,47 +142,22 @@ final class HashCore<K, V> {
     }
 
     boolean computing() {
-        return claims != null;
+        return claims.any();
     }
 
-    private Claim claimOn(Claim first, Object key, int hash) {
-        Thread me = Thread.currentThread();
-        for (Claim c = first; c != null; c = c.next) {
-            if (c.hash == hash && c.thread != me && (c.key == key || key.equals(c.key))) {
-                return c;
-            }
-        }
-        return null;
-    }
-
-    /** Waits out any computation of this key; answers the list of claims in which there was none. */
-    private Claim awaitClaims(Object key, int hash) {
-        for (;;) {
-            Claim seen = claims;
-            Claim held = seen == null ? null : claimOn(seen, key, hash);
-            if (held == null) {
-                return seen;
-            }
-            waitFor(held);
-        }
-    }
-
-    /** Blocks until that computation ends: whoever claimed holds the monitor throughout. */
-    private void waitFor(Claim held) {
-        synchronized (held) {
-            // Nothing to do inside: having got in is the news.
-        }
-    }
-
-    /** The search behind every write. Runs user code, so it holds nothing. */
-    private Probe<K, V> look(Object key, int hash, int aim) {
-        Node<K, V>[] t = table != null ? table : tableToWrite();
-        Probe<K, V> p = new Probe<>(t, hash);
-        Node<K, V> n = t[p.slot];
-        if (n instanceof Bundle) {
-            lookInLongBin(p, ((Bundle<K, V>) n).root, key, hash, aim);
+    /**
+     * The search behind every write. Runs user code, so it holds nothing. A write searching again,
+     * after {@code before} lost to another write, asks user code only about what is new to it, so
+     * that the search gets shorter and fits between those writes, however long the code takes.
+     */
+    private Probe<K, V> look(Object key, int hash, int aim, Probe<K, V> before) {
+        Object[] t = table != null ? table : tableToWrite();
+        Probe<K, V> p = new Probe<>(t, hash, before);
+        Object slot = t[p.slot];
+        if (slot instanceof BinTreap) {
+            lookInLongBin(p, HashCore.<K, V>tree(slot), key, hash, aim);
         } else {
-            for (; n != null && p.found == null; n = n.next) {
+            for (Node<K, V> n = chain(slot); n != null && p.found == null; n = n.next) {
                 if (n.hash == hash && (n.key == key || key.equals(n.key))) {
                     p.found = n;
                 } else {
@@ -202,47 +175,71 @@ final class HashCore<K, V> {
     private void lookInLongBin(Probe<K, V> p, BinTreap<K, V> root, Object key, int hash, int aim) {
         p.root = root;
         if (aim == FIND) {
-            p.found = BinTreap.find(root, hash, key);
+            p.found = BinTreap.find(root, hash, key, p.told);
             return;
         }
         @SuppressWarnings("unchecked")
-        BinTreap.Descent<K, V> d = new BinTreap.Descent<>(hash, key, aim == ADD ? new Node<>(hash, (K) key, null) : null);
+        BinTreap.Descent<K, V> d = new BinTreap.Descent<>(hash, key, aim == ADD ? new Node<>(hash, (K) key, null) : null, p.told);
         p.changed = aim == ADD ? d.add(root) : d.cut(root);
         p.found = d.found;
         p.entry = d.entry;
     }
 
-    /** With the monitor held: whether the search's answer is still true. */
+    /**
+     * With the monitor held: whether the search's answer is still true. It only asks what could have
+     * changed the answer, so writes of other keys in the bin do not send a search back to the start.
+     */
     private boolean current(Probe<K, V> p) {
         if (p.table != table) {
             return false;
         }
-        Node<K, V> n = p.table[p.slot];
-        if (n instanceof Bundle) {
-            return ((Bundle<K, V>) n).root == p.root;
+        Object slot = p.table[p.slot];
+        if (slot instanceof BinTreap || p.root != null) {
+            return slot == p.root;
         }
-        if (p.root != null) {
-            return false;
-        }
-        Node<K, V> last = null;
-        for (; n != null; n = n.next) {
-            if (n == p.found) {
-                return true;
+        Node<K, V> n = chain(slot);
+        if (p.found != null) {
+            while (n != null && n != p.found) {
+                n = n.next;
             }
-            last = n;
+            return n != null;
         }
-        // Keys only join at the end, so if that is unchanged nothing joined; what left does not matter.
-        return p.found == null && last == p.last;
+        return nothingNewOfHash(p, n);
     }
 
-    /** Applies a write of {@code value} (null removes) if the search still stands; else search again. */
-    private synchronized boolean commit(Probe<K, V> p, Claim seen, K key, V value) {
-        if (claims != seen || !current(p) || (p.found != null && p.found.value != p.old)) {
+    /**
+     * Keys only join at the end, so what lies behind the search's last node is new, and only a new
+     * node of this hash could be the key. Leaves the chain's real end in {@code p.last} for the insert.
+     */
+    private boolean nothingNewOfHash(Probe<K, V> p, Node<K, V> first) {
+        boolean behind = p.last == null;
+        Node<K, V> end = null;
+        for (Node<K, V> n = first; n != null; n = n.next) {
+            if (behind && n.hash == p.hash) {
+                return false;
+            }
+            behind |= n == p.last;
+            end = n;
+        }
+        p.last = end;
+        return behind;
+    }
+
+    /**
+     * Applies a write of {@code value} (null removes) if the search still stands; else search again.
+     * With {@code watch}, also if no computation that might be of this key has started since the
+     * search, as the writer has made no claim for it to see.
+     */
+    private synchronized boolean commit(Probe<K, V> p, K key, V value, boolean watch) {
+        if ((watch && claims.mayHold(p.hash)) || !current(p) || (p.exact && p.found.value != p.old)) {
             return false;
         }
         if (p.found == null) {
             insert(p, key, value);
-        } else if (value != null) {
+            return true;
+        }
+        p.old = p.found.value;
+        if (value != null) {
             p.found.value = value;
         } else {
             unlink(p);
@@ -252,39 +249,64 @@ final class HashCore<K, V> {
 
     V put(K key, V value, boolean onlyIfAbsent) {
         int hash = mix(key);
-        for (;;) {
-            Claim seen = awaitClaims(key, hash);
-            Probe<K, V> p = look(key, hash, ADD);
+        Probe<K, V> p = null;
+        while (!claims.any()) {
+            p = look(key, hash, ADD, p);
             if (p.found != null && onlyIfAbsent) {
                 return p.old;
             }
-            if (commit(p, seen, key, value)) {
-                bundleIfLong(p, hash);
+            if (commit(p, key, value, true)) {
+                treeIfLong(p, hash);
                 return p.old;
             }
         }
+        Object[] was = new Object[1];
+        atomically(key, old -> {
+            was[0] = old;
+            return old != null && onlyIfAbsent ? old : value;
+        });
+        return HashCore.<V>value(was);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <V> V value(Object[] holder) {
+        return (V) holder[0];
     }
 
     /** Sets a present key to {@code update}, or removes it if that is null. Answers its old value. */
+    @SuppressWarnings("unchecked")
     V change(Object key, V update, Object expected) {
         int hash = mix(key);
-        for (;;) {
-            Claim seen = awaitClaims(key, hash);
+        Probe<K, V> p = null;
+        while (!claims.any()) {
             if (table == null) {
                 return null;
             }
-            Probe<K, V> p = look(key, hash, update == null ? CUT : FIND);
+            p = look(key, hash, update == null ? CUT : FIND, p);
             if (p.found == null) {
                 return null;
             }
-            V old = p.old;
-            if (expected != null && expected != old && !expected.equals(old)) {
+            if (expected != null && !matches(expected, p.old)) {
                 return null;
             }
-            if (commit(p, seen, p.found.key, update)) {
-                return old;
+            p.exact = expected != null;
+            if (commit(p, p.found.key, update, true)) {
+                return p.old;
             }
         }
+        Object[] was = new Object[1];
+        atomically((K) key, old -> {
+            if (old == null || (expected != null && !matches(expected, old))) {
+                return old;
+            }
+            was[0] = old;
+            return update;
+        });
+        return HashCore.<V>value(was);
+    }
+
+    private static boolean matches(Object expected, Object value) {
+        return expected == value || expected.equals(value);
     }
 
     /**
@@ -293,43 +315,32 @@ final class HashCore<K, V> {
      */
     V atomically(K key, Function<? super V, ? extends V> step) {
         int hash = mix(key);
-        Claim mine = new Claim(hash, key);
-        for (;;) {
-            Claim seen = awaitClaims(key, hash);
-            synchronized (mine) {
-                if (stake(mine, seen)) {
-                    try {
-                        V fresh = step.apply(get(key));
-                        store(key, hash, fresh);
-                        return fresh;
-                    } finally {
-                        release(mine);
-                    }
+        HashClaims.Claim mine = new HashClaims.Claim(hash, key);
+        synchronized (mine) {
+            stake(mine);
+            try {
+                mine.awaitOlder();
+                mine.wiped = false;
+                V old = get(key);
+                V fresh = step.apply(old);
+                // A clear since then took the entry with it. So this ran before the clear: its answer
+                // stands, and goes nowhere. Finding no entry, it can as well have run after.
+                if (old == null || !mine.wiped) {
+                    store(key, hash, fresh);
                 }
+                return fresh;
+            } finally {
+                release(mine);
             }
         }
     }
 
-    /** Adds the claim, if the list is still the one found free of this key. */
-    private synchronized boolean stake(Claim mine, Claim seen) {
-        if (claims != seen) {
-            return false;
-        }
-        mine.next = claims;
-        claims = mine;
-        return true;
+    private synchronized void stake(HashClaims.Claim mine) {
+        claims.add(mine);
     }
 
-    private synchronized void release(Claim mine) {
-        if (claims == mine) {
-            claims = mine.next;
-            return;
-        }
-        Claim c = claims;
-        while (c.next != mine) {
-            c = c.next;
-        }
-        c.next = mine.next;
+    private synchronized void release(HashClaims.Claim mine) {
+        claims.remove(mine);
     }
 
     /** A computation's write: its claim keeps other writers of the key out, so none is waited for. */
@@ -337,24 +348,24 @@ final class HashCore<K, V> {
         if (value == null && table == null) {
             return;
         }
+        Probe<K, V> p = null;
         for (;;) {
-            Claim seen = claims;
-            Probe<K, V> p = look(key, hash, value == null ? CUT : ADD);
+            p = look(key, hash, value == null ? CUT : ADD, p);
             if (value == null && p.found == null) {
                 return;
             }
-            if (commit(p, seen, key, value)) {
-                bundleIfLong(p, hash);
+            if (commit(p, key, value, false)) {
+                treeIfLong(p, hash);
                 return;
             }
         }
     }
 
     private void insert(Probe<K, V> p, K key, V value) {
-        Node<K, V>[] t = p.table;
+        Object[] t = p.table;
         if (p.root != null) {
             p.entry.value = value;
-            ((Bundle<K, V>) t[p.slot]).root = p.changed;
+            t[p.slot] = p.changed;
         } else if (p.last == null) {
             t[p.slot] = new Node<>(p.hash, key, value);
         } else {
@@ -366,92 +377,69 @@ final class HashCore<K, V> {
         }
     }
 
-    private void bundleIfLong(Probe<K, V> p, int hash) {
+    private void treeIfLong(Probe<K, V> p, int hash) {
         if (p.found == null && p.root == null && p.length + 1 >= LONG_BIN) {
-            bundle(hash);
+            toTree(hash);
         }
     }
 
     /**
      * Turns a long chain into a tree. The compares are user code, so they run on what the chain was,
-     * and if it has changed since then the next write to it will try again. The nodes stay as they
-     * are, links included, for whoever is walking that chain.
+     * and if it has changed since then the next write to it will try again. The tree gets new nodes:
+     * whoever walks the old chain still can, but once nobody does, nothing keeps what left it alive.
      */
-    private void bundle(int hash) {
-        Node<K, V>[] t = table;
+    private void toTree(int hash) {
+        Object[] t = table;
         int slot = hash & (t.length - 1);
-        Node<K, V> head = t[slot];
-        if (head == null || head instanceof Bundle) {
+        Object head = t[slot];
+        if (head == null || head instanceof BinTreap) {
             return;
         }
-        int length = 0;
-        Node<K, V> last = null;
-        BinTreap<K, V> root = null;
-        for (Node<K, V> n = head; n != null; n = n.next) {
-            root = new BinTreap.Descent<>(n).add(root);
-            last = n;
-            length++;
-        }
+        ArrayList<Node<K, V>> copies = new ArrayList<>();
+        BinTreap<K, V> root = BinTreap.ofChain(HashCore.<K, V>chain(head), copies);
         synchronized (this) {
-            if (t == table && t[slot] == head && chainIs(head, last, length)) {
-                t[slot] = new Bundle<>(root);
+            if (t == table && t[slot] == head && BinTreap.takeValues(HashCore.<K, V>chain(head), copies)) {
+                t[slot] = root;
             }
         }
-    }
-
-    /** Keys join only at the end, so a chain with the same ends and length has the same nodes. */
-    private static <K, V> boolean chainIs(Node<K, V> head, Node<K, V> last, int length) {
-        Node<K, V> end = null;
-        int count = 0;
-        for (Node<K, V> n = head; n != null; n = n.next) {
-            end = n;
-            count++;
-        }
-        return end == last && count == length;
     }
 
     /** New nodes too: a reader or iterator on the old table keeps a table that no longer changes. */
-    private void grow(Node<K, V>[] old) {
-        Node<K, V>[] t = newTable(old.length << 1);
-        Node<K, V>[] tails = newTable(t.length);
+    private void grow(Object[] old) {
+        Object[] t = new Object[old.length << 1];
+        Object[] tails = new Object[t.length];
         for (int i = 0; i < old.length; i++) {
-            Node<K, V> n = old[i];
-            if (n instanceof Bundle) {
-                BinTreap<K, V> root = ((Bundle<K, V>) n).root;
-                t[i] = bundled(BinTreap.half(root, old.length, 0));
-                t[i + old.length] = bundled(BinTreap.half(root, old.length, old.length));
+            Object slot = old[i];
+            if (slot instanceof BinTreap) {
+                BinTreap<K, V> root = tree(slot);
+                t[i] = BinTreap.half(root, old.length, 0);
+                t[i + old.length] = BinTreap.half(root, old.length, old.length);
                 continue;
             }
-            for (; n != null; n = n.next) {
-                int slot = n.hash & (t.length - 1);
+            for (Node<K, V> n = chain(slot); n != null; n = n.next) {
+                int to = n.hash & (t.length - 1);
                 Node<K, V> copy = new Node<>(n.hash, n.key, n.value);
-                if (tails[slot] == null) {
-                    t[slot] = copy;
+                if (tails[to] == null) {
+                    t[to] = copy;
                 } else {
-                    tails[slot].next = copy;
+                    HashCore.<K, V>chain(tails[to]).next = copy;
                 }
-                tails[slot] = copy;
+                tails[to] = copy;
             }
         }
         table = t;
     }
 
-    private static <K, V> Node<K, V> bundled(BinTreap<K, V> root) {
-        return root == null ? null : new Bundle<>(root);
-    }
-
     private void unlink(Probe<K, V> p) {
-        Node<K, V>[] t = p.table;
+        Object[] t = p.table;
         Node<K, V> gone = p.found;
-        Node<K, V> n = t[p.slot];
-        if (n instanceof Bundle) {
-            ((Bundle<K, V>) n).root = p.changed;
-            if (p.changed == null) {
-                t[p.slot] = null;
-            }
-        } else if (n == gone) {
+        Object slot = t[p.slot];
+        if (slot instanceof BinTreap) {
+            t[p.slot] = p.changed;
+        } else if (slot == gone) {
             t[p.slot] = gone.next;
         } else {
+            Node<K, V> n = chain(slot);
             while (n.next != gone) {
                 n = n.next;
             }
@@ -460,29 +448,34 @@ final class HashCore<K, V> {
         size--;
     }
 
-    synchronized void clear() {
-        Node<K, V>[] t = table;
+    /**
+     * Waits out the computations running now, but not those that start later, or it might never end:
+     * those it wipes under count as having run before it, see {@link #atomically}.
+     */
+    void clear() {
+        claims.awaitOthers();
+        wipe();
+    }
+
+    private synchronized void wipe() {
+        Object[] t = table;
         if (t != null) {
             for (int i = 0; i < t.length; i++) {
                 t[i] = null;
             }
         }
         size = 0;
+        claims.markWiped();
     }
 
     /** The table as a walk starts on it, never null. */
-    Node<K, V>[] tableToWalk() {
-        Node<K, V>[] t = table;
-        return t != null ? t : HashCore.<K, V>newTable(0);
+    Object[] tableToWalk() {
+        Object[] t = table;
+        return t != null ? t : new Object[0];
     }
 
     /** Whether a walk is still on the current table. */
-    boolean isCurrent(Node<K, V>[] t) {
+    boolean isCurrent(Object[] t) {
         return t == table;
-    }
-
-    /** All the entries of a long bin, given what its slot holds; null for a chain. */
-    static <K, V> Node<K, V>[] longBinEntries(Node<K, V> slotted) {
-        return slotted instanceof Bundle ? ((Bundle<K, V>) slotted).root.entries() : null;
     }
 }

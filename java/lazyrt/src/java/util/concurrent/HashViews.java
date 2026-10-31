@@ -49,8 +49,14 @@ abstract class HashViews<K, V, E> extends AbstractCollection<E> {
         return super.toString();
     }
 
+    /** A null is simply not there, though {@code contains(null)} of two views throws (concurrent.md). */
     public final boolean containsAll(Collection<?> c) {
-        return super.containsAll(c);
+        for (Object o : c) {
+            if (o == null || !contains(o)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public final boolean removeAll(Collection<?> c) {

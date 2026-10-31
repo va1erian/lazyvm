@@ -1,5 +1,7 @@
 package java.util.concurrent;
 
+import lazy.internal.Turnstile;
+
 /** One waiting offer at a time on a private monitor; the next arrival takes it and answers it. */
 public class Exchanger<V> {
     private static final class Offer {
@@ -32,7 +34,7 @@ public class Exchanger<V> {
 
     @SuppressWarnings("unchecked")
     private V swap(Object x, boolean timed, long nanos) throws InterruptedException, TimeoutException {
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }

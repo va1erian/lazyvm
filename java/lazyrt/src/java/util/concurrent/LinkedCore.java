@@ -176,7 +176,7 @@ final class LinkedCore<E> {
 
     /** The timed form looks at the flag first in every class that has one (concurrent.md G5). */
     boolean offer(E e, boolean front, long nanos) throws InterruptedException {
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
@@ -216,7 +216,7 @@ final class LinkedCore<E> {
     }
 
     E poll(boolean front, long nanos) throws InterruptedException {
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         Slot<E> w;
         synchronized (this) {
             if (size > 0 && takers.open()) {
@@ -331,7 +331,7 @@ final class LinkedCore<E> {
 
     /** Waits until the element has left; a timeout or interrupt withdraws it. Whether it left. */
     boolean awaitTaken(Node<E> n, boolean timed, long nanos) throws InterruptedException {
-        long deadline = System.nanoTime() + nanos;
+        long deadline = Turnstile.deadline(nanos);
         for (;;) {
             long left = deadline - System.nanoTime();
             synchronized (this) {

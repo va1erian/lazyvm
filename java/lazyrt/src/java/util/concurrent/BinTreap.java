@@ -1,11 +1,14 @@
 package java.util.concurrent;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import lazy.internal.KeyOrder;
 
 /**
- * A long bin of a {@link HashCore}, as an immutable search tree. A write builds a new root that shares
- * what did not change, with no lock, since it runs the keys' {@code equals} and {@code compareTo}; the
- * core then publishes that root if the old one is still there. A reader just walks the root it read.
+ * A long bin of a {@link HashCore}, as an immutable search tree whose root sits in the table's slot. A
+ * write builds a new root that shares what did not change, with no lock, since it runs the keys'
+ * {@code equals} and {@code compareTo}; the core then publishes that root if the old one is still in
+ * the slot. A reader just walks the root it read.
  *
  * <p>Keys go by hash, then by {@link KeyOrder}; within that the shape follows a random rank, higher
  * above lower, so the order keys arrive in cannot make it lopsided. Keys of no known order search both
@@ -13,6 +16,7 @@ import lazy.internal.KeyOrder;
  * different is the keys' fault (concurrent.md, "What is not pinned").
  */
 final class BinTreap<K, V> {
+    private static final int SAME = 2;
     private static int rankSeed = (int) System.nanoTime() | 1;
 
     private final HashCore.Node<K, V> entry;
@@ -45,19 +49,35 @@ final class BinTreap<K, V> {
         return new BinTreap<>(entry, left, r, rank);
     }
 
-    static <K, V> HashCore.Node<K, V> find(BinTreap<K, V> t, int hash, Object key) {
+    /**
+     * What the keys' own code says about a key and an entry of its hash: {@link #SAME}, or which way
+     * to go, 0 if it cannot tell. {@code told}, if any, remembers it for a later search of this write.
+     */
+    private static <K, V> int ask(HashCore.Node<K, V> e, Object key, IdentityHashMap<HashCore.Node<K, V>, Integer> told) {
+        Integer known = told == null ? null : told.get(e);
+        if (known != null) {
+            return known;
+        }
+        int r = e.key == key || key.equals(e.key) ? SAME : Integer.signum(KeyOrder.compared(key, e.key));
+        if (told != null) {
+            told.put(e, r);
+        }
+        return r;
+    }
+
+    static <K, V> HashCore.Node<K, V> find(BinTreap<K, V> t, int hash, Object key, IdentityHashMap<HashCore.Node<K, V>, Integer> told) {
         while (t != null) {
             HashCore.Node<K, V> e = t.entry;
             if (hash != e.hash) {
                 t = hash < e.hash ? t.left : t.right;
                 continue;
             }
-            if (e.key == key || key.equals(e.key)) {
+            int r = ask(e, key, told);
+            if (r == SAME) {
                 return e;
             }
-            int r = KeyOrder.compared(key, e.key);
             if (r == 0) {
-                HashCore.Node<K, V> inRight = find(t.right, hash, key);
+                HashCore.Node<K, V> inRight = find(t.right, hash, key, told);
                 if (inRight != null) {
                     return inRight;
                 }
@@ -92,6 +112,32 @@ final class BinTreap<K, V> {
         return (e.hash & bit) != wanted ? merge(l, r) : new BinTreap<>(new HashCore.Node<>(e.hash, e.key, e.value), l, r, t.rank);
     }
 
+    /**
+     * A tree of new entries with the keys of a chain, which are put in {@code copies}. The compares are
+     * user code, so the chain may change meanwhile, and the entries have no value yet.
+     */
+    static <K, V> BinTreap<K, V> ofChain(HashCore.Node<K, V> first, ArrayList<HashCore.Node<K, V>> copies) {
+        BinTreap<K, V> root = null;
+        for (HashCore.Node<K, V> n = first; n != null; n = n.next) {
+            HashCore.Node<K, V> copy = new HashCore.Node<>(n.hash, n.key, null);
+            copies.add(copy);
+            root = new Descent<>(copy).add(root);
+        }
+        return root;
+    }
+
+    /** Gives the copies the chain's values, and says whether it still has just those keys, in that order. */
+    static <K, V> boolean takeValues(HashCore.Node<K, V> first, ArrayList<HashCore.Node<K, V>> copies) {
+        int i = 0;
+        for (HashCore.Node<K, V> n = first; n != null; n = n.next) {
+            if (i == copies.size() || copies.get(i).key != n.key) {
+                return false;
+            }
+            copies.get(i++).value = n.value;
+        }
+        return i == copies.size();
+    }
+
     @SuppressWarnings("unchecked")
     HashCore.Node<K, V>[] entries() {
         HashCore.Node<K, V>[] out = (HashCore.Node<K, V>[]) new HashCore.Node<?, ?>[count()];
@@ -115,20 +161,22 @@ final class BinTreap<K, V> {
         private final Object key;
         /** False once {@code equals} cannot find anything further: both sides were searched, or it is a new key. */
         private boolean checking;
+        private final IdentityHashMap<HashCore.Node<K, V>, Integer> told;
         final HashCore.Node<K, V> entry;
         HashCore.Node<K, V> found;
 
         /** For a key that may be in the tree. */
-        Descent(int hash, Object key, HashCore.Node<K, V> entry) {
+        Descent(int hash, Object key, HashCore.Node<K, V> entry, IdentityHashMap<HashCore.Node<K, V>, Integer> told) {
             this.hash = hash;
             this.key = key;
             this.entry = entry;
+            this.told = told;
             this.checking = true;
         }
 
         /** For an entry known not to be in the tree. */
         Descent(HashCore.Node<K, V> entry) {
-            this(entry.hash, entry.key, entry);
+            this(entry.hash, entry.key, entry, null);
             this.checking = false;
         }
 
@@ -142,25 +190,35 @@ final class BinTreap<K, V> {
                 toLeft = hash < t.entry.hash;
             } else {
                 Object other = t.entry.key;
-                if (checking && (other == key || key.equals(other))) {
+                // Past the point where equals can find anything, only the order is wanted, if it costs.
+                int r = checking || told != null ? ask(t.entry, key, told) : KeyOrder.compared(key, other);
+                if (checking && r == SAME) {
                     found = t.entry;
                     return t;
                 }
-                int r = KeyOrder.compared(key, other);
                 if (r == 0) {
                     if (checking) {
                         checking = false;
-                        found = find(t.left, hash, key);
-                        found = found != null ? found : find(t.right, hash, key);
+                        found = find(t.left, hash, key, told);
+                        found = found != null ? found : find(t.right, hash, key, told);
                         if (found != null) {
                             return t;
                         }
                     }
-                    r = KeyOrder.tieBreak(key, other);
+                    r = classOrder(key, other);
                 }
                 toLeft = r < 0;
             }
             return toLeft ? addedLeft(t) : addedRight(t);
+        }
+
+        /**
+         * Keys of one class stay together, so that a key's search never meets keys of its own order
+         * out of place, whatever else lies between and however the ranks turn the tree. Within a class
+         * no side is better: the keys are searched both ways, and the ranks decide the shape.
+         */
+        private static int classOrder(Object a, Object b) {
+            return a.getClass() == b.getClass() ? 1 : a.getClass().getName().compareTo(b.getClass().getName());
         }
 
         private BinTreap<K, V> addedLeft(BinTreap<K, V> t) {
@@ -187,11 +245,11 @@ final class BinTreap<K, V> {
             HashCore.Node<K, V> e = t.entry;
             int r = hash < e.hash ? -1 : 1;
             if (hash == e.hash) {
-                if (e.key == key || key.equals(e.key)) {
+                r = ask(e, key, told);
+                if (r == SAME) {
                     found = e;
                     return merge(t.left, t.right);
                 }
-                r = KeyOrder.compared(key, e.key);
             }
             if (r >= 0) {
                 BinTreap<K, V> c = cut(t.right);

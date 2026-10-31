@@ -12,7 +12,7 @@ import java.util.NoSuchElementException;
  */
 abstract class HashWalk<K, V, E> implements Iterator<E>, java.util.Enumeration<E> {
     private final HashCore<K, V> core;
-    private final HashCore.Node<K, V>[] table;
+    private final Object[] table;
     private int slot;
     /** The rest of the long bin this walk is in, which has no chain to follow. */
     private HashCore.Node<K, V>[] flat;
@@ -52,11 +52,13 @@ abstract class HashWalk<K, V, E> implements Iterator<E>, java.util.Enumeration<E
     }
 
     /** The first node of the next bin's chain; for a long bin nothing yet, with {@code flat} set. */
+    @SuppressWarnings("unchecked")
     private HashCore.Node<K, V> enterBin() {
-        HashCore.Node<K, V> n = table[slot++];
-        flat = HashCore.longBinEntries(n);
+        Object s = table[slot++];
+        boolean tree = s instanceof BinTreap;
+        flat = tree ? ((BinTreap<K, V>) s).entries() : null;
         flatAt = 0;
-        return flat != null ? null : n;
+        return tree ? null : (HashCore.Node<K, V>) s;
     }
 
     abstract E make(K key, V value);
