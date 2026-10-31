@@ -468,70 +468,14 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     }
 
     public static ForkJoinTask<?> adapt(Runnable runnable) {
-        return new Adapted<Object>(Executors.callable(runnable, null), Adapted.RUNNABLE);
+        return new AdaptedTask<Object>(Executors.callable(runnable, null), AdaptedTask.RUNNABLE);
     }
 
     public static <T> ForkJoinTask<T> adapt(Runnable runnable, T result) {
-        return new Adapted<T>(Executors.callable(runnable, result), Adapted.RUNNABLE);
+        return new AdaptedTask<T>(Executors.callable(runnable, result), AdaptedTask.RUNNABLE);
     }
 
     public static <T> ForkJoinTask<T> adapt(Callable<? extends T> callable) {
-        return new Adapted<T>(callable, Adapted.CALLABLE);
-    }
-
-    /** Runs a callable or runnable as a task. A callable's checked failure goes in wrapped. */
-    static final class Adapted<T> extends ForkJoinTask<T> implements RunnableFuture<T> {
-        static final int CALLABLE = 0;
-        static final int RUNNABLE = 1;
-        /** The {@code execute(Runnable)} form, whose failure escapes to the worker. */
-        static final int EXECUTED = 2;
-
-        private final Callable<? extends T> callable;
-        private final int form;
-        private T result;
-
-        Adapted(Callable<? extends T> callable, int form) {
-            if (callable == null) {
-                throw new NullPointerException();
-            }
-            this.callable = callable;
-            this.form = form;
-        }
-
-        @Override
-        public T getRawResult() {
-            return result;
-        }
-
-        @Override
-        protected void setRawResult(T value) {
-            result = value;
-        }
-
-        @Override
-        protected boolean exec() {
-            try {
-                result = callable.call();
-                return true;
-            } catch (RuntimeException | Error e) {
-                throw e;
-            } catch (Exception e) {
-                if (form == CALLABLE) {
-                    throw new RuntimeException(e);
-                }
-                ForkJoinTask.<RuntimeException>sneak(e);
-                return false;
-            }
-        }
-
-        @Override
-        public void run() {
-            invoke();
-        }
-
-        @Override
-        boolean escapes() {
-            return form == EXECUTED;
-        }
+        return new AdaptedTask<T>(callable, AdaptedTask.CALLABLE);
     }
 }

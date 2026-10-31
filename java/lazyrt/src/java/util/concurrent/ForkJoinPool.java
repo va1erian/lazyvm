@@ -123,7 +123,7 @@ public class ForkJoinPool extends AbstractExecutorService {
             throw new NullPointerException();
         }
         core.pushExternal(task instanceof ForkJoinTask<?> ? (ForkJoinTask<?>) task
-                : new ForkJoinTask.Adapted<Void>(Executors.<Void>callable(task, null), ForkJoinTask.Adapted.EXECUTED));
+                : new AdaptedTask<Void>(Executors.<Void>callable(task, null), AdaptedTask.EXECUTED));
     }
 
     public <T> ForkJoinTask<T> submit(ForkJoinTask<T> task) {
@@ -317,10 +317,10 @@ public class ForkJoinPool extends AbstractExecutorService {
     }
 
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-        return new ForkJoinTask.Adapted<T>(Executors.callable(runnable, value), ForkJoinTask.Adapted.RUNNABLE);
+        return new AdaptedTask<T>(Executors.callable(runnable, value), AdaptedTask.RUNNABLE);
     }
 
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
-        return new ForkJoinTask.Adapted<T>(callable, ForkJoinTask.Adapted.CALLABLE);
+        return new AdaptedTask<T>(callable, AdaptedTask.CALLABLE);
     }
 }
