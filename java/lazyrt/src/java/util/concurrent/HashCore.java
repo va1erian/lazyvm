@@ -345,6 +345,7 @@ final class HashCore<K, V> {
     }
 
     /** New nodes too: a reader or iterator on the old table keeps a table that no longer changes. */
+    @SuppressWarnings("unchecked")
     private void grow(Object[] old) {
         Object[] t = new Object[old.length << 1];
         Object[] tails = new Object[t.length];
@@ -356,13 +357,13 @@ final class HashCore<K, V> {
                 t[i + old.length] = BinTreap.half(root, old.length, old.length);
                 continue;
             }
-            for (Node<K, V> n = chain(slot); n != null; n = n.next) {
+            for (Node<K, V> n = (Node<K, V>) slot; n != null; n = n.next) {
                 int to = n.hash & (t.length - 1);
                 Node<K, V> copy = new Node<>(n.hash, n.key, n.value);
                 if (tails[to] == null) {
                     t[to] = copy;
                 } else {
-                    HashCore.<K, V>chain(tails[to]).next = copy;
+                    ((Node<K, V>) tails[to]).next = copy;
                 }
                 tails[to] = copy;
             }
