@@ -322,8 +322,8 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     }
 
     /**
-     * A queued task runs right here if there is time at all, and then it can take as long as it
-     * likes: the deadline is only for waiting ("timed get in worker outlasts its limit").
+     * With no time at all it just looks ("timed get in worker with no time"). Otherwise a queued task
+     * runs right here for as long as it likes: the limit is for waiting ("... outlasts its limit").
      */
     public final V get(long timeout, TimeUnit unit)
             throws InterruptedException, ExecutionException, TimeoutException {
@@ -333,8 +333,11 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
             throw new InterruptedException();
         }
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        boolean tight = status == PENDING && nanos > 0 && ForkJoinCore.stackTight();
-        if (status == PENDING && nanos > 0 && takeHere(tight)) {
+        if (status == PENDING && nanos <= 0) {
+            throw new TimeoutException();
+        }
+        boolean tight = status == PENDING && ForkJoinCore.stackTight();
+        if (status == PENDING && takeHere(tight)) {
             run0();
         }
         while (status == PENDING) {

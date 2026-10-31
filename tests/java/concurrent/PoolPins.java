@@ -27,10 +27,12 @@ public class PoolPins {
         show("setCorePoolSize wakes idle workers", () -> until(() -> x.getPoolSize() == 0));
         x.shutdown();
         ThreadPoolExecutor y = new ThreadPoolExecutor(1, 3, 1, TimeUnit.HOURS, new SynchronousQueue<>());
+        // Each holds its worker until all three are in, so no worker can be reused.
         CountDownLatch three = new CountDownLatch(3);
-        for (int i = 0; i < 3; i++) y.execute(three::countDown);
+        for (int i = 0; i < 3; i++) y.execute(() -> { three.countDown(); try { three.await(); } catch (InterruptedException e) { } });
         three.await();
-        until(() -> y.getActiveCount() == 0 && y.getPoolSize() == 3);
+        show("three workers held", y::getPoolSize);
+        until(() -> y.getActiveCount() == 0);
         y.setMaximumPoolSize(1);
         show("setMaximumPoolSize wakes idle workers", () -> until(() -> y.getPoolSize() == 1));
         y.shutdown();
@@ -90,7 +92,8 @@ public class PoolPins {
         four.await();
         f.cancel(false);
         s.shutdown();
-        show("fixed rate catches up after a slow run", () -> at[3] - at[1] < TimeUnit.MILLISECONDS.toNanos(period));
+        // Fixed delay would take exactly two periods here at the least, whatever else goes on.
+        show("fixed rate catches up after a slow run", () -> at[3] - at[1] < TimeUnit.MILLISECONDS.toNanos(2 * period));
     }
 
     static void hugeDelays() throws Exception {
@@ -118,7 +121,67 @@ public class PoolPins {
         t.shutdownNow();
     }
 
+    /** A queue whose take sits out the first interrupt each thread gets: only one that follows wakes it. */
+    static class Stubborn extends LinkedBlockingQueue<Runnable> {
+        final ThreadLocal<Boolean> woken = new ThreadLocal<>();
+        @Override public Runnable take() throws InterruptedException {
+            for (;;) {
+                try { return super.take(); }
+                catch (InterruptedException e) { if (woken.get() != null) throw e; woken.set(true); }
+            }
+        }
+    }
+
+    static void chain() throws Exception {
+        // Shutdown's interrupts are sat out: a remove then wakes the idle workers, each passing it on.
+        ThreadPoolExecutor x = new ThreadPoolExecutor(8, 8, 0, TimeUnit.SECONDS, new Stubborn());
+        x.prestartAllCoreThreads();
+        until(() -> x.getActiveCount() == 0);
+        Thread.sleep(100);
+        x.shutdown();
+        Thread.sleep(100);
+        x.remove(() -> { });
+        show("idle workers wake each other", () -> x.awaitTermination(15, TimeUnit.SECONDS) + " " + x.getPoolSize());
+    }
+
+    /** Past a stop the queue is not asked, so one that throws does not keep the pool from ending. */
+    static void badQueue() throws Exception {
+        boolean[] bad = new boolean[1];
+        BlockingQueue<Runnable> q = new LinkedBlockingQueue<Runnable>() {
+            @Override public boolean isEmpty() { if (bad[0]) throw new IllegalStateException("isEmpty"); return super.isEmpty(); }
+        };
+        AtomicInteger hook = new AtomicInteger();
+        ThreadPoolExecutor x = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, q) {
+            @Override protected void terminated() { hook.incrementAndGet(); }
+        };
+        x.prestartAllCoreThreads();
+        until(() -> x.getActiveCount() == 0);
+        Thread.sleep(100);
+        bad[0] = true;
+        show("shutdownNow, queue throws", x::shutdownNow);
+        show("ends all the same", () -> x.awaitTermination(15, TimeUnit.SECONDS) + " hook=" + hook);
+    }
+
+    /** At the lowest timeout there is, as far as a call gives up at once. */
+    static void lowestTimeout() throws Exception {
+        ExecutorService e = Executors.newFixedThreadPool(1);
+        List<Callable<String>> l = Collections.singletonList(() -> "v");
+        CountDownLatch rel = new CountDownLatch(1), in = new CountDownLatch(1);
+        e.execute(() -> { in.countDown(); try { rel.await(); } catch (InterruptedException x) { } });
+        in.await();
+        show("invokeAny", () -> e.invokeAny(l, Long.MIN_VALUE, TimeUnit.DAYS));
+        show("awaitTermination", () -> e.awaitTermination(Long.MIN_VALUE, TimeUnit.DAYS));
+        rel.countDown();
+        // invokeAll does not give up: the time wraps around, and the task runs.
+        Future<String> f = e.invokeAll(l, Long.MIN_VALUE, TimeUnit.DAYS).get(0);
+        show("invokeAll", () -> f.isCancelled() + " " + f.get());
+        e.shutdown();
+    }
+
     public static void main(String[] args) throws Exception {
+        chain();
+        badQueue();
+        lowestTimeout();
         wakes();
         stops();
         fixedRate();

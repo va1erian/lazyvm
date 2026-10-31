@@ -82,19 +82,24 @@ public class ThreadPools {
         zero.shutdown();
     }
 
+    /** On the oracle a busy worker can read as not active for a moment, so this looks until it reads so. */
+    static void showWith(String label, ThreadPoolExecutor p, int active) throws Exception {
+        String[] seen = new String[1];
+        until(() -> (seen[0] = p.toString()).contains("active threads = " + active + ","));
+        show(label, () -> seen[0]);
+    }
+
     static void growthAndRejection() throws Exception {
         CountDownLatch gate = new CountDownLatch(1);
         List<String> log = new ArrayList<>();
         ThreadPoolExecutor p = pool(1, 2, new ArrayBlockingQueue<>(1));
         show("empty", () -> p);
         p.execute(new Task("a", gate, log));
-        until(() -> p.getActiveCount() == 1);
-        show("one core", () -> p);
+        showWith("one core", p, 1);
         p.execute(new Task("b", gate, log));
-        show("queued", () -> p);
+        showWith("queued", p, 1);
         p.execute(new Task("c", gate, log));
-        until(() -> p.getActiveCount() == 2);
-        show("overflow worker", () -> p);
+        showWith("overflow worker", p, 2);
         show("rejected", () -> { p.execute(new Task("d", gate, log)); return "no"; });
         show("largest", p::getLargestPoolSize);
         show("taskCount", p::getTaskCount);

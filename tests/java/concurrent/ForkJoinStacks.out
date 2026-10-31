@@ -1,0 +1,50 @@
+submission after a fork in onStart = null
+task on the worker's own pool = ran
+worker's own pool ends = true
+task beside a user's worker = ran
+pool of a user's worker ends = true
+user's worker counted right = 0 0
+timed get in worker outlasts its limit at 1 = here=true done=true
+timed get in worker outlasts its limit at 2 = here=true done=true
+timed get in worker with no time 0 = timeout queued=1 unfork=true
+timed get in worker with no time -1 = timeout queued=1 unfork=true
+timed get in worker with no time -9223372036854775808 = timeout queued=1 unfork=true
+timed get in a tree of tasks = 987 workers=1
+timed get outside with the lowest timeout = timeout
+awaitTermination with the lowest timeout = false
+no worker ever: quiet at once = true ran=null queued=1
+busy pool, waiting from outside = false here=true
+a failure it runs is thrown at it ! java.lang.IllegalStateException: boom
+busy pool, waiting on another pool's worker = false here=true
+a failure it runs is thrown at it ! java.lang.IllegalStateException: boom
+common pool's awaitTermination = false caller
+nested blockers = [true, true]
+helpQuiesce deep down, factory throws = fork threw, helpQuiesce returned, child done=true
+nothing left counted = 0 0
+invoke chain 800 outside a pool = 800
+invokeAll chain 800 outside a pool = 800
+invoke chain 800 on another plain thread = 800
+invoke chain 800 on another pool's worker = 800
+invoke chain 1400 outside a pool = 1400
+invokeAll chain 1400 outside a pool = 1400
+invoke chain 1400 on another plain thread = 1400
+invoke chain 1400 on another pool's worker = 1400
+chain 600, factory null = 600
+invoke chain 600, factory null = 600
+chain 600, factory throw = 600
+invoke chain 600, factory throw = 600
+chain 600, factory start = 600
+invoke chain 600, factory start = 600
+runaway forks at 1 = java.lang.StackOverflowError
+few workers for it at 1 = true
+pool ends at 1 = true
+runaway forks at 2 = java.lang.StackOverflowError
+few workers for it at 2 = true
+pool ends at 2 = true
+runaway forks at 4 = java.lang.StackOverflowError
+few workers for it at 4 = true
+pool ends at 4 = true
+runaway invokes = java.lang.StackOverflowError
+pool ends after invokes = true
+chain of a million = java.lang.StackOverflowError
+overflow then a task = java.lang.StackOverflowError next

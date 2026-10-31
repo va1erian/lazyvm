@@ -25,6 +25,12 @@ public class ForkJoinNoWorkers {
         public void uncaughtException(Thread t, Throwable e) { System.out.println("handler H: " + e); }
     }
 
+    static class Invoked extends RecursiveTask<Integer> {
+        final int d;
+        Invoked(int d) { this.d = d; }
+        @Override protected Integer compute() { return d == 0 ? 0 : new Invoked(d - 1).invoke() + 1; }
+    }
+
     public static void main(String[] args) throws Exception {
         show("common parallelism", ForkJoinPool::getCommonPoolParallelism);
         ForkJoinPool c = ForkJoinPool.commonPool();
@@ -43,5 +49,7 @@ public class ForkJoinNoWorkers {
         show("worker thread name", () -> { String[] s = new String[1]; CountDownLatch l = new CountDownLatch(1); c.execute(() -> { s[0] = Thread.currentThread().getName(); l.countDown(); }); return l.await(500, TimeUnit.MILLISECONDS) ? s[0] : "no worker"; });
         show("tryUnfork outside", () -> { ForkJoinTask<String> t = ForkJoinTask.adapt(() -> "v").fork(); boolean b = t.tryUnfork(); return b || t.join().equals("v"); });
         show("pool quiet", () -> c.awaitQuiescence(2, TimeUnit.SECONDS));
+        // No worker can take over from a deep stack here, so this stays on the one it started on.
+        show("invoke chain", () -> new Invoked(600).invoke());
     }
 }

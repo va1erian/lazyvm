@@ -1,4 +1,11 @@
+idle workers wake each other = true 0
+shutdownNow, queue throws ! java.lang.IllegalStateException: isEmpty
+ends all the same = true hook=1
+invokeAny ! java.util.concurrent.TimeoutException
+awaitTermination = false
+invokeAll = false v
 setCorePoolSize wakes idle workers = true
+three workers held = 3
 setMaximumPoolSize wakes idle workers = true
 first task after a stop = [first task interrupted=true]
 end waits for the drain = [hook sees queue=0, await=true queue then=0] returned=1

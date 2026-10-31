@@ -187,7 +187,7 @@ final class PoolWorkers {
     private Runnable nextTask(Worker w) {
         boolean timedOut = false;
         for (;;) {
-            boolean empty = queue.isEmpty();
+            boolean empty = state >= STOP || queue.isEmpty();
             boolean timed;
             long wait;
             synchronized (this) {
