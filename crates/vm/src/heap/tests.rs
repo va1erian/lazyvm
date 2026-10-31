@@ -133,7 +133,10 @@ fn the_handler_room_follows_what_a_collection_finds_live() {
     let small = heap
         .alloc(big_array(limit + limit / 8))
         .unwrap_or_else(|e| panic!("{e:?}"));
-    assert!(heap.alloc(big_array(limit)).is_err(), "natives have stopped");
+    assert!(
+        heap.alloc(big_array(limit)).is_err(),
+        "natives have stopped"
+    );
     heap.give_handler_room();
     assert!(!heap.would_exceed(HANDLER_ROOM));
 
@@ -142,10 +145,16 @@ fn the_handler_room_follows_what_a_collection_finds_live() {
     let live = heap.live_bytes();
     assert!(live > limit, "still over the limit");
     assert!(!heap.would_exceed(HANDLER_ROOM));
-    assert!(heap.would_exceed(HANDLER_ROOM + 1), "room is what is live now");
+    assert!(
+        heap.would_exceed(HANDLER_ROOM + 1),
+        "room is what is live now"
+    );
 
     heap.collect([]);
-    assert!(heap.would_exceed(limit + 1), "under the limit, the limit again");
+    assert!(
+        heap.would_exceed(limit + 1),
+        "under the limit, the limit again"
+    );
     assert!(!heap.would_exceed(limit));
 }
 

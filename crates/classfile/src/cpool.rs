@@ -289,11 +289,7 @@ pub fn encode_mutf8(units: &[u16]) -> Vec<u8> {
         match u {
             0x01..=0x7f => out.push(u as u8),
             0 | 0x80..=0x7ff => out.extend([(u >> 6) as u8 | 0xc0, low]),
-            _ => out.extend([
-                (u >> 12) as u8 | 0xe0,
-                ((u >> 6) & 0x3f) as u8 | 0x80,
-                low,
-            ]),
+            _ => out.extend([(u >> 12) as u8 | 0xe0, ((u >> 6) & 0x3f) as u8 | 0x80, low]),
         }
     }
     out
