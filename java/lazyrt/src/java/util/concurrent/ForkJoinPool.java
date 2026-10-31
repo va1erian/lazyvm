@@ -284,8 +284,8 @@ public class ForkJoinPool extends AbstractExecutorService {
         }
         long start = System.nanoTime();
         while (!core.isQuiescent()) {
-            // Anyone waiting from outside helps, and what it runs can throw at it.
-            ForkJoinTask<?> t = core.queues.pollForeign();
+            // What it runs can throw at it.
+            ForkJoinTask<?> t = core.takeForAssist();
             if (t != null) {
                 t.runAssisting();
             } else if (System.nanoTime() - start >= left) {

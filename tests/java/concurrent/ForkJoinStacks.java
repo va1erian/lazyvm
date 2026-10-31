@@ -254,6 +254,15 @@ public class ForkJoinStacks {
             rel.countDown();
             y.shutdown();
         }
+        // With a worker free the task goes to it, and the wait can end while it runs.
+        ForkJoinPool f = new ForkJoinPool(2);
+        f.submit(() -> "first").get();
+        f.awaitQuiescence(15, TimeUnit.SECONDS);
+        CountDownLatch end = new CountDownLatch(1);
+        ForkJoinTask<?> slow = f.submit(() -> awaitQuietly(end));
+        show("a free worker takes it", () -> f.awaitQuiescence(10, TimeUnit.MILLISECONDS) + " done=" + slow.isDone());
+        end.countDown();
+        f.shutdown();
         // Waiting on the common pool's end also helps.
         int p = ForkJoinPool.getCommonPoolParallelism();
         CountDownLatch in = new CountDownLatch(p), rel = new CountDownLatch(1);

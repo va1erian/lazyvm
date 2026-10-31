@@ -272,6 +272,11 @@ final class ForkJoinCore extends ForkJoinRoster {
         }
     }
 
+    /** For an outside thread waiting for quiet: a queued task no worker is on its way to. */
+    synchronized ForkJoinTask<?> takeForAssist() {
+        return nobodyComing() ? queues.takeForeign(null) : null;
+    }
+
     /** The monitor is held. */
     private boolean nobodyComing() {
         return scout == null && reserved == 0;

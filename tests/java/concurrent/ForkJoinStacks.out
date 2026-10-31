@@ -17,6 +17,7 @@ busy pool, waiting from outside = false here=true
 a failure it runs is thrown at it ! java.lang.IllegalStateException: boom
 busy pool, waiting on another pool's worker = false here=true
 a failure it runs is thrown at it ! java.lang.IllegalStateException: boom
+a free worker takes it = false done=false
 common pool's awaitTermination = false caller
 nested blockers = [true, true]
 helpQuiesce deep down, factory throws = fork threw, helpQuiesce returned, child done=true
