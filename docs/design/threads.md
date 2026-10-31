@@ -48,6 +48,34 @@ Yielding at every poll whenever anyone waits was tried first and spent all
 the time handing over (8 allocating threads made almost no progress), so a
 slice lasts 5 ms, like a classic interpreter lock.
 
+That count times a slice only while polls come quickly. Between two polls there
+can be a native of any length, so a slice was 1024 of them: a daemon thread
+looping on `System.arraycopy` of 16 MB kept `Thread.sleep(1)` on another thread
+waiting 596 ms on average. So one helper thread, the *watch* (`Gil::keep_watch`),
+wakes when the slice is due to end, and if someone can take over, sets a flag that
+the next poll honours by looking at the clock at once. It sleeps with
+`std::thread::sleep`, late by 0.5 ms at most on Windows (see "Timed waits"), so
+this holds on every platform: a slice ends within about a slice's length plus the
+one native that is running, which nothing can interrupt. The flag is read only on
+the path taken with threads in line, so one thread pays nothing, and the watch
+starts when a thread first joins the line. With the line empty for 8 looks in a
+row it sleeps until someone joins: rousing it takes a system call, which threads
+that only hop on a lock must not pay at each hop. While it times, it wakes about
+once per slice, 200 times a second, and takes the slot's mutex once. If it cannot
+be started, slices are as long as the polls make them. `gil_tests.rs` pins that a
+holder with slow polls is told, and that the watch comes back after sleeping.
+
+| Mean `Thread.sleep(1)` beside a thread looping on (`SlowPoll`), ms | count alone | with the watch | oracle |
+|---|---|---|---|
+| `arraycopy` of 16 MB | 498-596 | 9.6 | 1.4 |
+| `arraycopy` of 64 MB | 2396 | 21.8 | |
+| `clone` of 16 MB | 261 | 7.8 | |
+| `arraycopy` of 1 MB | 43 | 5.4 | |
+| `System.gc()` with 16 MB of objects | 40 | 5.5 | 29 |
+| nothing | 5.1 | 5.1 | |
+
+SPIN_COST
+
 ### Turns
 
 The line has two parts: *preempted* threads, which were busy (their slice ended,
@@ -143,7 +171,10 @@ of 1 ms and of 5 ms all took 15.6 ms; the tick is confirmed as the cause), so
 0.5 ms, on a high-resolution timer) but cannot be woken. So the last 20 ms of any
 timed wait (`sleep`, `wait`, `join`, `parkNanos`) are timed by one helper thread,
 `thread/timer.rs`: the waiting thread parks, and the helper sleeps and unparks it
-when its time comes, yielding through the last 100 us. It holds no VM, it starts at
+when its time comes, yielding through the last 100 us. A thread woken earlier takes
+its entry back: left there, the entries of threads hopping on `wait(10)` piled up
+and kept the helper busy, and a hop cost 3.5 us against 1.7 for `wait(1000)`
+(`TimedHop`; now 1.6 for both). It holds no VM, it starts at
 the first such wait, and with none left it waits on a condition variable. It needs
 no `unsafe` and no `timeBeginPeriod`, which would raise the tick for the process.
 `Thread.sleep(1)` in a loop: mean 1.03 ms, 0.1 to 0.2 s of CPU per 2000 sleeps;
@@ -151,6 +182,18 @@ the oracle here: 1.43 ms, 0.13 s of CPU. If the helper cannot be started, a wait
 the OS timer. Elsewhere, LazyOS included, `park_timeout` is used as it is: on LazyOS
 `Thread.sleep(1)` has a median of 1.03 ms, `wait(1)` 1.10 ms and `parkNanos(100000)` 0.13 ms,
 and two spinning threads take turns of 10 ms for the pair (QEMU, WHPX).
+
+LazyOS's monotonic clock is the count of 10 ms timer ticks plus the calibrated TSC's
+progress within the tick, so its resolution is 1 ns, or 10 ms if the TSC could not be
+calibrated. It never goes back, but it can stand still: the fraction is capped just
+below one tick, so with the timer interrupt late (a stalled guest), it waits for the
+tick and then catches up. No test line can flip on that for being too short: `sleep`,
+timed `wait` and `parkNanos` loop until `Instant` has passed the deadline, whatever
+the OS wait did, and `System.nanoTime` reads the same `Instant`, so a lower bound on
+the elapsed time of such a wait holds by construction (`LockEdges` "flagged park",
+`LockSupports` "permits do not stack" and "parkUntil waits", `Interrupts` "timed wait",
+`TimeUnits` "sleep small"). `parkUntil` starts from the wall clock, read twice a few
+instructions apart: only stepping the clock in between could shorten it.
 
 ### Stopping the world
 
@@ -208,6 +251,24 @@ Java monitors are not OS locks: a thread blocked on one has released the VM.
   Rust into Java: one such call was measured at under 8 KiB of stack, so
   1000-deep reflective recursion works on a started thread too
   (`DeepThread`).
+- Java frames use no OS stack, and each thread may have 16384
+  (`Options::max_frames`, decisions.md D15; `-Xss` sets it, at 16384 per MiB, so
+  `-Xss1m` is the default). A frame of a small method costs about 245 bytes of Rust
+  allocations (`DeepThreads`: 406 MB for 100 threads at the bottom at once, 1982 MB for
+  500; the oracle 143 MB and 604 MB). So a thread at the limit holds about 4 MB, and
+  after it unwinds keeps the 1.8 MB or so of its frame table until it ends.
+  `max_frame_slots` bounds a thread with very large frames, at 4M slots of 16 bytes.
+  An overflow takes 2.1 ms (oracle 0.9). A collection takes 128 ns per frame on the stack: 2 ms
+  with one thread 16000 frames down (`DeepGc`; `System.gc()` on the oracle is about as long at
+  any depth), and it comes only as allocation asks for it: 20000 allocations of 64 KiB
+  take the same at depth 10 and at 16000.
+- An exception out of the uncaught exception handler is reported on stderr, in the
+  oracle's words, by `lazy.internal.VM.handlerFailed`, a native that allocates nothing,
+  as the handler may well have failed for lack of memory (`HandlerFailsThreads`). The main
+  thread's goes back to the VM (`Vm::report_handler_failure`, from `finish` in the
+  launcher), because with the heap full it can come before any handler has started:
+  `Thread.currentThread` may have to make the main thread's object (`HandlerFailsFullHeap`,
+  `HandlerFailsMain`, and `HandlerReturnsFullHeap`, where nothing failed and nothing is said).
 - The main thread is entry 0. Its `Thread` object is made the first time
   Java asks for it (`currentThread`), so a program that never does pays
   nothing.
@@ -280,7 +341,8 @@ lock per class; the VM lock plays that part. A thread that finds another
 thread initializing the class parks until some initialization finishes, then
 looks again; the initializing thread itself proceeds (a recursive request).
 A failure leaves the class erroneous, and every later use throws
-`NoClassDefFoundError: Could not initialize class ...`. A thread waiting for
+`NoClassDefFoundError: Could not initialize class ...`, except for a library
+class that ran out of heap or stack ("Out of memory", below). A thread waiting for
 another thread's initializer reports `RUNNABLE`, before and after an
 interrupt, as Java 8 does (`ClinitState`); the wait is not interruptible.
 
@@ -289,8 +351,11 @@ interrupt, as Java 8 does (`ClinitState`); the wait is not interruptible.
 An allocating bytecode that cannot fit even after collecting (soft references
 included) is `OutOfMemoryError`, on any thread. The limit is a count of bytes, not
 the memory itself, so nothing is set aside. Whatever a program does, the heap stays
-below twice the limit (`Heap::alloc`), so host memory is bounded for a given `-Xmx`,
-apart from the one exception below, a fixed small amount:
+below twice the limit (`Heap::alloc`), plus the handler's room and the one exception
+below, a fixed small amount. So the *heap's* host memory is bounded for a given `-Xmx`.
+What `-Xmx` does not count: thread stacks (64 MiB reserved per thread), frames (up to
+16384 per thread, about 4 MB, see "Thread lifecycle"), and the VM's Rust allocations,
+such as classes, the slot table and the thread table.
 
 - **The error itself.** Observed on Java 8, and the same here (`OutOfMemoryErrors`,
   in the test's first lines): the first two `OutOfMemoryError`s the VM makes are new
@@ -312,16 +377,20 @@ apart from the one exception below, a fixed small amount:
   has nothing to do with the depth of the stack or with `-Xss` (`OutOfMemoryDeepStack`).
 - **Library class initializers** have the limit too. A program that retains memory
   run from one, as `ForkJoinPool`'s does through its factory property, gets no pass
-  (`OutOfMemoryErrors`, "stayed within the limit"). One that fails for lack of memory
-  goes back to not being initialized, so the next use tries again: it would otherwise
-  be broken for good, while on the oracle such classes are mostly initialized at
-  startup. Only library code can tell, and JVMS 5.5 steps 10 to 12 still hold for a
+  (`OutOfMemoryErrors`, "stayed within the limit"). One that fails for lack of memory,
+  or of stack, goes back to not being initialized, so the next use tries again: it
+  would otherwise be broken for good, while on the oracle such classes are mostly
+  initialized at startup. A `println` as the first output, in a handler at the bottom
+  of a stack overflow, would have ended the program with no output at all
+  (`StackOverflowFirstUse`). Only library code can tell, and JVMS 5.5 steps 10 to 12 still hold for a
   program's own classes: an initializer that runs out of memory throws that error and
   leaves its class erroneous, and later uses throw `NoClassDefFoundError`, as on the
   oracle (`Fails`, `FailsToo` in `OutOfMemory`).
-- **The handler**: an `OutOfMemoryError` makes 64 KiB more available until a
+- **The handler**: an `OutOfMemoryError` makes 64 KiB more available, counted from
+  the limit or from what the heap holds if a native took it past that, until a
   collection gets back under the limit, as a handler usually reports what it
-  caught. On the oracle, slack in its generations gives the same. It is one
+  caught (`OutOfMemoryHandlerRoom`, and `the_handler_has_room_wherever_a_native_took_the_heap`
+  in the heap's tests). On the oracle, slack in its generations gives the same. It is one
   fixed amount: a loop that catches the error and retains more runs out, and
   so does a handler reached after library code swallowed earlier errors
   (`Retain composeDone` gets a second, uncaught `OutOfMemoryError` there).
@@ -335,6 +404,12 @@ out and report it (`OutOfMemorySmallestHeap`).
 
 Not the same as the oracle, and not pinned:
 
+- A retried library initializer runs again, with any program code it calls. The common
+  pool's `threadFactory` property names such code: run out of memory in its constructor,
+  and here the next `commonPool()` runs it again, and may then work, where the oracle
+  ran it once and throws `NoClassDefFoundError` from then on. Kept on purpose: the same
+  retry is what keeps `println` working after a shortage, and it cannot tell the cases
+  apart. A partial initialization by such code can be seen twice.
 - Its class loading needs the Java heap, so a class first *loaded* with the heap full
   fails to load, without being marked. Here loading uses no heap, so its initializer
   runs and the class may become erroneous, or may work. The test loads its classes

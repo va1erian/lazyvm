@@ -206,7 +206,7 @@ fn wait_in_line(gil: &Arc<Gil>, thread: usize) -> std::thread::JoinHandle<()> {
 /// has been and gone.
 fn let_waiter_through(gil: &Arc<Gil>, waiter: std::thread::JoinHandle<()>) {
     gil.release(Vm::placeholder(Arc::clone(gil)));
-    waiter.join().unwrap();
+    assert!(waiter.join().is_ok(), "the waiter panicked");
     drop(gil.acquire(0, Line::Preempted));
 }
 
