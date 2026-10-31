@@ -410,11 +410,27 @@ public class CompletableFutureReaders {
         });
     }
 
+    /** The lowest timeouts must not wrap round into a far future. */
+    static void farNegative() {
+        long[][] cases = {{Long.MIN_VALUE, 0}, {Long.MIN_VALUE + 1, 0}, {Long.MIN_VALUE, 1}, {-Long.MAX_VALUE / 2, 1}};
+        for (long[] c : cases) {
+            TimeUnit unit = c[1] == 0 ? TimeUnit.NANOSECONDS : TimeUnit.DAYS;
+            show("timed get at " + c[0] + " " + unit, () -> {
+                try {
+                    return new CompletableFuture<String>().get(c[0], unit);
+                } catch (TimeoutException e) {
+                    return "timeout";
+                }
+            });
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         counts();
         release();
         interrupts();
         workers();
         races();
+        farNegative();
     }
 }

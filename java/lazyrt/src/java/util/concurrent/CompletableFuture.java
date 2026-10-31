@@ -5,6 +5,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import lazy.internal.Turnstile;
 
 /**
  * A result that arrives once, with a list of what waits for it. The logic is in {@link StageStep}
@@ -158,7 +159,7 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
-        StageReader reader = new StageReader(true, timed, timed ? System.nanoTime() + nanos : 0L);
+        StageReader reader = new StageReader(true, timed, timed ? Turnstile.deadline(nanos) : 0L);
         StageOutcome o = await(reader);
         if (o == null && reader.interrupted) {
             throw new InterruptedException();

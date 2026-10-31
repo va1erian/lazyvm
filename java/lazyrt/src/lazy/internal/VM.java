@@ -30,9 +30,6 @@ public final class VM {
 
     public static native int availableProcessors();
 
-    /** Whether this thread has used half of its frames, so a caller should spare what is left. */
-    public static native boolean stackHalfUsed();
-
     /** 64 fresh bits per call, different in every run (util.md R3): seeds, not cryptography. */
     public static native long entropy();
 

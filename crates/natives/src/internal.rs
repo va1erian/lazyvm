@@ -61,9 +61,6 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(VM_CLASS, "availableProcessors", "()I", |_, _| {
         ret_int(platform::available_processors())
     });
-    vm.register_native(VM_CLASS, "stackHalfUsed", "()Z", |vm, _| {
-        ret_bool(vm.frames.len() >= vm.options.max_frames / 2)
-    });
     vm.register_native(VM_CLASS, "entropy", "()J", |_, _| {
         Ok(Some(Value::Long(platform::entropy())))
     });

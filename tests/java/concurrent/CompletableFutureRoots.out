@@ -38,4 +38,6 @@ anyOf of one future, many times = 11808 1 0
 out of stack in a firing, then a visit: pending = at most one in every trial
 out of stack after a function, then a visit = ran at most once in every trial
 out of stack after a handover, then a visit = queued and ran at most once in every trial
+out of stack in a supply task, run again = settled, at most one call, in every trial
+out of stack in a run task, run again = settled, at most one call, in every trial
 other stages during a compose's toString of a failure = true

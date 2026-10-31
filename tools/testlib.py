@@ -28,6 +28,8 @@ from common import LAZYRT_CLASSES, TESTS_CLASSES, TESTS_SRC, die, java_sources  
 
 DEFAULT_TIMEOUT = 60
 TIMEOUT_MARK = "--- timeout"
+# A test that bounds its own calls prints this and halts when one passes its limit.
+HUNG_MARK = "--- hung"
 
 
 @dataclass

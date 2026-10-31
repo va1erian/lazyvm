@@ -315,7 +315,7 @@ public class ForkJoinLimits {
         }
     }
     static void deep() throws Exception {
-        int[][] chains = {{350, 4}, {390, 3}, {200, 15}, {800, 0}};
+        int[][] chains = {{350, 4}, {390, 3}, {200, 15}, {600, 0}, {800, 0}};
         for (int[] c : chains) {
             for (int par : new int[] {1, 2}) {
                 ForkJoinPool p = new ForkJoinPool(par);

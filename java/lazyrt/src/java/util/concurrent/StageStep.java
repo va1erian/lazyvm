@@ -41,12 +41,14 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     /** With two sources: the first to settle is enough. */
     private final boolean either;
     private final CompletableFuture<?> target;
-    /** Set the first time the sources allowed a firing, or a task with no source began; that one does the work. */
+    /** Set the first time the sources allowed a firing; that one does the work. */
     private boolean fired;
     /** A task has settled its target: an entry still on a list is nothing but a count now. */
     private boolean ended;
     /** The entry on {@code second}'s list. */
     private OtherSide otherSide;
+    /** The function has been entered. */
+    private boolean calling;
     /** The function has run and left {@code returned} or {@code threw}, not yet made into an outcome. */
     private boolean called;
     private Object returned;
@@ -165,9 +167,6 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     /** Executor entry point. An executor that calls it again finds the target settled, as a rule. */
     @Override
     public void run() {
-        if (first == null && inOwnFunction()) {
-            return;
-        }
         boolean settled = target.outcome == null && settleTarget();
         // A compose left to its inner stage has not ended yet, as far as its sources are concerned.
         if (first != null && target.outcome != null) {
@@ -179,12 +178,15 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
         }
     }
 
-    /** A task with no source claims its stage: run again while its function is in progress, it does nothing. */
-    private boolean inOwnFunction() {
+    /**
+     * A task with no source claims its function on the way in: run again while that is in progress it
+     * does nothing, and only a run that overflowed before getting here leaves it to the next run.
+     */
+    private boolean mayCall() {
         synchronized (CompletableFuture.LOCK) {
-            boolean busy = fired && !called;
-            fired = true;
-            return busy;
+            boolean busy = first == null && calling;
+            calling = true;
+            return !busy;
         }
     }
 
@@ -269,6 +271,9 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
                 StageOutcome noCall = first == null ? null : withoutFunction();
                 if (noCall != null) {
                     return noCall;
+                }
+                if (!mayCall()) {
+                    return null;
                 }
                 call();
             }

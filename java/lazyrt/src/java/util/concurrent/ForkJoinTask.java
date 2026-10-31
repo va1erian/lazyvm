@@ -89,20 +89,17 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     /** As {@link #quietlyJoin}, spelled out: a frame less per level of a chain of joins goes deeper. */
     public final V join() {
         if (status == PENDING) {
-            boolean tight = ForkJoinCore.stackTight();
-            if (takeHere(tight)) {
+            if (takeHere()) {
                 run0();
             }
-            awaitDone(tight);
+            awaitDone();
         }
         return report();
     }
 
     /** As {@link #quietlyInvoke}, spelled out for the same reason. */
     public final V invoke() {
-        if (!handedOff()) {
-            run0();
-        }
+        run0();
         quietlyJoin();
         return report();
     }
@@ -124,55 +121,26 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     }
 
     /** Whether the caller should run this task now, it being queued and the caller about to wait. */
-    private boolean takeHere(boolean tight) {
+    private boolean takeHere() {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return w != null ? w.core.takeToJoin(w, this, tight) : ForkJoinPool.shared.core.takeOutside(this);
+        return w != null ? w.core.takeToJoin(w, this) : ForkJoinPool.shared.core.takeOutside(this);
     }
 
-    /**
-     * On a stack too deep to go on safely, the task moves to a worker's new stack, on the worker's
-     * own pool or, outside any pool, the common pool. False if it has to run here.
-     */
-    private boolean handedOff() {
-        if (status != PENDING || !ForkJoinCore.stackTight()) {
-            return false;
-        }
+    /** Waits for the outcome, with a deadline if {@code timed}. A blocked worker stops counting. */
+    private void block(boolean timed, long deadline) throws InterruptedException, TimeoutException {
         ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        return (w != null ? w.core : ForkJoinPool.shared.core).handOff(w, this);
-    }
-
-    /**
-     * Waits for the outcome, with a deadline if {@code timed}. A blocked worker stops counting. True
-     * if the wait ended with the task to be run by the caller, which only a tight stack can bring.
-     */
-    private boolean block(boolean tight, boolean timed, long deadline) throws InterruptedException, TimeoutException {
-        if (status != PENDING) {
-            return false;
-        }
-        ForkJoinWorkerThread w = ForkJoinWorkerThread.current();
-        ForkJoinCore core = w != null ? w.core : ForkJoinPool.shared.core;
-        try {
-            if (w != null) {
-                w.awaited = this;
-            }
-            if (tight) {
-                core.enterTight();
-                if (core.awaitStandIn(w, this)) {
-                    return true;
-                }
-            } else if (w != null) {
-                core.beginBlock(w);
-            }
+        if (w == null) {
             waitForOutcome(timed, deadline);
-            return false;
+            return;
+        }
+        ForkJoinCore core = w.core;
+        try {
+            w.awaited = this;
+            core.beginBlock(w);
+            waitForOutcome(timed, deadline);
         } finally {
-            if (w != null) {
-                w.awaited = null;
-                core.endBlock(w);
-            }
-            if (tight) {
-                core.leaveTight();
-            }
+            w.awaited = null;
+            core.endBlock(w);
         }
     }
 
@@ -192,14 +160,12 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     }
 
     /** An interrupt during the wait comes back afterwards, unless this is a worker: it is dropped. */
-    private void awaitDone(boolean tight) {
+    private void awaitDone() {
         boolean outside = ForkJoinWorkerThread.current() == null;
         boolean flagged = false;
         while (status == PENDING) {
             try {
-                if (block(tight, false, 0)) {
-                    run0();
-                }
+                block(false, 0);
             } catch (InterruptedException e) {
                 flagged = outside;
             } catch (TimeoutException cannotHappen) {
@@ -305,15 +271,12 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (Thread.interrupted()) {
             throw new InterruptedException();
         }
-        boolean tight = status == PENDING && ForkJoinCore.stackTight();
-        if (status == PENDING && takeHere(tight)) {
+        if (status == PENDING && takeHere()) {
             run0();
         }
         try {
             while (status == PENDING) {
-                if (block(tight, false, 0)) {
-                    run0();
-                }
+                block(false, 0);
             }
         } catch (TimeoutException cannotHappen) {
             throw new AssertionError(cannotHappen);
@@ -336,15 +299,12 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
         if (status == PENDING && nanos <= 0) {
             throw new TimeoutException();
         }
-        boolean tight = status == PENDING && ForkJoinCore.stackTight();
-        if (status == PENDING && takeHere(tight)) {
+        if (status == PENDING && takeHere()) {
             run0();
         }
         while (status == PENDING) {
             try {
-                if (block(tight, true, deadline)) {
-                    run0();
-                }
+                block(true, deadline);
             } catch (InterruptedException e) {
                 if (w == null) {
                     throw e;
@@ -367,18 +327,15 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
 
     public final void quietlyJoin() {
         if (status == PENDING) {
-            boolean tight = ForkJoinCore.stackTight();
-            if (takeHere(tight)) {
+            if (takeHere()) {
                 run0();
             }
-            awaitDone(tight);
+            awaitDone();
         }
     }
 
     public final void quietlyInvoke() {
-        if (!handedOff()) {
-            run0();
-        }
+        run0();
         quietlyJoin();
     }
 

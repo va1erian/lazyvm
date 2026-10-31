@@ -1,7 +1,6 @@
 package java.util.concurrent;
 
 import java.util.concurrent.locks.LockSupport;
-import lazy.internal.VM;
 
 /**
  * What the workers of a {@link ForkJoinPool} do with tasks; {@link ForkJoinRoster}, the same object
@@ -19,11 +18,6 @@ import lazy.internal.VM;
  *
  * <p>A joiner runs the awaited task itself if it is still queued anywhere, and nothing else: any
  * other task could be waiting for something lower on its own stack.
- *
- * <p>A stack here holds fewer frames than the deep chains people write would like, so past half of
- * it a thread leaves the task for a new stack and waits. Only a few such stacks are added, and when
- * they are all in use, or no worker can come, it runs the task on its own stack after all, where
- * runaway recursion then overflows as it should.
  */
 final class ForkJoinCore extends ForkJoinRoster {
     /** Idle workers end after this long; daemons or not, each is an OS thread with a stack. */
@@ -32,15 +26,9 @@ final class ForkJoinCore extends ForkJoinRoster {
     private static final long DEFER_NANOS = 10_000_000L;
     private static final int MAX_DEFER_SHIFT = 4;
     private static final long POLL_NANOS = 1_000_000L;
-    /**
-     * Threads that may wait at a time on a stack past its half. With 2047 frames each that adds up
-     * to about 20000, around what a plain recursion reaches on the oracle's default stack.
-     */
-    private static final int MAX_TIGHT_WAITERS = 8;
 
     /** Workers in {@code helpQuiesce} with nothing to run: they do not hold the pool from being quiet. */
     private int quiescing;
-    private int tightWaiters;
 
     ForkJoinCore(ForkJoinPool pool, int parallelism, boolean asyncMode, String workerPrefix) {
         super(pool, parallelism, asyncMode, workerPrefix);
@@ -188,16 +176,8 @@ final class ForkJoinCore extends ForkJoinRoster {
         return true;
     }
 
-    /** Whether a task should go on another worker's fresh stack rather than on top of this one. */
-    static boolean stackTight() {
-        return VM.stackHalfUsed();
-    }
-
     /** Whether a worker about to wait for {@code awaited} should run it now instead. */
-    synchronized boolean takeToJoin(ForkJoinWorkerThread w, ForkJoinTask<?> awaited, boolean tight) {
-        if (tight && tightWaiters < MAX_TIGHT_WAITERS) {
-            return false;
-        }
+    synchronized boolean takeToJoin(ForkJoinWorkerThread w, ForkJoinTask<?> awaited) {
         return queues.removeQueued(w, awaited);
     }
 
@@ -211,125 +191,48 @@ final class ForkJoinCore extends ForkJoinRoster {
         }
     }
 
-    /**
-     * Queues a task invoked on a tight stack, for a worker to take. False if it should run here.
-     * Whatever the factory throws is not the caller's business: its wait takes the task back.
-     */
-    boolean handOff(ForkJoinWorkerThread w, ForkJoinTask<?> task) {
-        boolean spawn;
-        synchronized (this) {
-            if (parallelism == 0 || tightWaiters >= MAX_TIGHT_WAITERS) {
-                return false;
-            }
-            if (w != null) {
-                queues.pushLocal(w, task);
-            } else {
-                queues.addSubmission(task);
-            }
-            spawn = signal();
-        }
-        try {
-            if (spawn) {
-                createWorker();
-            }
-        } catch (Throwable noWorkerCameOfIt) {
-            // Then its wait finds nobody coming.
-        }
-        return true;
-    }
-
-    synchronized void enterTight() {
-        tightWaiters++;
-    }
-
-    synchronized void leaveTight() {
-        tightWaiters--;
-    }
-
-    /**
-     * The caller's stack is tight and counted as such. Waits as long as a worker may still come for
-     * {@code awaited}. True if it is still queued with nobody coming: it is the caller's to run, which
-     * can overflow but cannot hang. A worker stays counted as blocked until {@link #endBlock}.
-     */
-    boolean awaitStandIn(ForkJoinWorkerThread w, ForkJoinTask<?> awaited) {
-        try {
-            if (w != null) {
-                beginBlock(w);
-            }
-        } catch (Throwable noWorkerCameOfIt) {
-            // Then the loop below finds nobody coming, unless someone else asked for one.
-        }
-        for (;;) {
-            synchronized (this) {
-                if (awaited.isDone()) {
-                    return false;
-                }
-                if (nobodyComing() || tightWaiters > MAX_TIGHT_WAITERS) {
-                    return queues.removeQueued(w, awaited);
-                }
-            }
-            LockSupport.parkNanos(this, POLL_NANOS);
-        }
-    }
-
     /** For an outside thread waiting for quiet: a queued task no worker is on its way to. */
     synchronized ForkJoinTask<?> takeForAssist() {
-        return nobodyComing() ? queues.takeForeign(null) : null;
-    }
-
-    /** The monitor is held. */
-    private boolean nobodyComing() {
-        return scout == null && reserved == 0;
+        return scout == null && reserved == 0 ? queues.takeForeign(null) : null;
     }
 
     /**
      * Runs what it can find, then waits for the workers to have nothing to do. Blocked workers do
      * not count as doing something, nor do others waiting here ("two in helpQuiesce"), but one that
-     * leaves counts again at once: the second stays until the first's task is over. On a tight stack
-     * it asks for a worker first and runs tasks itself once none is coming.
+     * leaves counts again at once: the second stays until the first's task is over.
      */
     void helpQuiesce(ForkJoinWorkerThread w) {
         boolean waiting = false;
-        boolean asked = false;
-        for (;;) {
-            ForkJoinTask<?> t = null;
-            boolean tight = stackTight();
-            synchronized (this) {
-                if (!tight || asked && nobodyComing()) {
+        try {
+            for (;;) {
+                ForkJoinTask<?> t;
+                synchronized (this) {
                     t = queues.ownNext(w);
                     t = t != null ? t : queues.takeForeign(w);
+                    if (t != null && waiting) {
+                        quiescing--;
+                        waiting = false;
+                    } else if (t == null && !waiting) {
+                        quiescing++;
+                        waiting = true;
+                    }
+                    if (t == null && !queues.anyQueued() && running() == quiescing) {
+                        return;
+                    }
                 }
-                if (t != null && waiting) {
-                    quiescing--;
-                    waiting = false;
-                } else if (t == null && !waiting) {
-                    quiescing++;
-                    waiting = true;
-                }
-                if (t == null && !queues.anyQueued() && running() == quiescing) {
-                    quiescing--;
-                    return;
+                if (t != null) {
+                    t.run0();
+                } else {
+                    LockSupport.parkNanos(this, POLL_NANOS);
                 }
             }
-            if (t != null) {
-                t.run0();
-            } else if (tight) {
-                pauseAskingForWorker(w);
-                asked = true;
-            } else {
-                LockSupport.parkNanos(this, POLL_NANOS);
-            }
-        }
-    }
-
-    private void pauseAskingForWorker(ForkJoinWorkerThread w) {
-        try {
-            beginBlock(w);
-            LockSupport.parkNanos(this, POLL_NANOS);
-        } catch (Throwable noWorkerCameOfIt) {
-            // Then the next look finds nobody coming.
         } finally {
-            endBlock(w);
+            // Calls nothing, as a stack overflow may be what brought it here.
+            if (waiting) {
+                synchronized (this) {
+                    quiescing--;
+                }
+            }
         }
     }
 }

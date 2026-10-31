@@ -417,6 +417,21 @@ public class CompletableFutureRoots {
         return once ? "queued and ran at most once in every trial" : "queued or ran more than once";
     }
 
+    /** A task with no source that overflowed before its function: run again, it settles, and calls it once. */
+    static String settledOnSecondRun(Started started) {
+        boolean good = true;
+        int limit = stackLimit();
+        for (int d = limit - 60; d <= limit + 3; d++) {
+            List<Runnable> queue = new ArrayList<>();
+            ownRuns[0] = 0;
+            CompletableFuture<?> c = started.on(queue);
+            try { recurse(d, queue.get(0)); } catch (StackOverflowError e) { /* looked at below */ }
+            queue.get(0).run();
+            good &= c.isDone() && ownRuns[0] <= 1;
+        }
+        return good ? "settled, at most one call, in every trial" : "pending or called twice";
+    }
+
     /** Another stage goes on while a compose is inside the failure's toString, which waits for it. */
     static boolean othersWhileInToString() throws Exception {
         CountDownLatch inToString = new CountDownLatch(1), otherDone = new CountDownLatch(1);
@@ -475,6 +490,8 @@ public class CompletableFutureRoots {
         show("out of stack in a firing, then a visit: pending", CompletableFutureRoots::lostAfterOverflow);
         show("out of stack after a function, then a visit", CompletableFutureRoots::ranOnceAfterOverflow);
         show("out of stack after a handover, then a visit", CompletableFutureRoots::queuedOnceAfterOverflow);
+        show("out of stack in a supply task, run again", () -> settledOnSecondRun(queue -> CompletableFuture.supplyAsync(() -> { ownRuns[0]++; return "r"; }, queue::add)));
+        show("out of stack in a run task, run again", () -> settledOnSecondRun(queue -> CompletableFuture.runAsync(() -> ownRuns[0]++, queue::add)));
         show("other stages during a compose's toString of a failure", CompletableFutureRoots::othersWhileInToString);
     }
 }

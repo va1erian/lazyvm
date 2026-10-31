@@ -28,3 +28,7 @@ many complete one = 1 100
 attach races settle = 0
 two sources race = 0
 reader races settle = 0
+timed get at -9223372036854775808 NANOSECONDS = timeout
+timed get at -9223372036854775807 NANOSECONDS = timeout
+timed get at -9223372036854775808 DAYS = timeout
+timed get at -4611686018427387903 DAYS = timeout
