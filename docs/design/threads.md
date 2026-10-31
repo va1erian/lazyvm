@@ -396,6 +396,9 @@ such as classes, the slot table and the thread table.
   program's own classes: an initializer that runs out of memory throws that error and
   leaves its class erroneous, and later uses throw `NoClassDefFoundError`, as on the
   oracle (`Fails`, `FailsToo` in `OutOfMemory`).
+- **A handler that fails**: its line on stderr names the thread in modified UTF-8, as on the
+  oracle: a NUL in two bytes, a surrogate pair as two surrogates of three bytes each, a lone one
+  as it is (`HandlerFailsThreads`, "odd name ended").
 - **The handler**: an `OutOfMemoryError` makes 64 KiB more available, counted from
   the limit or from what the heap holds if a native took it past that, as a handler
   usually reports what it caught. Each collection brings that down to 64 KiB past what

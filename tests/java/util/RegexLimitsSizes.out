@@ -13,4 +13,6 @@ repeated resets over a String 300 fast
 nesting 20000 ( Stack overflow during pattern compilation, index inside, full message
 nesting 20000 (?= Stack overflow during pattern compilation, index inside, full message
 nesting 20000 (?<= Stack overflow during pattern compilation, index inside, full message
+nested class Stack overflow during pattern compilation, index inside, full message
+nested class Stack overflow during pattern compilation, index inside, full message
 done

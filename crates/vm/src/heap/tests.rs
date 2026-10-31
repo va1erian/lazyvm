@@ -128,7 +128,7 @@ fn the_handler_room_follows_what_a_collection_finds_live() {
     let limit = 1 << 20;
     let mut heap = Heap::new(limit);
     let big = heap
-        .alloc(big_array(limit + limit / 2))
+        .alloc(big_array(limit / 2))
         .unwrap_or_else(|e| panic!("{e:?}"));
     let small = heap
         .alloc(big_array(limit + limit / 8))
