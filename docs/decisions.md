@@ -337,7 +337,7 @@ here, and a regex golden (`RegexLimitsSizes`, "nesting 20000") needs an overflow
   bounds a thread with very large frames as before.
 - **Calls from Rust into Java** do use OS stack, so they have a limit of their own,
   `Options::max_nesting`: 2400. That is what recursion through `Method.invoke` reaches:
-  2146 to 2334 on the oracle in 12 runs, main thread or started; `DeepThread` pins 1500, and
+  2146 to 2334 on the oracle in 6 runs, main thread or started; `DeepThread` pins 1500, and
   `lazy/internal/CallNesting` the end of it, also inside LazyOS. All 2400 nests took 3.56 MiB
   on Windows at worst (`Nest`: reflection, constructors, a class loaded at the bottom), of a
   64 MiB stack on a started thread and 256 MiB on the main one. Those stacks are the same size

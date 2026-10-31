@@ -419,6 +419,8 @@ out and report it (`OutOfMemorySmallestHeap`).
 
 Not the same as the oracle, and not pinned:
 
+- After a native overshoots the limit, the heap can stay above what the oracle retains: at `-Xmx32m`, natives reach 62 MB, and the program can then hold 40 MB, where the oracle holds 28 MB. Bytecode adds nothing past that.
+
 - A retried library initializer runs again, with any program code it calls. The common
   pool's `threadFactory` property names such code: run out of memory in its constructor,
   and here the next `commonPool()` runs it again, and may then work, where the oracle
