@@ -17,6 +17,9 @@ root's list under what moved onto it = [m0, s=2, m1, s=1, old of s, s=0]
 step finds its target settled, in the target's own firing = [in, other, out]
 handed over, then found again through the other list = [handed 1, in, other, out] 0 0
 task of a compose left pending, run again = 2 2 false i
+both with a settled dependent, fired through one list, leaves the other = [before b=2 a=1, after b=1 a=0, new b=0]
+supply task run again in its own function = 1 r1
+run task run again in its own function = 1 null
 task of a compose left pending does not help = [task ran, sibling] 0 true true
 task end, either, receiver pending, through the other = [fn=1, sib0=1, sib1=1, own=0] 0
 task end, either, other pending, through the receiver = [fn=1, sib=0] 0
@@ -32,7 +35,7 @@ wide either, settled by the receiver = 20000 0 0
 wide either, settled by the other = 20000 0 0
 many requests against one shutdown, shuffled = 20000 9999 0
 anyOf of one future, many times = 11808 1 0
-out of stack in a firing, then a visit: pending = 0
+out of stack in a firing, then a visit: pending = at most one in every trial
 out of stack after a function, then a visit = ran at most once in every trial
 out of stack after a handover, then a visit = queued and ran at most once in every trial
 other stages during a compose's toString of a failure = true

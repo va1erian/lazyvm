@@ -41,7 +41,7 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     /** With two sources: the first to settle is enough. */
     private final boolean either;
     private final CompletableFuture<?> target;
-    /** Set the first time the sources allowed a firing; that one does the work. */
+    /** Set the first time the sources allowed a firing, or a task with no source began; that one does the work. */
     private boolean fired;
     /** A task has settled its target: an entry still on a list is nothing but a count now. */
     private boolean ended;
@@ -130,7 +130,7 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
         }
         try {
             if (target.outcome != null) {
-                leaveOtherSource();
+                leaveSources();
                 return target;
             }
             if (executor == null || skipsExecutor()) {
@@ -165,6 +165,9 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
     /** Executor entry point. An executor that calls it again finds the target settled, as a rule. */
     @Override
     public void run() {
+        if (first == null && inOwnFunction()) {
+            return;
+        }
         boolean settled = target.outcome == null && settleTarget();
         // A compose left to its inner stage has not ended yet, as far as its sources are concerned.
         if (first != null && target.outcome != null) {
@@ -173,6 +176,15 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
         }
         if (settled) {
             target.fireLinks();
+        }
+    }
+
+    /** A task with no source claims its stage: run again while its function is in progress, it does nothing. */
+    private boolean inOwnFunction() {
+        synchronized (CompletableFuture.LOCK) {
+            boolean busy = fired && !called;
+            fired = true;
+            return busy;
         }
     }
 
@@ -206,13 +218,6 @@ final class StageStep extends StageLink implements Runnable, CompletableFuture.A
             synchronized (CompletableFuture.LOCK) {
                 leave(source);
             }
-        }
-    }
-
-    /** A step found with its target settled: only the {@code either} steps leave. */
-    private void leaveOtherSource() {
-        if (either) {
-            leaveSources();
         }
     }
 

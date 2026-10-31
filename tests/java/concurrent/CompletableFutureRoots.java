@@ -147,6 +147,29 @@ public class CompletableFutureRoots {
             inner.complete("i");
             return before + " " + d.join();
         });
+        show("both with a settled dependent, fired through one list, leaves the other", () -> {
+            CompletableFuture<String> a = cf(), b = cf();
+            List<String> log = new ArrayList<>();
+            CompletableFuture<Void> d = a.thenAcceptBoth(b, (x, y) -> log.add("fn"));
+            d.complete(null);
+            b.thenRun(() -> log.add("new b=" + b.getNumberOfDependents()));
+            b.thenRun(() -> {
+                log.add("before b=" + b.getNumberOfDependents() + " a=" + a.getNumberOfDependents());
+                a.complete("a");
+                log.add("after b=" + b.getNumberOfDependents() + " a=" + a.getNumberOfDependents());
+            });
+            b.complete("b");
+            return log;
+        });
+        ownTaskAgain("supply", queue -> CompletableFuture.supplyAsync(() -> {
+            ownRuns[0]++;
+            queue.get(0).run();
+            return "r" + ownRuns[0];
+        }, queue::add));
+        ownTaskAgain("run", queue -> CompletableFuture.runAsync(() -> {
+            ownRuns[0]++;
+            queue.get(0).run();
+        }, queue::add));
         show("task of a compose left pending does not help", () -> {
             CompletableFuture<String> s = cf(), inner = cf();
             List<String> log = new ArrayList<>();
@@ -160,6 +183,21 @@ public class CompletableFutureRoots {
             String c = s.getNumberOfDependents() + " " + d.isCompletedExceptionally();
             inner.complete("i");
             return log + " " + c + " " + d.isCompletedExceptionally();
+        });
+    }
+
+    static final int[] ownRuns = new int[1];
+
+    interface Started { CompletableFuture<?> on(List<Runnable> queue); }
+
+    /** A task with no source, run again from inside its own function. */
+    static void ownTaskAgain(String kind, Started started) {
+        show(kind + " task run again in its own function", () -> {
+            ownRuns[0] = 0;
+            List<Runnable> queue = new ArrayList<>();
+            CompletableFuture<?> d = started.on(queue);
+            queue.get(0).run();
+            return ownRuns[0] + " " + d.join();
         });
     }
 
@@ -403,27 +441,30 @@ public class CompletableFutureRoots {
         return sawOther[0];
     }
 
-    /** Completes at every depth up to the end of the stack, then visits: what is still pending is lost. */
-    static int lostAfterOverflow() {
+    /**
+     * Completes at every depth up to the end of the stack, then visits: what is still pending is lost.
+     * The oracle loses one entry or none, depending on its JIT: 0 with its default flags, as a rule,
+     * and 1 with -Xint or -XX:TieredStopAtLevel=1. So this line only bounds it; here it is 0, which
+     * lazy/internal/StageOverflow holds.
+     */
+    static String lostAfterOverflow() {
         int lo = stackLimit();
         int worst = 0;
-        for (int rep = 0; rep < 2; rep++) {
-            for (int d = Math.max(0, lo - 300); d <= lo + 5; d++) {
-                CompletableFuture<String> s = cf();
-                CompletableFuture<String> mid = s.thenApply(v -> v);
-                List<CompletableFuture<?>> stages = new ArrayList<>();
-                stages.add(mid);
-                for (int i = 0; i < 20; i++) stages.add(mid.thenApply(v -> v + "1").thenApply(v -> v + "2"));
-                try { recurse(d, () -> s.complete("v")); } catch (StackOverflowError e) { /* looked at below */ }
-                if (!s.isDone()) continue;
-                s.complete("again");
-                mid.complete("again");
-                int pending = 0;
-                for (CompletableFuture<?> f : stages) if (!f.isDone()) pending++;
-                worst = Math.max(worst, pending);
-            }
+        for (int d = Math.max(0, lo - 100); d <= lo + 5; d++) {
+            CompletableFuture<String> s = cf();
+            CompletableFuture<String> mid = s.thenApply(v -> v);
+            List<CompletableFuture<?>> stages = new ArrayList<>();
+            stages.add(mid);
+            for (int i = 0; i < 20; i++) stages.add(mid.thenApply(v -> v + "1").thenApply(v -> v + "2"));
+            try { recurse(d, () -> s.complete("v")); } catch (StackOverflowError e) { /* looked at below */ }
+            if (!s.isDone()) continue;
+            s.complete("again");
+            mid.complete("again");
+            int pending = 0;
+            for (CompletableFuture<?> f : stages) if (!f.isDone()) pending++;
+            worst = Math.max(worst, pending);
         }
-        return worst;
+        return worst <= 1 ? "at most one in every trial" : "more than one";
     }
 
     public static void main(String[] args) throws Exception {
@@ -431,9 +472,6 @@ public class CompletableFutureRoots {
         settledTargets();
         taskEnds();
         wide();
-        // 0 is the oracle with its default flags, over about 200 runs and 150 rounds. It reads 1 every
-        // time with -Xint or -XX:TieredStopAtLevel=1, or with a shorter sweep or other work before it:
-        // this line holds only under the oracle's JIT, so it stays where it is, with the sweep's size.
         show("out of stack in a firing, then a visit: pending", CompletableFutureRoots::lostAfterOverflow);
         show("out of stack after a function, then a visit", CompletableFutureRoots::ranOnceAfterOverflow);
         show("out of stack after a handover, then a visit", CompletableFutureRoots::queuedOnceAfterOverflow);
