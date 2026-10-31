@@ -74,7 +74,12 @@ holder with slow polls is told, and that the watch comes back after sleeping.
 | `System.gc()` with 16 MB of objects | 40 | 5.5 | 29 |
 | nothing | 5.1 | 5.1 | |
 
-SPIN_COST
+With fast polls the watch changes nothing that can be measured: `Spin2`, 100M calls,
+5 runs interleaved with the build before it, 19.7-20.2 s against 19.8-20.0 s on one
+busy thread and 20.2-20.8 s against 20.2-20.8 s on two, and the same for `TimedHop` and
+`StartLoop`. Sharing the VM costs 2% to 4% over one thread doing the same work (the
+looks, the mutex and the 400 switches a second), not the under 1% once claimed for the
+looks alone.
 
 ### Turns
 

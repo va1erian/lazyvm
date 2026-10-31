@@ -53,9 +53,9 @@ pub(crate) struct Gil {
 const SLICE: Duration = Duration::from_millis(5);
 
 /// How many safepoints a holder with threads in line passes between looks at
-/// the clock: a look is about 30 ns on Windows, and a safepoint comes every
-/// few nanoseconds to tens of them, so the slice is exact to some 50 us and
-/// the looks cost under 1% of the holder's time.
+/// the clock: a look is about 30 ns on Windows, and a safepoint usually comes every
+/// few nanoseconds to tens of them, so the slice is exact to some 50 us. All
+/// that sharing the VM costs is 2% to 4% of the time (threads.md).
 const POLLS_PER_LOOK: u32 = 1024;
 
 /// With no one in line for this many looks in a row, the watch stops timing
