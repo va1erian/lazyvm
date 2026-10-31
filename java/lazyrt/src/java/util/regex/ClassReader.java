@@ -41,10 +41,15 @@ class ClassReader extends PatternReader {
             cursor++;
             negating = true;
         }
-        deepestClass = Math.max(deepestClass, ++classDepth);
-        CharClass result = body(negating, true);
-        classDepth--;
+        CharClass result = deeper(negating, true);
         return result == null ? CharClass.range(1, 0) : CharClass.cached(result);
+    }
+
+    private CharClass deeper(boolean negating, boolean bracketed) {
+        deepestClass = Math.max(deepestClass, ++classDepth);
+        CharClass result = body(negating, bracketed);
+        classDepth--;
+        return result;
     }
 
     /**
@@ -210,7 +215,7 @@ class ClassReader extends PatternReader {
                 CharClass nested = parseClass();
                 side = side == null ? nested : CharClass.or(side, nested);
             } else {
-                side = CharClass.cached(body(false, false));
+                side = CharClass.cached(deeper(false, false));
             }
         }
     }

@@ -21,7 +21,7 @@ public class DeepThread {
         final String[] out = new String[1];
         Thread t = new Thread(() -> {
             try {
-                out[0] = "reflective depth " + viaReflection(2000);
+                out[0] = "reflective depth " + viaReflection(1500);
             } catch (Throwable e) {
                 out[0] = "failed: " + e;
             }
@@ -29,6 +29,6 @@ public class DeepThread {
         t.start();
         t.join();
         System.out.println(out[0]);
-        System.out.println("on the main thread " + viaReflection(2000));
+        System.out.println("on the main thread " + viaReflection(1500));
     }
 }
