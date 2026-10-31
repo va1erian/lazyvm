@@ -80,11 +80,38 @@ abstract class HashViews<K, V, E> extends AbstractCollection<E> {
     }
 
     final int elementHashes() {
+        return hashes(iterator());
+    }
+
+    static int hashes(Iterator<?> it) {
         int h = 0;
-        for (Iterator<E> it = iterator(); it.hasNext();) {
+        while (it.hasNext()) {
             h += it.next().hashCode();
         }
         return h;
+    }
+
+    static boolean holds(Iterator<?> it, Object value) {
+        while (it.hasNext()) {
+            Object v = it.next();
+            if (v == value || value.equals(v)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The usual form of a map's text, from its own walk: {@code toString} asks no public method. */
+    static <K, V> String text(ConcurrentHashMap<K, V> map) {
+        StringBuilder sb = new StringBuilder("{");
+        for (Iterator<Map.Entry<K, V>> it = map.entryWalk(); it.hasNext();) {
+            Map.Entry<K, V> e = it.next();
+            sb.append(e.getKey() == map ? "(this Map)" : e.getKey()).append('=').append(e.getValue() == map ? "(this Map)" : e.getValue());
+            if (it.hasNext()) {
+                sb.append(", ");
+            }
+        }
+        return sb.append('}').toString();
     }
 
     /** Both ways round, with no size comparison: the sizes may be changing. */
@@ -233,7 +260,7 @@ abstract class HashViews<K, V, E> extends AbstractCollection<E> {
 
         /** Writes the value in any case, and says only whether the key was new (concurrent.md). */
         public boolean add(Map.Entry<K, V> e) {
-            return map.put(e.getKey(), e.getValue()) == null;
+            return map.core.put(e.getKey(), Objects.requireNonNull(e.getValue()), false) == null;
         }
 
         public boolean addAll(Collection<? extends Map.Entry<K, V>> c) {

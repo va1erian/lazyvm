@@ -1,0 +1,20 @@
+put of that key inside compute, a put queued: finished
+remove(k, v) of that key inside compute, a put queued: finished
+remove of that key inside compute, a put queued: finished
+replace of that key inside compute, a put queued: finished
+replace(k, v, v) of that key inside compute, a put queued: finished
+computeIfAbsent of that key inside compute, a put queued: finished
+putIfAbsent of that key inside compute, a put queued: finished
+put of another key inside compute, a put queued: finished
+put of that key inside compute, a compute queued: finished
+entry setValue of that key inside compute, a put queued: finished
+iterator remove of that key inside compute, a put queued: finished
+clear inside compute, a put queued: finished
+  end {k=2}
+keySet clear inside compute, a compute queued: finished
+  end {k=9}
+replace(k, equal, new), a writer storing equal values: ended, true
+remove(k, equal), a writer storing equal values: ended, true
+put of a present key beside another compute: equals 1, hashCode 1
+remove of a present key beside another compute: equals 1, hashCode 1
+walk of an outgrown table: equals 0, hashCode 0

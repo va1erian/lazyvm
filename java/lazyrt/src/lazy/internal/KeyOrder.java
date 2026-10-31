@@ -20,8 +20,8 @@ public final class KeyOrder {
         return 0;
     }
 
-    /** A side for two keys {@link #compared} cannot tell apart: class names, then identity hashes. */
-    public static int tieBreak(Object k, Object pk) {
+    /** A side for two keys {@link #compared} cannot tell apart: by class name, or else by identity. */
+    public static int anySide(Object k, Object pk) {
         if (k != null && pk != null) {
             int r = k.getClass().getName().compareTo(pk.getClass().getName());
             if (r != 0) {
