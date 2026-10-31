@@ -22,6 +22,7 @@ invokeAll at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
 helpQuiesce at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
 awaitQuiescence at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
 managedBlock at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+helpQuiesce beside a busy worker at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
 runaway at 1: java.lang.StackOverflowError, few workers true
   ends true
 runaway at 2: java.lang.StackOverflowError, few workers true

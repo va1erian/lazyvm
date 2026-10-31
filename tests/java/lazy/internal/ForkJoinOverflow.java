@@ -40,7 +40,8 @@ public class ForkJoinOverflow {
             case "invoke": return () -> new Noop().invoke();
             case "quietlyInvoke": return () -> new Noop().quietlyInvoke();
             case "invokeAll": return () -> ForkJoinTask.invokeAll(new Noop(), new Noop());
-            case "helpQuiesce": return ForkJoinTask::helpQuiesce;
+            case "helpQuiesce":
+            case "helpQuiesce beside a busy worker": return ForkJoinTask::helpQuiesce;
             case "awaitQuiescence": return () -> ForkJoinTask.getPool().awaitQuiescence(1, TimeUnit.SECONDS);
             default: return () -> ForkJoinPool.managedBlock(new ForkJoinPool.ManagedBlocker() {
                 @Override public boolean block() { return true; }
@@ -59,6 +60,15 @@ public class ForkJoinOverflow {
             pending.complete(null);
         });
         release.setDaemon(true);
+        if (mode.equals("helpQuiesce beside a busy worker")) {
+            // So that it has to wait, and can overflow in that with its count taken.
+            CountDownLatch in = new CountDownLatch(1);
+            x.execute(() -> {
+                in.countDown();
+                while (!pending.isDone()) Thread.yield();
+            });
+            in.await();
+        }
         ForkJoinTask<?> t = x.submit(() -> { release.start(); dive(make(mode, pending)); });
         t.get(30, TimeUnit.SECONDS);
         Thread.sleep(30);
@@ -125,6 +135,7 @@ public class ForkJoinOverflow {
                 System.out.println(mode + " at " + par + ": " + one(mode, par));
             }
         }
+        System.out.println("helpQuiesce beside a busy worker at 2: " + one("helpQuiesce beside a busy worker", 2));
         runaways();
         System.exit(0);
     }
