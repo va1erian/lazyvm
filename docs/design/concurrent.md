@@ -1354,6 +1354,9 @@ being kept. Neither was: both are now what the oracle does.
   direct executor settles at 700 on both; at 1000 its last stage is ok on the oracle and failed or pending here, depending on the frames below the
   `complete`; at 2000 it is pending on the oracle and failed or pending here. The order in which readers wake when nothing holds them, and who of a
   reader and a completer takes the next entry.
+- **`CompletableFuture`, two rare differences found by probe, no line holds them**: a `*Both` step whose dependent was settled directly, fired with both sources
+  settled, leaves the other source's list at once on the oracle and only when that list fires here, so that source's count reads one more until then. A
+  `supplyAsync` or `runAsync` task run again from inside its own function does nothing on the oracle and runs the function again here.
 - **`CompletableFuture`, out of stack in a firing**: on the oracle a stage whose firing ran out of stack mostly stays pending after a visit (340 of 880 in one
   sweep), and its function is not run again. Here the visit settles it, by the rule in the section above. Only that the function ran once is pinned. The line
   "out of stack in a firing, then a visit: pending" (`CompletableFutureRoots`) reads 0 on the oracle with its default flags and needs that test's own
