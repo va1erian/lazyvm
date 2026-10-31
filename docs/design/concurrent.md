@@ -1300,7 +1300,7 @@ attaching), `a,b`, `b,a`; a throwing function is also covered.
   entry is gone and the stage stays pending, after any visit too (`CompletableFutureNoHeap`).
 - A task an executor runs twice is not the case above: a compose left waiting for its inner stage calls its function again and joins the inner stage's
   list again (`CompletableFutureRoots`: "task of a compose left pending, run again"). A `supplyAsync` or `runAsync` task run again while its own function is in
-  progress does nothing ("supply task run again in its own function", "run task run again in its own function"). One that overflowed before it reached its function settles when run again, with one call of the function at most ("out of stack in a supply task, run again", "out of stack in a run task, run again").
+  progress does nothing ("supply task run again in its own function", "run task run again in its own function"). One that overflowed before it reached its function settles when run again, with one call of the function at most ("out of stack in a supply task, run again", "out of stack in a run task, run again"). At the last frames or two the attempt can still end as a failure with `StackOverflowError` and no call, which the oracle's compiled code was not seen to do; the lines allow it.
 - `LOCK` holds no user code. A compose reads a done inner stage under it and wraps the failure outside it, as the wrapping calls the failure's
   `toString` (`CompletableFutureRoots`: "other stages during a compose's toString of a failure").
 - Long chains of stages linked by the API do not exhaust the stack: 20000 chained `thenApply` and `thenCompose`, and a fan of 5000
