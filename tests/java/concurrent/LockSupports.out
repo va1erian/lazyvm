@@ -1,0 +1,19 @@
+permit consumed by park = returned
+permits do not stack = true
+unpark null = ok
+unpark unstarted = NEW
+unpark dead = TERMINATED
+non-positive return at once = true
+parkUntil waits = true
+current no blocker = null
+getBlocker null ! java.lang.NullPointerException
+blocker while parked = the blocker
+state parked = WAITING
+blocker after = null
+blocker timed = the blocker
+state timed = TIMED_WAITING
+blocker until = the blocker
+null blocker = null
+interrupt wakes park, keeps flag = flag=true
+flagged parks return = true
+parks without unpark stay = false

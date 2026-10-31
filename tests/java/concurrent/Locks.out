@@ -1,0 +1,87 @@
+new toString = concurrent.Locks$Open@H[Unlocked]
+isFair = false
+fair isFair = true
+fair toString = java.util.concurrent.locks.ReentrantLock@H[Unlocked]
+isLocked = false
+holdCount = 0
+owner = null
+locked toString = concurrent.Locks$Open@H[Locked by thread main]
+holdCount 2 = 2
+isHeld = true
+owner name = main
+holdCount 1 = 1
+still locked = true
+unlocked = false
+unlock free ! java.lang.IllegalMonitorStateException
+tryLock = true
+tryLock again = true
+holdCount tried = 2
+hasQueuedThread null ! java.lang.NullPointerException
+tryLock null unit ! java.lang.NullPointerException
+tryLock zero = true
+other tryLock = false
+other timed tryLock = false
+other unlock = false
+other holdCount = 0
+queueLength = 2
+hasQueued = true
+hasQueuedThread a = true
+hasQueuedThread main = false
+queued = [a, b]
+blocked state = WAITING
+queue drained = 0
+fair tryLock while queued = false
+fair order = [t0, t1, t2, t3]
+lockInterruptibly flagged ! java.lang.InterruptedException
+flag cleared = false
+timed tryLock flagged ! java.lang.InterruptedException
+flag cleared 2 = false
+lock keeps flag = true
+tryLock keeps flag = true
+interrupted while queued = java.lang.InterruptedException flag=false
+left queue = 0
+uninterruptible still queued = 1
+lock after interrupt = flag=true
+await unowned ! java.lang.IllegalMonitorStateException
+awaitNanos unowned ! java.lang.IllegalMonitorStateException
+await time unowned ! java.lang.IllegalMonitorStateException
+awaitUntil unowned ! java.lang.IllegalMonitorStateException
+awaitUninterruptibly unowned ! java.lang.IllegalMonitorStateException
+signal unowned ! java.lang.IllegalMonitorStateException
+signalAll unowned ! java.lang.IllegalMonitorStateException
+hasWaiters unowned ! java.lang.IllegalMonitorStateException
+waitQueueLength unowned ! java.lang.IllegalMonitorStateException
+waitingThreads unowned ! java.lang.IllegalMonitorStateException
+hasWaiters null ! java.lang.NullPointerException
+waitQueueLength null ! java.lang.NullPointerException
+waitingThreads null ! java.lang.NullPointerException
+hasWaiters foreign ! java.lang.IllegalArgumentException: Not owner
+waitQueueLength foreign ! java.lang.IllegalArgumentException: Not owner
+hasWaiters none = false
+waitQueueLength none = 0
+signal none = ok
+awaitUntil null ! java.lang.NullPointerException
+await null unit ! java.lang.NullPointerException
+awaitNanos negative = true
+awaitNanos zero = true
+await timed out = false
+await zero = false
+awaitUntil past = false
+held after waits = 1
+waiters = 3
+hasWaiters = true
+waiters after signal = 2
+queued after signal = 1
+first signalled = [w0 holds 2]
+waiters after signalAll = 0
+signal FIFO = [w0 holds 2, w1 holds 2, w2 holds 2]
+waiting names = [waiter]
+waiter state = WAITING
+interrupt before signal = java.lang.InterruptedException held=true flag=false
+interrupt after signal = returned flag=true
+uninterruptible still waiting = true
+awaitUninterruptibly = returned flag=true
+await flagged ! java.lang.InterruptedException
+awaitNanos flagged ! java.lang.InterruptedException
+held = true
+Lock iface newCondition class = true

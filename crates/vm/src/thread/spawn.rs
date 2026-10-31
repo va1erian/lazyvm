@@ -3,12 +3,12 @@
 
 use std::sync::Arc;
 
-use super::{Blocked, Gil, ThreadEntry, ThreadState};
+use super::{Blocked, Gil, Line, ThreadEntry, ThreadState};
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
 /// Stack reserved for a started thread. A nested call from Rust into Java
-/// was measured at under 8 KiB of stack, so `Options::max_nesting` (1024)
+/// was measured at under 8 KiB of stack, so `Options::max_nesting` (2400)
 /// fits with a wide margin, as on the launcher's bigger main thread.
 pub const THREAD_STACK_BYTES: usize = 64 << 20;
 /// The `sysexits.h` status for an internal VM failure, as the launcher uses.
@@ -71,7 +71,7 @@ impl Vm {
             *slot = None;
         }
         let mut waiters = std::mem::take(&mut self.threads.exit_waiters);
-        self.threads.unpark_all(&mut waiters);
+        self.threads.unpark_all(&self.gil, &mut waiters);
     }
 
     /// What the main thread does after `main` returns or its uncaught
@@ -139,14 +139,14 @@ fn thread_main(gil: Arc<Gil>, me: usize) {
 }
 
 fn run_thread(gil: Arc<Gil>, me: usize) {
-    let mut vm = gil.acquire();
+    let mut vm = gil.acquire(me, Line::Woken);
     vm.current = me;
     vm.resume_state(me);
     match vm.run_java_thread() {
         Ok(()) => {}
         Err(VmError::Exit(code)) => vm.exit_process(code),
-        // `runByVm` handles every exception; one escaping it (say, an
-        // OutOfMemoryError in the handler) just ends the thread.
+        // `runByVm` handles every exception; one escaping it, from what it does
+        // after the handler, just ends the thread.
         Err(e) if e.is_catchable() => {}
         Err(e) => {
             eprintln!("lazyvm: internal error: {e}");

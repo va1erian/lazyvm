@@ -9,12 +9,11 @@ use crate::{Vm, VmError, VmResult};
 /// "Requested array size exceeds VM limit", whatever the heap.
 pub(crate) const MAX_ARRAY: usize = i32::MAX as usize - 2;
 
+pub(crate) const ARRAY_LIMIT: &str = "Requested array size exceeds VM limit";
+
 /// The error for an array longer than `MAX_ARRAY`.
 pub(crate) fn array_limit() -> VmError {
-    VmError::exception(
-        "java/lang/OutOfMemoryError",
-        "Requested array size exceeds VM limit",
-    )
+    VmError::exception("java/lang/OutOfMemoryError", ARRAY_LIMIT)
 }
 
 impl Vm {

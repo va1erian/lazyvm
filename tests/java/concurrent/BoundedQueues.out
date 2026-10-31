@@ -1,0 +1,177 @@
+array empty = []
+array remaining = 3
+array poll empty = null
+array peek empty = null
+array timed poll empty = null
+array zero poll empty = null
+array element empty ! java.util.NoSuchElementException
+array remove empty ! java.util.NoSuchElementException
+array add null ! java.lang.NullPointerException
+array offer null ! java.lang.NullPointerException
+array put null ! java.lang.NullPointerException
+array timed offer null ! java.lang.NullPointerException
+array addAll null elem ! java.lang.NullPointerException
+array after partial addAll = [z]
+array addAll self ! java.lang.IllegalArgumentException
+array add = true
+array offer = true
+array full = [a, b, c]
+array size = 3
+array remaining full = 0
+array add full ! java.lang.IllegalStateException: Queue full
+array offer full = false
+array timed offer full = false
+array zero offer full = false
+array addAll full ! java.lang.IllegalStateException: Queue full
+array peek = a
+array element = a
+array contains = true
+array contains null = false
+array remove obj null = false
+array remove obj absent = false
+array toArray = [a, b, c]
+array toArray big = [a, b, c, null, null]
+array toArray null ! java.lang.NullPointerException
+array toArray bad type = ArrayStoreException
+array iterate = [a, b, c]
+array remove obj middle = true
+array after remove = [a, c]
+array poll = a
+array take = c
+array drained = true
+array drain null ! java.lang.NullPointerException
+array drain self ! java.lang.IllegalArgumentException
+array drain self max ! java.lang.IllegalArgumentException
+array drain none = 0
+array drain negative = 0
+array drain 2 = 2
+array out = [a, b]
+array left = [c]
+array drain rest = 1
+array out all = [a, b, c]
+array drain empty = 0
+array drain into failing = java.lang.IllegalStateException: sink left=[p, q]
+array drain refused midway = java.lang.IllegalStateException: sink left=[b, c] got=[a]
+array remove before next ! java.lang.IllegalStateException
+array next = a
+array iterator removed = [b, c]
+array remove twice ! java.lang.IllegalStateException
+array next 2 = b
+array hasNext after concurrent removal (weak) = true
+array next past end ! java.util.NoSuchElementException
+array empty hasNext = false
+array empty next ! java.util.NoSuchElementException
+array no CME = ok
+array forEach = [x]
+array removeIf = true
+array put blocks = 3
+array take unblocks = a
+array putter = put done
+array queue = [b, c, d]
+array interrupted put = java.lang.InterruptedException flag=false
+array not inserted = [b, c, d]
+array taker = for taker
+array interrupted poll = poll java.lang.InterruptedException
+array take flagged, empty ! java.lang.InterruptedException
+array take flagged, available ! java.lang.InterruptedException
+array poll flagged = a
+array timed poll flagged ! java.lang.InterruptedException
+array put flagged, free ! java.lang.InterruptedException
+array timed offer flagged ! java.lang.InterruptedException
+array offer flagged = true
+array flag stays = true
+linked empty = []
+linked remaining = 3
+linked poll empty = null
+linked peek empty = null
+linked timed poll empty = null
+linked zero poll empty = null
+linked element empty ! java.util.NoSuchElementException
+linked remove empty ! java.util.NoSuchElementException
+linked add null ! java.lang.NullPointerException
+linked offer null ! java.lang.NullPointerException
+linked put null ! java.lang.NullPointerException
+linked timed offer null ! java.lang.NullPointerException
+linked addAll null elem ! java.lang.NullPointerException
+linked after partial addAll = [z]
+linked addAll self ! java.lang.IllegalArgumentException
+linked add = true
+linked offer = true
+linked full = [a, b, c]
+linked size = 3
+linked remaining full = 0
+linked add full ! java.lang.IllegalStateException: Queue full
+linked offer full = false
+linked timed offer full = false
+linked zero offer full = false
+linked addAll full ! java.lang.IllegalStateException: Queue full
+linked peek = a
+linked element = a
+linked contains = true
+linked contains null = false
+linked remove obj null = false
+linked remove obj absent = false
+linked toArray = [a, b, c]
+linked toArray big = [a, b, c, null, null]
+linked toArray null ! java.lang.NullPointerException
+linked toArray bad type = ArrayStoreException
+linked iterate = [a, b, c]
+linked remove obj middle = true
+linked after remove = [a, c]
+linked poll = a
+linked take = c
+linked drained = true
+linked drain null ! java.lang.NullPointerException
+linked drain self ! java.lang.IllegalArgumentException
+linked drain self max ! java.lang.IllegalArgumentException
+linked drain none = 0
+linked drain negative = 0
+linked drain 2 = 2
+linked out = [a, b]
+linked left = [c]
+linked drain rest = 1
+linked out all = [a, b, c]
+linked drain empty = 0
+linked drain into failing = java.lang.IllegalStateException: sink left=[p, q]
+linked drain refused midway = java.lang.IllegalStateException: sink left=[b, c] got=[a]
+linked remove before next ! java.lang.IllegalStateException
+linked next = a
+linked iterator removed = [b, c]
+linked remove twice ! java.lang.IllegalStateException
+linked next 2 = b
+linked hasNext after concurrent removal (weak) = true
+linked next past end ! java.util.NoSuchElementException
+linked empty hasNext = false
+linked empty next ! java.util.NoSuchElementException
+linked no CME = ok
+linked forEach = [x]
+linked removeIf = true
+linked put blocks = 3
+linked take unblocks = a
+linked putter = put done
+linked queue = [b, c, d]
+linked interrupted put = java.lang.InterruptedException flag=false
+linked not inserted = [b, c, d]
+linked taker = for taker
+linked interrupted poll = poll java.lang.InterruptedException
+linked take flagged, empty ! java.lang.InterruptedException
+linked take flagged, available ! java.lang.InterruptedException
+linked poll flagged = a
+linked timed poll flagged ! java.lang.InterruptedException
+linked put flagged, free ! java.lang.InterruptedException
+linked timed offer flagged ! java.lang.InterruptedException
+linked offer flagged = true
+linked flag stays = true
+array bad capacity ! java.lang.IllegalArgumentException
+array negative ! java.lang.IllegalArgumentException
+array init = [a, b]
+array init too many ! java.lang.IllegalArgumentException
+array init null collection ! java.lang.NullPointerException
+array init null element ! java.lang.NullPointerException
+linked bad capacity ! java.lang.IllegalArgumentException
+linked default capacity = 2147483647
+linked init = [a, b]
+linked init capacity = 2147483645
+linked init null ! java.lang.NullPointerException
+linked init null element ! java.lang.NullPointerException
+fair takers FIFO = [t0 got 0, t1 got 1, t2 got 2]

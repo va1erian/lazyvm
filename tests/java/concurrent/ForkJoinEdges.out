@@ -1,0 +1,136 @@
+two order = [a, b]
+three order = [a, b, c]
+list order = [a, b, c]
+linked list order = [a, b, c]
+empty array = ok
+empty list = 0
+one element = [a]
+three fail at 0 = java.lang.IllegalStateException: f0 ran=[t0] falsetruetrue done truetruetrue
+two fail at 0 = java.lang.IllegalStateException: f0 ran=[t0] falsefalse done truefalse
+three fail at 1 = java.lang.IllegalStateException: f1 ran=[t0, t1] falsefalsetrue done truetruetrue
+two fail at 1 = java.lang.IllegalStateException: f1 ran=[t0, t1] falsefalse done truetrue
+three fail at 2 = java.lang.IllegalStateException: f2 ran=[t0, t1, t2] falsefalsefalse done truetruetrue
+both fail = java.lang.IllegalStateException: fa ran=[a] falsefalse
+null first of two = npe [] false queued=1 unfork=true
+null second of two = npe [] false queued=0
+null in array = npe [a] a=truefalse c=truetrue queued=1
+null first in array = npe [] b=truetrue c=truetrue
+null in list = npe [a] a=true c=truetrue
+complete after done = [exec, get, set after] true after
+completeExceptionally after done = true null
+complete after cancel = [set x] true
+reinit tag = 0 done=false
+tag after fail = 7
+reinit after fail = 0 false null
+reinit after cancel = false false 0
+sneaky invoke ! java.io.IOException: io
+sneaky ex = java.io.IOException: io
+sneaky get ! java.util.concurrent.ExecutionException: java.io.IOException: io
+error invoke ! java.lang.AssertionError: a
+error ex = java.lang.AssertionError: a
+adapted runnable sneaky ! java.io.IOException: io
+task throws CancellationException ! java.util.concurrent.CancellationException: mine
+task throws CE flags = false true java.util.concurrent.CancellationException: mine
+task throws CE get ! java.util.concurrent.ExecutionException: java.util.concurrent.CancellationException: mine
+complete with CE = false java.util.concurrent.CancellationException: given
+complete with CE join ! java.util.concurrent.CancellationException: given
+complete with error = java.lang.AssertionError: x
+complete with error join ! java.lang.AssertionError: x
+raw pending = initial
+get timed null unit ! java.lang.NullPointerException
+get timed null unit flagged ! java.lang.NullPointerException
+flag after npe = true
+get timed 0 flagged ! java.lang.InterruptedException
+flag after = false
+get timed neg ! java.util.concurrent.TimeoutException
+get cancelled flagged ! java.lang.InterruptedException
+flag after cancel get = false
+quietlyJoin flagged = true
+join keeps waiting past interrupt = late
+join flag set after = true
+invoke exec false waits = done
+invoke exec false log = [exec, set done, get]
+adapter toString shape = true
+adapter is runnable = true true
+adapter run = x
+adapter run failing ! java.lang.IllegalStateException: q
+serializable = true
+thread facts = main 5 true handler=true
+flag between tasks = false
+get flagged in worker = x
+get in worker helps = x
+timed get in worker helps = x
+join in worker runs other local = [a] then [a, c, b]
+submit from worker queued = local=0 subs=1 inner
+execute from worker queued = local=0 subs=1 ran=true
+invoke from worker = x
+other pool's fork from worker = true same=true
+poolTask order = true true null
+tryUnfork of older = false
+fork twice = 2 runs=1
+await after = true
+after shutdown toString = java.util.concurrent.ForkJoinPool@H[Terminated, parallelism = 1, size = 0, active = 0, running = 0, steals = S, tasks = 0, submissions = 0]
+word while busy = java.util.concurrent.ForkJoinPool@H[Shutting down
+flags while busy = true false false
+await while busy = false
+end = true
+shutdownNow list = []
+queued cancelled = true true
+get queued ! java.util.concurrent.CancellationException
+end now = true
+running saw = true true true
+flags now = true false true
+shutdownNow again = []
+idle quiescent = 0 0 1
+idle shutdown end = true
+null factory queued = 1 quiescent=true
+null factory shutdown = false false true
+null factory stop = true
+throwing factory submit ! java.lang.IllegalStateException: f
+throwing factory queue = 1
+throwing factory flags = 0
+ctor order ! java.lang.IllegalArgumentException
+worker null pool ! java.lang.NullPointerException
+await null ! java.lang.NullPointerException
+quiesce null ! java.lang.NullPointerException
+await flagged ! java.lang.InterruptedException
+cleared = false
+awaitQuiescence flagged = true
+kept = true
+await flagged terminated ! java.lang.InterruptedException
+cleared 2 = false
+list type = 0
+execute runnable task = compute
+submit runnable task = compute
+submit runnable same = true
+invokeAll empty = []
+invokeAll null element ! java.lang.NullPointerException
+invokeAll failing = true ForkJoinTask
+invokeAll failing get class = java.lang.RuntimeException
+invokeAny failing = java.lang.RuntimeException
+newTaskFor class = true
+newTaskFor runnable class = true
+newTaskFor null ! java.lang.NullPointerException
+handled = [Hooked java.lang.IllegalStateException: escaped]
+hook log after failure = [onStart, onTermination java.lang.IllegalStateException: escaped, onStart]
+threads made = 2
+submit failure no handler = 1
+execute(task) failure no handler = 2
+onStart throws = java.lang.IllegalStateException: start
+onStart throws log = onStart onTermination java.lang.IllegalStateException: start
+interrupt carried to a queued next task = true
+no interrupt once idle = false
+stop with blocked join = true
+joiner and awaited cancelled = true true
+after stop = true
+fork after stop = [interrupted, forked cancelled=false, joined late]
+inside after shutdown = fork=f submit rejected
+after shutdown = true
+outside helpQuiesce = ok
+outside tryUnfork never forked = false
+outside surplus = 0
+outside peek = null
+outside poll = null
+common execute task = x
+fork outside = w
+quiesce common = true

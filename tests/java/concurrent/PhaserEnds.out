@@ -1,0 +1,28 @@
+registered r 1 reg 2 arr 0 un 2 [phase = 1 parties = 2 arrived = 0]
+registered m 1 reg 2 arr 0 un 2 [phase = 1 parties = 2 arrived = 0]
+registered c 1 reg 2 arr 0 un 2 [phase = 1 parties = 2 arrived = 0]
+advanced r 2 reg 2 arr 0 un 2 [phase = 2 parties = 2 arrived = 0]
+advanced m 2 reg 2 arr 0 un 2 [phase = 2 parties = 2 arrived = 0]
+advanced c 2 reg 2 arr 0 un 2 [phase = 2 parties = 2 arrived = 0]
+ended while waiting to register: -2147483648
+  leaf -2147483648 reg 0 arr 0 un 0 [phase = -2147483648 parties = 0 arrived = 0]
+  mid -2147483648 reg 1 arr 1 un 0 [phase = -2147483648 parties = 1 arrived = 1]
+hook ended -2147483647 reg 3 arr 3 un 0 [phase = -2147483647 parties = 3 arrived = 3]
+hook ended, one left -2147483647 reg 2 arr 2 un 0 [phase = -2147483647 parties = 2 arrived = 2]
+hook ended, none left -2147483647 reg 0 arr 0 un 0 [phase = -2147483647 parties = 0 arrived = 0]
+new child after it -2147483647 reg 2 arr 0 un 2 [phase = -2147483647 parties = 2 arrived = 0]
+empty child -2147483647 reg 0 arr 0 un 0 [phase = -2147483647 parties = 0 arrived = 0]
+root of two -2147483647 reg 2 arr 2 un 0 [phase = -2147483647 parties = 2 arrived = 2]
+child of two -2147483647 reg 2 arr 2 un 0 [phase = -2147483647 parties = 2 arrived = 2]
+other child -2147483647 reg 1 arr 1 un 0 [phase = -2147483647 parties = 1 arrived = 1]
+forced after -2147483647 reg 2 arr 2 un 0 [phase = -2147483647 parties = 2 arrived = 2]
+went on 1 reg 2 arr 0 un 2 [phase = 1 parties = 2 arrived = 0]
+one in 1 reg 2 arr 1 un 1 [phase = 1 parties = 2 arrived = 1]
+ended at 1 -2147483646 reg 2 arr 2 un 0 [phase = -2147483646 parties = 2 arrived = 2]
+last arriver gets 1
+the one before gets -2147483647
+afterwards -2147483647
+on a child 1 | -2147483647 reg 1 arr 1 un 0 [phase = -2147483647 parties = 1 arrived = 1] | -2147483647 reg 1 arr 1 un 0 [phase = -2147483647 parties = 1 arrived = 1]
+hook forces -2147483648 -2147483648 reg 1 arr 1 un 0 [phase = -2147483648 parties = 1 arrived = 1]
+hook forces and ends -2147483648 -2147483648 reg 1 arr 1 un 0 [phase = -2147483648 parties = 1 arrived = 1]
+hook goes on 1 1 reg 1 arr 0 un 1 [phase = 1 parties = 1 arrived = 0]

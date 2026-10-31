@@ -1,0 +1,67 @@
+null and zero period ! java.lang.NullPointerException
+null unit and zero period ! java.lang.NullPointerException
+submit null ! java.lang.NullPointerException
+submit null with result ! java.lang.NullPointerException
+submit null callable ! java.lang.NullPointerException
+setCore negative ! java.lang.IllegalArgumentException
+setMax is free = 5
+allowCore ! java.lang.IllegalArgumentException: Core threads must have nonzero keep alive times
+queue class is blocking = 2147483647
+queue add plain = ClassCastException
+queue offer plain = ClassCastException
+queue size after = 0
+core 0 runs = ran
+core 0 ends = true
+peek is soonest = true
+poll zero due = true
+poll not due = null
+peek not due = true
+size = 2
+contains = true
+timed poll not due = null
+drain not due = 0 0
+iterator sees = 2
+toArray = 2
+remove from view = true
+clear = 0
+ended = true
+shutdownNow order = due1 due2 then [day, hour]
+cancelled removed at shutdown = true
+delayed waits = false
+cancel after shutdown = true
+cancelled stays = 1 false
+purge ends = true
+remove policy ends = true
+policy off after shutdown = true true
+periodic off after shutdown = true
+both: flags = false true false
+both: end = true
+due with policy off = false true
+running periodic after shutdown = false false
+running periodic end = false 1
+shutdownNow running list = []
+shutdownNow running = true false false
+returned is decorated = true
+periodic reruns go through the decorated one = true
+remove policy with decorated = 1
+purge decorated = 0
+decorate null ! java.lang.NullPointerException
+future class = true
+future toString shape = true
+sizes grow to core = 2
+schedule on idle pool at core = x
+compare other kind = 1
+compare null ! java.lang.NullPointerException
+getDelay null ! java.lang.NullPointerException
+huge getDelay days = 106751
+huge after overdue = true
+core 0 late task = late
+core 0 threads made = 1
+huge2 getDelay days = 106751
+hug compare = true
+cancel done = false
+execute failure not to handler = 0 1
+discarded future = false false
+caller policy after shutdown = false
+hooks = [before true, after null done=false, before true, after null done=true, terminated]
+task counts = 2 2

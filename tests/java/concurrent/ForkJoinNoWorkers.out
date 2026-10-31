@@ -1,0 +1,14 @@
+common parallelism = 1
+getParallelism = 1
+handler = false
+toString = java.util.concurrent.ForkJoinPool@H[Running, parallelism = 0
+awaitQuiescence = true
+execute ran = false
+joined from outside = true
+fork join = v
+get = w
+timed get = w
+worker thread name = no worker
+tryUnfork outside = true
+pool quiet = true
+invoke chain = 600

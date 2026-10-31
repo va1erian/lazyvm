@@ -1,0 +1,84 @@
+run calls set virtually = [set v, done cancelled=false isDone=true]
+run calls setException virtually = [setException java.lang.Exception: x, done cancelled=false isDone=true]
+cancel skips set = [done cancelled=true isDone=true]
+done throws in run ! java.lang.IllegalStateException: done
+after done throws = v
+done throws in cancel ! java.lang.IllegalStateException: done
+after cancel throw = true
+run inside run = outer
+cancel inside own run = true flag=true
+get inside own run = timed out
+runAndReset no set = true []
+runAndReset cancelled during = false
+runAndReset set during = false [set from inside, done cancelled=false isDone=true] from inside
+second run while running = 1
+runAndReset style while running = false
+value = b
+cancel(true) before run no flag = false
+run with flag = f=true
+flag still = true
+timed zero flagged pending ! java.lang.InterruptedException
+cleared = false
+null unit flagged pending ! java.lang.NullPointerException
+flag kept by npe = true
+timed get flagged done = d
+flag kept = true
+get flagged cancelled ! java.util.concurrent.CancellationException
+flag kept 2 = true
+states ok = yes
+all null middle ! java.lang.NullPointerException
+all null middle log = [a] [exec]
+all timed null middle ! java.lang.NullPointerException
+all timed null middle log = [] []
+all reject second ! java.util.concurrent.RejectedExecutionException: second
+all reject log = [a] [exec]
+any reject second ! java.util.concurrent.RejectedExecutionException: second
+any reject log = [a] [exec]
+any all failed which ! java.util.concurrent.ExecutionException: java.lang.IllegalStateException: third
+any all failed log = [first, second, third]
+any null later ! java.lang.NullPointerException
+any null later log = [first]
+any flagged direct = x
+any flagged kept = true
+all flagged direct = 1
+all flagged kept = true
+all timed flagged direct = 1
+all timed flagged kept = true
+any flagged later ! java.lang.InterruptedException
+any flagged later kept = false
+any later cancels = wrapper done=false
+any timed zero ! java.util.concurrent.TimeoutException
+any timed zero queued = 2
+any timed neg ! java.util.concurrent.TimeoutException
+all timed zero executes = 2 queued=1 true
+all timed flagged ! java.lang.InterruptedException
+all timed flagged kept 2 = false
+all timed flagged queued = 1
+submit runnable null result log = null
+submit class = java.util.concurrent.FutureTask
+cancel queued = true
+not delivered until its turn = null
+delivered then = true
+rejected names = Task T rejected from java.util.concurrent.ThreadPoolExecutor@H[Terminated, pool size = N, active threads = 0, queued tasks = 0, completed tasks = 2]
+ecs newTaskFor = [c, r]
+queue full ! java.lang.IllegalStateException: Queue full
+queue full size = 1
+execute got FutureTask=true future=true
+returned class = java.util.concurrent.FutureTask
+privileged same = false
+group of factory made there = mine
+group of factory made in main = main
+priority in low group = 3
+single class not pool = false
+single toString not bracket = true
+unconfigurable null submit ! java.lang.NullPointerException
+unconfigurable execute null ! java.lang.NullPointerException
+unconfigurable shutdownNow = []
+unconfigurable flags = true true true
+single sched period = true
+single sched shutdownNow = 1
+fixed negative ! java.lang.IllegalArgumentException
+cached sized = 0 0 false
+factory given is kept = true
+thread toString = Thread[pool-N-thread-1,5,main]
+stealing invokeAll = a

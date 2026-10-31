@@ -1,0 +1,16 @@
+full heap, default handler ended, alive: false
+handler out of memory ended, alive: false
+handler throws ended, alive: false
+handler prints and throws ended, alive: false
+odd name ended
+--- stderr ---
+
+Exception: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHandler in thread "full heap, default handler"
+
+Exception: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHandler in thread "handler out of memory"
+
+Exception: java.lang.IllegalStateException thrown from the UncaughtExceptionHandler in thread "handler throws"
+in the handler
+Exception: java.lang.IllegalArgumentException thrown from the UncaughtExceptionHandler in thread "handler prints and throws"
+
+Exception: java.lang.IllegalStateException thrown from the UncaughtExceptionHandler in thread "pair ������ lone ��� nul ��."

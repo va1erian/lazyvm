@@ -9,11 +9,13 @@
 mod gil;
 mod monitor;
 mod spawn;
+mod timer;
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 pub(crate) use gil::Gil;
+use gil::Line;
 pub(crate) use monitor::Monitors;
 
 use crate::interp::Frame;
@@ -40,6 +42,7 @@ pub(crate) struct ThreadState {
     frame_slots: usize,
     nesting: u32,
     creating_exception: u32,
+    unlimited: bool,
     loading: Vec<Arc<str>>,
 }
 
@@ -48,10 +51,14 @@ pub(crate) struct ThreadEntry {
     pub(crate) java: Option<Ref>,
     /// For waking the thread when it is parked.
     os: std::thread::Thread,
+    /// In `Vm::park`: it holds no VM, and comes back for it once woken.
+    parked: bool,
     pub(crate) daemon: bool,
     pub(crate) interrupted: bool,
     /// Set by `notify` for a thread in a wait set.
     pub(crate) notified: bool,
+    /// `LockSupport`'s permit: one, not a count.
+    park_permit: bool,
     pub(crate) blocked: Blocked,
     /// `Some` while the thread does not hold the VM.
     pub(crate) state: Option<ThreadState>,
@@ -101,16 +108,21 @@ impl Threads {
             .position(|e| e.as_ref().is_some_and(|e| e.java == Some(t)))
     }
 
-    pub(crate) fn unpark(&self, i: usize) {
+    /// Wakes thread `i` if it is parked. Its waker holds the VM, so the
+    /// thread gets its place in the line now (`Gil::expect`).
+    pub(crate) fn unpark(&self, gil: &Gil, i: usize) {
         if let Some(e) = self.get(i) {
+            if e.parked {
+                gil.expect(i);
+            }
             e.os.unpark();
         }
     }
 
     /// Wakes every thread in `list` and empties it.
-    pub(crate) fn unpark_all(&self, list: &mut Vec<usize>) {
+    pub(crate) fn unpark_all(&self, gil: &Gil, list: &mut Vec<usize>) {
         for i in list.drain(..) {
-            self.unpark(i);
+            self.unpark(gil, i);
         }
     }
 
@@ -134,9 +146,11 @@ impl ThreadEntry {
         ThreadEntry {
             java,
             os: std::thread::current(),
+            parked: false,
             daemon,
             interrupted: false,
             notified: false,
+            park_permit: false,
             blocked: Blocked::No,
             state: None,
         }
@@ -152,6 +166,7 @@ impl Vm {
             frame_slots: self.frame_slots,
             nesting: self.nesting,
             creating_exception: self.creating_exception,
+            unlimited: self.heap.unlimited,
             loading: std::mem::take(&mut self.loading),
         };
         if let Some(e) = self.threads.get_mut(me) {
@@ -169,6 +184,7 @@ impl Vm {
         self.frame_slots = s.frame_slots;
         self.nesting = s.nesting;
         self.creating_exception = s.creating_exception;
+        self.heap.unlimited = s.unlimited;
         self.loading = s.loading;
     }
 
@@ -176,18 +192,19 @@ impl Vm {
     /// `deadline` passes. Wakeups can be spurious: callers loop on their
     /// condition, which they check while holding the VM.
     pub(crate) fn park(&mut self, blocked: Blocked, deadline: Option<Instant>) {
-        self.set_blocked(blocked);
+        self.set_blocked(blocked, true);
         self.blocking(|| match deadline {
             None => std::thread::park(),
-            Some(d) => std::thread::park_timeout(d.saturating_duration_since(Instant::now())),
+            Some(d) => timer::park_until(d),
         });
-        self.set_blocked(Blocked::No);
+        self.set_blocked(Blocked::No, false);
     }
 
-    fn set_blocked(&mut self, b: Blocked) {
+    fn set_blocked(&mut self, b: Blocked, parked: bool) {
         let me = self.current;
         if let Some(e) = self.threads.get_mut(me) {
             e.blocked = b;
+            e.parked = parked;
         }
     }
 
@@ -217,7 +234,7 @@ impl Vm {
             && let Some(e) = self.threads.get_mut(i)
         {
             e.interrupted = true;
-            e.os.unpark();
+            self.threads.unpark(&self.gil, i);
         }
     }
 
@@ -247,6 +264,40 @@ impl Vm {
         self.thread_index(t)
             .and_then(|i| self.threads.get(i))
             .map(|e| e.blocked)
+    }
+
+    /// `LockSupport.unpark`: a thread that is not alive is left alone.
+    pub fn unpark_thread(&mut self, t: Ref) {
+        if let Some(i) = self.thread_index(t)
+            && let Some(e) = self.threads.get_mut(i)
+        {
+            e.park_permit = true;
+            self.threads.unpark(&self.gil, i);
+        }
+    }
+
+    /// `LockSupport.park`: returns when the permit is there (using it up), when the
+    /// interrupt flag is set (leaving it set), or at the end of `nanos`, if given.
+    /// The OS token can be stale, so only those three end the wait.
+    pub fn park_thread(&mut self, nanos: Option<u64>) {
+        let deadline = nanos.and_then(|n| Instant::now().checked_add(Duration::from_nanos(n)));
+        let blocked = match nanos {
+            Some(_) => Blocked::TimedWaiting,
+            None => Blocked::Waiting,
+        };
+        let me = self.current;
+        loop {
+            let Some(e) = self.threads.get_mut(me) else {
+                return;
+            };
+            if std::mem::take(&mut e.park_permit) || e.interrupted {
+                return;
+            }
+            if deadline.is_some_and(|d| Instant::now() >= d) {
+                return;
+            }
+            self.park(blocked, deadline);
+        }
     }
 
     /// `Thread.sleep`: interruptible, the flag cleared when it fires.

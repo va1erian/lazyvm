@@ -1,7 +1,6 @@
 package java.util;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import lazy.internal.KeyOrder;
 
 /**
  * HashMap bins that hold a red-black tree besides their sequence (spec 1.H6 to H12). A tree
@@ -11,30 +10,7 @@ final class HashTree {
     // Spec 1.H12: a split half this small becomes a list bin.
     static final int LIST_AT_SPLIT = 6;
 
-    /** The last class asked about in qualifies(), with the answer. */
-    private static volatile Object[] lastAnswer = {null, Boolean.FALSE};
-
     private HashTree() {
-    }
-
-    /** Spec 1.H6 step 2: k.compareTo(pk) for two keys of one qualifying class, else 0. */
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static int compared(Object k, Object pk) {
-        if (k != null && pk != null && k.getClass() == pk.getClass() && qualifies(k.getClass())) {
-            return ((Comparable) k).compareTo(pk);
-        }
-        return 0;
-    }
-
-    /** Spec 1.H6 steps 3 and 4: class names, then identity hashes. */
-    private static int tieBreak(Object k, Object pk) {
-        if (k != null && pk != null) {
-            int r = k.getClass().getName().compareTo(pk.getClass().getName());
-            if (r != 0) {
-                return r;
-            }
-        }
-        return System.identityHashCode(k) <= System.identityHashCode(pk) ? -1 : 1;
     }
 
     /**
@@ -66,7 +42,8 @@ final class HashTree {
                 p = child(p, p.right == null);
                 continue;
             }
-            int r = compared(k, p.key);
+            // Spec 1.H6 step 2.
+            int r = KeyOrder.compared(k, p.key);
             if (r != 0) {
                 p = child(p, r < 0);
                 continue;
@@ -124,7 +101,7 @@ final class HashTree {
             } else if (find && Objects.equals(k, p.key)) {
                 s.found = p;
                 return s;
-            } else if ((r = compared(k, p.key)) == 0) {
+            } else if ((r = KeyOrder.compared(k, p.key)) == 0) {
                 if (!searched) {
                     searched = true;
                     HashMap.Cell<K, V> q = lookup(child(p, true), h, k);
@@ -133,7 +110,8 @@ final class HashTree {
                         return s;
                     }
                 }
-                r = tieBreak(k, p.key);
+                // Spec 1.H6 steps 3 and 4.
+                r = KeyOrder.anySide(k, p.key);
             }
             HashMap.Cell<K, V> next = child(p, r < 0);
             if (next == null) {
@@ -148,29 +126,6 @@ final class HashTree {
     @SuppressWarnings("unchecked")
     private static <K, V> HashMap.Cell<K, V> child(HashMap.Cell<K, V> p, boolean left) {
         return (HashMap.Cell<K, V>) (left ? p.left : p.right);
-    }
-
-    // Spec 1.H6: String, or a class that itself declares Comparable<itself>.
-    private static boolean qualifies(Class<?> c) {
-        if (c == String.class) {
-            return true;
-        }
-        Object[] last = lastAnswer;
-        if (last[0] == c) {
-            return (Boolean) last[1];
-        }
-        boolean yes = false;
-        for (Type t : c.getGenericInterfaces()) {
-            if (t instanceof ParameterizedType) {
-                ParameterizedType p = (ParameterizedType) t;
-                Type[] args = p.getActualTypeArguments();
-                if (p.getRawType() == Comparable.class && args.length == 1 && args[0] == c) {
-                    yes = true;
-                }
-            }
-        }
-        lastAnswer = new Object[] {c, yes};
-        return yes;
     }
 
     /** Spec 1.H7: makes bin i a tree by inserting its sequence in order; the root goes first. */

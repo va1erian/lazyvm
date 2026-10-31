@@ -1,0 +1,42 @@
+quietlyJoin at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+join at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+get at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+timed get at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+fork and join at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+fork and timed get at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+invoke at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+quietlyInvoke at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+invokeAll at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+helpQuiesce at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+awaitQuiescence at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+managedBlock at 1: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+quietlyJoin at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+join at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+get at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+timed get at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+fork and join at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+fork and timed get at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+invoke at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+quietlyInvoke at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+invokeAll at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+helpQuiesce at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+awaitQuiescence at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+managedBlock at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+helpQuiesce beside a busy worker at 2: counts 0 0, next true, helpQuiesce back, quiet true, ends true
+runaway at 1: java.lang.StackOverflowError, few workers true
+  ends true
+runaway at 2: java.lang.StackOverflowError, few workers true
+  ends true
+runaway at 4: java.lang.StackOverflowError, few workers true
+  ends true
+runaway at 8: java.lang.StackOverflowError, few workers true
+  ends true
+runaway at 24: java.lang.StackOverflowError, few workers true
+  ends true
+runaway at 1000: java.lang.StackOverflowError, few workers true
+  ends true
+chain of a million: java.lang.StackOverflowError
+then a task: next
+  ends true
+runaway invokes: java.lang.StackOverflowError, few workers true
+  ends true

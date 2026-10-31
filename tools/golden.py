@@ -67,6 +67,8 @@ def main() -> None:
         result = testlib.run([oracle(test.modern_oracle), *ORACLE_FLAGS], test)
         if result.startswith(testlib.TIMEOUT_MARK):
             die(f"{test.name} timed out on the oracle; not blessed")
+        if testlib.HUNG_MARK in result:
+            die(f"{test.name} hung on the oracle; not blessed: {result[result.index(testlib.HUNG_MARK):]}")
         test.golden.write_text(result, encoding="utf-8", newline="\n")
         print(f"blessed {test.name}")
 

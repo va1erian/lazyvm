@@ -91,6 +91,17 @@ public class RegexLimitsSizes {
                 System.out.println("nesting 20000 " + open + " StackOverflowError");
             }
         }
+        // Classes nest as well, by brackets or by a right side of && after another.
+        for (String p : new String[] {rep("[", 20000) + "a" + rep("]", 20000), "[" + rep("a&&", 20000) + "a]"}) {
+            try {
+                Pattern.compile(p);
+                System.out.println("nested class compiled");
+            } catch (PatternSyntaxException e) {
+                System.out.println("nested class " + e.getDescription() + messageShape(e, p));
+            } catch (StackOverflowError e) {
+                System.out.println("nested class StackOverflowError");
+            }
+        }
         System.out.println("done");
     }
 }

@@ -1,0 +1,54 @@
+negative ! java.lang.IllegalArgumentException: count < 0
+zero = java.util.concurrent.CountDownLatch@H[Count = 0]
+zero timed await = true
+toString = java.util.concurrent.CountDownLatch@H[Count = 2]
+count = 2
+timed await not reached = false
+zero wait = false
+await null unit ! java.lang.NullPointerException
+count 1 = 1
+waiter = released
+count 0 = 0
+floors at zero = 0
+toString done = java.util.concurrent.CountDownLatch@H[Count = 0]
+await after = true
+await flagged, open ! java.lang.InterruptedException
+await flagged, closed ! java.lang.InterruptedException
+cleared = false
+timed flagged ! java.lang.InterruptedException
+interrupted waiter = java.lang.InterruptedException flag=false
+count unchanged = 1
+parties zero ! java.lang.IllegalArgumentException
+parties zero action ! java.lang.IllegalArgumentException
+toString not overridden = true
+one party index = 0
+one party again = 0
+null unit ! java.lang.NullPointerException
+null action = 0
+parties = 3
+waiting = 0
+broken = false
+waiting 2 = 2
+last index = 0
+log = [action on main, t0 index 2, t1 index 1]
+reusable waiting = 0
+reusable broken = false
+timeout ! java.util.concurrent.TimeoutException
+broken after timeout = true
+waiting after timeout = 0
+await broken ! java.util.concurrent.BrokenBarrierException
+timed await broken ! java.util.concurrent.BrokenBarrierException
+reset repairs = false
+reset breaks waiter = java.util.concurrent.BrokenBarrierException
+usable after reset = false
+zero timeout ! java.util.concurrent.TimeoutException
+await flagged ! java.lang.InterruptedException
+broken after flagged = true
+cleared = false
+interrupted waiter = java.lang.InterruptedException flag=false
+other waiter = java.util.concurrent.BrokenBarrierException
+broken = true
+action throws ! java.lang.IllegalStateException: action
+action broke it = true
+last runs action ! java.lang.IllegalStateException: action
+first sees broken = java.util.concurrent.BrokenBarrierException

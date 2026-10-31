@@ -1,0 +1,47 @@
+submission after a fork in onStart = null
+task on the worker's own pool = ran
+worker's own pool ends = true
+task beside a user's worker = ran
+pool of a user's worker ends = true
+user's worker counted right = 0 0
+timed get in worker outlasts its limit at 1 = here=true done=true
+timed get in worker outlasts its limit at 2 = here=true done=true
+timed get in worker with no time 0 = timeout queued=1 unfork=true
+timed get in worker with no time -1 = timeout queued=1 unfork=true
+timed get in worker with no time -9223372036854775808 = timeout queued=1 unfork=true
+timed get in a tree of tasks = 987 workers=1
+timed get outside with the lowest timeout = timeout
+awaitTermination with the lowest timeout = false
+no worker ever: quiet at once = true ran=null queued=1
+busy pool, waiting from outside = false here=true
+a failure it runs is thrown at it ! java.lang.IllegalStateException: boom
+busy pool, waiting on another pool's worker = false here=true
+a failure it runs is thrown at it ! java.lang.IllegalStateException: boom
+a free worker takes it = false done=false
+common pool's awaitTermination = false caller
+nested blockers = [true, true]
+helpQuiesce deep down, factory throws = fork threw, helpQuiesce returned, child done=true
+nothing left counted = 0 0
+invoke chain 800 outside a pool = 800
+invokeAll chain 800 outside a pool = 800
+invoke chain 800 on another pool's worker = 800
+invoke chain 1400 outside a pool = 1400
+invokeAll chain 1400 outside a pool = 1400
+invoke chain 1400 on another pool's worker = 1400
+deep invoke, monitor held = true
+deep invoke, lock held = 2
+deep invoke, thread local = mine
+deep invoke, who runs it = true false null
+deep invoke, interrupt flag = true true
+deep invoke, same failure = true
+deep invoke in a class's initializer = 2
+deep invoke with the common pool blocked = ran
+deep fork and join on a worker, monitor held = true
+deep invoke on a worker, monitor held = true
+deep timed get keeps its limit = timeout true
+deep join, next worker stuck in onStart = 2100
+deep join, factory stuck = 2100
+chain 1000 with older siblings at 1 = 1000
+chain 1000 with older siblings at 2 = 1000
+chain 1000 with older siblings at 4 = 1000
+16 chains of 1400 = 22400

@@ -1,0 +1,62 @@
+latch null unit flagged ! java.lang.NullPointerException flag=true
+latch zero flagged ! java.lang.InterruptedException flag=false
+latch countDown flagged = 0 flag=true
+latch open, timed zero flagged ! java.lang.InterruptedException flag=false
+exchange zero flagged ! java.lang.InterruptedException flag=false
+exchange null unit flagged ! java.lang.NullPointerException flag=true
+exchange flagged, partner waiting ! java.lang.InterruptedException flag=false
+partner still there = t flag=false
+barrier zero flagged ! java.lang.InterruptedException flag=false
+broken by that = true flag=false
+broken and flagged ! java.util.concurrent.BrokenBarrierException flag=true
+barrier null unit flagged ! java.lang.NullPointerException flag=true
+not broken by a null unit = false flag=false
+one party flagged ! java.lang.InterruptedException flag=false
+one party broken = true flag=false
+last arrival flagged ! java.lang.InterruptedException flag=false
+last arrival broke it = true flag=false
+action Error ! java.lang.Error: boom flag=false
+action Error broke it = true flag=false
+action resets: last arrival = 0 flag=false
+action resets: other = ! java.util.concurrent.BrokenBarrierException flag=false
+seen by action = waiting 2 broken false flag=false
+seen by action after its reset = waiting 0 broken false flag=false
+parties during action = 1 flag=false
+interrupted while the action runs: still = WAITING flag=false
+getNumberWaiting waited = = 0 flag=false
+isBroken waited = true flag=false
+reset waited = = done flag=false
+late interrupted arrival = ! java.lang.InterruptedException flag=false
+rounds: the last arriver = 0 flag=false
+rounds: the waiter! java.util.concurrent.BrokenBarrierException
+rounds: await in the action java.util.concurrent.TimeoutException, broken true
+rounds: after them = false 0 flag=false
+negative flagged ! java.lang.IllegalArgumentException flag=true
+timed null unit flagged ! java.lang.NullPointerException flag=true
+negative and null unit ! java.lang.IllegalArgumentException flag=true
+zero permits flagged ! java.lang.InterruptedException flag=false
+release flagged = 1 flag=true
+tryAcquire 0 on negative = false flag=false
+release 0 at the maximum = 2147483647 flag=false
+release up from the minimum = -1 flag=false
+permits reach all four, fair=false = true flag=false
+permits reach all four, fair=true = true flag=false
+next served after head left, timed=false = true flag=false
+next served after head left, timed=true = true flag=false
+fair timed zero behind a new head = false flag=false
+fair timed zero behind a new head = false flag=false
+fair timed zero behind a new head = false flag=false
+fair timed zero behind a new head = false flag=false
+fair timed zero behind a new head = false flag=false
+wide int range, both signs = true flag=false
+wide int range varies = true flag=false
+wide long range, both signs = true flag=false
+int min to zero = true flag=false
+long min to zero = true flag=false
+widest double range = true flag=false
+double up to infinity = true flag=false
+double from minus infinity = false flag=false
+timedWait flagged ! java.lang.InterruptedException flag=false
+timedWait zero flagged = ok flag=true
+timedJoin dead thread flagged = ok flag=true
+micros sleep = ok flag=false

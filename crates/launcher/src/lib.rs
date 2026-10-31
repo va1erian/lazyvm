@@ -19,6 +19,10 @@ const EXIT_INTERNAL: u8 = 70;
 #[cfg_attr(windows, allow(dead_code))]
 const VM_STACK_BYTES: usize = 256 << 20;
 
+/// Observed on Java 8: a smaller `-Xmx` is refused. The VM's own needs are less,
+/// but must not be near it (docs/design/threads.md, "Out of memory").
+const MIN_HEAP_BYTES: usize = 1 << 20;
+
 /// Natives registered after `natives::register_all`, by the binary.
 pub type Extra = &'static [fn(&mut Vm)];
 
@@ -45,6 +49,12 @@ pub fn main(extra: Extra) -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    if launch.options.heap_limit < MIN_HEAP_BYTES {
+        // On stdout, as on Java 8.
+        println!("Error occurred during initialization of VM");
+        println!("Too small initial heap");
+        return ExitCode::from(1);
+    }
     let code = match run_vm(launch, extra) {
         Ok(code) => code,
         Err(msg) => internal(&msg),
@@ -215,8 +225,13 @@ fn finish(vm: &mut Vm, result: Result<(), VmError>) -> Ended {
         Err(e) => return Ended::Exit(internal(&e.to_string())),
     };
     match report_uncaught(vm, ex) {
-        Ok(()) | Err(VmError::Throw(_)) => Ended::Main(ExitCode::from(1)),
+        Ok(()) => Ended::Main(ExitCode::from(1)),
         Err(VmError::Exit(code)) => Ended::Exit(ExitCode::from(code as u8)),
+        // With the heap full, the error can come before the handler starts.
+        Err(e) if e.is_catchable() => match vm.report_handler_failure(&e) {
+            Ok(()) => Ended::Main(ExitCode::from(1)),
+            Err(e) => Ended::Exit(internal(&e.to_string())),
+        },
         Err(e) => Ended::Exit(internal(&e.to_string())),
     }
 }

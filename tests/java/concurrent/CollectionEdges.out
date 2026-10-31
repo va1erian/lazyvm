@@ -1,0 +1,121 @@
+drain into a sink feeding LinkedBlockingQueue 2 = moved 2 left 3
+drain into a sink feeding ArrayBlockingQueue 2 = moved 2 left 3
+drain into a sink feeding LinkedBlockingDeque 2 = moved 2 left 3
+drain into a sink feeding PriorityBlockingQueue 2 = moved 2 left 3
+drain into a sink feeding LinkedTransferQueue 2 = moved 2 left 3
+drain into a sink feeding DelayQueue 2 = moved 2 left 3
+drain into a sink feeding LinkedBlockingQueue 3 = moved 3 left 3
+drain into a sink feeding ArrayBlockingQueue 3 = moved 3 left 3
+drain into a sink feeding LinkedBlockingDeque 3 = moved 3 left 3
+drain into a sink feeding PriorityBlockingQueue 3 = moved 3 left 3
+drain into a sink feeding LinkedTransferQueue 3 = moved 3 left 3
+drain into a sink feeding DelayQueue 3 = moved 3 left 3
+drain into a sink feeding LinkedBlockingQueue 5 = moved 3 left 3
+drain into a sink feeding ArrayBlockingQueue 5 = moved 3 left 3
+drain into a sink feeding LinkedBlockingDeque 5 = moved 3 left 3
+drain into a sink feeding PriorityBlockingQueue 5 = moved 3 left 3
+drain into a sink feeding LinkedTransferQueue 5 = moved 5 left 3
+drain into a sink feeding DelayQueue 5 = moved 5 left 3
+drain into a sink feeding LinkedBlockingQueue 2147483647 = moved 3 left 3
+drain into a sink feeding ArrayBlockingQueue 2147483647 = moved 3 left 3
+drain into a sink feeding LinkedBlockingDeque 2147483647 = moved 3 left 3
+drain into a sink feeding PriorityBlockingQueue 2147483647 = moved 3 left 3
+drain into a sink feeding LinkedTransferQueue 2147483647 = java.lang.IllegalStateException: sink full moved 1001 left 2
+drain into a sink feeding DelayQueue 2147483647 = java.lang.IllegalStateException: sink full moved 1001 left 3
+drain into a sink that takes from the queue = 4 [1, 2, 3, 4] left []
+sub set of the very element = 2
+its sibling stays valid = [3, 4, 5]
+as does the sub-list = [1, 2, 3]
+sub set of an equal element = 2
+its sibling goes stale ! java.util.ConcurrentModificationException
+the sub-list stays valid = [1, 2, 3]
+capacity 268435456 costs nothing yet = 0 null null false null null null {}
+cleared = true
+capacity 1073741824 costs nothing yet = 0 null null false null null null {}
+cleared = true
+capacity 2147483647 costs nothing yet = 0 null null false null null null {}
+cleared = true
+head below the low end ! java.lang.IllegalArgumentException: inconsistent range
+tail above the high end ! java.lang.IllegalArgumentException: inconsistent range
+sub above both ends ! java.lang.IllegalArgumentException: key out of range
+sub below the low end ! java.lang.IllegalArgumentException: key out of range
+sub above the high end ! java.lang.IllegalArgumentException: key out of range
+head on an excluded low end = {}
+sub ending on an excluded low end = {}
+sub reversed inside ! java.lang.IllegalArgumentException: inconsistent range
+tail on an excluded high end = {}
+head inclusive on an excluded high end ! java.lang.IllegalArgumentException: key out of range
+head exclusive on an excluded high end = {30=v30}
+tail inclusive on an excluded low end ! java.lang.IllegalArgumentException: key out of range
+tail exclusive on an excluded low end = {30=v30}
+descending head beyond ! java.lang.IllegalArgumentException: inconsistent range
+descending tail beyond ! java.lang.IllegalArgumentException: inconsistent range
+descending sub beyond ! java.lang.IllegalArgumentException: key out of range
+descending of a range = {40=v40, 30=v30, 20=v20} {20=v20, 30=v30, 40=v40}
+descending nav = 40 30 20 20 null null
+range nav outside = 40 40 20 20 null null
+range keys = [30] [20] [40] [40, 30, 20]
+range write outside ! java.lang.IllegalArgumentException: key out of range
+range conditional outside = false
+range computes outside = null
+range merge outside ! java.lang.IllegalArgumentException: key out of range
+hash views are one each = true true true
+keySet(v) is new = false
+skip views are one each = true true true true true
+double descending is not the map = false
+bulk entry is read-only ! java.lang.UnsupportedOperationException
+reduced entry is read-only ! java.lang.UnsupportedOperationException
+searched entry = a=1
+view entry writes = {a=3}
+view entry of a removed key writes it back = 3 {a=4}
+growing map: no repeat, all old keys seen = 0 12
+removed after growth: at most the one it held = true
+read during compute = 1
+other key during compute = null
+other compute during compute = 2
+writer of that key = BLOCKED
+writer came second = 100
+flag kept by compute = 2 true
+set of the same element is no write = 1
+failed removes are no write = 1
+failed adds are no write = 1
+same-order sort is a write ! java.util.ConcurrentModificationException
+clear of nothing is a write ! java.util.ConcurrentModificationException
+sub addAll of nothing, stale = false
+sub addAll at of nothing, stale ! java.util.ConcurrentModificationException
+sub get far, stale: index first ! java.lang.IndexOutOfBoundsException: Index: 9,Size: 1
+sub add far, stale: staleness first ! java.util.ConcurrentModificationException
+sub forEach, stale ! java.util.ConcurrentModificationException
+array source narrower than the list = [1]
+toArray is plain = [Ljava.lang.Object;
+tryTransfer null unit leaves nothing ! java.lang.NullPointerException
+nothing left = 0
+timed offer never reads its unit = true a
+zero tryTransfer flagged ! java.lang.InterruptedException
+flag cleared, not left = false 0
+blocking queue source keeps its comparator = true
+java.util.PriorityQueue source: comparator dropped = null
+one non-comparable source = 1
+comparator that throws, second insert = java.lang.IllegalStateException: cmp 1 a
+heap layout = [2, 3, 9, 5] [1, 3, 2, 5, 9, 8]
+iterator removes that very element = 1 true true
+deque timed poll flagged, element ready ! java.lang.InterruptedException
+left in the deque = false [x]
+put flagged, a taker waits = true
+taker = v
+timed poll flagged, a giver waits = g true
+non-fair: the newest taker first = [2:x0, 1:x1, 0:x2]
+one hand-over per consumer = true true false
+after = 0 0
+fair putters FIFO = [-1, 0, 1, 2]
+removed further along one bin = 3
+cleared under an iterator = 3
+entry contains a null key = false
+entry contains a null value = false
+computeIfAbsent of a present key waits for its compute = BLOCKED
+and answers what it computed = 2
+get null with a comparator that allows it ! java.lang.NullPointerException
+set equals a smaller set = false
+linked queue iterator follows past what left = [b, c]
+default computeIfAbsent that lost answers the winner = 77
+default merge rejects a null value on an absent key ! java.lang.NullPointerException

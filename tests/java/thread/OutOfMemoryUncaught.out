@@ -1,0 +1,5 @@
+--- stderr ---
+Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+	at thread.OutOfMemoryUncaught$Node.<init>(OutOfMemoryUncaught.java:8)
+	at thread.OutOfMemoryUncaught.main(OutOfMemoryUncaught.java:18)
+--- exit 1 ---

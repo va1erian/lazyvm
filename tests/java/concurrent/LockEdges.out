@@ -1,0 +1,65 @@
+await unowned flagged ! java.lang.InterruptedException flag=false
+awaitNanos unowned flagged ! java.lang.InterruptedException flag=false
+await time unowned flagged ! java.lang.InterruptedException flag=false
+awaitUntil unowned flagged ! java.lang.InterruptedException flag=false
+awaitUninterruptibly unowned flagged ! java.lang.IllegalMonitorStateException flag=true
+awaitUntil null unowned ! java.lang.NullPointerException flag=false
+await null unit unowned ! java.lang.NullPointerException flag=false
+awaitUntil null flagged ! java.lang.NullPointerException flag=true
+await null unit flagged ! java.lang.NullPointerException flag=true
+hasWaiters custom condition ! java.lang.IllegalArgumentException: not owner flag=false
+hasWaiters foreign unowned ! java.lang.IllegalArgumentException: Not owner flag=false
+hasWaiters null unowned ! java.lang.NullPointerException flag=false
+tryLock null unit flagged ! java.lang.NullPointerException flag=true
+tryLock zero flagged ! java.lang.InterruptedException flag=false
+tryLock negative flagged ! java.lang.InterruptedException flag=false
+await zero flagged ! java.lang.InterruptedException flag=false
+awaitNanos negative flagged ! java.lang.InterruptedException flag=false
+awaitUntil past flagged ! java.lang.InterruptedException flag=false
+lockInterruptibly flagged reentrant ! java.lang.InterruptedException flag=false
+timed tryLock flagged reentrant ! java.lang.InterruptedException flag=false
+holds after flagged reentry = 1 flag=false
+awaitNanos runs out = true flag=false
+await runs out = false flag=false
+awaitUntil runs out = false flag=false
+awaitNanos signalled = true flag=false
+await signalled = true flag=false
+awaitUntil signalled = true flag=false
+await longest time = true flag=false
+awaitNanos longest time = true flag=false
+awaitUninterruptibly keeps flag = true holds 1 flag=true
+owner await wakes the queue = true true flag=false
+second read unlock ! java.lang.IllegalMonitorStateException: attempt to unlock read lock, not locked by current thread flag=false
+read count after = 0 flag=false
+read await only ! java.lang.IllegalMonitorStateException flag=false
+signal with read hold only ! java.lang.IllegalMonitorStateException flag=false
+await with both holds = true flag=false
+seen during that wait = read locks 0 write holds 1 flag=false
+both holds back = 1 1 1 flag=false
+both released = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 0, Read locks = 0] flag=false
+toString, held elsewhere = java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 1, Read locks = 0] java.util.concurrent.locks.ReentrantReadWriteLock$WriteLock@H[Locked by thread holder] flag=false
+my view of it = 0 0 true flag=false
+fair timed reentry behind queue = true flag=false
+fair lock reentry behind queue = 2 flag=false
+fair read reentry timed = true flag=false
+fair read reentry = 2 flag=false
+writer reads past its queue = true flag=false
+fair read behind a new writer = false flag=false
+fair read behind a new writer = false flag=false
+fair read behind a new writer = false flag=false
+fair read behind a new writer = false flag=false
+fair read behind a new writer = false flag=false
+all readers in, fair=false = true 4 flag=false
+all readers in, fair=true = true 4 flag=false
+queued lock at the limit, fair=false = java.lang.Error: Maximum lock count exceeded flag=false
+queued interruptibly at the limit = java.lang.Error: Maximum lock count exceeded flag=false
+queued timed at the limit = java.lang.Error: Maximum lock count exceeded flag=false
+after them = 65535 0 java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 0, Read locks = 65535] flag=false
+queued lock at the limit, fair=true = java.lang.Error: Maximum lock count exceeded flag=false
+queued interruptibly at the limit = java.lang.Error: Maximum lock count exceeded flag=false
+queued timed at the limit = java.lang.Error: Maximum lock count exceeded flag=false
+after them = 65535 0 java.util.concurrent.locks.ReentrantReadWriteLock@H[Write locks = 0, Read locks = 65535] flag=false
+flagged park used the permit = true flag=false
+blocker forms return at once = true flag=false
+blocker not left behind = null flag=false
+unpark before start does nothing = true flag=false

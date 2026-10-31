@@ -318,3 +318,31 @@ at the end of S5).
   S15-04, fonts and imaging for AWT and Swing) says in its PR what it costs.
 - **Data the VM needs** (Unicode tables, and later time zones or fonts)
   counts, whether it is embedded in the binary or shipped in the jar.
+
+## D15. Java frames per thread
+
+A thread has 16384 Java frames by default (`Options::max_frames`), and then
+`StackOverflowError`. The number should behave like the oracle's for programs that
+recurse a known amount and for programs that overflow on purpose, and it cannot be
+exact: the oracle's limit is a size in bytes, so its depth depends on the size of each
+frame, and at its default it reaches from 8962 to 22523 frames when interpreted, and
+further once compiled (`Depth`: 62716 on a started thread). 16384 is inside that range,
+as 4096, the earlier value, was not: deep recursion that works on the oracle failed
+here, and a regex golden (`RegexLimitsSizes`, "nesting 20000") needs an overflow at
+20000 levels of nesting where the parser recurses.
+
+- **Cost.** Frames are Rust allocations, not OS stack: about 245 bytes for a small
+  method, so about 4 MB for a thread at the limit, and only for threads that go there.
+  Figures are in threads.md, "Thread lifecycle". The limit of 4M slots per thread
+  bounds a thread with very large frames as before.
+- **Calls from Rust into Java** do use OS stack, so they have a limit of their own,
+  `Options::max_nesting`: 2400. That is what recursion through `Method.invoke` reaches:
+  2146 to 2334 on the oracle in 6 runs, main thread or started; `DeepThread` pins 1500, and
+  `lazy/internal/CallNesting` the end of it, also inside LazyOS. All 2400 nests took 3.56 MiB
+  on Windows at worst (`Nest`: reflection, constructors, a class loaded at the bottom), of a
+  64 MiB stack on a started thread and 256 MiB on the main one. Those stacks are the same size
+  on every platform (`Builder::stack_size`; musl maps what it is asked, and LazyOS fills that map
+  on demand, `docs/architecture/virtual-memory.md` there), so a thread pays only for what it uses.
+- **`-Xss<size>`** sets the limit at 16384 frames per MiB, between 256 and 1048576 frames.
+  So `-Xss1m` is the default, as on the oracle: interpreted, its depth with `-Xss1m` is
+  the depth with no flag (10450 for a small method), and 2m and 512k double and halve it.

@@ -1,0 +1,44 @@
+get flagged queued keeps flag = x flag=true
+timed get flagged queued = ie flag=false
+get flagged done = x flag=true
+timed get flagged done = ie flag=false
+timed get null unit worker = npe
+state pending get timed=false = WAITING
+done after interrupt = false
+pending get interrupted timed=false = raw flag=false
+state pending get timed=true = TIMED_WAITING
+done after interrupt = false
+pending get interrupted timed=true = raw flag=false
+worker timed get expires = timeout
+worker get cancelled = ce
+outside get interrupted ! java.lang.InterruptedException
+outside flag = false
+outside timed get interrupted ! java.lang.InterruptedException
+outside flag 2 = false
+common default parallelism = true
+managed compensates = second ran
+blocker = unblocked
+unmanaged no compensation = timeout
+third after = third
+blocker throws = java.lang.RuntimeException
+join compensates = freed
+completer = completer
+end = true
+runs to parallelism = 3
+size at most = true
+never above parallelism = true
+submission order = [a, b, c, d]
+async submission order = [a, b, c]
+shutdown finishes forked trees = true 511
+helpQuiesce in task = 100
+name a = ForkJoinPool-N-worker-1
+name b = ForkJoinPool-N-worker-1
+index = true
+rename in start = true
+terminated worker getPool = true
+terminated worker index = true
+deep 300 = 300
+deep 800 = 800
+fib 22 par 1 = 17711
+fib 22 par 2 = 17711
+fib 22 par 8 = 17711

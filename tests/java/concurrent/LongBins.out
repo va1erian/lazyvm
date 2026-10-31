@@ -1,0 +1,38 @@
+many: size = 20000
+many: sum of gets = 199990000
+many: miss = null
+many: after removing half = 10000
+many: still found = 10000
+ordered: answers that differ from a HashMap = 0
+ordered: same mappings = true
+ordered: iteration has each once = true
+ties: answers that differ from a HashMap = 0
+ties: same mappings = true
+ties: iteration has each once = true
+no order: answers that differ from a HashMap = 0
+no order: same mappings = true
+no order: iteration has each once = true
+order on another class: answers that differ from a HashMap = 0
+order on another class: same mappings = true
+order on another class: iteration has each once = true
+mixed: answers that differ from a HashMap = 0
+mixed: same mappings = true
+mixed: iteration has each once = true
+strings of one hash: answers that differ from a HashMap = 0
+strings of one hash: same mappings = true
+strings of one hash: iteration has each once = true
+growth: misses = 0
+growth: size = 3000
+growth: emptied = true
+growth: nothing left to iterate = false
+growth: usable again = 1
+entry writes through in a long bin = 777
+iterator remove in a long bin = false 39
+remove twice ! java.lang.IllegalStateException
+the rest of the walk = 39
+after clear = 0 null
+written after clear = {concurrent.LongBins$Ranked@2a=3}
+put of a new key, compareTo throws ! java.lang.IllegalStateException: compare
+get of an absent key, compareTo throws ! java.lang.IllegalStateException: compare
+remove of an absent key, compareTo throws ! java.lang.IllegalStateException: compare
+after the throws = 40 false

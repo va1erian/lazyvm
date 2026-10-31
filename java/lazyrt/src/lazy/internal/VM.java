@@ -53,18 +53,22 @@ public final class VM {
     /** The generated class implementing an annotation type: a subclass of AnnotationBase. */
     static native Class<?> annotationClass(Class<?> annotationType);
 
+    /** Reports what the running thread's uncaught exception handler threw, with no use of the heap. */
+    public static native void handlerFailed(Throwable thrown);
+
     /**
      * Called by the VM when an exception escapes the main thread: it goes to
-     * the thread's handler, as for any other thread.
+     * the thread's handler, as for any other thread. What comes out of this the
+     * VM reports itself (`handlerFailed`), as it may be for lack of memory before
+     * any handler has started.
      */
     static void uncaught(Throwable t) {
         Thread current = Thread.currentThread();
+        current.getUncaughtExceptionHandler().uncaughtException(current, t);
         try {
-            current.getUncaughtExceptionHandler().uncaughtException(current, t);
+            System.err.flush();
         } catch (Throwable u) {
-            System.err.print("\nException: " + u.getClass().getName()
-                    + " thrown from the UncaughtExceptionHandler in thread \"" + current.getName() + "\"\n");
+            // Not the handler's failure: with the heap full, this is all that went wrong.
         }
-        System.err.flush();
     }
 }

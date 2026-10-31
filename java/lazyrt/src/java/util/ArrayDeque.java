@@ -39,32 +39,36 @@ public class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E>, Cl
 
     private int mask() { return slots.length - 1; }
 
-    // Spec 4.D1: when an add fills the array it doubles, renumbered so the first is in slot 0.
-    private void doubleIfFull() {
-        if (front != back) {
+    // Spec 4.D1: when an add fills the array it doubles, renumbered so the first is in slot 0. Done
+    // before the add changes anything, so that a failed allocation leaves the deque as it was;
+    // `newFront` is where the first goes now for that to come out after the add.
+    private void growForAdd(int newFront) {
+        int n = slots.length;
+        if (((back + 1) & (n - 1)) != front) {
             return;
         }
-        int n = slots.length;
         Object[] bigger = new Object[n << 1];
-        System.arraycopy(slots, front, bigger, 0, n - front);
-        System.arraycopy(slots, 0, bigger, n - front, front);
+        int size = n - 1;
+        int upper = Math.min(n - front, size);
+        System.arraycopy(slots, front, bigger, newFront, upper);
+        System.arraycopy(slots, 0, bigger, newFront + upper, size - upper);
         slots = bigger;
-        front = 0;
-        back = n;
+        front = newFront;
+        back = newFront + size;
     }
 
     public void addFirst(E e) {
         Objects.requireNonNull(e);
+        growForAdd(1);
         front = (front - 1) & mask();
         slots[front] = e;
-        doubleIfFull();
     }
 
     public void addLast(E e) {
         Objects.requireNonNull(e);
+        growForAdd(0);
         slots[back] = e;
         back = (back + 1) & mask();
-        doubleIfFull();
     }
 
     public boolean offerFirst(E e) {

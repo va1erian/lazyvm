@@ -1,0 +1,49 @@
+all order = D:a; D:b; D:java.util.concurrent.ExecutionException: java.lang.IllegalStateException: c; D:d; 
+all empty = []
+all null ! java.lang.NullPointerException
+all null element ! java.lang.NullPointerException
+all timed null ! java.lang.NullPointerException
+all timed null unit ! java.lang.NullPointerException
+all timed ok = D:a; D:b; 
+all timed out cancels = DC:java.util.concurrent.CancellationException; DC:java.util.concurrent.CancellationException; 
+all timed zero = DC:java.util.concurrent.CancellationException; 
+all flagged ! java.lang.InterruptedException
+any single = a
+any failing then ok = ok
+any one failed ! java.util.concurrent.ExecutionException: java.lang.IllegalStateException: only
+any empty ! java.lang.IllegalArgumentException
+any null ! java.lang.NullPointerException
+any null element ! java.lang.NullPointerException
+any timed null ! java.lang.NullPointerException
+any timed empty ! java.lang.IllegalArgumentException
+any timed ok = a
+any timeout ! java.util.concurrent.TimeoutException
+any timed null unit ! java.lang.NullPointerException
+any winner = winner
+any terminated = true
+any interrupted the loser = true
+invokeAll after shutdown = rejected
+submit callable = v
+submit runnable = null
+submit runnable result = r
+submit type = true
+submit null ! java.lang.NullPointerException
+invokeAll = D:a; D:b; 
+invokeAny = a
+log = [newTaskFor callable, execute, newTaskFor runnable null, execute, newTaskFor runnable r, execute, newTaskFor callable, execute, newTaskFor callable, execute, newTaskFor callable, execute, newTaskFor callable, execute]
+completion service reject ! java.util.concurrent.RejectedExecutionException: no
+null executor ! java.lang.NullPointerException
+null queue ! java.lang.NullPointerException
+poll empty = null
+timed poll empty = null
+submit null ! java.lang.NullPointerException
+submit null runnable ! java.lang.NullPointerException
+take first = a
+take second = b
+take third same future = true
+take third ! java.util.concurrent.ExecutionException: java.lang.IllegalStateException: c
+drained = null
+cancelled is delivered = true
+own queue used = 1
+own queue value = x
+take flagged ! java.lang.InterruptedException

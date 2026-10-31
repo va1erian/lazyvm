@@ -1,0 +1,16 @@
+monitor: 15000
+queue: left 0, sum 37492500
+ping-pong: sum 125250
+condition: 1500
+monitor: 15000
+queue: left 0, sum 37492500
+ping-pong: sum 125250
+condition: 1500
+monitor: 15000
+queue: left 0, sum 37492500
+ping-pong: sum 125250
+condition: 1500
+monitor: 15000
+queue: left 0, sum 37492500
+ping-pong: sum 125250
+condition: 1500

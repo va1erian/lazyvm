@@ -10,6 +10,10 @@ package java.util.regex;
  * and an empty side of && is ignored.
  */
 class ClassReader extends PatternReader {
+    /** How far classes nest, here and so far: a class is parsed by recursion (see Parser.nestedDeeply). */
+    private int classDepth;
+    int deepestClass;
+
     ClassReader(String pattern, int flags) {
         super(pattern, flags);
     }
@@ -37,8 +41,15 @@ class ClassReader extends PatternReader {
             cursor++;
             negating = true;
         }
-        CharClass result = body(negating, true);
+        CharClass result = deeper(negating, true);
         return result == null ? CharClass.range(1, 0) : CharClass.cached(result);
+    }
+
+    private CharClass deeper(boolean negating, boolean bracketed) {
+        deepestClass = Math.max(deepestClass, ++classDepth);
+        CharClass result = body(negating, bracketed);
+        classDepth--;
+        return result;
     }
 
     /**
@@ -204,7 +215,7 @@ class ClassReader extends PatternReader {
                 CharClass nested = parseClass();
                 side = side == null ? nested : CharClass.or(side, nested);
             } else {
-                side = CharClass.cached(body(false, false));
+                side = CharClass.cached(deeper(false, false));
             }
         }
     }

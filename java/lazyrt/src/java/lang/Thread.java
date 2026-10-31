@@ -36,6 +36,8 @@ public class Thread implements Runnable {
     private volatile int status;
     private volatile UncaughtExceptionHandler handler;
     private ClassLoader contextClassLoader;
+    /** What LockSupport says this thread is parked on; only LockSupport touches it. */
+    private Object parkedFor;
     /** Values of this thread's ThreadLocals and InheritableThreadLocals. */
     Map<ThreadLocal<?>, Object> locals;
     Map<ThreadLocal<?>, Object> inheritableLocals;
@@ -210,8 +212,7 @@ public class Thread implements Runnable {
         try {
             getUncaughtExceptionHandler().uncaughtException(this, t);
         } catch (Throwable u) {
-            System.err.print("\nException: " + u.getClass().getName()
-                    + " thrown from the UncaughtExceptionHandler in thread \"" + getName() + "\"\n");
+            lazy.internal.VM.handlerFailed(u);
         }
     }
 

@@ -7,6 +7,7 @@ package java.util.regex;
  */
 final class Parser extends GroupReader {
     private static final int MAX = Integer.MAX_VALUE;
+    private static final int DEEPLY_NESTED = 8;
 
     int loopCount;
     int lookCount;
@@ -25,6 +26,15 @@ final class Parser extends GroupReader {
 
     Parser(String pattern, int flags) {
         super(pattern, flags);
+    }
+
+    /**
+     * Whether a stack overflow says something about this pattern, and not just where it was compiled:
+     * else a library class's initializer would stay broken for a syntax error (docs/regex.md). No
+     * library pattern nests this far.
+     */
+    boolean nestedDeeply() {
+        return deepestDepth >= DEEPLY_NESTED || deepestClass >= DEEPLY_NESTED;
     }
 
     /**

@@ -90,6 +90,74 @@ fn alloc_past_twice_the_limit_fails() {
     assert!(matches!(heap.alloc(big), Err(VmError::OutOfMemory)));
 }
 
+fn big_array(bytes: usize) -> Object {
+    Object {
+        class: ClassId(0),
+        body: Body::Array(Array::Byte(vec![0; bytes].into())),
+    }
+}
+
+/// A native took the heap past the limit, right up to where natives stop: a
+/// handler still has its room.
+#[test]
+fn the_handler_has_room_wherever_a_native_took_the_heap() {
+    let mut heap = Heap::new(1 << 20);
+    assert!(heap.alloc(big_array((2 << 20) - HEADER_BYTES)).is_ok());
+    assert!(heap.alloc(big_array(0)).is_err());
+    assert!(heap.would_exceed(1));
+    heap.give_handler_room();
+    assert!(!heap.would_exceed(HANDLER_ROOM));
+    assert!(heap.would_exceed(HANDLER_ROOM + 1));
+    assert!(heap.alloc(big_array(HANDLER_ROOM - HEADER_BYTES)).is_ok());
+}
+
+#[test]
+fn the_handler_room_does_not_grow_with_each_error() {
+    let mut heap = Heap::new(1 << 20);
+    assert!(heap.alloc(big_array((1 << 20) - HEADER_BYTES)).is_ok());
+    heap.give_handler_room();
+    assert!(heap.alloc(big_array(HANDLER_ROOM - HEADER_BYTES)).is_ok());
+    heap.give_handler_room();
+    assert!(heap.would_exceed(1), "used up, and given once");
+}
+
+/// A native's peak does not stay available: `RoomStay` kept 22 MB more than the
+/// oracle at a 32 MB limit with room that only a return under the limit ended.
+#[test]
+fn the_handler_room_follows_what_a_collection_finds_live() {
+    let limit = 1 << 20;
+    let mut heap = Heap::new(limit);
+    let big = heap
+        .alloc(big_array(limit / 2))
+        .unwrap_or_else(|e| panic!("{e:?}"));
+    let small = heap
+        .alloc(big_array(limit + limit / 8))
+        .unwrap_or_else(|e| panic!("{e:?}"));
+    assert!(
+        heap.alloc(big_array(limit)).is_err(),
+        "natives have stopped"
+    );
+    heap.give_handler_room();
+    assert!(!heap.would_exceed(HANDLER_ROOM));
+
+    let _ = big;
+    heap.collect([small]);
+    let live = heap.live_bytes();
+    assert!(live > limit, "still over the limit");
+    assert!(!heap.would_exceed(HANDLER_ROOM));
+    assert!(
+        heap.would_exceed(HANDLER_ROOM + 1),
+        "room is what is live now"
+    );
+
+    heap.collect([]);
+    assert!(
+        heap.would_exceed(limit + 1),
+        "under the limit, the limit again"
+    );
+    assert!(!heap.would_exceed(limit));
+}
+
 #[test]
 fn weak_referents_are_cleared_and_soft_ones_kept_until_asked() {
     let mut heap = Heap::new(64 << 20);

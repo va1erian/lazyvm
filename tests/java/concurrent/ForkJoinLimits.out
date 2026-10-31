@@ -1,0 +1,110 @@
+two in helpQuiesce = out out
+two in awaitQuiescence = true true
+helpQuiesce waits for a busy worker = true
+awaitQuiescence in worker outlasts its timeout = true
+helpQuiesce ignores a blocked worker = true 1
+second out of helpQuiesce stays = true true
+helpQuiesce runs own forks then submissions = [b, a, sub]
+another pool's worker times out = false
+start throws: execute ! java.lang.OutOfMemoryError: cannot start
+start throws: after = made=1 size=0 ran=0
+start throws: second = true made=2 size=1
+start throws: ends = true true
+constructor throws: execute ! java.lang.IllegalStateException: ctor
+constructor throws: after = made=1 size=0 ran=0
+constructor throws: second = true made=2 size=1
+constructor throws: ends = false false
+killed worker's forks: 0 = true ran=0 cancelled=0 made=2
+killed worker's pool ends: 0 = true
+killed worker's forks: 2 = true ran=0 cancelled=2 made=2
+killed worker's pool ends: 2 = true
+killed worker with one idle beside it = made=3
+submission behind a killed worker = true
+onStart failure: gone = true made=1 ran=0
+onStart failure: next call = true made=2
+idle workers go away = true
+and come back = yes
+fork left on a stand-in = true stand-in seen=true
+plain tasks at once after a stand-in = 1
+queue served above the target = true other still running=true
+latched on each other at 2 = true
+spinning on each other at 2 = 2
+forks latched on each other at 2 = met
+latched on each other at 8 = true
+spinning on each other at 8 = 8
+forks latched on each other at 8 = met
+chain 350 with 4 extra frames at 1 = 350
+chain 350 with 4 extra frames at 2 = 350
+chain 390 with 3 extra frames at 1 = 390
+chain 390 with 3 extra frames at 2 = 390
+chain 200 with 15 extra frames at 1 = 200
+chain 200 with 15 extra frames at 2 = 200
+chain 600 with 0 extra frames at 1 = 600
+chain 600 with 0 extra frames at 2 = 600
+chain 800 with 0 extra frames at 1 = 800
+chain 800 with 0 extra frames at 2 = 800
+invokeAll two deep 650 = 650
+invokeAll many deep 650 = 650
+invokeAll two deep 1000 = 1000
+invokeAll many deep 1000 = 1000
+OnlyNoArg join = copy OnlyNoArg msg=null cause=original
+OnlyNoArg getException = copy OnlyNoArg msg=null cause=original again the same=false
+OnlyNoArg get = copy OnlyNoArg msg=null cause=original outer=concurrent.ForkJoinLimits$OnlyNoArg
+OnlyCause join = copy OnlyCause msg=concurrent.ForkJoinLimits$OnlyCause: b cause=original
+OnlyCause getException = copy OnlyCause msg=concurrent.ForkJoinLimits$OnlyCause: b cause=original again the same=false
+OnlyCause get = copy OnlyCause msg=concurrent.ForkJoinLimits$OnlyCause: b cause=original outer=concurrent.ForkJoinLimits$OnlyCause: concurrent.ForkJoinLimits$OnlyCause: b
+CauseFirst join = copy CauseFirst msg=concurrent.ForkJoinLimits$CauseFirst: c cause=original
+CauseFirst getException = copy CauseFirst msg=concurrent.ForkJoinLimits$CauseFirst: c cause=original again the same=false
+CauseFirst get = copy CauseFirst msg=concurrent.ForkJoinLimits$CauseFirst: c cause=original outer=concurrent.ForkJoinLimits$CauseFirst: concurrent.ForkJoinLimits$CauseFirst: c
+NoArgFirst join = copy NoArgFirst msg=concurrent.ForkJoinLimits$NoArgFirst: d cause=original
+NoArgFirst getException = copy NoArgFirst msg=concurrent.ForkJoinLimits$NoArgFirst: d cause=original again the same=false
+NoArgFirst get = copy NoArgFirst msg=concurrent.ForkJoinLimits$NoArgFirst: d cause=original outer=concurrent.ForkJoinLimits$NoArgFirst: concurrent.ForkJoinLimits$NoArgFirst: d
+Hidden join = same Hidden msg=e cause=null
+Hidden getException = same Hidden msg=e cause=null again the same=true
+Hidden get = same Hidden msg=e cause=null outer=concurrent.ForkJoinLimits$Hidden: e
+Prot join = copy Prot msg=null cause=original
+Prot getException = copy Prot msg=null cause=original again the same=false
+Prot get = copy Prot msg=null cause=original outer=concurrent.ForkJoinLimits$Prot
+Priv join = same Priv msg=g cause=null
+Priv getException = same Priv msg=g cause=null again the same=true
+Priv get = same Priv msg=g cause=null outer=concurrent.ForkJoinLimits$Priv: g
+CtorThrows join = same CtorThrows msg=h cause=null
+CtorThrows getException = same CtorThrows msg=h cause=null again the same=true
+CtorThrows get = same CtorThrows msg=h cause=null outer=concurrent.ForkJoinLimits$CtorThrows: h
+CauseFixed join = same CauseFixed msg=i cause=null
+CauseFixed getException = same CauseFixed msg=i cause=null again the same=true
+CauseFixed get = same CauseFixed msg=i cause=null outer=concurrent.ForkJoinLimits$CauseFixed: i
+ProtCtor join = same ProtCtor msg=j cause=null
+ProtCtor getException = same ProtCtor msg=j cause=null again the same=true
+ProtCtor get = same ProtCtor msg=j cause=null outer=concurrent.ForkJoinLimits$ProtCtor: j
+NarrowCtor join = same NarrowCtor msg=k cause=null
+NarrowCtor getException = same NarrowCtor msg=k cause=null again the same=true
+NarrowCtor get = same NarrowCtor msg=k cause=null outer=concurrent.ForkJoinLimits$NarrowCtor: k
+Checked join = copy Checked msg=null cause=original
+Checked getException = copy Checked msg=null cause=original again the same=false
+Checked get = copy Checked msg=null cause=original outer=concurrent.ForkJoinLimits$Checked
+Err join = copy Err msg=null cause=original
+Err getException = copy Err msg=null cause=original again the same=false
+Err get = copy Err msg=null cause=original outer=concurrent.ForkJoinLimits$Err
+IllegalArgumentException join = copy IllegalArgumentException msg=java.lang.IllegalArgumentException: n cause=original
+IllegalArgumentException getException = copy IllegalArgumentException msg=java.lang.IllegalArgumentException: n cause=original again the same=false
+IllegalArgumentException get = copy IllegalArgumentException msg=java.lang.IllegalArgumentException: n cause=original outer=java.lang.IllegalArgumentException: java.lang.IllegalArgumentException: n
+ArithmeticException join = copy ArithmeticException msg=null cause=original
+ArithmeticException getException = copy ArithmeticException msg=null cause=original again the same=false
+ArithmeticException get = copy ArithmeticException msg=null cause=original outer=java.lang.ArithmeticException
+StackOverflowError join = copy StackOverflowError msg=null cause=original
+StackOverflowError getException = copy StackOverflowError msg=null cause=original again the same=false
+StackOverflowError get = copy StackOverflowError msg=null cause=original outer=java.lang.StackOverflowError
+CancellationException join = copy CancellationException msg=null cause=original
+CancellationException getException = copy CancellationException msg=null cause=original again the same=false
+CancellationException get = copy CancellationException msg=null cause=original outer=java.util.concurrent.CancellationException
+completed here, read here = same IllegalStateException msg=ise cause=null
+completed here, read on a worker = copy IllegalStateException msg=java.lang.IllegalStateException: ise cause=original
+completed on a worker, read here = copy IllegalStateException msg=java.lang.IllegalStateException: ise cause=original
+checked completed on a worker, read here = java.lang.RuntimeException: java.lang.RuntimeException: java.io.IOException: io cause=java.lang.RuntimeException: java.io.IOException: io then=java.io.IOException: io
+invoked here = same IllegalStateException msg=ise cause=null
+read on another plain thread = copy IllegalStateException msg=java.lang.IllegalStateException: ise cause=original
+read here again = same IllegalStateException msg=ise cause=null
+forked and joined on one worker = same IllegalStateException msg=ise cause=null
+run by a thief, joined by the forker = copy IllegalStateException msg=java.lang.IllegalStateException: ise cause=original
+reinitialized, completed here = same IllegalStateException msg=ise cause=null

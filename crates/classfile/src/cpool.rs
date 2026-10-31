@@ -280,6 +280,21 @@ fn parse_entry(
     })
 }
 
+/// Encodes UTF-16 code units as modified UTF-8 (JVMS 4.4.7), unit by unit: so a
+/// NUL takes two bytes, and a surrogate, paired or not, three of its own.
+pub fn encode_mutf8(units: &[u16]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(units.len());
+    for &u in units {
+        let low = (u & 0x3f) as u8 | 0x80;
+        match u {
+            0x01..=0x7f => out.push(u as u8),
+            0 | 0x80..=0x7ff => out.extend([(u >> 6) as u8 | 0xc0, low]),
+            _ => out.extend([(u >> 12) as u8 | 0xe0, ((u >> 6) & 0x3f) as u8 | 0x80, low]),
+        }
+    }
+    out
+}
+
 /// Decodes modified UTF-8 (JVMS 4.4.7) into UTF-16 code units.
 pub fn decode_mutf8_utf16(bytes: &[u8]) -> Result<Vec<u16>, String> {
     let mut out = Vec::with_capacity(bytes.len());
@@ -328,6 +343,21 @@ pub fn decode_mutf8(bytes: &[u8]) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn modified_utf8_encodes_unit_by_unit_and_decodes_back() {
+        // NUL, ASCII, two bytes, three bytes, a pair, a lone surrogate.
+        let units = [0, 0x41, 0xe9, 0x4e2d, 0xd83d, 0xde00, 0xd83d];
+        let bytes = super::encode_mutf8(&units);
+        assert_eq!(
+            bytes,
+            [
+                0xc0, 0x80, 0x41, 0xc3, 0xa9, 0xe4, 0xb8, 0xad, 0xed, 0xa0, 0xbd, 0xed, 0xb8, 0x80,
+                0xed, 0xa0, 0xbd
+            ]
+        );
+        assert_eq!(super::decode_mutf8_utf16(&bytes), Ok(units.to_vec()));
+    }
+
     use super::*;
 
     #[test]
