@@ -66,8 +66,10 @@ const IDLE_LOOKS: u32 = 8;
 /// What the thread keeping the watch is doing.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Watch {
-    /// Not there: no thread has ever waited, or it could not be started.
+    /// Not there: no thread has waited yet.
     Absent,
+    /// The OS would not start it, and a switch should not ask again each time.
+    Refused,
     Timing,
     Asleep,
 }
@@ -314,7 +316,7 @@ impl Gil {
     /// thread cannot be started, slices are as long as the polls make them.
     fn call_watch(&self, slot: &mut Slot) {
         match slot.watch {
-            Watch::Timing => {}
+            Watch::Timing | Watch::Refused => {}
             Watch::Asleep => {
                 slot.watch = Watch::Timing;
                 self.rouse.notify_one();
@@ -327,9 +329,10 @@ impl Gil {
                     .name("vm-watch".into())
                     .stack_size(64 << 10)
                     .spawn(move || gil.keep_watch());
-                if started.is_ok() {
-                    slot.watch = Watch::Timing;
-                }
+                slot.watch = match started {
+                    Ok(_) => Watch::Timing,
+                    Err(_) => Watch::Refused,
+                };
             }
         }
     }

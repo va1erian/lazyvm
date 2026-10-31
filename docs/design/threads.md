@@ -61,8 +61,8 @@ the path taken with threads in line, so one thread pays nothing, and the watch
 starts when a thread first joins the line. With the line empty for 8 looks in a
 row it sleeps until someone joins: rousing it takes a system call, which threads
 that only hop on a lock must not pay at each hop. While it times, it wakes about
-once per slice, 200 times a second, and takes the slot's mutex once. If it cannot
-be started, slices are as long as the polls make them. `gil_tests.rs` pins that a
+once per slice, 200 times a second, and takes the slot's mutex once. Inside LazyOS, `Thread.sleep(1)` beside `arraycopy` of 16 MB takes 10.4 ms on average, and of 1 MB 8.1 ms.
+If it cannot be started, slices are as long as the polls make them. `gil_tests.rs` pins that a
 holder with slow polls is told, and that the watch comes back after sleeping.
 
 | Mean `Thread.sleep(1)` beside a thread looping on (`SlowPoll`), ms | count alone | with the watch | oracle |
@@ -266,7 +266,9 @@ Java monitors are not OS locks: a thread blocked on one has released the VM.
   An overflow takes 2.1 ms (oracle 0.9). A collection takes 128 ns per frame on the stack: 2 ms
   with one thread 16000 frames down (`DeepGc`; `System.gc()` on the oracle is about as long at
   any depth), and it comes only as allocation asks for it: 20000 allocations of 64 KiB
-  take the same at depth 10 and at 16000.
+  take the same at depth 10 and at 16000. Inside LazyOS (QEMU, WHPX, 1 GiB), an overflow takes
+  2.7 ms and a collection at 16000 frames 3.1 ms; 120 threads at the limit at once work, and
+  300 end the process (status 137, for lack of memory): nothing in the suite goes there.
 - An exception out of the uncaught exception handler is reported on stderr, in the
   oracle's words, by `lazy.internal.VM.handlerFailed`, a native that allocates nothing,
   as the handler may well have failed for lack of memory (`HandlerFailsThreads`). The main
