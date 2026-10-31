@@ -1095,7 +1095,7 @@ happens to behave the same way, so `CompletableFutureShapes` pins it too ("subcl
   keeps a `CompletionException` subclass as is ("read SubCE", "read SubCancel", "read dependent of SubCE"). A dependent of a
   `CompletionException` with no cause gets the same object ("read dependent of NoCause"). `get(t, null)` throws before looking at the flag
   or the state ("timed null unit keeps the flag"); with the flag set on a pending future it throws `InterruptedException` even with no
-  time left ("timed zero, flagged and pending").
+  time left ("timed zero, flagged and pending"). A far negative timeout is a past time like any other on a pending future: it times out at once (`CompletableFutureReaders`: "timed get at ...").
 
 ### Readers (`CompletableFutureReaders`)
 
