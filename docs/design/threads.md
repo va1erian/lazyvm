@@ -8,7 +8,8 @@ how the collector stops the world, how monitors and class initialization
 block, and what later items (S6-03 to S6-06) can rely on.
 
 Code: `crates/vm/src/thread/` (`gil.rs` the lock, `mod.rs` the thread table
-and parking, `monitor.rs` monitors, `spawn.rs` start, end and VM exit),
+and parking, `timer.rs` timed parking, `monitor.rs` monitors, `spawn.rs` start,
+end and VM exit),
 `crates/vm/src/interp/sync.rs` (the bytecodes and `synchronized` methods),
 `crates/vm/src/init.rs` (class initialization), `crates/natives/src/lang_thread.rs`,
 and in `lazyrt` `Thread`, `ThreadGroup`, `ThreadLocal`,
@@ -19,7 +20,7 @@ and in `lazyrt` `Thread`, `ThreadGroup`, `ThreadLocal`,
 All VM code takes `&mut Vm`. Rather than share one `Vm` between threads
 (which needs `unsafe` or interior mutability everywhere), the `Vm` *value*
 moves between OS threads. A thread that gives the VM up moves it into a slot
-(`Gil`, a `Mutex<Option<Vm>>` and a condition variable) and leaves an empty
+(`Gil`, a `Mutex<Option<Vm>>` and a condition variable per thread) and leaves an empty
 placeholder `Vm` in its own `&mut Vm`; when its turn comes it moves the real
 one back. So a `&mut Vm` is always exclusive, and the VM core stays safe
 Rust: no new `unsafe` block was needed.
@@ -37,29 +38,48 @@ Rust: no new `unsafe` block was needed.
 ### Safepoints and time slices
 
 The interpreter polls at every backward branch and every call (`Vm::safepoint`,
-called from `op_branch` and `call`): one relaxed atomic load. A waiting thread
-sets the flag once the running slice (5 ms) is spent, and the holder yields at
-its next poll.
+called from `op_branch` and `call`): one relaxed atomic load of a flag that says
+a thread is in line. With none, that is all a safepoint costs. With some, the
+holder times its own slice: every 1024 polls it looks at the clock, and gives up
+the VM when 5 ms have passed since the slice began and someone can take it, so
+the slice is 5 ms on every platform (`Slice`: mean run 5.0 ms). It used to be a
+waiting thread that noticed, on an OS timer, and that took 15.6 ms on Windows.
 Yielding at every poll whenever anyone waits was tried first and spent all
 the time handing over (8 allocating threads made almost no progress), so a
 slice lasts 5 ms, like a classic interpreter lock.
 
 ### Turns
 
-The line has two parts: *preempted* threads, which could have gone on running
-(their slice ended, or `Thread.yield`, or just started), and *woken* threads,
-which were blocked. The rules, in `gil.rs`:
+The line has two parts: *preempted* threads, which were busy (their slice ended,
+or `Thread.yield`), and *woken* threads, which were blocked or have just started.
+The rules, in `gil.rs`:
 
 1. A thread that blocks before its slice is spent leaves the rest of the slice
    to the woken line, and the preempted line waits for it to be spent.
 2. Whoever wakes a parked thread holds the VM, and names the thread in the
    woken line there and then (`Gil::expect`), before the OS has woken it. Should
    the VM come free before it arrives, it stays idle for it, at worst until the
-   slice is spent. `ThreadEntry::parked` says the thread is sure to come.
+   slice is spent, which the first preempted thread times. `ThreadEntry::parked`
+   says the thread is sure to come.
 3. A spent slice goes to the oldest preempted thread if the woken line had the
-   last one, otherwise to the woken line. So a preempted thread is never passed
-   for more than one slice per thread ahead of it, and the woken line never
-   waits longer than one slice.
+   last one, otherwise to the woken line, among the threads that were waiting:
+   the thread whose slice ended does not count, even if it would be alone in
+   the preempted line (`Slot::preempt_holder`). So a preempted thread is never
+   passed for more than one slice per thread ahead of it, and the woken line
+   waits at most one slice for its next turn.
+4. A thread preempted on a woken slice, having had less than a slice of VM time
+   since it blocked, stays in the woken line, at the back. Threads handing a
+   lock around share one slice, and when it ended during one's turn, that one
+   went behind every busy thread and the others stopped until it came round.
+   With 200 busy threads that was a second, every few slices. Once it has had a
+   whole slice since it blocked it is busy too, so blocking once buys one slice.
+
+A switch notifies only the thread that goes next, on its own condition variable,
+or, if that one is on its way, the first preempted thread, so that it can time
+the slice. A thread that gets to the slot and finds that another should go next
+(its arrival or the time that passed changed that) wakes it in turn. Every step
+takes constant time: the preempted line is a queue, arrived threads a heap by the
+place they were named in, and a thread's own entry says if it has a place.
 
 Before this, turns were first come, first served, and a thread woken from a
 monitor queued behind every busy thread. Each lock handover then cost a whole
@@ -83,15 +103,54 @@ pins this: it takes seconds now, and hits the test's time limit if a handover
 waits behind busy threads again. `Fairness` still bounds starvation on a lock.
 Naming the woken thread is not pinned by a test, as the VM only loses speed
 without it: a thread that gets back before its waker blocks needs no name, and
-one that does not waits out a slice. Measured with 3 spinners, a hop of a
-ping-pong takes 165 us rather than 270 us on a `LinkedBlockingQueue`, and 15 us
-rather than 110 us on `wait`/`notify`.
+one that does not waits out a slice. The same goes for rule 4, starting threads
+in the woken line and timing the slice at the poll: `gil_tests.rs` pins who goes
+next, as far as the line alone shows it, and `Fairness` hangs if a holder never
+yields, but the time lost is seen only by measuring. Per hop, at 3ca290d and now,
+with the oracle for comparison:
 
-All of this runs only when a thread gives up the VM, so one thread pays nothing
-for it: by the method below, against the commit before it, `ScannerLong`
-+1.0%, `RegexDepth` +1.2%, `RegexMemoStarts` -1.4%, `CharacterTables` +1.4%,
-`GcChurn` +0.4%, `CaseMapping` +0.2% and 80M uncontended monitor entries +1.0%,
-all within what repeated runs of one build differ by.
+| With N spinning threads | 0 | 3 | 30 | 200 | oracle at 30 |
+|---|---|---|---|---|---|
+| `wait`/`notify` hop, before, us | 1.4 | 10 | 288 | 1230 | 3.5 |
+| the same, now, us | 1.5 | 3.1 | 3.3 | 2.6 | |
+| `LinkedBlockingQueue` hop, before, us | 15 | 151 | 2216 | 37700 | 3.4 |
+| the same, now, us | 15 | 33 | 43 | 42 | |
+| unpark, p99, before, ms | 1.3 | 59 | 469 | 3146 | 24 |
+| the same, now, ms | 0.2 | 5 | 0.1 | 5 | |
+
+(`Sched`; the worst of it is the woken line's share: with spinners it runs every
+other slice, 5 ms on and 5 ms off, so hops happen in bursts.) Releasing and
+joining 3000 parked threads (`Probe4 parked`) took 14.5 s and takes 40 ms; the
+oracle takes about 100 ms. `Convoy2 30 500`, a round: 472 ms before, 157 ms now, oracle
+28 ms, as a thread that used its whole slice waits for 30 others. `Pair 3000 3
+pair`: 186728 hops before, 511472 now, oracle 594129, and no spinner goes more
+than 30 ms without a turn. Machine load moved single runs of one build by up to a factor
+of 5 while these were taken, so read them as orders of magnitude.
+
+All of this runs only when a thread gives up the VM or someone is in line, so one
+thread pays nothing for it: by the method below, against the commit before it,
+`ScannerLong` -1.0%, `RegexDepth` -1.9%, `RegexMemoStarts` -0.6%, `CharacterTables`
++0.9%, `GcChurn` -1.0%, `CaseMapping` -2.6% and 80M uncontended monitor entries -3.6%
+(best of 3 at 3ca290d, with other sessions running on the machine), all within what runs
+of one build differ by.
+
+### Timed waits
+
+On Windows a timed wait on a lock or on a thread's token ends on the system tick,
+15.6 ms apart, whatever it asks for (measured: `park_timeout` and `wait_timeout`
+of 1 ms and of 5 ms all took 15.6 ms; the tick is confirmed as the cause), so
+`Thread.sleep(1)` took 16 ms. `std::thread::sleep` is finer there (to the next
+0.5 ms, on a high-resolution timer) but cannot be woken. So the last 20 ms of any
+timed wait (`sleep`, `wait`, `join`, `parkNanos`) are timed by one helper thread,
+`thread/timer.rs`: the waiting thread parks, and the helper sleeps and unparks it
+when its time comes, yielding through the last 100 us. It holds no VM, it starts at
+the first such wait, and with none left it waits on a condition variable. It needs
+no `unsafe` and no `timeBeginPeriod`, which would raise the tick for the process.
+`Thread.sleep(1)` in a loop: mean 1.03 ms, 0.1 to 0.2 s of CPU per 2000 sleeps;
+the oracle here: 1.43 ms, 0.13 s of CPU. If the helper cannot be started, a wait uses
+the OS timer. Elsewhere, LazyOS included, `park_timeout` is used as it is: on LazyOS
+`Thread.sleep(1)` has a median of 1.03 ms, `wait(1)` 1.10 ms and `parkNanos(100000)` 0.13 ms,
+and two spinning threads take turns of 10 ms for the pair (QEMU, WHPX).
 
 ### Stopping the world
 
@@ -228,23 +287,38 @@ interrupt, as Java 8 does (`ClinitState`); the wait is not interruptible.
 ## Out of memory
 
 An allocating bytecode that cannot fit even after collecting (soft references
-included) is `OutOfMemoryError`, on any thread, and everything the VM does to
-report it must work with the heap full. The limit is a count of bytes, not the
-memory itself, so nothing is set aside and nothing happens at startup; the VM
-just does not apply it in these places (`OutOfMemory`, `OutOfMemoryUncaught`):
+included) is `OutOfMemoryError`, on any thread. The limit is a count of bytes, not
+the memory itself, so nothing is set aside. Whatever a program does, the heap stays
+below twice the limit (`Heap::alloc`), so host memory is bounded for a given `-Xmx`,
+apart from the one exception below, a fixed small amount:
 
-- **Creating an exception** (`throw_new`): loading and initializing its class,
-  running its constructor, recording the trace. Otherwise the first failure in
-  a program that had thrown nothing yet took the exception classes down with
-  it: `NoClassDefFoundError` could not initialize itself either, and the VM
-  gave up.
-- **Library class initializers** (`Class::from_boot`): a shortage while
-  `Throwable`, say, is first used must not leave it erroneous for good. On the
-  oracle such classes are mostly initialized before `main`. A program's own
-  classes get no such pass: an initializer that runs out of memory throws that
-  error and leaves its class erroneous (JVMS 5.5 steps 10 to 12), and later
-  uses throw `NoClassDefFoundError`, as on the oracle (`Fails`, `FailsToo` in
-  the test). Both are tracked per thread (`Heap::past_limit`).
+- **The error itself.** Observed on Java 8, and the same here (`OutOfMemoryErrors`,
+  in the test's first lines): the first two `OutOfMemoryError`s the VM makes are new
+  objects, whatever their message, with a trace of the innermost 32 frames. After that
+  there is one shared object per message (`Java heap space`, `Requested array size
+  exceeds VM limit`), with no trace, and its trace cannot be set or filled in. A
+  program that catches and keeps them gets nothing new to keep. On all of them, and on
+  a VM-made `StackOverflowError`, the cause is null and cannot be set (`initCause`
+  throws `IllegalStateException`), and `addSuppressed` does nothing.
+- **The shared objects** are made at the first shortage (`Vm::shared_oom`), of library
+  classes only, with no limit at all for that one call (`Heap::unlimited`), so that
+  they exist from then on, wherever that shortage struck: in a native that took the
+  heap to twice the limit, say (`OutOfMemoryInNative`).
+- **Any other exception** the heap has no room for turns into that error, as on the
+  oracle (`NullPointerException`, `StackOverflowError` lines of `OutOfMemoryErrors`).
+  The same goes for a shortage while an exception is made, so a shortage cannot nest
+  and exception creation can always end. Nothing else gets past the limit.
+- **A trace** holds the innermost 1024 frames at most, as on the oracle, so its size
+  has nothing to do with the depth of the stack or with `-Xss` (`OutOfMemoryDeepStack`).
+- **Library class initializers** have the limit too. A program that retains memory
+  run from one, as `ForkJoinPool`'s does through its factory property, gets no pass
+  (`OutOfMemoryErrors`, "stayed within the limit"). One that fails for lack of memory
+  goes back to not being initialized, so the next use tries again: it would otherwise
+  be broken for good, while on the oracle such classes are mostly initialized at
+  startup. Only library code can tell, and JVMS 5.5 steps 10 to 12 still hold for a
+  program's own classes: an initializer that runs out of memory throws that error and
+  leaves its class erroneous, and later uses throw `NoClassDefFoundError`, as on the
+  oracle (`Fails`, `FailsToo` in `OutOfMemory`).
 - **The handler**: an `OutOfMemoryError` makes 64 KiB more available until a
   collection gets back under the limit, as a handler usually reports what it
   caught. On the oracle, slack in its generations gives the same. It is one
@@ -255,12 +329,23 @@ just does not apply it in these places (`OutOfMemory`, `OutOfMemoryUncaught`):
 A collection is always some way off after one (`MIN_GC_STEP`), even when live
 data is over the limit, or every instruction would collect until it was not.
 
-Not the same as the oracle: its class loading needs the Java heap, so a class
-first *loaded* with the heap full fails to load, without being marked. Here
-loading uses no heap, so its initializer runs and the class may become
-erroneous, or may work. The test loads its classes first. Messages also differ,
-as the oracle may say `GC overhead limit exceeded`, so no test pins one for
-small objects.
+Below 1 MiB, the launcher refuses a heap as the oracle does, with its message
+(`tests/launcher`: `xmx_too_small`, `xmx_one_byte`); 1 MiB is enough to start, run
+out and report it (`OutOfMemorySmallestHeap`).
+
+Not the same as the oracle, and not pinned:
+
+- Its class loading needs the Java heap, so a class first *loaded* with the heap full
+  fails to load, without being marked. Here loading uses no heap, so its initializer
+  runs and the class may become erroneous, or may work. The test loads its classes
+  first.
+- With the heap full, the handler room can make an exception here that the oracle
+  replaces with its error (`ArithmeticException` against `OutOfMemoryError` in the same
+  place), and a library class it initialized at startup can make `println` fail here
+  with the heap held full (no test keeps it so).
+- Its messages may say `GC overhead limit exceeded`, so no test pins one for small
+  objects, and when it stops making new errors could in principle depend on more than
+  the count seen here; two is what every run showed.
 
 ## Cost on one thread
 

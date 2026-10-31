@@ -35,6 +35,9 @@ SEP = os.pathsep
 J = "build/launcher"
 CASES = {
     "jar": ["-jar", f"{J}/app.jar", "x", "y z", ""],
+    # Below 1 MiB the heap is refused; at it, thread.OutOfMemorySmallestHeap runs.
+    "xmx_too_small": ["-Xmx1023k", "-cp", f"{J}/app.jar{SEP}{J}/lib.jar", "app.Main"],
+    "xmx_one_byte": ["-Xmx1", "-cp", f"{J}/app.jar{SEP}{J}/lib.jar", "app.Main"],
     "jar_missing": ["-jar", f"{J}/missing.jar"],
     "jar_no_main": ["-jar", f"{J}/nomain.jar"],
     "jar_corrupt": ["-jar", f"{J}/corrupt.jar"],

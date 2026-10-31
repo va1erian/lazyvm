@@ -59,6 +59,7 @@ impl Vm {
         }
         roots.extend(self.interned.values().copied());
         roots.extend(self.roots.iter().copied());
+        self.oom.roots(&mut roots);
         roots
     }
 

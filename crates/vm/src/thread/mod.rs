@@ -9,6 +9,7 @@
 mod gil;
 mod monitor;
 mod spawn;
+mod timer;
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -41,7 +42,7 @@ pub(crate) struct ThreadState {
     frame_slots: usize,
     nesting: u32,
     creating_exception: u32,
-    past_limit: u32,
+    unlimited: bool,
     loading: Vec<Arc<str>>,
 }
 
@@ -165,7 +166,7 @@ impl Vm {
             frame_slots: self.frame_slots,
             nesting: self.nesting,
             creating_exception: self.creating_exception,
-            past_limit: self.heap.past_limit,
+            unlimited: self.heap.unlimited,
             loading: std::mem::take(&mut self.loading),
         };
         if let Some(e) = self.threads.get_mut(me) {
@@ -183,7 +184,7 @@ impl Vm {
         self.frame_slots = s.frame_slots;
         self.nesting = s.nesting;
         self.creating_exception = s.creating_exception;
-        self.heap.past_limit = s.past_limit;
+        self.heap.unlimited = s.unlimited;
         self.loading = s.loading;
     }
 
@@ -194,7 +195,7 @@ impl Vm {
         self.set_blocked(blocked, true);
         self.blocking(|| match deadline {
             None => std::thread::park(),
-            Some(d) => std::thread::park_timeout(d.saturating_duration_since(Instant::now())),
+            Some(d) => timer::park_until(d),
         });
         self.set_blocked(Blocked::No, false);
     }

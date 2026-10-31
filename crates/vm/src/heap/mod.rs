@@ -75,9 +75,9 @@ pub struct Heap {
     /// an `OutOfMemoryError` until a collection brings the heap under the limit.
     room: usize,
     next_gc: usize,
-    /// Above zero while the running thread does work the limit must not stop
-    /// (`Vm::past_limit`). It belongs to that thread and moves with its state.
-    pub(crate) past_limit: u32,
+    /// The running thread is making a shared `OutOfMemoryError` (`Vm::vm_oom`),
+    /// a fixed amount, and has no limit. This moves with the thread's state.
+    pub(crate) unlimited: bool,
     pub collections: u64,
 }
 
@@ -97,7 +97,7 @@ impl Heap {
             limit,
             room: limit,
             next_gc: MIN_GC_BYTES.min(limit),
-            past_limit: 0,
+            unlimited: false,
             collections: 0,
         }
     }
@@ -132,9 +132,7 @@ impl Heap {
     /// safe point, while the allocating bytecodes collect first.
     pub fn alloc(&mut self, object: Object) -> Result<Ref, VmError> {
         let bytes = object.bytes();
-        if self.live_bytes.saturating_add(bytes) > self.limit.saturating_mul(2)
-            && self.past_limit == 0
-        {
+        if self.live_bytes.saturating_add(bytes) > self.limit.saturating_mul(2) && !self.unlimited {
             return Err(VmError::OutOfMemory);
         }
         self.live_bytes += bytes;

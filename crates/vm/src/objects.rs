@@ -9,26 +9,14 @@ use crate::{Vm, VmError, VmResult};
 /// "Requested array size exceeds VM limit", whatever the heap.
 pub(crate) const MAX_ARRAY: usize = i32::MAX as usize - 2;
 
+pub(crate) const ARRAY_LIMIT: &str = "Requested array size exceeds VM limit";
+
 /// The error for an array longer than `MAX_ARRAY`.
 pub(crate) fn array_limit() -> VmError {
-    VmError::exception(
-        "java/lang/OutOfMemoryError",
-        "Requested array size exceeds VM limit",
-    )
+    VmError::exception("java/lang/OutOfMemoryError", ARRAY_LIMIT)
 }
 
 impl Vm {
-    /// Runs `f` with the heap limit lifted for the running thread. For VM work
-    /// that must not fail for lack of memory and allocates little: if it did,
-    /// the error it should report could not be made, or a library class would
-    /// stay broken (docs/design/threads.md, "Out of memory").
-    pub(crate) fn past_limit<T>(&mut self, f: impl FnOnce(&mut Vm) -> T) -> T {
-        self.heap.past_limit += 1;
-        let out = f(self);
-        self.heap.past_limit -= 1;
-        out
-    }
-
     /// A new instance with default field values. The class must be an
     /// initialized, non-abstract instance class; callers check that.
     pub fn new_object(&mut self, class: ClassId) -> VmResult<Ref> {

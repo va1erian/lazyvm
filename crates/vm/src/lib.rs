@@ -96,12 +96,16 @@ pub struct Vm {
     pub wk: WellKnown,
     /// Depth of nested `throw_new` calls, to stop runaway exception creation.
     pub(crate) creating_exception: u32,
+    /// VM-made `OutOfMemoryError`s (`throw.rs`).
+    pub(crate) oom: throw::OomErrors,
     /// Slots used by `frames`, checked against `Options::max_frame_slots`.
     pub(crate) frame_slots: usize,
     /// Current nesting of `invoke` from Rust.
     pub(crate) nesting: u32,
     /// The VM lock, shared by every thread (`thread::Gil`).
     pub(crate) gil: Arc<thread::Gil>,
+    /// Safepoints until the next look at the clock (`Vm::poll_slice`).
+    pub(crate) polls_to_look: u32,
     /// Every live Java thread.
     pub(crate) threads: thread::Threads,
     /// The index in `threads` of the thread holding the VM.
@@ -151,9 +155,11 @@ impl Vm {
             options,
             wk: WellKnown::default(),
             creating_exception: 0,
+            oom: throw::OomErrors::default(),
             frame_slots: 0,
             nesting: 0,
             gil,
+            polls_to_look: 1,
             threads: thread::Threads::default(),
             current: 0,
             monitors: thread::Monitors::default(),
