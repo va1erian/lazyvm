@@ -24,18 +24,27 @@ use crate::value::{Ref, Value};
 
 impl Vm {
     /// Executes simple instructions of the top frame until one needs the full
-    /// path, then returns to the dispatch loop.
+    /// path, then returns to the dispatch loop. After a taken backward branch
+    /// it polls for a safepoint and carries on, so a hot loop stays in here;
+    /// the frame is borrowed again afterwards, as a thread switch may have run
+    /// other code meanwhile. A pending collection goes back to the dispatch loop.
     #[inline]
     pub(super) fn run_simple(&mut self) {
-        let Vm {
-            frames,
-            heap,
-            classes,
-            ..
-        } = self;
-        let Some(f) = frames.last_mut() else { return };
-        if run(f, heap, classes) {
+        loop {
+            let Vm {
+                frames,
+                heap,
+                classes,
+                ..
+            } = self;
+            let Some(f) = frames.last_mut() else { return };
+            if !run(f, heap, classes) {
+                return;
+            }
             self.safepoint();
+            if self.heap.wants_gc() {
+                return;
+            }
         }
     }
 }
