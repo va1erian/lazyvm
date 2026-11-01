@@ -116,6 +116,14 @@ returns. To keep handlers on the loop, settle from the loop:
 `Loop.executor().execute(() -> f.cancel(true))`, as a timer's handler
 already does.
 
+A second one: a thread that `join`s or `get`s a stage helps run its remaining
+dependents once it is released, as `CompletableFuture` lets it. So with several
+actions on one stage, a `main` blocked in `join` may run some of them, at the
+same time as the loop runs others. Programs whose handlers share state should
+not block on such a stage: chain from it instead, or have each stage carry one
+action. For the same reason a daemon thread helping that way can still be
+running a handler when `pending` reaches 0, and the VM may exit under it.
+
 **Do not block on the loop's thread.** A handler that sleeps, joins or does
 blocking file I/O holds up every other completion. Blocking work goes to
 another executor (`CompletableFuture.supplyAsync(work)`); the loop does not
@@ -271,8 +279,9 @@ the VM exits, as files do (`design/files.md`).
 - **The keeper** makes "Lifetime" hold with no special case in the VM. One
   lock guards a `pending` count. Starting an operation or queueing a task
   takes it, adds one, and starts a keeper if none is alive, before the call
-  returns. The dispatcher subtracts only after a completion's handlers have
-  run, so work a handler starts is counted first. A keeper is a non-daemon
+  returns. The dispatcher subtracts only after running a completion's handlers
+  (those a blocked reader did not take, see "Where code runs"), so work a handler
+  starts is counted first. A keeper is a non-daemon
   thread that waits on the lock until `pending` is 0, marks itself gone and
   ends; it touches nothing else, so a new one overlapping an old one is
   harmless.

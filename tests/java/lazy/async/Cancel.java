@@ -36,13 +36,18 @@ public class Cancel {
         System.out.println("exceptionally after " + f.completeExceptionally(new Error()));
         System.out.println("pending " + Reactor.pending());
 
-        CompletableFuture<Void> soon = Loop.delay(50, TimeUnit.MILLISECONDS).toCompletableFuture();
+        // On the loop, so the timer cannot come due before the cancel however the machine stalls.
         boolean[] ran = new boolean[1];
-        CompletableFuture<Void> after = soon.thenRun(() -> ran[0] = true);
-        soon.cancel(false);
+        boolean[] failed = new boolean[1];
+        Loop.executor().execute(() -> {
+            CompletableFuture<Void> soon = Loop.delay(50, TimeUnit.MILLISECONDS).toCompletableFuture();
+            CompletableFuture<Void> after = soon.thenRun(() -> ran[0] = true);
+            soon.cancel(false);
+            failed[0] = after.isCompletedExceptionally();
+        });
         Thread.sleep(150);
-        System.out.println("cancelled delay ran " + ran[0] + ", dependent failed "
-                + after.isCompletedExceptionally());
+        pendingIs(0);
+        System.out.println("cancelled delay ran " + ran[0] + ", dependent failed " + failed[0]);
 
         f = far();
         System.out.println("complete " + f.complete(null) + " " + f.isDone() + " " + f.join());

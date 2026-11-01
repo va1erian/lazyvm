@@ -15,10 +15,17 @@ import java.util.concurrent.CompletionStage;
 public final class Reactor {
     private static final int BATCH = 256;
 
-    /** Guards every field below. Nothing that can run a program's code is called under it. */
+    /**
+     * Guards the mutable fields below. Nothing that can run a program's code happens under it,
+     * which is why threads are made outside it: a new thread runs the program's
+     * InheritableThreadLocal.childValue.
+     */
     private static final Object LOCK = new Object();
     private static final Map<Long, LoopFuture<?>> OPERATIONS = new HashMap<>();
     private static final ArrayDeque<Runnable> TASKS = new ArrayDeque<>();
+    /** Made here, so that a lack of memory reaches the first caller and not a dead dispatcher. */
+    private static final long[] DONE = new long[BATCH];
+    private static final Thread DISPATCHER = thread("lazy-loop", true, Reactor::dispatch);
     private static long nextId = 1;
     private static int pending;
     private static boolean dispatching, keeping;
@@ -28,20 +35,23 @@ public final class Reactor {
     /** Runs {@code task} on the loop's thread. */
     public static void execute(Runnable task) {
         if (task == null) throw new NullPointerException("task");
-        synchronized (LOCK) {
-            count();
-            TASKS.add(task);
-        }
+        enter(() -> TASKS.add(task));
         wake0();
     }
 
     /** A stage that completes after {@code nanos} (not negative). */
     public static CompletionStage<Void> delay(long nanos) {
+        if (nanos < 0) throw new IllegalArgumentException("negative delay");
         LoopFuture<Void> stage = begin();
         try {
-            timer0(stage.id(), nanos);
-        } catch (IOException e) {
-            failLater(stage, e);
+            try {
+                timer0(stage.id(), nanos);
+            } catch (IOException e) {
+                failLater(stage, e);
+            }
+        } catch (RuntimeException | Error t) {
+            if (withdraw(stage.id())) finished();
+            throw t;
         }
         return stage;
     }
@@ -59,31 +69,55 @@ public final class Reactor {
     }
 
     private static <T> LoopFuture<T> begin() {
+        long id;
         synchronized (LOCK) {
-            count();
-            LoopFuture<T> stage = new LoopFuture<>(nextId++);
-            OPERATIONS.put(stage.id(), stage);
-            return stage;
+            id = nextId++;
+        }
+        LoopFuture<T> stage = new LoopFuture<>(id);
+        enter(() -> OPERATIONS.put(id, stage));
+        return stage;
+    }
+
+    /**
+     * Records {@code work} and counts it, with both threads up before the caller's call returns.
+     * It counts last, so work that fails for lack of memory leaves nothing counted, and a keeper
+     * it started finds the count at 0 and ends.
+     */
+    private static void enter(Runnable work) {
+        Thread keeper = null;
+        for (;;) {
+            synchronized (LOCK) {
+                if (threadsUp(keeper)) {
+                    work.run();
+                    pending++;
+                    return;
+                }
+            }
+            keeper = thread("lazy-loop-keeper", false, Reactor::keep);
         }
     }
 
-    /** One more pending thing, with both threads up before the caller's call returns. */
-    private static void count() {
-        if (!dispatching) {
-            start("lazy-loop", true, Reactor::dispatch);
-            dispatching = true;
-        }
+    /** Under the lock: false if a keeper is needed and the caller has yet to make one. */
+    private static boolean threadsUp(Thread keeper) {
         if (!keeping) {
-            start("lazy-loop-keeper", false, Reactor::keep);
+            if (keeper == null) return false;
+            keeper.start();
             keeping = true;
         }
-        pending++;
+        if (!dispatching) {
+            DISPATCHER.start();
+            dispatching = true;
+        }
+        return true;
     }
 
-    private static void start(String name, boolean daemon, Runnable body) {
-        Thread thread = new Thread(body, name);
+    /** In the root group, so what happens to the loop does not depend on who used it first. */
+    private static Thread thread(String name, boolean daemon, Runnable body) {
+        ThreadGroup group = Thread.currentThread().getThreadGroup();
+        while (group.getParent() != null) group = group.getParent();
+        Thread thread = new Thread(group, body, name);
         thread.setDaemon(daemon);
-        thread.start();
+        return thread;
     }
 
     /** Takes {@code id} out of the table; true if the caller now settles it. */
@@ -134,14 +168,22 @@ public final class Reactor {
         }
     }
 
-    /** The dispatcher: the loop's thread, for the life of the VM. */
+    /**
+     * The dispatcher: the loop's thread, for the life of the VM. The ids taken are already out of
+     * the inbox, so whatever is thrown (claiming one boxes it, and the heap may be full), it goes
+     * on from the id it was at.
+     */
     private static void dispatch() {
-        long[] done = new long[BATCH];
+        int next = 0, taken = 0;
         for (;;) {
             try {
-                int n = take0(done);
-                for (int i = 0; i < n; i++) deliver(done[i]);
+                while (next < taken) {
+                    deliver(DONE[next]);
+                    next++;
+                }
                 runTasks();
+                taken = take0(DONE);
+                next = 0;
             } catch (Throwable t) {
                 report(t);
             }

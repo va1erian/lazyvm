@@ -1,4 +1,4 @@
-order [100, 200, 300]
+order [500, 1000, 1500]
 not early true
 on lazy-loop
 zero done in the call false

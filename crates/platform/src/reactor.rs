@@ -5,7 +5,7 @@
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::io;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Condvar, Mutex, MutexGuard, OnceLock, mpsc};
 use std::time::{Duration, Instant};
 
@@ -24,9 +24,12 @@ const POLL_RETRY: Duration = Duration::from_millis(100);
 /// of 16 ms 29 ms); a longer stretch starts on `poll`, which ends before the
 /// deadline since it is late by at most about one tick (16.6 ms).
 const SLEEPER_RANGE: Duration = Duration::from_millis(20);
+/// The longest `poll` parks with a deadline ahead. On Windows a timeout of about
+/// 49.7 days or more reaches the OS as "no timeout", and the deadline would be missed.
+const LONGEST_PARK: Duration = Duration::from_secs(24 * 60 * 60);
 
 enum Request {
-    Timer { id: u64, nanos: u64 },
+    Timer { id: u64, deadline: Instant },
     Cancel(u64),
 }
 
@@ -40,6 +43,8 @@ static REQUESTS: Mutex<Vec<Request>> = Mutex::new(Vec::new());
 static INBOX: OnceLock<(Mutex<Inbox>, Condvar)> = OnceLock::new();
 static WAKER: OnceLock<Result<Waker, String>> = OnceLock::new();
 static WAKES: AtomicU64 = AtomicU64::new(0);
+/// A wake failed, so the requests queued behind it still need one.
+static WAKE_OWED: AtomicBool = AtomicBool::new(false);
 
 fn locked<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
@@ -50,9 +55,13 @@ fn inbox() -> &'static (Mutex<Inbox>, Condvar) {
 }
 
 /// Starts an operation that finishes `nanos` from now. Its id comes to
-/// [`take`] once, unless it is cancelled first.
+/// [`take`] once, unless it is cancelled first. A deadline past what `Instant`
+/// can hold is never reached.
 pub fn timer(id: u64, nanos: u64) -> io::Result<()> {
-    request(Request::Timer { id, nanos })
+    match Instant::now().checked_add(Duration::from_nanos(nanos)) {
+        Some(deadline) => request(Request::Timer { id, deadline }),
+        None => waker().map(|_| ()),
+    }
 }
 
 /// Withdraws an operation. An id that has already finished is ignored, and
@@ -135,8 +144,10 @@ fn request(r: Request) -> io::Result<()> {
         queue.push(r);
         was_empty
     };
-    if was_empty {
-        waker.wake()?;
+    if was_empty || WAKE_OWED.swap(false, Ordering::Relaxed) {
+        waker
+            .wake()
+            .inspect_err(|_| WAKE_OWED.store(true, Ordering::Relaxed))?;
     }
     Ok(())
 }
@@ -147,7 +158,7 @@ fn run(mut poll: Poll) {
     loop {
         for r in std::mem::take(&mut *locked(&REQUESTS)) {
             match r {
-                Request::Timer { id, nanos } => timers.add(id, Instant::now(), nanos),
+                Request::Timer { id, deadline } => timers.add(id, deadline),
                 Request::Cancel(id) => timers.cancel(id),
             }
         }
@@ -173,7 +184,7 @@ fn park_for(next: Option<Instant>, now: Instant) -> Option<Duration> {
         Some(left) if left <= SLEEPER_RANGE => (!sleeper::arm(next)).then_some(left),
         _ => {
             sleeper::arm(None);
-            left.map(|left| left - SLEEPER_RANGE)
+            left.map(|left| (left - SLEEPER_RANGE).min(LONGEST_PARK))
         }
     }
 }
@@ -181,7 +192,7 @@ fn park_for(next: Option<Instant>, now: Instant) -> Option<Duration> {
 /// Times the last stretch before a deadline and then wakes the reactor. It
 /// starts at the first deadline that close, and parks while none is.
 mod sleeper {
-    use super::{Instant, Mutex, OnceLock, WAKER, locked, timer};
+    use super::{Instant, Mutex, OnceLock, POLL_RETRY, WAKER, locked, timer};
     use std::thread::Thread;
 
     const STACK_BYTES: usize = 64 * 1024;
@@ -227,14 +238,17 @@ mod sleeper {
                 timer::park_until(at);
                 continue;
             }
+            // A deadline is armed only after a request, so the waker is there.
+            // The reactor may be parked with no timeout, so a failed wake is tried again.
+            if let Some(Ok(waker)) = WAKER.get()
+                && waker.wake().is_err()
+            {
+                std::thread::sleep(POLL_RETRY);
+                continue;
+            }
             let mut armed = locked(&ARMED);
             if *armed == Some(at) {
                 *armed = None;
-            }
-            drop(armed);
-            // A deadline is armed only after a request, so the waker is there.
-            if let Some(Ok(waker)) = WAKER.get() {
-                let _ = waker.wake();
             }
         }
     }
@@ -255,12 +269,9 @@ struct Timers {
 }
 
 impl Timers {
-    /// A deadline past what `Instant` can hold is never reached.
-    fn add(&mut self, id: u64, now: Instant, nanos: u64) {
-        if let Some(deadline) = now.checked_add(Duration::from_nanos(nanos)) {
-            self.by_deadline.insert((deadline, id));
-            self.by_id.insert(id, deadline);
-        }
+    fn add(&mut self, id: u64, deadline: Instant) {
+        self.by_deadline.insert((deadline, id));
+        self.by_id.insert(id, deadline);
     }
 
     fn cancel(&mut self, id: u64) {
@@ -294,17 +305,21 @@ mod tests {
 
     const MS: u64 = 1_000_000;
 
+    fn ms(n: u64) -> Duration {
+        Duration::from_millis(n)
+    }
+
     #[test]
     fn timers_come_due_in_deadline_order() {
         let now = Instant::now();
         let mut t = Timers::default();
-        t.add(1, now, 30 * MS);
-        t.add(2, now, 10 * MS);
-        t.add(3, now, 20 * MS);
-        assert_eq!(t.next_deadline(), Some(now + Duration::from_millis(10)));
+        t.add(1, now + ms(30));
+        t.add(2, now + ms(10));
+        t.add(3, now + ms(20));
+        assert_eq!(t.next_deadline(), Some(now + ms(10)));
         assert_eq!(t.take_due(now), Vec::<u64>::new());
-        assert_eq!(t.take_due(now + Duration::from_millis(20)), [2, 3]);
-        assert_eq!(t.take_due(now + Duration::from_millis(30)), [1]);
+        assert_eq!(t.take_due(now + ms(20)), [2, 3]);
+        assert_eq!(t.take_due(now + ms(30)), [1]);
         assert_eq!(t.next_deadline(), None);
     }
 
@@ -312,11 +327,20 @@ mod tests {
     fn a_cancelled_timer_leaves_nothing_behind() {
         let now = Instant::now();
         let mut t = Timers::default();
-        t.add(1, now, MS);
+        t.add(1, now + ms(1));
         t.cancel(1);
         t.cancel(1);
         assert_eq!(t.next_deadline(), None);
         assert!(t.by_id.is_empty());
+    }
+
+    #[test]
+    fn a_far_deadline_still_ends_the_park_in_time() {
+        let now = Instant::now();
+        let far = now + Duration::from_secs(60 * 24 * 60 * 60);
+        assert_eq!(park_for(Some(far), now), Some(LONGEST_PARK));
+        assert_eq!(park_for(None, now), None);
+        assert_eq!(park_for(Some(now + ms(50)), now), Some(ms(30)));
     }
 
     /// The median, as in `timer`'s own test: a busy machine does not count, but
