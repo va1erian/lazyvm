@@ -175,10 +175,10 @@ Safe to use from any thread.
   stream; a pending `readAll` fails, since its body is cut short. Queued
   writes are sent, then the sending side is shut down, and what the peer
   still sends is discarded until it closes too, so our last bytes are not
-  lost to a reset. After 10 s, or at once if the stage is cancelled, the
+  lost to a reset. After 10 s, or at once if this stage is cancelled, the
   socket is closed as it stands and writes not yet sent fail. The stage
   completes when the socket is closed. A second `close()` returns a new
-  stage that completes after the first.
+  stage that completes after the first, whose cancelling changes nothing else.
 - `String peer()`: the remote address as `host:port` with the numeric host
   (`127.0.0.1:52144`, `[::1]:7000`).
 
@@ -285,7 +285,8 @@ the VM exits, as files do (`design/files.md`).
   ends; it touches nothing else, so a new one overlapping an old one is
   harmless.
 
-Every stage is a `lazy.internal.LoopFuture`, a `CompletableFuture` subclass
+Every stage of an operation is a `lazy.internal.LoopFuture` (so not a second
+`close()`'s, a plain stage that follows the first), a `CompletableFuture` subclass
 that overrides `cancel`, `complete`, `completeExceptionally`,
 `obtrudeValue` and `obtrudeException`. Each operation settles exactly once:
 
@@ -395,9 +396,10 @@ a new row). S6-06 records them in
 - `crates/platform/src/reactor.rs` (thread, poll, timers, requests, and in
   S10-02 the park trait), `crates/platform/src/timer.rs` (timed parking, moved
   from `crates/vm` so the reactor can use it), `crates/platform/src/net.rs`
-  (S7-01: sockets, resolvers);
+  (requests, connecting);
   `crates/natives/src/lazy_async.rs` (the `Reactor` natives).
 - `crates/platform/src/net/conn.rs` (open connections),
+  `crates/platform/src/net/listen.rs` (listeners),
   `crates/platform/src/resolver.rs` (name lookups).
 - `tools/lazyos_test.py --net` (S7-01): runs the tests marked `NEEDS: net` or
   `NEEDS: lazyos-net`, through LazyOS `tools/lazyvm/run.py --net`. That boots
@@ -426,7 +428,7 @@ Hand-written goldens (`lazy.*`, D9). "Both" means Windows and LazyOS.
   port 0, connect, echo, close both ends; each next `read` is started inside the
   previous one's handler; `localhost`), `ConnectRefused` (a port whose listener was
   just closed, an unknown host, a port in use, bad arguments), `Backpressure` (a peer
-  that writes 8 MiB to a reader that waits has to wait too, in a 32 MB heap),
+  that writes 256 MiB to a reader that waits has to wait too, in a 32 MB heap),
   `CancelRead`, `ReadTimeout` (the pattern above), `CloseRules` (our last bytes
   survive unread input, a cut-short `readAll`, its limit, a handler that throws),
   `WriteOrder` (overlapping writes in call order, a prompt close), `ReadAllHeap` (a

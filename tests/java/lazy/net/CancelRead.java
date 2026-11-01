@@ -76,8 +76,9 @@ public class CancelRead {
                 })).toCompletableFuture().join();
         Loop.executor().execute(() -> {
             CompletableFuture<Connection> late = Tcp.connect("127.0.0.1", watcher.port()).toCompletableFuture();
+            // Long enough for the connect to finish even through netd on a stalled machine.
             try {
-                Thread.sleep(300);
+                Thread.sleep(2000);
             } catch (InterruptedException e) {
                 throw new AssertionError(e);
             }
