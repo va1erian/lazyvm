@@ -1,0 +1,10 @@
+failed in the call false
+refused: java.io.IOException: connection refused: 127.0.0.1:PORT
+unknown: java.io.IOException: unknown host: nosuch.invalid
+in use: java.io.IOException: address in use: 127.0.0.1:PORT
+null host: NullPointerException
+port 0: IllegalArgumentException
+port 65536: IllegalArgumentException
+null listen host: NullPointerException
+null handler: NullPointerException
+listen port -1: IllegalArgumentException

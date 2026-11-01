@@ -1,0 +1,8 @@
+all of it true
+readAll cut short IOException: closed
+write after close IOException: closed
+over the limit IOException: more than 16 MiB to read: PEER
+closed by that IOException: closed
+reported boom on lazy-loop
+thrower's connection ended 0
+second

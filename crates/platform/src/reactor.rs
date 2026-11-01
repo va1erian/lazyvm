@@ -1,9 +1,10 @@
 //! The reactor: one native thread that parks in `mio` and never runs bytecode
 //! (docs/async.md, "Inside"). Java threads queue requests to it and wake it;
-//! it posts the ids of finished operations to an inbox, which the dispatcher,
-//! a Java thread, empties through [`take`].
+//! it posts finished operations to an inbox, which the dispatcher, a Java
+//! thread, empties through [`take`]. The sockets are in [`crate::net`].
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
+use std::hash::Hash;
 use std::io;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Condvar, Mutex, MutexGuard, OnceLock, mpsc};
@@ -11,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use mio::{Events, Poll, Token, Waker};
 
+use crate::net::{self, Net};
 use crate::timer;
 
 const WAKE: Token = Token(0);
@@ -28,15 +30,43 @@ const SLEEPER_RANGE: Duration = Duration::from_millis(20);
 /// 49.7 days or more reaches the OS as "no timeout", and the deadline would be missed.
 const LONGEST_PARK: Duration = Duration::from_secs(24 * 60 * 60);
 
-enum Request {
+pub(crate) enum Request {
     Timer { id: u64, deadline: Instant },
     Cancel(u64),
+    Net(net::Request),
+}
+
+/// What a finished operation left.
+#[derive(Debug, PartialEq)]
+pub enum Outcome {
+    Done,
+    Bytes(Vec<u8>),
+    Failed(String),
+}
+
+/// A finished operation. `handle` is what must be released if nobody wants
+/// the result any more: the socket it made or worked on, or 0.
+#[derive(Debug, PartialEq)]
+pub struct Completion {
+    pub id: u64,
+    pub handle: u64,
+    pub outcome: Outcome,
 }
 
 #[derive(Default)]
 struct Inbox {
-    done: VecDeque<u64>,
+    done: VecDeque<Completion>,
     woken: bool,
+}
+
+/// What a timer is for. Operations are timers of their own; the others time
+/// a stage of a socket's life.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) enum Due {
+    Operation(u64),
+    Attempt(u64),
+    Closing(u64),
+    AcceptRetry(u64),
 }
 
 static REQUESTS: Mutex<Vec<Request>> = Mutex::new(Vec::new());
@@ -54,9 +84,9 @@ fn inbox() -> &'static (Mutex<Inbox>, Condvar) {
     INBOX.get_or_init(Default::default)
 }
 
-/// Starts an operation that finishes `nanos` from now. Its id comes to
-/// [`take`] once, unless it is cancelled first. A deadline past what `Instant`
-/// can hold is never reached.
+/// Starts an operation that finishes `nanos` from now. It comes to [`take`]
+/// once, unless it is cancelled first. A deadline past what `Instant` can hold
+/// is never reached.
 pub fn timer(id: u64, nanos: u64) -> io::Result<()> {
     match Instant::now().checked_add(Duration::from_nanos(nanos)) {
         Some(deadline) => request(Request::Timer { id, deadline }),
@@ -73,9 +103,9 @@ pub fn cancel(id: u64) {
     }
 }
 
-/// Up to `max` finished ids. Blocks until there is one or [`wake_taker`] was
-/// called since the last `take`, so it may return none.
-pub fn take(max: usize) -> Vec<u64> {
+/// Up to `max` finished operations. Blocks until there is one or
+/// [`wake_taker`] was called since the last `take`, so it may return none.
+pub fn take(max: usize) -> Vec<Completion> {
     let (lock, ready) = inbox();
     let mut inbox = locked(lock);
     while inbox.done.is_empty() && !inbox.woken {
@@ -84,6 +114,16 @@ pub fn take(max: usize) -> Vec<u64> {
     inbox.woken = false;
     let n = inbox.done.len().min(max);
     inbox.done.drain(..n).collect()
+}
+
+/// Puts back what a [`take`] could not hand on, ahead of what came since.
+pub fn untake(rest: Vec<Completion>) {
+    let (lock, ready) = inbox();
+    let mut inbox = locked(lock);
+    for completion in rest.into_iter().rev() {
+        inbox.done.push_front(completion);
+    }
+    ready.notify_one();
 }
 
 /// Makes the current or next [`take`] return.
@@ -136,7 +176,7 @@ fn start() -> Result<Waker, String> {
 
 /// Only the first request into an empty queue wakes the reactor: it empties
 /// the queue after every wake, so the later ones are covered by that one.
-fn request(r: Request) -> io::Result<()> {
+pub(crate) fn request(r: Request) -> io::Result<()> {
     let waker = waker()?;
     let was_empty = {
         let mut queue = locked(&REQUESTS);
@@ -152,20 +192,38 @@ fn request(r: Request) -> io::Result<()> {
     Ok(())
 }
 
+/// Hands a finished operation to the dispatcher.
+pub(crate) fn post(completion: Completion) {
+    let (lock, ready) = inbox();
+    locked(lock).done.push_back(completion);
+    ready.notify_one();
+}
+
 fn run(mut poll: Poll) {
-    let mut events = Events::with_capacity(64);
+    let mut events = Events::with_capacity(256);
     let mut timers = Timers::default();
+    let mut net = Net::default();
     loop {
         for r in std::mem::take(&mut *locked(&REQUESTS)) {
             match r {
-                Request::Timer { id, deadline } => timers.add(id, deadline),
-                Request::Cancel(id) => timers.cancel(id),
+                Request::Timer { id, deadline } => timers.add(Due::Operation(id), deadline),
+                Request::Cancel(id) => {
+                    timers.cancel(Due::Operation(id));
+                    net.cancel(id, poll.registry(), &mut timers);
+                }
+                Request::Net(r) => net.request(r, poll.registry(), &mut timers),
             }
         }
         let now = Instant::now();
-        let due = timers.take_due(now);
-        if !due.is_empty() {
-            post(due);
+        for due in timers.take_due(now) {
+            match due {
+                Due::Operation(id) => post(Completion {
+                    id,
+                    handle: 0,
+                    outcome: Outcome::Done,
+                }),
+                other => net.timer(other, poll.registry(), &mut timers),
+            }
         }
         match poll.poll(&mut events, park_for(timers.next_deadline(), now)) {
             Ok(()) => {}
@@ -173,6 +231,9 @@ fn run(mut poll: Poll) {
             Err(_) => std::thread::sleep(POLL_RETRY),
         }
         WAKES.fetch_add(1, Ordering::Relaxed);
+        for event in events.iter().filter(|e| e.token() != WAKE) {
+            net.ready(event.token(), poll.registry(), &mut timers);
+        }
     }
 }
 
@@ -259,42 +320,45 @@ mod sleeper {
     }
 }
 
-fn post(ids: Vec<u64>) {
-    let (lock, ready) = inbox();
-    locked(lock).done.extend(ids);
-    ready.notify_one();
-}
-
-/// Timers by deadline, with the deadline by id so that a cancel is cheap: a
+/// Timers by deadline, with the deadline by key so that a cancel is cheap: a
 /// timeout cancelled on every read must not pile up until its deadline.
-#[derive(Default)]
-struct Timers {
-    by_deadline: BTreeSet<(Instant, u64)>,
-    by_id: HashMap<u64, Instant>,
+pub(crate) struct Timers<K = Due> {
+    by_deadline: BTreeSet<(Instant, K)>,
+    by_key: HashMap<K, Instant>,
 }
 
-impl Timers {
-    fn add(&mut self, id: u64, deadline: Instant) {
-        self.by_deadline.insert((deadline, id));
-        self.by_id.insert(id, deadline);
+impl<K> Default for Timers<K> {
+    fn default() -> Self {
+        Timers {
+            by_deadline: BTreeSet::new(),
+            by_key: HashMap::new(),
+        }
+    }
+}
+
+impl<K: Copy + Ord + Hash> Timers<K> {
+    pub(crate) fn add(&mut self, key: K, deadline: Instant) {
+        self.cancel(key);
+        self.by_deadline.insert((deadline, key));
+        self.by_key.insert(key, deadline);
     }
 
-    fn cancel(&mut self, id: u64) {
-        if let Some(deadline) = self.by_id.remove(&id) {
-            self.by_deadline.remove(&(deadline, id));
+    pub(crate) fn cancel(&mut self, key: K) {
+        if let Some(deadline) = self.by_key.remove(&key) {
+            self.by_deadline.remove(&(deadline, key));
         }
     }
 
-    /// The ids due at `now`, soonest first.
-    fn take_due(&mut self, now: Instant) -> Vec<u64> {
+    /// The keys due at `now`, soonest first.
+    fn take_due(&mut self, now: Instant) -> Vec<K> {
         let mut due = Vec::new();
-        while let Some(&(deadline, id)) = self.by_deadline.first() {
+        while let Some(&(deadline, key)) = self.by_deadline.first() {
             if deadline > now {
                 break;
             }
             self.by_deadline.pop_first();
-            self.by_id.remove(&id);
-            due.push(id);
+            self.by_key.remove(&key);
+            due.push(key);
         }
         due
     }
@@ -317,7 +381,7 @@ mod tests {
     #[test]
     fn timers_come_due_in_deadline_order() {
         let now = Instant::now();
-        let mut t = Timers::default();
+        let mut t = Timers::<u64>::default();
         t.add(1, now + ms(30));
         t.add(2, now + ms(10));
         t.add(3, now + ms(20));
@@ -331,12 +395,12 @@ mod tests {
     #[test]
     fn a_cancelled_timer_leaves_nothing_behind() {
         let now = Instant::now();
-        let mut t = Timers::default();
+        let mut t = Timers::<u64>::default();
         t.add(1, now + ms(1));
         t.cancel(1);
         t.cancel(1);
         assert_eq!(t.next_deadline(), None);
-        assert!(t.by_id.is_empty());
+        assert!(t.by_key.is_empty());
     }
 
     #[test]
@@ -352,9 +416,10 @@ mod tests {
     fn a_short_timer_does_not_last_a_system_tick() {
         let mut waits: Vec<Duration> = (0..9)
             .map(|i| {
+                let id = u64::MAX - i;
                 let start = Instant::now();
-                timer(i, MS).expect("the reactor starts");
-                while take(8).is_empty() {}
+                timer(id, MS).expect("the reactor starts");
+                while !take(8).iter().any(|c| c.id == id) {}
                 start.elapsed()
             })
             .collect();

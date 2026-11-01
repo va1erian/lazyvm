@@ -1,0 +1,10 @@
+cancel true true
+peer saw the end true
+read after IOException: closed
+write after IOException: closed
+read after close IOException: closed
+write pending true
+cancel true
+write after IOException: closed
+cancel connect true
+nothing pending
