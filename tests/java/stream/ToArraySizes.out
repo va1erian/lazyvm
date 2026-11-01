@@ -1,0 +1,63 @@
+short toArray: !java.lang.IllegalStateException: End size 2 is less than fixed size 5
+short toArray gen: !java.lang.IllegalStateException: End size 2 is less than fixed size 5 | gen5
+short map toArray: !java.lang.IllegalStateException: End size 2 is less than fixed size 5
+short peek toArray: !java.lang.IllegalStateException: End size 2 is less than fixed size 5 | p1 p2
+short zero toArray: !java.lang.IllegalStateException: End size 0 is less than fixed size 5
+short one toArray: !java.lang.IllegalStateException: End size 4 is less than fixed size 5
+short filter toArray: [1, 2]
+short sorted toArray: !java.lang.IllegalStateException: Begin size 2 is not equal to fixed size 5
+short limit toArray: [1, 2]
+short skip toArray: [2]
+short boxed toArray: !java.lang.IllegalStateException: End size 2 is less than fixed size 5
+short int toArray: !java.lang.IllegalStateException: End size 2 is less than fixed size 5
+short int map toArray: !java.lang.IllegalStateException: End size 2 is less than fixed size 5
+short long toArray: !java.lang.IllegalStateException: End size 2 is less than fixed size 5
+short double toArray: !java.lang.IllegalStateException: End size 2 is less than fixed size 5
+short collect toList: [1, 2]
+short count: 2
+short forEach: - | e1 e2
+short reduce: 3
+long toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 2
+long toArray gen: !java.lang.IllegalStateException: Accept exceeded fixed size of 2 | gen2
+long map toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 2
+long peek toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 2 | p1 p2 p3
+long one toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 4
+long zero claim toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 0
+long sorted toArray: !java.lang.ArrayIndexOutOfBoundsException: 2
+long limit toArray: [1, 2, 3, 4]
+long skip toArray: [2, 3, 4, 5]
+long boxed toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 2
+long int toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 2
+long int map toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 2
+long long toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 2
+long double toArray: !java.lang.IllegalStateException: Accept exceeded fixed size of 1
+long collect toList: [1, 2, 3, 4, 5]
+long count: 5
+long forEach: - | e1 e2 e3 e4 e5
+long iterator: 5
+exact toArray: [1, 2, 3]
+short gen too big: !java.lang.IllegalStateException: Begin size 5 is not equal to fixed size 6
+short gen too small: !java.lang.IllegalStateException: Begin size 5 is not equal to fixed size 1
+long gen too big: !java.lang.IllegalStateException: Begin size 2 is not equal to fixed size 3
+long range limit toArray: 3
+long range limit boxed toArray: 3
+long range filter limit toArray: 3
+long range collect toList limit: [0, 1, 2]
+long range exact size: 9223372036854775807
+int range 2G exact size: 2147483647
+int range near limit count: 4
+supplier claims SIZED toArray: [1, 2, 3] | sup gen3
+supplier claims SIZED toArray plain: [1, 2, 3] | sup
+supplier claims SIZED map toArray: [1, 2, 3] | sup gen3
+supplier claims SIZED count: 3 | sup
+supplier claims SIZED collect: [1, 2, 3] | sup
+supplier claims SIZED flags: 16 | sup
+supplier claims SIZED estimate: 9223372036854775807 | sup
+supplier claims SIZED exact: -1 | sup
+supplier claims SIZED iterator: 1 2 | sup
+supplier no claim toArray: [1, 2, 3] | sup gen3
+supplier int claims SIZED toArray: [1, 2, 3]
+supplier long claims SIZED toArray: [1, 2, 3]
+supplier double claims SIZED toArray: [1.0, 2.0, 3.0]
+supplier claims SIZED sized spliterator: [1, 2, 3] | gen3
+supplier claims SIZED fewer: !java.lang.IllegalStateException: End size 2 is less than fixed size 5 | gen5

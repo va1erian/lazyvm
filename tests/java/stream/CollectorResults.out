@@ -1,0 +1,122 @@
+toList: java.util.ArrayList [pear, fig, apple, kiwi, date, plum, fig]
+toList empty: java.util.ArrayList []
+toList nulls: [a, null]
+toList mutable: 8
+toSet: java.util.HashSet [apple, date, fig, kiwi, pear, plum]
+toSet nulls: 2
+toCollection: java.util.TreeSet [apple, date, fig, kiwi, pear, plum]
+toCollection LinkedList: java.util.LinkedList [pear, fig, apple, kiwi, date, plum, fig]
+toCollection ArrayDeque: java.util.ArrayDeque [pear, fig, apple, kiwi, date, plum, fig]
+toCollection TreeSet with null: java.lang.NullPointerException
+toCollection null supplier result: java.lang.NullPointerException
+joining: pearfigapplekiwidateplumfig
+joining delimiter: pear, fig, apple, kiwi, date, plum, fig
+joining affixes: {pear, fig, apple, kiwi, date, plum, fig}
+joining empty: 
+joining empty affixes: <>
+joining one: <x>
+joining null element: a-null-b
+joining StringBuilder: a+b
+joining empty strings: [||]
+joining empty delimiter: (ab)
+joining result type: java.lang.String
+mapping: [4, 3, 5, 4, 4, 4, 3]
+mapping set: [3, 4, 5]
+mapping joining: pfakdpf
+collectingAndThen: java.util.Collections$UnmodifiableRandomAccessList
+collectingAndThen size: 7
+counting: 7
+counting type: java.lang.Long
+counting empty: 0
+minBy: Optional[apple]
+maxBy: Optional[apple]
+maxBy ties: Optional[apple]
+minBy ties: Optional[fig]
+minBy empty: Optional.empty
+maxBy null result: Optional.empty
+summingInt: 27
+summingInt type: java.lang.Integer
+summingInt wraps: -2147483648
+summingInt empty: 0
+summingLong: -9223372036854775808
+summingLong type: java.lang.Long
+summingDouble: 1.0
+summingDouble type: java.lang.Double
+summingDouble empty: 0.0
+summingDouble inf: Infinity
+summingDouble inf -inf: NaN
+summingDouble NaN: NaN
+summingDouble -0.0: 0.0
+averagingInt: 3.857142857142857
+averagingInt empty: 0.0
+averagingInt type: java.lang.Double
+averagingInt large: 2.147483647E9
+averagingLong: 2.3333333333333335
+averagingLong wraps: -1.0
+averagingDouble: 0.1
+averagingDouble empty: 0.0
+averagingDouble inf: Infinity
+averagingDouble NaN: NaN
+reducing op: Optional[apple]
+reducing op empty: Optional.empty
+reducing identity: pfakdpf
+reducing identity empty: none
+reducing mapper: 27
+reducing mapper empty: 7
+reducing identity object is reused: pearfigapplekiwidateplumfig pearfigapplekiwidateplumfigpearfigapplekiwidateplumfig
+reducing null result: null
+reducing op null result: Optional.empty
+reducing op null element: Optional.empty
+summarizingInt: IntSummaryStatistics{count=7, sum=27, min=3, average=3.857143, max=5}
+summarizingLong: LongSummaryStatistics{count=7, sum=27, min=3, average=3.857143, max=5}
+summarizingDouble: DoubleSummaryStatistics{count=7, sum=27.000000, min=3.000000, average=3.857143, max=5.000000}
+summarizingInt empty: IntSummaryStatistics{count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
+summarizingDouble empty: DoubleSummaryStatistics{count=0, sum=0.000000, min=Infinity, average=0.000000, max=-Infinity}
+summarizingInt type: java.util.IntSummaryStatistics
+groupingBy: java.util.HashMap {3=[fig, fig], 4=[pear, kiwi, date, plum], 5=[apple]}
+groupingBy keys: {p=[pear, plum], a=[apple], d=[date], f=[fig, fig], k=[kiwi]}
+groupingBy value type: java.util.ArrayList
+groupingBy empty: java.util.HashMap {}
+groupingBy counting: {3=2, 4=4, 5=1}
+groupingBy set: {3=[fig], 4=[date, kiwi, pear, plum], 5=[apple]}
+groupingBy mapping: {3=ff, 4=pkdp, 5=a}
+groupingBy TreeMap: java.util.TreeMap {3=[fig, fig], 4=[pear, kiwi, date, plum], 5=[apple]}
+groupingBy TreeMap reversed: {5=1, 4=4, 3=2}
+groupingBy LinkedHashMap: java.util.LinkedHashMap {p=[pear, plum], f=[fig, fig], a=[apple], k=[kiwi], d=[date]}
+groupingBy nested: {3={f=2}, 4={d=1, k=1, p=2}, 5={a=1}}
+groupingBy finisher: {3=2, 4=4, 5=1}
+groupingBy finisher keeps map: java.util.LinkedHashMap {4=4, 3=2, 5=1}
+groupingBy summing: {3=6, 4=16, 5=5}
+groupingBy maxBy: {3=Optional[fig], 4=Optional[plum], 5=Optional[apple]}
+groupingBy null key: java.lang.NullPointerException: element cannot be mapped to a null key
+groupingBy null key later: java.lang.NullPointerException: element cannot be mapped to a null key
+groupingBy null key empty: java.util.HashMap {}
+groupingByConcurrent: java.util.TreeMap {3=[fig, fig], 4=[pear, kiwi, date, plum], 5=[apple]}
+groupingByConcurrent counting: java.util.TreeMap {3=2, 4=4, 5=1}
+groupingByConcurrent factory: java.util.concurrent.ConcurrentSkipListMap {3=[fig, fig], 4=[pear, kiwi, date, plum], 5=[apple]}
+groupingByConcurrent null key: java.lang.NullPointerException: element cannot be mapped to a null key
+groupingByConcurrent type: true
+groupingBy parallel: {3=[fig, fig], 4=[pear, kiwi, date, plum], 5=[apple]}
+groupingByConcurrent parallel: {3=2, 4=4, 5=1}
+partitioningBy: {false=[fig, fig], true=[pear, apple, kiwi, date, plum]}
+partitioningBy empty: {false=[], true=[]}
+partitioningBy counting: {false=2, true=5}
+partitioningBy empty counting: {false=0, true=0}
+partitioningBy all one side: {false=[], true=[apple, date, fig, kiwi, pear, plum]}
+partitioningBy mapping: {false=[4, 5, 4, 4], true=[3, 4, 3]}
+partitioningBy nested: {false={false=[fig, fig], true=[]}, true={false=[kiwi, plum], true=[pear, apple, date]}}
+partitioningBy get: [pear, apple, kiwi, date, plum] [fig, fig] null null
+partitioningBy containsKey: true true false false
+partitioningBy size: 2
+partitioningBy keys: [false, true]
+partitioningBy values: [2, 5]
+partitioningBy entries: false=2;true=5;
+partitioningBy put: java.lang.UnsupportedOperationException
+partitioningBy remove: java.lang.UnsupportedOperationException
+partitioningBy clear: java.lang.UnsupportedOperationException
+partitioningBy entry setValue: java.lang.UnsupportedOperationException
+partitioningBy equals: true true true
+partitioningBy forEach: false[a]true[bb]
+partitioningBy mutable lists: {false=[z], true=[a]}
+partitioningBy get twice same: true
+partitioningBy parallel: {false=[1, 2, 4, 5, 7, 8], true=[0, 3, 6, 9]}

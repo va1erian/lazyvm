@@ -103,4 +103,10 @@ public class CopyOnWriteArraySet<E> extends AbstractSet<E> implements java.io.Se
     public void forEach(Consumer<? super E> action) {
         list.forEach(action);
     }
+
+    @SuppressWarnings("unchecked")
+    public java.util.Spliterator<E> spliterator() {
+        return (java.util.Spliterator<E>) java.util.Spliterators.spliterator(list.snapshot(),
+                java.util.Spliterator.DISTINCT | java.util.Spliterator.IMMUTABLE);
+    }
 }

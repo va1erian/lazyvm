@@ -1,0 +1,80 @@
+sorted []: 
+Arrays.sort []: 
+List.sort []: 
+same as Arrays.sort []: true
+unsized same []: true
+natural order same []: ok
+sorted [1]: 
+Arrays.sort [1]: 
+List.sort [1]: 
+same as Arrays.sort [1]: true
+unsized same [1]: true
+natural order same [1]: ok
+sorted [2, 1]: 1?2
+Arrays.sort [2, 1]: 1?2
+List.sort [2, 1]: 1?2
+same as Arrays.sort [2, 1]: true
+unsized same [2, 1]: true
+natural order same [2, 1]: ok
+sorted [1, 2]: 2?1
+Arrays.sort [1, 2]: 2?1
+List.sort [1, 2]: 2?1
+same as Arrays.sort [1, 2]: true
+unsized same [1, 2]: true
+natural order same [1, 2]: ok
+sorted [3, 1, 2]: 1?3 2?1 2?3 2?1
+Arrays.sort [3, 1, 2]: 1?3 2?1 2?3 2?1
+List.sort [3, 1, 2]: 1?3 2?1 2?3 2?1
+same as Arrays.sort [3, 1, 2]: true
+unsized same [3, 1, 2]: true
+natural order same [3, 1, 2]: ok
+sorted [5, 4, 3, 2, 1]: 4?5 3?4 2?3 1?2
+Arrays.sort [5, 4, 3, 2, 1]: 4?5 3?4 2?3 1?2
+List.sort [5, 4, 3, 2, 1]: 4?5 3?4 2?3 1?2
+same as Arrays.sort [5, 4, 3, 2, 1]: true
+unsized same [5, 4, 3, 2, 1]: true
+natural order same [5, 4, 3, 2, 1]: ok
+sorted [1, 2, 3, 4, 5]: 2?1 3?2 4?3 5?4
+Arrays.sort [1, 2, 3, 4, 5]: 2?1 3?2 4?3 5?4
+List.sort [1, 2, 3, 4, 5]: 2?1 3?2 4?3 5?4
+same as Arrays.sort [1, 2, 3, 4, 5]: true
+unsized same [1, 2, 3, 4, 5]: true
+natural order same [1, 2, 3, 4, 5]: ok
+sorted [2, 7, 1, 8, 2, 8]: 7?2 1?7 1?7 1?2 8?2 8?7 2?7 2?2 8?2 8?8
+Arrays.sort [2, 7, 1, 8, 2, 8]: 7?2 1?7 1?7 1?2 8?2 8?7 2?7 2?2 8?2 8?8
+List.sort [2, 7, 1, 8, 2, 8]: 7?2 1?7 1?7 1?2 8?2 8?7 2?7 2?2 8?2 8?8
+same as Arrays.sort [2, 7, 1, 8, 2, 8]: true
+unsized same [2, 7, 1, 8, 2, 8]: true
+natural order same [2, 7, 1, 8, 2, 8]: ok
+sorted [4, 4, 4]: 4?4 4?4
+Arrays.sort [4, 4, 4]: 4?4 4?4
+List.sort [4, 4, 4]: 4?4 4?4
+same as Arrays.sort [4, 4, 4]: true
+unsized same [4, 4, 4]: true
+natural order same [4, 4, 4]: ok
+larger same as Arrays.sort: true
+larger unsized same: true
+larger count: 407
+larger list sort same: true
+sorted result: [4, 11, 14, 21, 31, 41, 48, 58, 68, 78, 85, 95]
+sorted reversed result: [95, 85, 78, 68, 58, 48, 41, 31, 21, 14, 11, 4]
+sorted twice: [4, 11, 14, 21, 31, 41, 48, 58, 68, 78, 85, 95]
+sorted comparator once for a pair: 1?2
+sorted comparator for strings: ab ca cb 
+sorted natural mixed order of cast: java.lang.ClassCastException: java.lang.String cannot be cast to java.lang.Integer
+sorted comparator that throws: java.lang.IllegalStateException: cmp
+sorted comparator that throws on one element: 1
+sorted with null comparator result: [2, 1]
+sorted inconsistent small: [3, 1, 2]
+sorted inconsistent small 2: [2, 1, 3]
+sorted pure sizes: [1, 3, 5, 9]
+sorted longs: [1, 3, 5, 9]
+sorted doubles: [1.0, 3.0, 5.0, 9.0]
+min comparator calls: 11?48 11?85 11?21 11?58 11?95
+max comparator calls: 11?48 48?85 85?21 85?58 85?95
+distinct then sorted: [1, 2, 3]
+sorted then distinct: [1, 2, 3]
+sorted nulls with comparator: [a, b, null]
+sorted records stability: [a1, a2, a3, b1, b2, b3]
+sorted stability 64: [0, 2, 4, 6, 8, 10]
+sorted stability 70 odd first: [1, 3, 5, 7, 9, 11]

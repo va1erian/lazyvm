@@ -68,6 +68,16 @@ class SubList<E> extends AbstractList<E> {
         return backing instanceof RandomAccess ? new Fast<E>(backing, start, to) : new SubList<E>(backing, start, to);
     }
 
+    /** An ArrayList window walks the ArrayList's storage over its range; its structure is fixed when this is made. */
+    @Override
+    public Spliterator<E> spliterator() {
+        if (!indexed) {
+            return super.spliterator();
+        }
+        checkUnchanged();
+        return ((ArrayList<E>) root).window(offset, offset + size, root.modCount);
+    }
+
     // Spec 9.F2: an ArrayList window reads and writes the ArrayList's storage, not through its parent.
     @SuppressWarnings("unchecked")
     public E get(int index) {

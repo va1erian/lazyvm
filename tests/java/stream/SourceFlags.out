@@ -1,0 +1,84 @@
+unmodifiableMap entrySet HashMap: DISTINCT|SIZED est=5 exact=5
+unmodifiableMap entrySet TreeMap: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+unmodifiableMap entrySet stream: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+unmodifiableMap keySet TreeMap: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 natural
+unmodifiableMap values TreeMap: ORDERED|SIZED est=5 exact=5
+unmodifiableMap entrySet LinkedHashMap: ORDERED|DISTINCT|SIZED|SUBSIZED est=5 exact=5
+unmodifiableSortedMap entrySet: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+unmodifiableNavigableMap entrySet: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+unmodifiableSet entrySet: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+unmodifiableSortedSet: ORDERED|DISTINCT|SORTED|SIZED est=2 exact=2 natural
+unmodifiableCollection TreeSet: ORDERED|DISTINCT|SORTED|SIZED est=2 exact=2 natural
+unmodifiableList: ORDERED|SIZED|SUBSIZED est=2 exact=2
+synchronizedMap entrySet: DISTINCT|SIZED est=5 exact=5
+synchronizedSortedSet: ORDERED|DISTINCT|SORTED|SIZED est=2 exact=2 natural
+checkedSortedSet: ORDERED|DISTINCT|SORTED|SIZED est=2 exact=2 natural
+TreeMap entrySet: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+TreeMap keySet: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 natural
+TreeMap navigableKeySet: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 natural
+TreeMap values: ORDERED|SIZED est=5 exact=5
+TreeMap comparator entrySet: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+TreeMap comparator keySet: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+TreeMap entrySet stream: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 cmp
+TreeMap entrySet stream sorted natural: ORDERED|DISTINCT|SORTED|SIZED est=5 exact=5 natural
+TreeMap descendingMap entries: [5, 4, 3, 2, 1]
+TreeMap subMap entries: [2, 3]
+TreeMap view estimate after change: 6
+CSLM keySet entries: [1, 2, 3, 4, 5]
+CSLM descendingMap keys: [5, 4, 3, 2, 1]
+CSLM headMap keys: [1, 2]
+CSLM headMap values: [v1, v2]
+CSLM subMap descending keys: [4, 3, 2]
+CSLS headSet elements: [1, 2]
+CSLS descendingSet elements: [5, 4, 3, 2, 1]
+CSLS descendingSet headSet elements: [5, 4]
+long range MIN MAX: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+long rangeClosed MIN MAX: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+long range MIN 0: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+long range MIN 1: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+long range 0 MAX: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=9223372036854775807 exact=9223372036854775807 natural
+long range -1 MAX: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+long rangeClosed 0 MAX: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+long rangeClosed 1 MAX: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=9223372036854775807 exact=9223372036854775807 natural
+long rangeClosed MIN MIN: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=1 exact=1 natural
+long rangeClosed MAX MAX: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=1 exact=1 natural
+long range MIN MAX peek: ORDERED est=9223372036854775807 exact=-1
+long range MIN MAX boxed: ORDERED est=9223372036854775807 exact=-1
+long range MIN MAX limit: ORDERED est=9223372036854775807 exact=-1
+long range MIN MAX limit sum: -9223372036854775805
+long range MIN MAX iterator: -9223372036854775808 -9223372036854775807
+long range MIN MAX advance: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+long rangeClosed MIN MAX advance: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+long range 0 MAX advance: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=9223372036854775806 exact=9223372036854775806 natural
+long rangeClosed MIN MAX count prefix: 10
+int range MIN MAX: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=4294967295 exact=4294967295 natural
+int rangeClosed MIN MAX: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=4294967296 exact=4294967296 natural
+int rangeClosed MIN MAX advance: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=4294967295 exact=4294967295 natural
+int rangeClosed MAX MAX: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=1 exact=1 natural
+int rangeClosed MAX MAX advance: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=0 exact=0 natural
+concat flags: ORDERED|SIZED|IMMUTABLE|SUBSIZED est=5 exact=5
+concat list flags: ORDERED|SIZED|SUBSIZED est=5 exact=5
+concat set flags: SIZED est=4 exact=4
+concat tree flags: ORDERED|SIZED est=4 exact=4
+concat range flags: ORDERED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=5 exact=5
+concat mixed flags: ORDERED|IMMUTABLE est=9223372036854775807 exact=-1
+concat unordered flags: SIZED|SUBSIZED est=3 exact=3
+concat empty flags: SIZED|SUBSIZED est=0 exact=0
+concat after advance: 5 4/4 3/3 2/2 1/1 0/0
+concat int after advance: 5 4/4 3/3 2/2 1/1 0/0
+concat long after advance: 3 2/2 1/1 0/0
+concat double after advance: 3 2/2 1/1 0/0
+concat after forEachRemaining: ORDERED|SIZED|IMMUTABLE|SUBSIZED est=0 exact=0
+concat unsized first: ORDERED est=5 exact=-1 | ORDERED est=4 exact=-1 | ORDERED est=3 exact=-1 | ORDERED est=2 exact=-1 | ORDERED|SIZED|IMMUTABLE|SUBSIZED est=1 exact=1 | ORDERED|SIZED|IMMUTABLE|SUBSIZED est=0 exact=0
+concat total MAX: ORDERED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=9223372036854775807 exact=9223372036854775807
+concat total MAX plus one: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+concat total MAX minus one: ORDERED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=9223372036854775806 exact=9223372036854775806
+concat MAX and one: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+concat MAX and zero: SIZED|SUBSIZED est=9223372036854775807 exact=9223372036854775807
+concat zero and MAX: SIZED|SUBSIZED est=9223372036854775807 exact=9223372036854775807
+concat MAX and MAX: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+concat MAX and MAX advance: ORDERED|NONNULL|IMMUTABLE est=9223372036854775807 exact=-1
+concat int total large: ORDERED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=8589934591 exact=8589934591
+concat three: ORDERED|SIZED|IMMUTABLE|SUBSIZED est=6 exact=6
+concat split: ORDERED|SIZED|IMMUTABLE|SUBSIZED est=3 exact=3 | ORDERED|SIZED|IMMUTABLE|SUBSIZED est=2 exact=2
+concat split elements: 123|45

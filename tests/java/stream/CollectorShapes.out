@@ -1,0 +1,175 @@
+toList: [IDENTITY_FINISH]
+toSet: [UNORDERED, IDENTITY_FINISH]
+toCollection: [IDENTITY_FINISH]
+joining: []
+joining 3: []
+mapping: [IDENTITY_FINISH]
+mapping set: [UNORDERED, IDENTITY_FINISH]
+mapping counting: []
+collectingAndThen: []
+collectingAndThen set: [UNORDERED]
+counting: []
+minBy: []
+maxBy: []
+summingInt: []
+summingLong: []
+summingDouble: []
+averagingInt: []
+averagingLong: []
+averagingDouble: []
+reducing 1: []
+reducing 2: []
+reducing 3: []
+groupingBy: [IDENTITY_FINISH]
+groupingBy counting: []
+groupingBy toList: [IDENTITY_FINISH]
+groupingBy 3: [IDENTITY_FINISH]
+groupingBy 3 counting: []
+groupingByConcurrent: [CONCURRENT, UNORDERED, IDENTITY_FINISH]
+groupingByConcurrent counting: [CONCURRENT, UNORDERED]
+groupingByConcurrent 3: [CONCURRENT, UNORDERED, IDENTITY_FINISH]
+groupingByConcurrent 3 counting: [CONCURRENT, UNORDERED]
+groupingByConcurrent toSet: [CONCURRENT, UNORDERED, IDENTITY_FINISH]
+groupingBy toSet: [IDENTITY_FINISH]
+partitioningBy: [IDENTITY_FINISH]
+partitioningBy counting: []
+partitioningBy toList: [IDENTITY_FINISH]
+toMap: [IDENTITY_FINISH]
+toMap 3: [IDENTITY_FINISH]
+toMap 4: [IDENTITY_FINISH]
+toConcurrentMap: [CONCURRENT, UNORDERED, IDENTITY_FINISH]
+toConcurrentMap 3: [CONCURRENT, UNORDERED, IDENTITY_FINISH]
+toConcurrentMap 4: [CONCURRENT, UNORDERED, IDENTITY_FINISH]
+summarizingInt: [IDENTITY_FINISH]
+summarizingLong: [IDENTITY_FINISH]
+summarizingDouble: [IDENTITY_FINISH]
+of 4: [IDENTITY_FINISH]
+of 4 identity: [IDENTITY_FINISH]
+of 4 all: [CONCURRENT, UNORDERED, IDENTITY_FINISH]
+of 4 dup: [UNORDERED, IDENTITY_FINISH]
+of 5: []
+of 5 identity: [IDENTITY_FINISH]
+of 5 unordered: [UNORDERED]
+enum: [CONCURRENT, UNORDERED, IDENTITY_FINISH]
+enum valueOf: 0
+characteristics immutable: java.lang.UnsupportedOperationException
+characteristics immutable remove: java.lang.UnsupportedOperationException
+characteristics immutable of: java.lang.UnsupportedOperationException
+characteristics type: true
+of null supplier: java.lang.NullPointerException
+of null accumulator: java.lang.NullPointerException
+of null combiner: java.lang.NullPointerException
+of null finisher: java.lang.NullPointerException
+of null characteristics: java.lang.NullPointerException
+of null characteristic element: java.lang.NullPointerException
+of 5 null characteristics: java.lang.NullPointerException
+of 5 null element: java.lang.NullPointerException
+toList parts: java.util.ArrayList[x]true[x, x]
+toSet parts: java.util.HashSet[x][x]
+joining parts: x-y-z
+of parts: 2
+of 4 finisher is identity: true
+toList built: ok
+toList empty: true
+toList one: [a]
+toCollection null built: ok
+toCollection null empty: java.lang.NullPointerException
+toCollection null one: java.lang.NullPointerException
+joining null delimiter built: ok
+joining null delimiter empty: java.lang.NullPointerException: The delimiter must not be null
+joining null delimiter one: java.lang.NullPointerException: The delimiter must not be null
+joining null prefix built: ok
+joining null prefix empty: java.lang.NullPointerException: The prefix must not be null
+joining null prefix one: java.lang.NullPointerException: The prefix must not be null
+joining null suffix built: ok
+joining null suffix empty: java.lang.NullPointerException: The suffix must not be null
+joining null suffix one: java.lang.NullPointerException: The suffix must not be null
+mapping null mapper built: ok
+mapping null mapper empty: true
+mapping null mapper one: java.lang.NullPointerException
+mapping null downstream built: java.lang.NullPointerException
+mapping null downstream empty: java.lang.NullPointerException
+mapping null downstream one: java.lang.NullPointerException
+collectingAndThen null downstream built: java.lang.NullPointerException
+collectingAndThen null downstream empty: java.lang.NullPointerException
+collectingAndThen null downstream one: java.lang.NullPointerException
+collectingAndThen null finisher built: java.lang.NullPointerException
+collectingAndThen null finisher empty: java.lang.NullPointerException
+collectingAndThen null finisher one: java.lang.NullPointerException
+minBy null built: java.lang.NullPointerException
+minBy null empty: java.lang.NullPointerException
+minBy null one: java.lang.NullPointerException
+maxBy null built: java.lang.NullPointerException
+maxBy null empty: java.lang.NullPointerException
+maxBy null one: java.lang.NullPointerException
+summingInt null built: ok
+summingInt null empty: true
+summingInt null one: java.lang.NullPointerException
+summingLong null built: ok
+summingLong null empty: true
+summingLong null one: java.lang.NullPointerException
+summingDouble null built: ok
+summingDouble null empty: true
+summingDouble null one: java.lang.NullPointerException
+averagingInt null built: ok
+averagingInt null empty: true
+averagingInt null one: java.lang.NullPointerException
+averagingDouble null built: ok
+averagingDouble null empty: true
+averagingDouble null one: java.lang.NullPointerException
+reducing null op built: ok
+reducing null op empty: true
+reducing null op one: Optional[a]
+reducing 2 null op built: ok
+reducing 2 null op empty: true
+reducing 2 null op one: java.lang.NullPointerException
+reducing 3 null mapper built: ok
+reducing 3 null mapper empty: true
+reducing 3 null mapper one: java.lang.NullPointerException
+reducing 3 null op built: ok
+reducing 3 null op empty: true
+reducing 3 null op one: java.lang.NullPointerException
+groupingBy null classifier built: ok
+groupingBy null classifier empty: true
+groupingBy null classifier one: java.lang.NullPointerException
+groupingBy null downstream built: java.lang.NullPointerException
+groupingBy null downstream empty: java.lang.NullPointerException
+groupingBy null downstream one: java.lang.NullPointerException
+groupingBy null factory built: ok
+groupingBy null factory empty: java.lang.NullPointerException
+groupingBy null factory one: java.lang.NullPointerException
+groupingByConcurrent null classifier built: ok
+groupingByConcurrent null classifier empty: true
+groupingByConcurrent null classifier one: java.lang.NullPointerException
+partitioningBy null predicate built: ok
+partitioningBy null predicate empty: true
+partitioningBy null predicate one: java.lang.NullPointerException
+partitioningBy null downstream built: java.lang.NullPointerException
+partitioningBy null downstream empty: java.lang.NullPointerException
+partitioningBy null downstream one: java.lang.NullPointerException
+toMap null key built: ok
+toMap null key empty: true
+toMap null key one: java.lang.NullPointerException
+toMap null value built: ok
+toMap null value empty: true
+toMap null value one: java.lang.NullPointerException
+toMap 3 null merge built: ok
+toMap 3 null merge empty: true
+toMap 3 null merge one: java.lang.NullPointerException
+toMap 4 null factory built: ok
+toMap 4 null factory empty: java.lang.NullPointerException
+toMap 4 null factory one: java.lang.NullPointerException
+toConcurrentMap null key built: ok
+toConcurrentMap null key empty: true
+toConcurrentMap null key one: java.lang.NullPointerException
+summarizingInt null built: ok
+summarizingInt null empty: true
+summarizingInt null one: java.lang.NullPointerException
+summarizingLong null built: ok
+summarizingLong null empty: true
+summarizingLong null one: java.lang.NullPointerException
+summarizingDouble null built: ok
+summarizingDouble null empty: true
+summarizingDouble null one: java.lang.NullPointerException
+collect null collector: java.lang.NullPointerException
+collect null collector on empty: java.lang.NullPointerException

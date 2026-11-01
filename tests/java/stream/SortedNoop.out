@@ -1,0 +1,112 @@
+long range sorted findFirst: OptionalLong[0]
+long range sorted limit: 3
+long rangeClosed sorted skip: OptionalLong[6]
+int range sorted findFirst: OptionalInt[0]
+int range sorted boxed: [0, 1]
+long range distinct findFirst: OptionalLong[0]
+long range sorted distinct limit: 1
+long range boxed findFirst: Optional[0]
+long range boxed sorted: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+long range mapToObj sorted: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+int range boxed sorted huge: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+long range map sorted: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+long range sorted peek findFirst: OptionalLong[0] | p0
+long range sorted iterator: 0
+long range sorted spliterator: - | got0
+array int sorted flags: ORDERED|SORTED|SIZED|SUBSIZED est=3
+int range sorted flags: ORDERED|DISTINCT|SORTED|SIZED|SUBSIZED est=5
+int range sorted peek flags: ORDERED|DISTINCT|SORTED|SIZED|SUBSIZED est=5
+int range sorted distinct flags: ORDERED est=5
+sorted distinct inconsistent: [1:1, 1:2, 1:1, 2:3] | cmp cmp cmp
+distinct sorted inconsistent: [1:1, 1:2, 2:3] | cmp cmp
+sorted distinct inconsistent reversed: [1:1, 1:2, 1:1, 2:3] | cmp cmp cmp cmp cmp cmp
+sorted distinct unsorted input: [1:1, 1:2, 2:3] | cmp cmp cmp cmp cmp cmp
+sorted distinct findFirst: Optional[1:1] | cmp cmp
+sorted distinct count: 4 | cmp cmp cmp
+sorted distinct with nulls: [1, null]
+TreeSet sorted distinct inconsistent: [1:1, 2:3] | cmp cmp cmp
+claims SORTED natural: [3, 1, 2]
+claims SORTED natural, no ORDERED: [3, 1, 2]
+claims DISTINCT: [1, 1, 2, 2]
+claims DISTINCT sorted: [1, 2, 2]
+claims SORTED sorted(cmp): [3, 2, 1]
+claims SORTED sorted(natural order cmp): [1, 2, 3]
+claims SORTED peek sorted: [3, 1, 2] | a3 b3 a1 b1 a2 b2
+claims SORTED map sorted: [1, 2, 3]
+claims SORTED filter sorted: [3, 1, 2]
+claims SORTED limit sorted: [3, 1]
+claims SORTED skip sorted: [1, 2]
+claims SORTED distinct sorted: [3, 1]
+claims SORTED unordered sorted: [3, 1, 2]
+claims SORTED parallel sorted: [3, 1, 2]
+claims SORTED comparator: [1, 2, 3]
+claims SORTED comparator sorted(same): [3, 2, 1]
+claims SORTED long: [3, 1, 2]
+claims SORTED int: [3, 1, 2]
+claims SORTED double: [3.0, 1.0, 2.0]
+claims DISTINCT int: [1]
+TreeSet sorted calls: [1:1, 2:3]
+TreeSet sorted peek order: [1, 2, 3] | a1 b1 a2 b2 a3 b3
+TreeSet sorted findFirst: Optional[1] | a1 b1
+TreeSet comparator sorted order: [1, 2, 3] | a3 a2 a1 b1 b2 b3
+TreeSet comparator sorted(cmp): [3, 2, 1]
+TreeSet comparator sorted counts: [1, 2, 3, 4] cmp calls 0
+TreeSet comparator sorted(cmp) counts: [4, 3, 2, 1] cmp calls 3
+TreeSet natural sorted counts: 3 compareTo calls 0
+sorted peek sorted: [1, 2, 3] | a3 a1 a2 b1 c1 b2 c2 b3 c3
+sorted sorted compare calls: [1, 2, 3] cmp calls 6
+natural sorted sorted calls: 3 compareTo calls 4 | cmp cmp cmp cmp
+TreeMap keySet sorted peek order: Optional[2] | a2 b2
+range sorted peek order: OptionalInt[0] | a0 b0
+BitSet sorted peek order: OptionalInt[1] | a1 b1
+sorted distinct short circuit: Optional[1] | a1 b1
+sorted distinct short circuit list: Optional[1] | a3 a1 a1 a2 b1
+sorted distinct limit: [1, 2] | a3 a1 a1 a2 b1 b2
+sorted distinct iterator: 2 | a3 a1 a1 a2 b1 b2 b3
+distinct sorted limit: [1, 2] | a3 a1 a1 a2 b1 b2
+TreeSet distinct peek order: [1, 2] | a1 b1 a2 b2
+LinkedHashSet distinct peek order: [3, 1] | a3 b3 a1 b1
+distinct equals calls: - | a1:1 b1:1 a1:2 b1:2 a1:1
+TreeSet comparator source: ORDERED|DISTINCT|SORTED|SIZED est=3 cmp
+TreeSet comparator stream: ORDERED|DISTINCT|SORTED|SIZED est=3 cmp
+TreeSet comparator map: ORDERED|SIZED est=3
+TreeSet comparator peek: ORDERED|DISTINCT|SIZED est=3
+TreeSet comparator filter: ORDERED|DISTINCT est=3
+TreeSet comparator sorted: ORDERED|DISTINCT|SORTED|SIZED est=3 null
+TreeSet comparator sorted(cmp): ORDERED|DISTINCT|SIZED est=3
+TreeSet comparator distinct: ORDERED|DISTINCT est=3
+TreeSet comparator limit: ORDERED|DISTINCT est=3
+TreeSet comparator unordered: DISTINCT|SIZED est=3
+TreeSet comparator boxed ints: ORDERED|SIZED est=3
+TreeSet natural peek: ORDERED|DISTINCT|SORTED|SIZED est=3 null
+TreeSet natural map: ORDERED|SIZED est=3
+TreeSet natural sorted: ORDERED|DISTINCT|SORTED|SIZED est=3 null
+TreeSet natural sorted(cmp): ORDERED|DISTINCT|SIZED est=3
+TreeSet natural distinct: ORDERED|DISTINCT|SORTED est=3
+list sorted peek: ORDERED|SORTED|SIZED|SUBSIZED est=2 null
+list sorted(cmp) peek: ORDERED|SIZED|SUBSIZED est=2 ISE
+list sorted spliterator: null
+list sorted map spliterator: ISE
+TreeSet comparator sorted getComparator: true
+sorted(cmp) spliterator getComparator: ISE
+TreeSet comparator sorted(cmp) peek getComparator: ISE
+TreeSet comparator getComparator same: true
+TreeSet comparator stream getComparator same: true
+natural TreeSet sorted(cmp) getComparator: ISE
+natural TreeSet sorted(cmp) peek getComparator: ISE
+natural TreeSet sorted peek getComparator: null
+natural TreeSet sorted(cmp) sorted getComparator: null
+natural TreeSet sorted(cmp) sorted flags: ORDERED|DISTINCT|SORTED|SIZED est=3
+natural TreeSet sorted(cmp) sorted order: [1, 2, 3]
+list sorted(cmp) sorted getComparator: null
+list sorted sorted(cmp) getComparator: ISE
+list sorted sorted(cmp) order: [3, 2, 1]
+list sorted peek skip getComparator: null
+list sorted peek getComparator twice: null null
+claims SORTED sorted peek getComparator: null
+claims SORTED sorted(cmp) peek getComparator: ISE
+claims SORTED peek getComparator: null
+natural TreeSet sorted(cmp) order: [3, 2, 1]
+comparator TreeSet sorted natural order: [1, 2, 3]
+comparator TreeSet sorted distinct: [1, 2, 3]
+comparator TreeSet sorted peek order: Optional[1] | a3 a2 a1 b1

@@ -1,0 +1,80 @@
+flatMap run: [1, 10, 2, 20, 3, 30] | c1 c2 c3
+flatMap limit: [1, 10, 2] | c1 c2
+flatMap limit 1: [1] | c1
+flatMap limit 2 peek: [1, 10] | in1 out1 in10 out10 c1
+nested flatMap: [1, 10, 2, 20, 2, 20, 3, 30] | c1 c2 C1 c2 c3 C2
+nested flatMap limit: [1, 10, 2] | c1 c2 C1
+nested flatMap limit 1: [1] | c1 C1
+nested flatMap findFirst: Optional[1] | c1 C1
+nested flatMap limit inside: [1, 10, 2, 2, 20, 3] | c1 c2 C1 c2 c3 C2
+flatMap empty inner: 0 | c1 c2
+flatMap null inner: 0 | 
+flatMap inner handler order: 1 | a b
+flatMap inner mapped: 1 | a b
+IntStream flatMap close: 6 | c1 c2
+IntStream flatMap close limit: 1 | c1
+LongStream flatMap close: 6 | c1 c2
+DoubleStream flatMap close: 6.0 | c1.0 c2.0
+flatMapToInt close: 3 | c1 c2
+flatMapToLong close: 3 | c1 c2
+flatMapToDouble close: 3.0 | c1 c2
+outer handler not run by flatMap: 2 | c1 c2
+inner pipeline throws: !RuntimeException(body m) | c1
+inner pipeline throws later: !RuntimeException(body p) | c1
+downstream throws: !RuntimeException(body d) | c1
+IntStream inner pipeline throws: !RuntimeException(body m) | c1
+nested inner throws: !RuntimeException(body n) | c1 C1
+inner already consumed: !IllegalStateException(stream has already been operated upon or closed) | used
+inner already consumed then close: - | used caught
+inner already linked: !IllegalStateException(stream has already been operated upon or closed) | used
+same inner returned twice: !IllegalStateException(stream has already been operated upon or closed) | shared
+inner handler registered late: !IllegalStateException(stream has already been operated upon or closed) | late
+flatMap body and close: !RuntimeException(body m1) +IllegalStateException(close c1) | c1
+flatMap body and two closes: !RuntimeException(body m) +IllegalStateException(close a) +IllegalStateException(close b) | a b
+flatMap body and close through peek: !RuntimeException(body p1) +IllegalStateException(close c1) | c1
+flatMap body and close through limit: !RuntimeException(body l1) +IllegalStateException(close c1) | c1
+flatMap body and close through peek limit: !RuntimeException(body q1) +IllegalStateException(close c1) | p1 c1
+flatMap close only: !IllegalStateException(close c1) | c1
+flatMap close only limit: !IllegalStateException(close c1) | c1
+flatMap close only peek: !IllegalStateException(close c1) | p1 c1
+flatMap close only second: !IllegalStateException(close c2) | c1 c2
+flatMap close error: !AssertionError(err) | 
+flatMap body error and close: !AssertionError(body err) +IllegalStateException(close c) | c
+nested flatMap body and close: !RuntimeException(body n) +IllegalStateException(close c1) +IllegalStateException(close C1) | c1 C1
+IntStream flatMap body and close: !RuntimeException(body m) +IllegalStateException(close c) | c
+LongStream flatMap body and close: !RuntimeException(body m) +IllegalStateException(close c) | c
+DoubleStream flatMap body and close: !RuntimeException(body m) +IllegalStateException(close c) | c
+flatMap iterator body and close: !RuntimeException(body m) +IllegalStateException(close c) | c
+flatMap spliterator close only: !IllegalStateException(close c) | c
+twr body and close: !RuntimeException(body t) +IllegalStateException(close c) | c
+twr body and two closes: !RuntimeException(body t) +IllegalStateException(close a) +IllegalStateException(close b) | a b
+twr terminal throws and close: !RuntimeException(body m) +IllegalStateException(close c) | c
+twr close only: !IllegalStateException(close a) +IllegalStateException(close b) | a b
+twr concat body and close: !RuntimeException(body m) +IllegalStateException(close a) +IllegalStateException(close b) +IllegalStateException(close c) | a b c
+twr flatMap in twr: !RuntimeException(body m) +IllegalStateException(close inner) +IllegalStateException(close outer) | inner outer
+twr IntStream body and close: !RuntimeException(body m) +IllegalStateException(close c) | c
+close same exception object: !IllegalArgumentException(Self-suppression not permitted) <-RuntimeException(body same) | 
+close suppressed already present: !IllegalStateException(close a) +RuntimeException(body pre) +RuntimeException(old) +IllegalStateException(close b) | a b
+close source then count: !IllegalStateException(source already consumed or closed) | 
+close source then iterator: !IllegalStateException(source already consumed or closed) | 
+close source then spliterator: !IllegalStateException(source already consumed or closed) | 
+close source then map: !IllegalStateException(source already consumed or closed) | 
+close source then sorted: !IllegalStateException(source already consumed or closed) | 
+close source then collect: !IllegalStateException(source already consumed or closed) | 
+close source then close again: - | a b
+close middle then count: 2 | 
+close last then count: !IllegalStateException(stream has already been operated upon or closed) | 
+close then count: !IllegalStateException(stream has already been operated upon or closed) | 
+close then map: !IllegalStateException(stream has already been operated upon or closed) | 
+close then iterator: !IllegalStateException(stream has already been operated upon or closed) | 
+close then onClose: - | late
+close then parallel: true | 
+close source then count after op: - | x
+IntStream close source then sum: !IllegalStateException(source already consumed or closed) | 
+LongStream close source then sum: !IllegalStateException(source already consumed or closed) | 
+DoubleStream close source then sum: !IllegalStateException(source already consumed or closed) | 
+IntStream close then boxed: !IllegalStateException(stream has already been operated upon or closed) | 
+collection close source then count: !IllegalStateException(source already consumed or closed) | 
+range close source then count: !IllegalStateException(source already consumed or closed) | 
+concat close source then count: !IllegalStateException(source already consumed or closed) | 
+close source of sorted then count: !IllegalStateException(source already consumed or closed) | 

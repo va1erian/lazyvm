@@ -32,8 +32,15 @@ final class FixedCollections {
         public void add(E e) { throw new UnsupportedOperationException(); }
     }
 
+    /** The one element of a singleton: ordered, distinct, immutable and sized. */
+    static <E> Spliterator<E> single(E element) {
+        return new ArraySplits.Refs<E>(new Object[] {element}, 0, 1, Spliterator.ORDERED | Spliterator.DISTINCT
+                | Spliterator.SIZED | Spliterator.NONNULL | Spliterator.IMMUTABLE | Spliterator.SUBSIZED);
+    }
+
     static final class EmptyList<E> extends AbstractList<E> implements RandomAccess, java.io.Serializable {
         public int size() { return 0; }
+        public Spliterator<E> spliterator() { return Spliterators.emptySpliterator(); }
         public E get(int index) { throw new IndexOutOfBoundsException("Index: " + index); }
         public Iterator<E> iterator() { return Collections.emptyIterator(); }
         public ListIterator<E> listIterator() { return Collections.emptyListIterator(); }
@@ -41,6 +48,7 @@ final class FixedCollections {
 
     static final class EmptySet<E> extends AbstractSet<E> implements java.io.Serializable {
         public Iterator<E> iterator() { return Collections.emptyIterator(); }
+        public Spliterator<E> spliterator() { return Spliterators.emptySpliterator(); }
         public int size() { return 0; }
     }
 
@@ -114,6 +122,7 @@ final class FixedCollections {
         private final E element;
 
         One(E element) { this.element = element; }
+        public Spliterator<E> spliterator() { return single(element); }
         public Iterator<E> iterator() { return once(element); }
         public int size() { return 1; }
         public boolean contains(Object o) { return Support.eq(o, element); }
@@ -124,6 +133,7 @@ final class FixedCollections {
         private final E element;
 
         OneList(E element) { this.element = element; }
+        public Spliterator<E> spliterator() { return single(element); }
         public int size() { return 1; }
 
         public E get(int index) {

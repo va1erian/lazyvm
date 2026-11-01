@@ -1,0 +1,90 @@
+range: [3, 4, 5, 6]
+range empty: []
+range reversed: []
+rangeClosed: [3, 4, 5, 6, 7]
+rangeClosed one: [-1]
+rangeClosed reversed: []
+rangeClosed to MAX: [9223372036854775805, 9223372036854775806, 9223372036854775807]
+range to MAX: [9223372036854775805, 9223372036854775806]
+rangeClosed from MIN: [-9223372036854775808, -9223372036854775807, -9223372036854775806]
+rangeClosed MIN MIN: [-9223372036854775808]
+rangeClosed MAX MAX: [9223372036854775807]
+range MIN MIN: []
+range huge size: 9223372036854775807
+range huge exact size: -1
+range small exact size: 5
+rangeClosed huge size: 9223372036854775807
+rangeClosed huge limit: [-9223372036854775808, -9223372036854775807]
+range huge limit: [-9223372036854775808, -9223372036854775807]
+rangeClosed anyMatch at MAX: true
+rangeClosed iterator end: false
+rangeClosed sum: 5000050000
+range count: 123456
+sum: 6
+sum empty: 0
+sum wraps: -9223372036854775808
+average: OptionalDouble[2.3333333333333335]
+average empty: OptionalDouble.empty
+average wraps: OptionalDouble[-1.0]
+average of one: OptionalDouble[9.223372036854776E18]
+min: OptionalLong[-1]
+max: OptionalLong[3]
+min empty: OptionalLong.empty
+count: 2
+summaryStatistics: LongSummaryStatistics{count=3, sum=10000000002, min=-2, average=3333333334.000000, max=10000000000}
+summaryStatistics empty: LongSummaryStatistics{count=0, sum=0, min=9223372036854775807, average=0.000000, max=-9223372036854775808}
+summaryStatistics wraps: LongSummaryStatistics{count=2, sum=-2, min=9223372036854775807, average=-1.000000, max=9223372036854775807}
+reduce op: OptionalLong[24]
+reduce op empty: OptionalLong.empty
+reduce identity: 91
+collect: 12
+anyMatch: true
+allMatch: false
+noneMatch: true
+anyMatch empty: false
+allMatch empty: true
+findFirst: OptionalLong[9]
+findAny: OptionalLong[9]
+findFirst empty: OptionalLong.empty
+forEach: 123
+forEachOrdered: 123
+map: [1099511627776, 2199023255552, 3298534883328]
+map overflow: [-9223372036854775808]
+mapToObj: [41, 42]
+mapToInt truncates: [5, -1]
+mapToDouble: 0.75
+asDoubleStream: [-1.0, 2.0, 9.223372036854776E18, 9.007199254740992E15]
+boxed: [1, 2]
+boxed type: java.lang.Long
+flatMap: [0, 0, 1]
+filter: [1, 3, 5, 7, 9]
+distinct: [3, 1, 2, 9223372036854775807]
+sorted: [-9223372036854775808, -1, 2, 3, 9223372036854775807]
+peek: 12
+limit: [1, 10, 100, 1000, 10000]
+skip: [4, 5]
+limit/skip max: []
+parallel: true
+sequential: false
+parallel sum: 12502500
+unordered: [2, 1]
+empty: []
+of one: [5]
+of none: []
+of many: [5, 6, 7]
+iterate: [10, 7, 4, 1]
+generate: [2, 4, 6]
+concat: [1, 2, 3]
+builder: true [1, 2, 3]
+builder empty: []
+builder twice: java.lang.IllegalStateException
+builder add after: java.lang.IllegalStateException
+builder as LongConsumer: [4, 5]
+iterator: 5 6 false
+iterator exhausted: java.util.NoSuchElementException
+iterator forEachRemaining LongConsumer: 123
+iterator forEachRemaining Consumer: 123
+iterator forEachRemaining null: java.lang.NullPointerException
+iterator remove: java.lang.UnsupportedOperationException: remove
+spliterator: 5,6,
+spliterator boxed: 56

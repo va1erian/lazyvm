@@ -1,0 +1,67 @@
+sorted flatMap sorted: [1, 2, 11, 12]
+sorted flatMap sorted cmp: [12, 11, 2, 1]
+sorted flatMapToInt sorted: [1, 2, 11, 12]
+int sorted flatMap sorted: [1, 2, 11, 12]
+long sorted flatMap sorted: [1, 2, 11, 12]
+double sorted flatMap sorted: [1.0, 2.0, 11.0, 12.0]
+sorted flatMap sorted iterator: [1, 2, 11, 12]
+sorted filter sorted: [2, 3]
+sorted limit sorted: [1, 2]
+sorted skip sorted: [2, 3]
+sorted distinct sorted: [1, 3]
+sorted flatMap sorted toArray: [1, 2, 11, 12]
+flatMap sorted several outer: [1, 2, 3, 4, 5, 10, 20, 30, 40, 50]
+flatMap sorted peek: [1, 2, 11, 12] | p1 p2 p11 p12
+step then forEachRemaining: - | p1 p10 c1 t1 r10 p2 p20 c2 r2 r20
+no step then forEachRemaining: - | p1 r1 p10 r10 c1 p2 r2 p20 r20 c2
+iterator next then forEachRemaining: - | o1 p1 p10 r10 o2 p2 p20 r2 r20
+sorted null empty: !java.lang.NullPointerException
+sorted null used: !java.lang.IllegalStateException: stream has already been operated upon or closed
+sorted null then reuse: !java.lang.IllegalStateException: stream has already been operated upon or closed | npe
+long range boxed sorted limit: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+long range boxed filter sorted: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+long range boxed sorted skip: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+long range boxed skip sorted: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+long range boxed sorted limit toArray: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+close source under way: 1 2 3 false
+close source under way spliterator: 23
+array tryAdvance throws: 23 | caught
+array forEachRemaining throws: 0 0 | caught
+array nested tryAdvance: 123
+int array tryAdvance throws: 23 | caught
+treeset remove during iterator: 1 CME
+treeset remove during spliterator: 1 2 3 CME
+linkedlist clear during walk: 1 null CME
+linkedlist clear then tryAdvance: CME
+priorityqueue clear then tryAdvance: CME
+deep concat: 600
+deep concat flags: ORDERED|SIZED|IMMUTABLE|SUBSIZED 600
+concat unsized by overflow after advance: ORDERED|IMMUTABLE -1
+flatMap same exception body and close: !java.lang.IllegalArgumentException: Self-suppression not permitted
+flatMap different exception body and close: !java.lang.RuntimeException: b
+toArray generator null: !java.lang.NullPointerException
+retried hasNext after comparator throws: ISE ISE 
+spliterator Collection concurrent: CONCURRENT
+spliterator Iterator concurrent: CONCURRENT
+spliterator Iterator not concurrent: ORDERED|SIZED|SUBSIZED
+sorted distinct null a: [null, 1]
+sorted distinct null b: [1, null, 1]
+sorted distinct null c: [1, null, 1]
+sorted distinct null d: [null, 2]
+sorted distinct null e: [1, 2, null, 2, 1]
+sorted distinct plain: [1, 2, 1, 2]
+int iterate trace: 7 | f1 p1 f2 p2 f4 p4
+long iterate trace: 7 | f1 p1 f2 p2 f4 p4
+double iterate trace: 7.0 | f1.0 p1.0 f2.0 p2.0 f4.0 p4.0
+object iterate trace: 3 | p1 f1 p2 f2 p4
+concat sequential parallel: true
+concat parallel sequential: true
+concat sequential sequential: false
+unordered twice: true
+unordered of unordered source: true
+inner flatMap read in bulk: 123CME
+inner flatMap read stepwise: CME
+supplier claims SORTED sorted: [3, 1, 2]
+supplier claims DISTINCT distinct: [1, 1, 2]
+supplier no claim sorted: [1, 2, 3]
+supplier claims SORTED int: [3, 1, 2]

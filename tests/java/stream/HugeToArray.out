@@ -1,0 +1,14 @@
+long range toArray: !java.lang.OutOfMemoryError
+long range boxed toArray: !java.lang.OutOfMemoryError
+long range boxed toArray gen: !java.lang.OutOfMemoryError
+int range toArray: !java.lang.OutOfMemoryError
+int rangeClosed toArray: !java.lang.OutOfMemoryError
+int range boxed toArray: !java.lang.OutOfMemoryError
+int range mapToObj toArray: !java.lang.OutOfMemoryError
+int range mapToLong toArray: !java.lang.OutOfMemoryError
+int range asDouble toArray: !java.lang.OutOfMemoryError
+long range asDouble toArray: !java.lang.OutOfMemoryError
+long range map toArray: !java.lang.OutOfMemoryError
+long range peek toArray: !java.lang.OutOfMemoryError
+long range sorted toArray: !java.lang.OutOfMemoryError
+int range sorted boxed toArray: !java.lang.OutOfMemoryError

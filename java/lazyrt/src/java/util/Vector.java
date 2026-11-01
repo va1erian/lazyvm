@@ -320,4 +320,18 @@ public class Vector<E> extends AbstractList<E> implements List<E>, RandomAccess,
     }
 
     int cursorLimit() { return elementCount; }
+
+    @Override
+    public Spliterator<E> spliterator() {
+        return new ArrayWalk<E>(Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED, false) {
+            @Override
+            Object[] array() { return elementData; }
+
+            @Override
+            int count() { return elementCount; }
+
+            @Override
+            int stamp() { return modCount; }
+        };
+    }
 }

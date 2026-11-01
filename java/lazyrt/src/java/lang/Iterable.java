@@ -2,6 +2,7 @@ package java.lang;
 
 import java.util.Iterator;
 import java.util.Objects;
+import java.util.Spliterator;
 import java.util.function.Consumer;
 
 public interface Iterable<T> {
@@ -12,5 +13,9 @@ public interface Iterable<T> {
         for (T t : this) {
             action.accept(t);
         }
+    }
+
+    default Spliterator<T> spliterator() {
+        return java.util.Spliterators.spliteratorUnknownSize(iterator(), 0);
     }
 }

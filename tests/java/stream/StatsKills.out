@@ -1,0 +1,247 @@
+sum [1.8014398509481982E16, 3.5]: 434fffffffffffff
+average [1.8014398509481982E16, 3.5]: 433fffffffffffff
+stats [1.8014398509481982E16, 3.5]: 434fffffffffffff 433fffffffffffff
+summingDouble [1.8014398509481982E16, 3.5]: 434fffffffffffff
+averagingDouble [1.8014398509481982E16, 3.5]: 433fffffffffffff
+summarizingDouble [1.8014398509481982E16, 3.5]: 434fffffffffffff 433fffffffffffff
+reduce [1.8014398509481982E16, 3.5]: 4350000000000000
+sum [3.5, 1.8014398509481982E16]: 434fffffffffffff
+average [3.5, 1.8014398509481982E16]: 433fffffffffffff
+stats [3.5, 1.8014398509481982E16]: 434fffffffffffff 433fffffffffffff
+summingDouble [3.5, 1.8014398509481982E16]: 434fffffffffffff
+averagingDouble [3.5, 1.8014398509481982E16]: 433fffffffffffff
+summarizingDouble [3.5, 1.8014398509481982E16]: 434fffffffffffff 433fffffffffffff
+reduce [3.5, 1.8014398509481982E16]: 4350000000000000
+sum [-1.8014398509481982E16, -3.5]: c34fffffffffffff
+average [-1.8014398509481982E16, -3.5]: c33fffffffffffff
+stats [-1.8014398509481982E16, -3.5]: c34fffffffffffff c33fffffffffffff
+summingDouble [-1.8014398509481982E16, -3.5]: c34fffffffffffff
+averagingDouble [-1.8014398509481982E16, -3.5]: c33fffffffffffff
+summarizingDouble [-1.8014398509481982E16, -3.5]: c34fffffffffffff c33fffffffffffff
+reduce [-1.8014398509481982E16, -3.5]: c350000000000000
+sum [-3.5, -1.8014398509481982E16]: c34fffffffffffff
+average [-3.5, -1.8014398509481982E16]: c33fffffffffffff
+stats [-3.5, -1.8014398509481982E16]: c34fffffffffffff c33fffffffffffff
+summingDouble [-3.5, -1.8014398509481982E16]: c34fffffffffffff
+averagingDouble [-3.5, -1.8014398509481982E16]: c33fffffffffffff
+summarizingDouble [-3.5, -1.8014398509481982E16]: c34fffffffffffff c33fffffffffffff
+reduce [-3.5, -1.8014398509481982E16]: c350000000000000
+sum [1.8014398509481982E16, -3.5]: 434ffffffffffffd
+average [1.8014398509481982E16, -3.5]: 433ffffffffffffd
+stats [1.8014398509481982E16, -3.5]: 434ffffffffffffd 433ffffffffffffd
+summingDouble [1.8014398509481982E16, -3.5]: 434ffffffffffffd
+averagingDouble [1.8014398509481982E16, -3.5]: 433ffffffffffffd
+summarizingDouble [1.8014398509481982E16, -3.5]: 434ffffffffffffd 433ffffffffffffd
+reduce [1.8014398509481982E16, -3.5]: 434ffffffffffffd
+sum [-3.5, 1.8014398509481982E16]: 434ffffffffffffd
+average [-3.5, 1.8014398509481982E16]: 433ffffffffffffd
+stats [-3.5, 1.8014398509481982E16]: 434ffffffffffffd 433ffffffffffffd
+summingDouble [-3.5, 1.8014398509481982E16]: 434ffffffffffffd
+averagingDouble [-3.5, 1.8014398509481982E16]: 433ffffffffffffd
+summarizingDouble [-3.5, 1.8014398509481982E16]: 434ffffffffffffd 433ffffffffffffd
+reduce [-3.5, 1.8014398509481982E16]: 434ffffffffffffd
+sum [-1.8014398509481982E16, 3.5]: c34ffffffffffffd
+average [-1.8014398509481982E16, 3.5]: c33ffffffffffffd
+stats [-1.8014398509481982E16, 3.5]: c34ffffffffffffd c33ffffffffffffd
+summingDouble [-1.8014398509481982E16, 3.5]: c34ffffffffffffd
+averagingDouble [-1.8014398509481982E16, 3.5]: c33ffffffffffffd
+summarizingDouble [-1.8014398509481982E16, 3.5]: c34ffffffffffffd c33ffffffffffffd
+reduce [-1.8014398509481982E16, 3.5]: c34ffffffffffffd
+sum [3.5, -1.8014398509481982E16]: c34ffffffffffffd
+average [3.5, -1.8014398509481982E16]: c33ffffffffffffd
+stats [3.5, -1.8014398509481982E16]: c34ffffffffffffd c33ffffffffffffd
+summingDouble [3.5, -1.8014398509481982E16]: c34ffffffffffffd
+averagingDouble [3.5, -1.8014398509481982E16]: c33ffffffffffffd
+summarizingDouble [3.5, -1.8014398509481982E16]: c34ffffffffffffd c33ffffffffffffd
+reduce [3.5, -1.8014398509481982E16]: c34ffffffffffffd
+sum [1.8014398509481982E16, 3.5, 3.5]: 4350000000000001
+average [1.8014398509481982E16, 3.5, 3.5]: 4335555555555557
+stats [1.8014398509481982E16, 3.5, 3.5]: 4350000000000001 4335555555555557
+summingDouble [1.8014398509481982E16, 3.5, 3.5]: 4350000000000001
+averagingDouble [1.8014398509481982E16, 3.5, 3.5]: 4335555555555557
+summarizingDouble [1.8014398509481982E16, 3.5, 3.5]: 4350000000000001 4335555555555557
+reduce [1.8014398509481982E16, 3.5, 3.5]: 4350000000000001
+sum [1.8014398509481982E16, 1.5, 1.5, 1.5]: 4350000000000001
+average [1.8014398509481982E16, 1.5, 1.5, 1.5]: 4330000000000001
+stats [1.8014398509481982E16, 1.5, 1.5, 1.5]: 4350000000000001 4330000000000001
+summingDouble [1.8014398509481982E16, 1.5, 1.5, 1.5]: 4350000000000001
+averagingDouble [1.8014398509481982E16, 1.5, 1.5, 1.5]: 4330000000000001
+summarizingDouble [1.8014398509481982E16, 1.5, 1.5, 1.5]: 4350000000000001 4330000000000001
+reduce [1.8014398509481982E16, 1.5, 1.5, 1.5]: 4350000000000000
+sum [1.8014398509481982E16, 1.0, 1.0, 1.0]: 4350000000000000
+average [1.8014398509481982E16, 1.0, 1.0, 1.0]: 4330000000000000
+stats [1.8014398509481982E16, 1.0, 1.0, 1.0]: 4350000000000000 4330000000000000
+summingDouble [1.8014398509481982E16, 1.0, 1.0, 1.0]: 4350000000000000
+averagingDouble [1.8014398509481982E16, 1.0, 1.0, 1.0]: 4330000000000000
+summarizingDouble [1.8014398509481982E16, 1.0, 1.0, 1.0]: 4350000000000000 4330000000000000
+reduce [1.8014398509481982E16, 1.0, 1.0, 1.0]: 4350000000000000
+sum [1.8014398509481982E16, 0.5, 0.5, 0.5, 0.5]: 4350000000000000
+average [1.8014398509481982E16, 0.5, 0.5, 0.5, 0.5]: 432999999999999a
+stats [1.8014398509481982E16, 0.5, 0.5, 0.5, 0.5]: 4350000000000000 432999999999999a
+summingDouble [1.8014398509481982E16, 0.5, 0.5, 0.5, 0.5]: 4350000000000000
+averagingDouble [1.8014398509481982E16, 0.5, 0.5, 0.5, 0.5]: 432999999999999a
+summarizingDouble [1.8014398509481982E16, 0.5, 0.5, 0.5, 0.5]: 4350000000000000 432999999999999a
+reduce [1.8014398509481982E16, 0.5, 0.5, 0.5, 0.5]: 434fffffffffffff
+sum [1.8014398509481982E16, 3.5, -3.5]: 434fffffffffffff
+average [1.8014398509481982E16, 3.5, -3.5]: 4335555555555555
+stats [1.8014398509481982E16, 3.5, -3.5]: 434fffffffffffff 4335555555555555
+summingDouble [1.8014398509481982E16, 3.5, -3.5]: 434fffffffffffff
+averagingDouble [1.8014398509481982E16, 3.5, -3.5]: 4335555555555555
+summarizingDouble [1.8014398509481982E16, 3.5, -3.5]: 434fffffffffffff 4335555555555555
+reduce [1.8014398509481982E16, 3.5, -3.5]: 434ffffffffffffe
+sum [1.8014398509481982E16, 1.8014398509481982E16, 3.5]: 4360000000000000
+average [1.8014398509481982E16, 1.8014398509481982E16, 3.5]: 4345555555555555
+stats [1.8014398509481982E16, 1.8014398509481982E16, 3.5]: 4360000000000000 4345555555555555
+summingDouble [1.8014398509481982E16, 1.8014398509481982E16, 3.5]: 4360000000000000
+averagingDouble [1.8014398509481982E16, 1.8014398509481982E16, 3.5]: 4345555555555555
+summarizingDouble [1.8014398509481982E16, 1.8014398509481982E16, 3.5]: 4360000000000000 4345555555555555
+reduce [1.8014398509481982E16, 1.8014398509481982E16, 3.5]: 4360000000000000
+sum [1.0E16, 1.0, 1.0, 1.0, 1.0]: 4341c37937e08002
+average [1.0E16, 1.0, 1.0, 1.0, 1.0]: 431c6bf526340003
+stats [1.0E16, 1.0, 1.0, 1.0, 1.0]: 4341c37937e08002 431c6bf526340003
+summingDouble [1.0E16, 1.0, 1.0, 1.0, 1.0]: 4341c37937e08002
+averagingDouble [1.0E16, 1.0, 1.0, 1.0, 1.0]: 431c6bf526340003
+summarizingDouble [1.0E16, 1.0, 1.0, 1.0, 1.0]: 4341c37937e08002 431c6bf526340003
+reduce [1.0E16, 1.0, 1.0, 1.0, 1.0]: 4341c37937e08000
+sum [1.0E16, 0.5, 0.5]: 4341c37937e08000
+average [1.0E16, 0.5, 0.5]: 4327af4c4a80aaab
+stats [1.0E16, 0.5, 0.5]: 4341c37937e08000 4327af4c4a80aaab
+summingDouble [1.0E16, 0.5, 0.5]: 4341c37937e08000
+averagingDouble [1.0E16, 0.5, 0.5]: 4327af4c4a80aaab
+summarizingDouble [1.0E16, 0.5, 0.5]: 4341c37937e08000 4327af4c4a80aaab
+reduce [1.0E16, 0.5, 0.5]: 4341c37937e08000
+sum [1.0E300, 1.0E300, -1.0E300]: 7e37e43c8800759c
+average [1.0E300, 1.0E300, -1.0E300]: 7e1fdafb60009cd0
+stats [1.0E300, 1.0E300, -1.0E300]: 7e37e43c8800759c 7e1fdafb60009cd0
+summingDouble [1.0E300, 1.0E300, -1.0E300]: 7e37e43c8800759c
+averagingDouble [1.0E300, 1.0E300, -1.0E300]: 7e1fdafb60009cd0
+summarizingDouble [1.0E300, 1.0E300, -1.0E300]: 7e37e43c8800759c 7e1fdafb60009cd0
+reduce [1.0E300, 1.0E300, -1.0E300]: 7e37e43c8800759c
+sum [0.1, 0.2, 0.3]: 3fe3333333333333
+average [0.1, 0.2, 0.3]: 3fc9999999999999
+stats [0.1, 0.2, 0.3]: 3fe3333333333333 3fc9999999999999
+summingDouble [0.1, 0.2, 0.3]: 3fe3333333333333
+averagingDouble [0.1, 0.2, 0.3]: 3fc9999999999999
+summarizingDouble [0.1, 0.2, 0.3]: 3fe3333333333333 3fc9999999999999
+reduce [0.1, 0.2, 0.3]: 3fe3333333333334
+sum [1.0E-300, 1.0E300, 1.0E-300]: 7e37e43c8800759c
+average [1.0E-300, 1.0E300, 1.0E-300]: 7e1fdafb60009cd0
+stats [1.0E-300, 1.0E300, 1.0E-300]: 7e37e43c8800759c 7e1fdafb60009cd0
+summingDouble [1.0E-300, 1.0E300, 1.0E-300]: 7e37e43c8800759c
+averagingDouble [1.0E-300, 1.0E300, 1.0E-300]: 7e1fdafb60009cd0
+summarizingDouble [1.0E-300, 1.0E300, 1.0E-300]: 7e37e43c8800759c 7e1fdafb60009cd0
+reduce [1.0E-300, 1.0E300, 1.0E-300]: 7e37e43c8800759c
+sum [1.8014398509481982E16, 2.5]: 4350000000000000
+average [1.8014398509481982E16, 2.5]: 4340000000000000
+stats [1.8014398509481982E16, 2.5]: 4350000000000000 4340000000000000
+summingDouble [1.8014398509481982E16, 2.5]: 4350000000000000
+averagingDouble [1.8014398509481982E16, 2.5]: 4340000000000000
+summarizingDouble [1.8014398509481982E16, 2.5]: 4350000000000000 4340000000000000
+reduce [1.8014398509481982E16, 2.5]: 4350000000000000
+sum [1.8014398509481982E16, 3.0]: 4350000000000000
+average [1.8014398509481982E16, 3.0]: 4340000000000000
+stats [1.8014398509481982E16, 3.0]: 4350000000000000 4340000000000000
+summingDouble [1.8014398509481982E16, 3.0]: 4350000000000000
+averagingDouble [1.8014398509481982E16, 3.0]: 4340000000000000
+summarizingDouble [1.8014398509481982E16, 3.0]: 4350000000000000 4340000000000000
+reduce [1.8014398509481982E16, 3.0]: 4350000000000000
+sum [1.8014398509481982E16, 4.5]: 4350000000000001
+average [1.8014398509481982E16, 4.5]: 4340000000000001
+stats [1.8014398509481982E16, 4.5]: 4350000000000001 4340000000000001
+summingDouble [1.8014398509481982E16, 4.5]: 4350000000000001
+averagingDouble [1.8014398509481982E16, 4.5]: 4340000000000001
+summarizingDouble [1.8014398509481982E16, 4.5]: 4350000000000001 4340000000000001
+reduce [1.8014398509481982E16, 4.5]: 4350000000000001
+sum [9.007199254740992E15, 1.5]: 4340000000000001
+average [9.007199254740992E15, 1.5]: 4330000000000001
+stats [9.007199254740992E15, 1.5]: 4340000000000001 4330000000000001
+summingDouble [9.007199254740992E15, 1.5]: 4340000000000001
+averagingDouble [9.007199254740992E15, 1.5]: 4330000000000001
+summarizingDouble [9.007199254740992E15, 1.5]: 4340000000000001 4330000000000001
+reduce [9.007199254740992E15, 1.5]: 4340000000000001
+sum [9.007199254740992E15, 1.5]: 4340000000000001
+average [9.007199254740992E15, 1.5]: 4330000000000001
+stats [9.007199254740992E15, 1.5]: 4340000000000001 4330000000000001
+summingDouble [9.007199254740992E15, 1.5]: 4340000000000001
+averagingDouble [9.007199254740992E15, 1.5]: 4330000000000001
+summarizingDouble [9.007199254740992E15, 1.5]: 4340000000000001 4330000000000001
+reduce [9.007199254740992E15, 1.5]: 4340000000000001
+sum [9.007199254740992E15, 1.0, 1.0]: 4340000000000001
+average [9.007199254740992E15, 1.0, 1.0]: 4325555555555557
+stats [9.007199254740992E15, 1.0, 1.0]: 4340000000000001 4325555555555557
+summingDouble [9.007199254740992E15, 1.0, 1.0]: 4340000000000001
+averagingDouble [9.007199254740992E15, 1.0, 1.0]: 4325555555555557
+summarizingDouble [9.007199254740992E15, 1.0, 1.0]: 4340000000000001 4325555555555557
+reduce [9.007199254740992E15, 1.0, 1.0]: 4340000000000000
+combine halves: 434fffffffffffff 433fffffffffffff
+combine halves swapped: 434fffffffffffff 433fffffffffffff
+combine negative: c34fffffffffffff
+combine with compensation: 4350000000000002
+combine with compensation 2: 4350000000000002
+accept one by one: 434fffffffffffff
+sum after sum: 434fffffffffffff 434fffffffffffff
+Int subclass: MyInt{count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
+Long subclass: MyLong{count=0, sum=0, min=9223372036854775807, average=0.000000, max=-9223372036854775808}
+Double subclass: MyDouble{count=0, sum=0.000000, min=Infinity, average=0.000000, max=-Infinity}
+Long subclass filled: MyLong{count=2, sum=12, min=5, average=6.000000, max=7}
+Double subclass filled: MyDouble{count=2, sum=12.250000, min=5.000000, average=6.125000, max=7.250000}
+Int subclass filled: MyInt{count=2, sum=-2, min=-7, average=-1.000000, max=5}
+Long anonymous: {count=0, sum=0, min=9223372036854775807, average=0.000000, max=-9223372036854775808}
+Double anonymous: {count=0, sum=0.000000, min=Infinity, average=0.000000, max=-Infinity}
+Long local class: Local{count=0, sum=0, min=9223372036854775807, average=0.000000, max=-9223372036854775808}
+Double local class: Local{count=0, sum=0.000000, min=Infinity, average=0.000000, max=-Infinity}
+Long dollar name: Odd$Name{count=0, sum=0, min=9223372036854775807, average=0.000000, max=-9223372036854775808}
+Long plain: LongSummaryStatistics{count=0, sum=0, min=9223372036854775807, average=0.000000, max=-9223372036854775808}
+Double plain: DoubleSummaryStatistics{count=0, sum=0.000000, min=Infinity, average=0.000000, max=-Infinity}
+Int plain: IntSummaryStatistics{count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
+Long from stream: LongSummaryStatistics{count=2, sum=3, min=1, average=1.500000, max=2}
+Double from stream: DoubleSummaryStatistics{count=2, sum=3.000000, min=1.000000, average=1.500000, max=2.000000}
+Long subclass via collect: MyLong{count=2, sum=3, min=1, average=1.500000, max=2}
+Double subclass via collect: MyDouble{count=2, sum=3.000000, min=1.000000, average=1.500000, max=2.000000}
+Long subclass class name: MyLong
+ints size and bounds: !java.lang.IllegalArgumentException: size must be non-negative
+ints size and equal bounds: !java.lang.IllegalArgumentException: size must be non-negative
+ints size ok bounds bad: !java.lang.IllegalArgumentException: bound must be greater than origin
+ints size bad bounds ok: !java.lang.IllegalArgumentException: size must be non-negative
+ints size MIN and bounds: !java.lang.IllegalArgumentException: size must be non-negative
+longs size and bounds: !java.lang.IllegalArgumentException: size must be non-negative
+longs size ok bounds bad: !java.lang.IllegalArgumentException: bound must be greater than origin
+longs size bad bounds ok: !java.lang.IllegalArgumentException: size must be non-negative
+doubles size and bounds: !java.lang.IllegalArgumentException: size must be non-negative
+doubles size ok bounds bad: !java.lang.IllegalArgumentException: bound must be greater than origin
+doubles size bad bounds ok: !java.lang.IllegalArgumentException: size must be non-negative
+doubles size and NaN: !java.lang.IllegalArgumentException: size must be non-negative
+doubles size ok and NaN: !java.lang.IllegalArgumentException: bound must be greater than origin
+doubles size ok origin NaN: !java.lang.IllegalArgumentException: bound must be greater than origin
+doubles infinite origin: 3
+TLR ints size and bounds: !java.lang.IllegalArgumentException: size must be non-negative
+TLR longs size and bounds: !java.lang.IllegalArgumentException: size must be non-negative
+TLR doubles size and bounds: !java.lang.IllegalArgumentException: size must be non-negative
+TLR ints bounded no size: !java.lang.IllegalArgumentException: bound must be greater than origin
+TLR ints size negative alone: !java.lang.IllegalArgumentException: size must be non-negative
+TLR longs size negative alone: !java.lang.IllegalArgumentException: size must be non-negative
+TLR doubles size negative alone: !java.lang.IllegalArgumentException: size must be non-negative
+subclass ints size and bounds: !java.lang.IllegalArgumentException: size must be non-negative
+ints full range: [5, -2147483648, -1] | nextInt() nextInt() nextInt() nextInt()
+ints full range unbounded size: [5, -2147483648, -1] | nextInt() nextInt() nextInt() nextInt()
+ints overflowing range: [-2000000000, 1999999999, 7, -2000000000] | nextInt() nextInt() nextInt() nextInt() nextInt() nextInt() nextInt()
+ints half range: [-1000000000, -1000000000] | nextInt(2000000000) nextInt(2000000000)
+ints range just overflowing: [0, 0, 0] | nextInt(2147483647) nextInt(2147483647) nextInt(2147483647)
+ints range overflowing by one: [-1, 0, 1] | nextInt() nextInt() nextInt()
+ints range origin MIN: [-5, -2147483648, -5] | nextInt() nextInt() nextInt() nextInt() nextInt()
+ints range bound MAX: [0, 0, 0] | nextInt(2147483647) nextInt(2147483647) nextInt(2147483647)
+ints small range: [5, 5] | nextInt(5) nextInt(5)
+ints power of two: [0, 0] | nextInt(16) nextInt(16)
+ints one value: [5, 5] | nextInt(1) nextInt(1)
+ints unbounded: [3, 4, 3] | nextInt() nextInt() nextInt()
+ints unbounded infinite: [3, 4, 3] | nextInt() nextInt() nextInt()
+longs full range: [5, -9223372036854775808, -1] | nextLong() nextLong() nextLong() nextLong()
+longs overflowing range: [-9223372036854775806, -5, 7] | nextLong() nextLong() nextLong() nextLong()
+longs power of two: [13, 14] | nextLong() nextLong()
+longs small range: [6, 7] | nextLong() nextLong()
+longs rejection: [3, 3] | nextLong() nextLong()
+longs unbounded: [3, 4, 3] | nextLong() nextLong() nextLong()
+doubles bounded: [12.5, 15.0, 19.999999999990003] | nextDouble() nextDouble() nextDouble()
+doubles bounded at the top: [0.9999999999999999, 0.9999999999999999] | nextDouble() nextDouble()
+doubles unbounded: [0.25, 0.5] | nextDouble() nextDouble()
+doubles infinite bound: [1.7976931348623157E308, 1.7976931348623157E308] | nextDouble() nextDouble()

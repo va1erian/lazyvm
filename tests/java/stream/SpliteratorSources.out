@@ -1,0 +1,153 @@
+constants: 16 1 4 64 256 1024 4096 16384
+ArrayList: ORDERED|SIZED|SUBSIZED exact=3 est=3
+ArrayList empty: ORDERED|SIZED|SUBSIZED exact=0 est=0
+LinkedList: ORDERED|SIZED|SUBSIZED exact=3 est=3
+Vector: ORDERED|SIZED|SUBSIZED exact=3 est=3
+Stack: ORDERED|SIZED|SUBSIZED exact=3 est=3
+ArrayDeque: ORDERED|SIZED|NONNULL|SUBSIZED exact=3 est=3
+PriorityQueue: SIZED|NONNULL|SUBSIZED exact=3 est=3
+HashSet: DISTINCT|SIZED exact=3 est=3
+LinkedHashSet: ORDERED|DISTINCT|SIZED|SUBSIZED exact=3 est=3
+TreeSet: ORDERED|DISTINCT|SORTED|SIZED exact=3 est=3
+TreeSet comparator: ORDERED|DISTINCT|SORTED|SIZED exact=3 est=3
+TreeSet headSet: ORDERED|DISTINCT|SORTED exact=-1 est=9223372036854775807
+TreeSet descendingSet: ORDERED|DISTINCT|SIZED exact=3 est=3
+EnumSet: DISTINCT|SIZED|SUBSIZED exact=2 est=2
+HashMap keySet: DISTINCT|SIZED exact=3 est=3
+HashMap values: SIZED exact=3 est=3
+HashMap entrySet: DISTINCT|SIZED exact=3 est=3
+LinkedHashMap keySet: ORDERED|DISTINCT|SIZED|SUBSIZED exact=3 est=3
+LinkedHashMap values: ORDERED|SIZED|SUBSIZED exact=3 est=3
+LinkedHashMap entrySet: ORDERED|DISTINCT|SIZED|SUBSIZED exact=3 est=3
+TreeMap keySet: ORDERED|DISTINCT|SORTED|SIZED exact=3 est=3
+TreeMap descendingKeySet: ORDERED|DISTINCT|SIZED exact=3 est=3
+TreeMap values: ORDERED|SIZED exact=3 est=3
+TreeMap entrySet: ORDERED|DISTINCT|SORTED|SIZED exact=3 est=3
+Arrays.asList: ORDERED|SIZED|SUBSIZED exact=3 est=3
+subList: ORDERED|SIZED|SUBSIZED exact=2 est=2
+Collections.emptyList: SIZED|SUBSIZED exact=0 est=0
+Collections.emptySet: SIZED|SUBSIZED exact=0 est=0
+Collections.singletonList: ORDERED|DISTINCT|SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=1 est=1
+Collections.singleton: ORDERED|DISTINCT|SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=1 est=1
+Collections.nCopies: ORDERED|SIZED|SUBSIZED exact=3 est=3
+Collections.unmodifiableList: ORDERED|SIZED|SUBSIZED exact=2 est=2
+Collections.unmodifiableSet: ORDERED|DISTINCT|SORTED|SIZED exact=2 est=2
+Collections.unmodifiableCollection: ORDERED|SIZED|SUBSIZED exact=2 est=2
+Collections.unmodifiableMap values: SIZED exact=3 est=3
+Collections.unmodifiableMap keySet: ORDERED|DISTINCT|SORTED|SIZED exact=3 est=3
+AbstractList subclass: ORDERED|SIZED|SUBSIZED exact=3 est=3
+AbstractSet subclass: DISTINCT|SIZED|SUBSIZED exact=2 est=2
+AbstractCollection subclass: SIZED|SUBSIZED exact=2 est=2
+AbstractQueue subclass: SIZED|SUBSIZED exact=2 est=2
+Iterable default: - exact=-1 est=9223372036854775807
+ConcurrentHashMap keySet: DISTINCT|NONNULL|CONCURRENT exact=-1 est=3
+ConcurrentHashMap values: NONNULL|CONCURRENT exact=-1 est=3
+ConcurrentHashMap entrySet: DISTINCT|NONNULL|CONCURRENT exact=-1 est=3
+ConcurrentSkipListSet: ORDERED|DISTINCT|SORTED|NONNULL|CONCURRENT exact=-1 est=2147483647
+CopyOnWriteArrayList: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+CopyOnWriteArraySet: DISTINCT|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+ConcurrentLinkedQueue: ORDERED|NONNULL|CONCURRENT exact=-1 est=9223372036854775807
+LinkedBlockingQueue: ORDERED|NONNULL|CONCURRENT exact=-1 est=3
+ArrayBlockingQueue: ORDERED|NONNULL|CONCURRENT exact=-1 est=3
+Arrays.spliterator: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+Arrays.spliterator range: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=2 est=2
+Arrays.spliterator int: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+Arrays.spliterator int range: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=1 est=1
+Arrays.spliterator long: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+Arrays.spliterator double: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=0 est=0
+Arrays.stream spliterator: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=2 est=2
+Arrays.stream range spliterator: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=1 est=1
+Arrays.stream int: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=2 est=2
+Arrays.stream long: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=2 est=2
+Arrays.stream double: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=2 est=2
+Arrays.asList stream: ORDERED|SIZED|SUBSIZED exact=2 est=2
+Stream.of one: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=1 est=1
+Stream.of many: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+Stream.empty: SIZED|SUBSIZED exact=0 est=0
+Stream.builder: ORDERED|SIZED|SUBSIZED exact=2 est=2
+Stream.builder one: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=1 est=1
+Stream.builder empty: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=0 est=0
+Stream.iterate: ORDERED|IMMUTABLE exact=-1 est=9223372036854775807
+Stream.generate: IMMUTABLE exact=-1 est=9223372036854775807
+Stream.concat: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=2 est=2
+Stream.concat unsized: IMMUTABLE exact=-1 est=9223372036854775807
+ArrayList stream: ORDERED|SIZED|SUBSIZED exact=3 est=3
+HashSet stream: DISTINCT|SIZED exact=3 est=3
+TreeSet stream: ORDERED|DISTINCT|SORTED|SIZED exact=3 est=3
+map: ORDERED|SIZED|SUBSIZED exact=3 est=3
+filter: ORDERED exact=-1 est=3
+peek: ORDERED|SIZED|SUBSIZED exact=3 est=3
+sorted: ORDERED|SORTED|SIZED|SUBSIZED exact=3 est=3
+sorted cmp: ORDERED|SIZED|SUBSIZED exact=3 est=3
+sorted on TreeSet: ORDERED|DISTINCT|SORTED|SIZED exact=3 est=3
+distinct: ORDERED|DISTINCT exact=-1 est=3
+distinct on HashSet: DISTINCT exact=-1 est=3
+limit: ORDERED exact=-1 est=3
+limit beyond: ORDERED exact=-1 est=3
+skip: ORDERED exact=-1 est=3
+skip beyond: ORDERED exact=-1 est=3
+unordered: SIZED|SUBSIZED exact=3 est=3
+unordered HashSet: DISTINCT|SIZED exact=3 est=3
+flatMap: ORDERED exact=-1 est=3
+mapToInt: ORDERED|SIZED|SUBSIZED exact=3 est=3
+mapToInt sorted: ORDERED|SORTED|SIZED|SUBSIZED exact=3 est=3
+boxed: ORDERED|SIZED|SUBSIZED exact=3 est=3
+boxed range: ORDERED|SIZED|SUBSIZED exact=3 est=3
+map range: ORDERED|SIZED|SUBSIZED exact=3 est=3
+parallel: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+sequential: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+iterate limit: ORDERED exact=-1 est=9223372036854775807
+generate limit: - exact=-1 est=9223372036854775807
+sorted limit: ORDERED|SORTED exact=-1 est=3
+filter sorted: ORDERED|SORTED exact=-1 est=3
+IntStream.of: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+IntStream.of one: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=1 est=1
+IntStream.empty: SIZED|SUBSIZED exact=0 est=0
+IntStream.range: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=3 est=3
+IntStream.range empty: SIZED|SUBSIZED exact=0 est=0
+IntStream.rangeClosed: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=4 est=4
+IntStream.iterate: ORDERED|NONNULL|IMMUTABLE exact=-1 est=9223372036854775807
+IntStream.generate: IMMUTABLE exact=-1 est=9223372036854775807
+IntStream.concat: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+IntStream.builder: ORDERED|SIZED|SUBSIZED exact=2 est=2
+IntStream sorted: ORDERED|SORTED|SIZED|SUBSIZED exact=2 est=2
+IntStream distinct: ORDERED exact=-1 est=2
+IntStream map range: ORDERED|SIZED|SUBSIZED exact=3 est=3
+IntStream filter range: ORDERED|DISTINCT|SORTED exact=-1 est=3
+IntStream limit range: ORDERED|DISTINCT|SORTED exact=-1 est=3
+LongStream.of: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+LongStream.range: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=3 est=3
+LongStream.rangeClosed: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=4 est=4
+LongStream.empty: SIZED|SUBSIZED exact=0 est=0
+LongStream.iterate: ORDERED|NONNULL|IMMUTABLE exact=-1 est=9223372036854775807
+DoubleStream.of: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=3 est=3
+DoubleStream.empty: SIZED|SUBSIZED exact=0 est=0
+DoubleStream.iterate: ORDERED|NONNULL|IMMUTABLE exact=-1 est=9223372036854775807
+DoubleStream.generate: IMMUTABLE exact=-1 est=9223372036854775807
+DoubleStream sorted: ORDERED|SORTED|SIZED|SUBSIZED exact=2 est=2
+DoubleStream.builder: ORDERED|SIZED|IMMUTABLE|SUBSIZED exact=1 est=1
+String chars: ORDERED|SIZED|SUBSIZED exact=3 est=3
+String codePoints: ORDERED exact=-1 est=9223372036854775807
+String empty chars: ORDERED|SIZED|SUBSIZED exact=0 est=0
+StringBuilder chars: ORDERED|SIZED|SUBSIZED exact=3 est=3
+StringBuffer codePoints: ORDERED exact=-1 est=9223372036854775807
+CharSequence chars: ORDERED|SIZED|SUBSIZED exact=3 est=3
+BitSet stream: ORDERED|DISTINCT|SORTED|SIZED|SUBSIZED exact=3 est=3
+BitSet empty stream: ORDERED|DISTINCT|SORTED|SIZED|SUBSIZED exact=0 est=0
+Random ints: SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=9223372036854775807 est=9223372036854775807
+Random ints size: SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=5 est=5
+Random ints range: SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=5 est=5
+Random longs size: SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=5 est=5
+Random doubles size: SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=5 est=5
+Random doubles: SIZED|NONNULL|IMMUTABLE|SUBSIZED exact=9223372036854775807 est=9223372036854775807
+Map entry stream: ORDERED|DISTINCT|SORTED|SIZED exact=3 est=3
+comparator natural: null
+comparator custom same: true
+comparator unsorted: java.lang.IllegalStateException
+comparator unsorted stream: java.lang.IllegalStateException
+comparator sorted stream: null
+comparator sorted stream custom: java.lang.IllegalStateException
+comparator range: null
+comparator IntStream sorted: null
+comparator Arrays.spliterator: java.lang.IllegalStateException
+hasCharacteristics: true false true false

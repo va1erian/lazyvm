@@ -71,4 +71,9 @@ public interface List<E> extends Collection<E> {
     ListIterator<E> listIterator(int index);
 
     List<E> subList(int fromIndex, int toIndex);
+
+    @Override
+    default Spliterator<E> spliterator() {
+        return Spliterators.spliterator(this, Spliterator.ORDERED);
+    }
 }

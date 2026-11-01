@@ -1,0 +1,100 @@
+  after first: got10 true  | o1 i1 in10 in100 in1000
+flatMap spliterator tryAdvance then rest: got10 true 100,1000,20,200,2000, | o2 i2 in20 in200 in2000
+  after next: 10 | o1 i1 in10 in100 in1000
+flatMap iterator next then rest: 10 then 100,1000,20,200,2000, | o2 i2 in20 in200 in2000
+flatMap iterator next hasNext next rest: 10 true 100 then 1000,20,200,2000,30,300,3000, | i1 in10 in100 in1000 i2 in20 in200 in2000 i3 in30 in300 in3000
+flatMap spliterator two tryAdvance then rest: [10, 100] then 1000,20,200,2000, | i1 in10 in100 in1000 i2 in20 in200 in2000
+  after next: s10 | i1 in10 m10 in100 m100 in1000 m1000
+flatMap map iterator next then rest: s10 then s100,s1000,s20,s200,s2000, | i2 in20 m20 in200 m200 in2000 m2000
+  after first: [10] | i1 in10 f10 in100 f100 in1000 f1000
+flatMap filter spliterator tryAdvance then rest: [10] then 1000,20,200,2000, | i2 in20 f20 in200 f200 in2000 f2000
+  after hasNext: - | i1 in10 q10 in100 q100 in1000 q1000
+  after two next: - | 
+flatMap peek iterator: 1000,20,200,2000, | i2 in20 q20 in200 q200 in2000 q2000
+  after first: [10] | i1 in10 in100 in1000
+concat of flatMaps spliterator: [10] then 100,1000,20,200,2000, | i2 in20 in200 in2000
+  after next: 10 | i1 in10 in100 in1000
+concat of flatMaps iterator: 10 then 100,1000,20,200,2000, | i2 in20 in200 in2000
+  after next: 10 | o1 i1 in10 in100 in1000
+flatMap limit iterator: 10 then 100,1000,20, | o2 i2 in20
+  after next: 100 | o1 i1 in10 in100 in1000
+flatMap skip iterator: 100 then 1000,20,200,2000, | o2 i2 in20 in200 in2000
+flatMap distinct spliterator: [1] then 2, | 
+  after first: got1  | o1 in1 in10 in100
+IntStream flatMap spliterator: got1 10,100,2,20,200, | o2 in2 in20 in200
+  after nextInt: 1 | in1 in10 in100
+IntStream flatMap iterator: 1 then 10,100,2,20,200, | in2 in20 in200
+LongStream flatMap iterator: 1 then 10,2,20, | 
+DoubleStream flatMap spliterator: [1.0] then 0.5,2.0,1.0, | 
+flatMapToInt iterator: 97 then 98,99, | 
+flatMap null and empty inner: true 3 4, | 
+  after next: 10 | o2 o1 i1 in10 in100 in1000 i2 in20 in200 in2000
+sorted flatMap iterator: 10 then 100,1000,20,200,2000, | 
+  after next: 1 | o2 o1
+flatMap sorted iterator: 1 then 2,6,7, | 
+  created: - | 
+  hasNext: - | a3 a1 a2 b1 b2 b3
+  next: - | 
+  hasNext next: - | 
+sorted peek iterator: 3, | 
+  created: - | 
+  tryAdvance: - | a3 a1 a2 b1 b2 b3
+  tryAdvance: - | 
+sorted peek spliterator: 3, | 
+  hasNext: - | o1 i1 in10 m10 in100 m100 in1000 m1000
+  hasNext again: - | 
+  next next: - | 
+  next: - | 
+  next: - | o2 i2 in20 m20 in200 m200 in2000 m2000
+flatMap map iterator hasNext: s200,s2000, | 
+  tryAdvance 1: - | o1 i1 in10 m10 in100 m100 in1000 m1000
+  tryAdvance 2: - | 
+  tryAdvance 3: - | 
+  tryAdvance 4: - | o2 i2 in20 m20 in200 m200 in2000 m2000
+flatMap map spliterator tryAdvance: s200,s2000, | 
+  hasNext: - | o1 i1 in10 in100
+  next next: - | 
+  hasNext at end: false | 
+flatMap limit 2 iterator: - | 
+  tryAdvance 1: - | o1 i1 in10 in100
+  tryAdvance 2: - | 
+  tryAdvance 3: false | 
+flatMap limit 2 spliterator: - | 
+  created: - | 
+  hasNext: false | a3 a1 a2
+sorted limit 0 iterator: - | 
+  tryAdvance: false | a3 a1 a2
+sorted limit 0 spliterator: - | 
+sorted limit 0 forEach: 0 | a3 a1 a2
+sorted limit 0 findFirst: Optional.empty | a3 a1 a2
+limit 0 sorted count: 0 | 
+limit 0 count: 0 | 
+limit 0 map sorted iterator: false | 
+IntStream sorted limit 0: 0 | a3 a1 a2
+IntStream limit 0: 0 | 
+LongStream sorted limit 0: 0 | a3 a1 a2
+DoubleStream sorted limit 0: 0.0 | a3.0 a1.0 a2.0
+  collected: [1, 11] | close1
+flatMap onClose limit sorted: [1, 11] | 
+  next: - | close1
+  next: - | 
+  hasNext: - | 
+flatMap onClose limit iterator: - | 
+flatMap onClose findFirst: Optional[1] | o1 in1 close1
+nested flatMap findFirst: Optional[10] | o1 m1 n10 n100 c1 C1
+  next: 10 | o1 m1 n10 n100 m2 n20 n200
+nested flatMap iterator: 10 then 100,20,200,20,200,30,300, | o2 m2 n20 n200 m3 n30 n300
+nested flatMap anyMatch: true | o1 m1 n10 n100 m2 n20 n200
+list limit 1 peek add count: !java.util.ConcurrentModificationException | 
+list peek add limit 1 count: !java.util.ConcurrentModificationException | 
+list limit 1 peek add forEach: !java.util.ConcurrentModificationException | 
+list limit 1 peek add iterator: !java.util.ConcurrentModificationException | 
+list limit 2 peek add iterator: !java.util.ConcurrentModificationException | 
+set limit 1 peek add count: !java.util.ConcurrentModificationException | 
+set limit 1 peek remove count: !java.util.ConcurrentModificationException | 
+list findFirst peek add: !java.util.ConcurrentModificationException | 
+list anyMatch add: !java.util.ConcurrentModificationException | 
+list limit 2 add: !java.util.ConcurrentModificationException | 
+linkedlist limit 1 peek add count: !java.util.ConcurrentModificationException | 
+arraydeque limit 1 peek add count: 1 | 
+treeset limit 1 peek add count: !java.util.ConcurrentModificationException | 

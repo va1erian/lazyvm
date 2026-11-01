@@ -15,6 +15,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 import lazy.internal.FileSystem;
 
 /**
@@ -263,5 +264,31 @@ public final class Files {
     public static Path write(Path path, Iterable<? extends CharSequence> lines, OpenOption... options)
             throws IOException {
         return write(path, lines, StandardCharsets.UTF_8, options);
+    }
+
+    public static Stream<String> lines(Path path, Charset cs) throws IOException {
+        java.util.Objects.requireNonNull(cs);
+        return TreeStreams.lines(newBufferedReader(path, cs));
+    }
+
+    public static Stream<String> lines(Path path) throws IOException {
+        return lines(path, StandardCharsets.UTF_8);
+    }
+
+    public static Stream<Path> list(Path dir) throws IOException {
+        return TreeStreams.list(dir);
+    }
+
+    public static Stream<Path> walk(Path start, int maxDepth, FileVisitOption... options) throws IOException {
+        return TreeStreams.walk(start, maxDepth, options);
+    }
+
+    public static Stream<Path> walk(Path start, FileVisitOption... options) throws IOException {
+        return walk(start, Integer.MAX_VALUE, options);
+    }
+
+    public static Stream<Path> find(Path start, int maxDepth, java.util.function.BiPredicate<Path, BasicFileAttributes> matcher,
+            FileVisitOption... options) throws IOException {
+        return TreeStreams.find(start, maxDepth, matcher, options);
     }
 }

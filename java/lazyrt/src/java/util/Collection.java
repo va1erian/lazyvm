@@ -1,5 +1,7 @@
 package java.util;
 
+import java.util.stream.StreamSupport;
+import java.util.stream.Stream;
 import java.util.function.Predicate;
 
 public interface Collection<E> extends Iterable<E> {
@@ -44,4 +46,16 @@ public interface Collection<E> extends Iterable<E> {
     boolean equals(Object o);
 
     int hashCode();
+
+    default Spliterator<E> spliterator() {
+        return Spliterators.spliterator(this, 0);
+    }
+
+    default Stream<E> stream() {
+        return StreamSupport.stream(spliterator(), false);
+    }
+
+    default Stream<E> parallelStream() {
+        return StreamSupport.stream(spliterator(), true);
+    }
 }
