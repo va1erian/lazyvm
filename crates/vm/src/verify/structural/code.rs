@@ -19,6 +19,14 @@ impl Layout {
         self.starts.get(pc).copied().unwrap_or(false)
     }
 
+    /// The instruction after the one at `pc`, or the code's length.
+    pub fn next(&self, pc: usize) -> usize {
+        let rest = self.starts.get(pc + 1..).unwrap_or(&[]);
+        rest.iter()
+            .position(|&s| s)
+            .map_or(self.starts.len(), |d| pc + 1 + d)
+    }
+
     fn target_ok(&self, target: i64) -> bool {
         usize::try_from(target).is_ok_and(|t| self.is_start(t))
     }
@@ -36,9 +44,8 @@ pub(crate) fn check_code(cf: &ClassFile, code: &Code) -> Result<Layout, Fail> {
     let layout = layout(bytes)?;
     let mut pc = 0;
     while pc < bytes.len() {
-        let len = decode::length(bytes, pc).map_err(|e| fail_at(pc, e))?;
         check_instruction(cf, code, &layout, pc).map_err(|e| fail_at(pc, e))?;
-        pc += len;
+        pc = layout.next(pc);
     }
     for h in &code.handlers {
         check_handler(cf, h, &layout).map_err(|e| fail_at(usize::from(h.start_pc), e))?;

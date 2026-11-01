@@ -86,6 +86,12 @@ impl Array {
         (bytes < PROBE_BYTES || can_allocate(bytes)).then(|| Array::new(kind, len))
     }
 
+    /// A copy, or `None` if the OS has no memory for it.
+    pub fn try_duplicate(&self) -> Option<Array> {
+        let bytes = self.bytes();
+        (bytes < PROBE_BYTES || can_allocate(bytes)).then(|| self.duplicate())
+    }
+
     pub fn new(kind: ElemKind, len: usize) -> Array {
         match kind {
             ElemKind::Boolean | ElemKind::Byte => Array::Byte(vec![0; len].into()),

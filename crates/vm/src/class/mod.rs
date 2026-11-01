@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use classfile::{ClassFile, Code};
 
+pub(crate) use access::package_of;
 pub use path::ClassPath;
 pub use resolve::Resolved;
 

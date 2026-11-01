@@ -10,6 +10,11 @@ use crate::{Vm, VmError, VmResult};
 
 const ILLEGAL_ACCESS: &str = "java/lang/IllegalAccessError";
 
+/// `name`'s package, for the run-time package test (JVMS 5.3).
+pub(crate) fn package_of(name: &str) -> &str {
+    name.rsplit_once('/').map_or("", |(p, _)| p)
+}
+
 impl Vm {
     /// The class whose rights `from` has.
     fn accessor(&self, from: ClassId) -> ClassId {
@@ -18,11 +23,8 @@ impl Vm {
 
     /// JVMS 5.3: same defining loader and same package name.
     pub(crate) fn same_runtime_package(&self, a: ClassId, b: ClassId) -> bool {
-        let package = |c: ClassId| {
-            let name = &*self.class(c).name;
-            name.rfind('/').map_or("", |at| &name[..at])
-        };
-        self.class(a).from_boot == self.class(b).from_boot && package(a) == package(b)
+        self.class(a).from_boot == self.class(b).from_boot
+            && package_of(&self.class(a).name) == package_of(&self.class(b).name)
     }
 
     /// JVMS 5.4.4: `class` is public, or in the accessor's run-time package.

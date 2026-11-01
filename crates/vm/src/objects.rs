@@ -20,6 +20,11 @@ impl Vm {
     /// A new instance with default field values. The class must be an
     /// initialized, non-abstract instance class; callers check that.
     pub fn new_object(&mut self, class: ClassId) -> VmResult<Ref> {
+        // Natives make instances of classes that were never initialized, and
+        // an instance's methods can then run: they must be verified by now.
+        if !self.class(class).verified {
+            self.link_class(class)?;
+        }
         let body = Body::Fields(self.class(class).instance_template.clone());
         self.heap.alloc(Object { class, body })
     }

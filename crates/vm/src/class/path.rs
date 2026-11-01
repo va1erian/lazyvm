@@ -106,9 +106,9 @@ fn collect_class_names(dir: &Path, prefix: &str, out: &mut Vec<String>) {
     };
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().into_owned();
-        let path = entry.path();
-        if path.is_dir() {
-            collect_class_names(&path, &format!("{prefix}{name}/"), out);
+        // Not through a link to a directory, which could lead back up here.
+        if entry.file_type().is_ok_and(|t| t.is_dir()) {
+            collect_class_names(&entry.path(), &format!("{prefix}{name}/"), out);
         } else if let Some(stem) = name.strip_suffix(".class") {
             out.push(format!("{prefix}{stem}"));
         }

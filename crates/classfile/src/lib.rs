@@ -131,8 +131,8 @@ impl ClassFile {
             let i = r.u2()?;
             interfaces.push(class_at(&r, &pool, i)?);
         }
-        let fields = parse_members(&mut r, &pool, false)?;
-        let methods = parse_members(&mut r, &pool, true)?;
+        let fields = parse_members(&mut r, &pool, false, major)?;
+        let methods = parse_members(&mut r, &pool, true, major)?;
         let mut cf = ClassFile {
             minor,
             major,
@@ -263,13 +263,14 @@ fn parse_members(
     r: &mut Reader<'_>,
     pool: &ConstantPool,
     methods: bool,
+    major: u16,
 ) -> Result<Vec<Member>, FormatError> {
     let count = r.u2()?;
     let mut out: Vec<Member> = Vec::with_capacity(usize::from(count));
     // A set, not a scan: 65535 members must not cost 65535^2 comparisons.
     let mut seen = std::collections::HashSet::with_capacity(usize::from(count));
     for _ in 0..count {
-        let member = parse_member(r, pool, methods)?;
+        let member = parse_member(r, pool, methods, major)?;
         if !seen.insert((member.name.clone(), member.descriptor.clone())) {
             return Err(r.error(format!(
                 "duplicate member {}{}",
@@ -285,6 +286,7 @@ fn parse_member(
     r: &mut Reader<'_>,
     pool: &ConstantPool,
     method: bool,
+    major: u16,
 ) -> Result<Member, FormatError> {
     let access = r.u2()?;
     let name = pool.utf8(r.u2()?).map_err(|e| r.error(e))?.clone();
@@ -314,7 +316,7 @@ fn parse_member(
                 if member.code.is_some() {
                     return Err(r.error("two Code attributes"));
                 }
-                member.code = Some(attr::parse_code(body, pool)?);
+                member.code = Some(attr::parse_code(body, pool, major)?);
             }
             ("ConstantValue", false) => {
                 member.constant_value = Some(attr::parse_index(body, "ConstantValue")?);

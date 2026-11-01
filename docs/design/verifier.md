@@ -12,7 +12,8 @@ error or a working program, never a confused VM.
 
 ## When linking runs
 
-`Vm::initialize` links first, so a class is verified before any of its code can
+`Vm::initialize` and `Vm::new_object` link first (natives make instances of
+classes they never initialized), so a class is verified before any of its code can
 run. `Vm::link_class` verifies the superclass chain and all superinterfaces
 before the class itself: interface methods are reachable from a class whose
 initialization never touches the interface (JVMS 5.5 step 7 skips those without
@@ -45,13 +46,14 @@ that error propagates as itself (`tests/verify/bad/CatchUnloadable`).
   type checking fall back to inference, and the oracle does. Here it stays
   rejected (`bad/Version50NeedsFrames`).
 - **Generated lambda classes are verified too.** `Class::host` makes one part of
-  the class that linked it: resolution gives it the host's access, and its
-  `invokespecial` of the host's private `lambda$` methods counts as the host's.
+  the class that linked it: resolution gives it the host's access, and the
+  `invokespecial` rule and the protected check judge it as the host. A call site
+  that fails retries with the same class, so failing in a loop defines no more.
 - **Hostile input has a budget.** Types are interned to one small `Copy` value,
-  a frame stores only the locals it declares, and a handler's frame is compared
-  again only when the locals changed. A class then gets 2^30 slot comparisons and
-  copies, and a method's declared frames 2^24 slots; past either it is a
-  `VerifyError`. `verify/tests.rs` builds the worst cases.
+  a frame stores only the locals it declares, comparing frames copies neither, and
+  a handler's frame is compared again only when the locals changed. A class then
+  gets 2^30 units of work (slots compared or copied, members scanned), and a
+  method's declared frames 2^24 slots; past either it is a `VerifyError`. `verify/tests.rs` builds the worst cases.
 
 ## Where the oracle and the JVMS differ
 
@@ -66,11 +68,14 @@ except as marked. Each row has a test.
 | `putfield` before `super()` | not mentioned | allowed on a field the class declares | `good/PutfieldBeforeSuper` |
 | Handler across `<init>` | checked with the incoming state | also with the rewritten locals, as 4.10.1.9's note says | `bad/HandlerAround*` |
 | The protected check | looks at the class the reference names | looks from that class up, for the declaring class | `bad/ProtectedThroughMiddleClass` |
+| The protected check on `new` | the top of the stack after the call | the object being initialized | `bad/ProtectedInitUnderThis` |
+| Overriding a final method | any non-private, non-static one | not a package-private one of another package | `good/PackageFinalOtherPackage` |
 | `Object.clone` on an array | fails the protected check | allowed | `good/ObjectCloneOnArray` |
 | `invokespecial` of an interface method | nothing more than assignability | the interface must be a direct one | `bad/SpecialIndirectInterface` |
 | `<clinit>` that is not static (51+) | 4.6 asks for it to be static | loads, and never runs | `good/ClinitNotStaticIsIgnored` |
 | `<init>` in an interface | 4.6 forbids it | loads | `good/InterfaceInitLoads` |
 | Bad names in the pool, such as `a//b` | format error | **LazyVM follows the JVMS**: the oracle fails later, at resolution | `bad/MemberRefBadClassName` |
+| A long reaching a frame's stack of `top`, `top` | allowed | **LazyVM refuses**, as does a frame of one `top`: it keeps one entry per value, like its interpreter, and no compiler declares `top` on a stack | `bad/LongIntoTwoTops` |
 
 Timing differs in one way: the oracle reports a malformed `StackMapTable` when the
 class loads and LazyVM when it links, which only a `Class.forName(name, false, ...)`
@@ -97,7 +102,7 @@ Each limit is an error Java can catch, never an abort.
 |---|---|---|---|
 | Stack depth | `-Xss` | 16384 frames per MiB | `StackOverflowError` |
 | Heap | `-Xmx` | 256 MiB | `OutOfMemoryError` |
-| Memory the OS refuses | | | `OutOfMemoryError`, for arrays of 1 MiB and up |
+| Memory the OS refuses | | | `OutOfMemoryError`, for new and cloned arrays of 1 MiB and up (not exercised by a test: it needs a machine out of memory) |
 | Classes loaded | `-Xmaxclasses:<n>` | 2^20 | `OutOfMemoryError` |
 | Bytes of code in a method | `-Xmaxcode:<bytes>` | 65535, the format's own limit | `ClassFormatError` |
 

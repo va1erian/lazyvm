@@ -99,6 +99,8 @@ pub struct Vm {
     pub(crate) select_cache: HashMap<(ClassId, MethodRef), MethodRef>,
     /// Linked lambda call sites: (caller, InvokeDynamic index) to factory.
     pub(crate) lambda_sites: HashMap<(ClassId, u16, usize), MethodRef>,
+    /// Lambda classes of call sites that have not linked yet.
+    pub(crate) lambda_failed: HashMap<(ClassId, u16, usize), ClassId>,
     /// Numbers generated lambda class names.
     pub(crate) lambda_count: u64,
     /// System properties: values as UTF-16, so a path holds any Java string.
@@ -161,6 +163,7 @@ impl Vm {
             natives: HashMap::new(),
             select_cache: HashMap::new(),
             lambda_sites: HashMap::new(),
+            lambda_failed: HashMap::new(),
             lambda_count: 0,
             properties: BTreeMap::new(),
             options,

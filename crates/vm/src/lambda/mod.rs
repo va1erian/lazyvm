@@ -27,6 +27,8 @@ const FLAG_BRIDGES: i32 = 4;
 /// Everything a lambda class needs, read from the call site.
 pub(crate) struct Spec {
     pub class_name: String,
+    /// The class holding the call site.
+    pub caller: Arc<str>,
     pub interface: String,
     pub captured: Vec<FieldType>,
     pub sam_name: String,
@@ -114,13 +116,12 @@ impl Vm {
             .file
             .clone()
             .ok_or_else(|| error("no constant pool"))?;
-        // `-` cannot appear in a Java class name, so no user class collides.
-        let name = loop {
-            self.lambda_count += 1;
-            let name = format!("{}-Lambda-{}", self.class(caller).name, self.lambda_count);
-            if self.loaded_class(&name).is_none() && self.classpath.find_class(&name).is_none() {
-                break name;
-            }
+        // A site that failed before retries with its class, so failing in a
+        // loop defines no more classes and repeats the error (JVMS 5.4.3).
+        let earlier = self.lambda_failed.get(&key).copied();
+        let name = match earlier {
+            Some(c) => self.class(c).name.to_string(),
+            None => self.next_lambda_name(caller),
         };
         let linked = read_spec(&file, index, name)
             .and_then(|spec| spin::class_file(&spec).map(|b| (spec, b)));
@@ -133,13 +134,24 @@ impl Vm {
             Ok(Err(msg)) => return Err(self.link_error(&msg)),
             Err(e) => return Err(self.wrap_link_failure(e)),
         }
-        let boot = self.class(caller).from_boot;
-        let class = match self.define_class(&spec.class_name, &bytes, boot) {
-            Ok(c) => c,
-            Err(e) => return Err(self.wrap_link_failure(e)),
+        let class = match earlier {
+            Some(c) => c,
+            None => {
+                let boot = self.class(caller).from_boot;
+                let class = match self.define_class(&spec.class_name, &bytes, boot) {
+                    Ok(c) => c,
+                    Err(e) => return Err(self.wrap_link_failure(e)),
+                };
+                self.class_mut(class).host = Some(caller);
+                self.lambda_failed.insert(key, class);
+                class
+            }
         };
-        self.class_mut(class).host = Some(caller);
+        if let Err(e) = self.link_class(class) {
+            return Err(self.wrap_link_failure(e));
+        }
         self.initialize(class)?;
+        self.lambda_failed.remove(&key);
         // Initializing the interface can run code that links this same site;
         // the first link to finish wins, as in Java 8.
         if let Some(&m) = self.lambda_sites.get(&key) {
@@ -163,6 +175,17 @@ impl Vm {
         };
         self.lambda_sites.insert(key, factory);
         Ok(factory)
+    }
+
+    fn next_lambda_name(&mut self, caller: ClassId) -> String {
+        // `-` cannot appear in a Java class name, so no user class collides.
+        loop {
+            self.lambda_count += 1;
+            let name = format!("{}-Lambda-{}", self.class(caller).name, self.lambda_count);
+            if self.loaded_class(&name).is_none() && self.classpath.find_class(&name).is_none() {
+                return name;
+            }
+        }
     }
 }
 
@@ -252,6 +275,7 @@ fn read_spec(file: &Arc<ClassFile>, index: u16, class_name: String) -> Result<Sp
     bridges.retain(|b| *b != sam_desc);
     Ok(Spec {
         class_name,
+        caller: file.this_class.clone(),
         interface: interface.to_string(),
         captured: invoked_md.params,
         sam_name: sam_name.to_string(),

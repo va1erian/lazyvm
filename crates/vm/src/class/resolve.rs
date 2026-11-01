@@ -189,7 +189,7 @@ impl Vm {
         let method = self.method(m);
         let (access, is_static) = (method.access, method.is_static());
         // JVMS 6.5: an array's `clone` is public, though `Object`'s is protected.
-        if !self.class(owner).is_array() {
+        if !(self.class(owner).is_array() && &*r.name == "clone") {
             let what = format!(
                 "method {}.{}{}",
                 self.class(m.class).java_name(),

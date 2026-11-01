@@ -233,6 +233,10 @@ fn check_method(
     {
         return Err("arguments do not fit max_locals".into());
     }
+    // JVMS 4.7.5: what the attribute lists are classes.
+    for &e in &m.exceptions {
+        cf.pool.class_name(e)?;
+    }
     match &*m.name {
         "<clinit>" => {}
         "<init>" => check_init(m, md.ret.is_none())?,

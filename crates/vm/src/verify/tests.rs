@@ -28,6 +28,7 @@ impl Hierarchy for World {
             is_interface: name == "t/Iface",
             super_name,
             boot: name.starts_with("java/"),
+            members: 0,
         })
     }
 
@@ -194,6 +195,36 @@ fn many_handlers_stop_at_the_budget() {
         65535
     ];
     c.stack_map = Some(hostile_frames(16, 0).into());
+    finishes_quickly(&cf);
+}
+
+#[test]
+fn many_stores_under_many_handlers_stop_at_the_budget() {
+    // Each store moves the locals' version, so each handler is judged again,
+    // with a current frame far larger than the handler's declared one.
+    let mut code: Vec<u8> = vec![0x03, 0xc4, 0x36, 0xff, 0xfe];
+    code.extend((0..21000).flat_map(|_| [0x03, 0x3b]));
+    code.push(RET);
+    let end = (code.len() - 1) as u16;
+    let mut cf = class("()V", 1, 65535, &code, Pool::default());
+    let c = cf.methods[0]
+        .code
+        .as_mut()
+        .unwrap_or_else(|| panic!("code"));
+    c.handlers = (0..65535u32)
+        .map(|_| Handler {
+            start_pc: 0,
+            end_pc: end,
+            handler_pc: end,
+            catch_type: 0,
+        })
+        .collect();
+    let mut map = 1u16.to_be_bytes().to_vec();
+    map.extend_from_slice(&[255]);
+    map.extend_from_slice(&end.to_be_bytes());
+    map.extend_from_slice(&[0, 0, 0, 1, 7]);
+    map.extend_from_slice(&[0, 0]);
+    c.stack_map = Some(map.into());
     finishes_quickly(&cf);
 }
 

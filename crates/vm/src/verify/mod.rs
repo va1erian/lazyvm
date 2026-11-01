@@ -40,6 +40,8 @@ pub struct ClassInfo {
     pub super_name: Option<Arc<str>>,
     /// Loaded from the boot path: part of the run-time package (JVMS 5.3).
     pub boot: bool,
+    /// Fields and methods declared: what a member lookup in it costs.
+    pub members: usize,
 }
 
 /// The class world the checker asks about. A class that cannot be loaded is
@@ -122,7 +124,7 @@ fn verify_method<H: Hierarchy + ?Sized>(
     types: &mut vtype::Types<'_, H>,
     budget: &mut Budget,
 ) -> Result<(), Fail> {
-    check::not_overriding_final(cf, m, types)?;
+    check::not_overriding_final(cf, m, types, budget)?;
     let Some(code) = &m.code else {
         return Ok(());
     };

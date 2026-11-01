@@ -60,6 +60,9 @@ ATYPES = {"boolean": 4, "char": 5, "float": 6, "double": 7, "byte": 8, "short": 
 FLAGS = {"public": 1, "private": 2, "protected": 4, "static": 8, "final": 0x10, "super": 0x20, "synchronized": 0x20,
          "volatile": 0x40, "bridge": 0x40, "transient": 0x80, "varargs": 0x80, "native": 0x100, "interface": 0x200,
          "abstract": 0x400, "strict": 0x800, "synthetic": 0x1000, "annotation": 0x2000, "enum": 0x4000}
+METAFACTORY = ("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;"
+               "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)"
+               "Ljava/lang/invoke/CallSite;")
 SIMPLE_TYPES = {"top": 0, "int": 1, "float": 2, "double": 3, "long": 4, "null": 5, "uninitThis": 6}
 
 
@@ -72,6 +75,7 @@ class Pool:
         self.entries: list[bytes] = []
         self.index: dict[bytes, int] = {}
         self.count = 1
+        self.bootstraps: list[bytes] = []
 
     def add(self, entry: bytes, wide: bool = False) -> int:
         if entry in self.index:
@@ -204,13 +208,22 @@ def invoke_size(desc: str) -> int:
         size += 2 if desc[at] in "JD" else 1
         while desc[at] == "[":
             at += 1
-            size_fix = desc[at] in "JD"
-            if size_fix:
-                size -= 1
         if desc[at] == "L":
             at = desc.index(";", at)
         at += 1
     return size
+
+
+def lambda_site(args: list[str], pool: Pool) -> int:
+    """`invokedynamic <name> <type> <kind> <impl class> <impl name> <impl desc> <sam desc> <instantiated>`."""
+    meta = pool.member(10, "java/lang/invoke/LambdaMetafactory", "metafactory", METAFACTORY)
+    handle = pool.add(b"\x0f\x06" + struct.pack(">H", meta))
+    impl = pool.member(10, args[3], args[4], args[5])
+    target = pool.add(b"\x0f" + bytes([int(args[2])]) + struct.pack(">H", impl))
+    types = [pool.add(b"\x10" + struct.pack(">H", pool.utf8(d))) for d in args[6:8]]
+    pool.bootstraps.append(struct.pack(">HH", handle, 3) + struct.pack(">HHH", types[0], target, types[1]))
+    site = struct.pack(">HH", len(pool.bootstraps) - 1, pool.name_type(args[0], args[1]))
+    return pool.add(b"\x12" + site)
 
 
 def instruction(tokens: list[str], pc: int, pool: Pool, labels: dict[str, int]) -> bytes:
@@ -232,6 +245,9 @@ def instruction(tokens: list[str], pc: int, pool: Pool, labels: dict[str, int]) 
         args = args[1:] if args[0] == "interface" else args
         out = bytes([INVOKES[op]]) + struct.pack(">H", pool.member(tag, args[0], args[1], args[2]))
         return out + bytes([invoke_size(args[2]), 0]) if op == "invokeinterface" else out
+    if op == "invokedynamic":
+        # A label pass runs this twice, and only the last pass's sites count.
+        return b"\xba" + struct.pack(">H", lambda_site(args, pool)) + b"\0\0"
     if op in CLASS_OPS:
         return bytes([CLASS_OPS[op]]) + struct.pack(">H", pool.cls(args[0]))
     simple = {"bipush": lambda: b"\x10" + struct.pack(">b", int(args[0])),
@@ -261,19 +277,21 @@ def ldc_index(args: list[str], pool: Pool) -> int:
     raise AsmError(f"ldc {kind}")
 
 
-def code_lines(m: Method) -> tuple[list[list[str]], list[list[str]], list[list[str]], str | None]:
-    """Splits a body into instructions and labels, frames, handlers, raw frames."""
-    code, frames, handlers, raw = [], [], [], None
+def code_lines(m: Method) -> tuple[list[list[str]], list[list[str]], list[list[str]], list[str], str | None]:
+    """Splits a body into instructions and labels, frames, handlers, raw frames, Exceptions."""
+    code, frames, handlers, raw, exceptions = [], [], [], [], None
     for tokens in m.lines:
         if tokens[0] == "frame":
             frames.append(tokens[1:])
         elif tokens[0] == "handler":
             handlers.append(tokens[1:])
         elif tokens[0] == "rawframes":
-            raw = "".join(tokens[1:])
+            raw.append("".join(tokens[1:]))
+        elif tokens[0] == "exceptions":
+            exceptions = "".join(tokens[1:])
         else:
             code.append(tokens)
-    return code, frames, handlers, raw
+    return code, frames, handlers, raw, exceptions
 
 
 def assemble_code(code: list[list[str]], pool: Pool) -> tuple[bytes, dict[str, int]]:
@@ -282,7 +300,9 @@ def assemble_code(code: list[list[str]], pool: Pool) -> tuple[bytes, dict[str, i
     for tokens in code:
         if tokens[0].endswith(":"):
             labels[tokens[0][:-1]] = 0
+    first_site = len(pool.bootstraps)
     for _ in range(2):
+        del pool.bootstraps[first_site:]
         out = b""
         for tokens in code:
             if tokens[0].endswith(":"):
@@ -323,19 +343,21 @@ def method_bytes(m: Method, pool: Pool) -> bytes:
     head = struct.pack(">HHH", m.flags, pool.utf8(m.name), pool.utf8(m.desc))
     if not m.lines:
         return head + struct.pack(">H", 0)
-    code, frames, handlers, raw = code_lines(m)
+    code, frames, handlers, raw, exceptions = code_lines(m)
     body, labels = assemble_code(code, pool)
     table = struct.pack(">H", len(handlers))
     for h in handlers:
         catch = 0 if h[3] == "any" else pool.cls(h[3])
         table += struct.pack(">HHHH", labels[h[0]], labels[h[1]], labels[h[2]], catch)
-    attr = b""
-    if raw is not None or frames:
-        data = bytes.fromhex(raw) if raw is not None else stack_map(frames, pool, labels)
-        attr = struct.pack(">HI", pool.utf8("StackMapTable"), len(data)) + data
-    inner = struct.pack(">HHI", m.stack, m.locals, len(body)) + body + table
-    inner += struct.pack(">H", 1 if attr else 0) + attr
-    return head + struct.pack(">HHI", 1, pool.utf8("Code"), len(inner)) + inner
+    tables = [bytes.fromhex(r) for r in raw] or ([stack_map(frames, pool, labels)] if frames else [])
+    inner = struct.pack(">HHI", m.stack, m.locals, len(body)) + body + table + struct.pack(">H", len(tables))
+    for data in tables:
+        inner += struct.pack(">HI", pool.utf8("StackMapTable"), len(data)) + data
+    attrs = struct.pack(">HI", pool.utf8("Code"), len(inner)) + inner
+    if exceptions is None:
+        return head + struct.pack(">H", 1) + attrs
+    thrown = bytes.fromhex(exceptions)
+    return head + struct.pack(">H", 2) + attrs + struct.pack(">HI", pool.utf8("Exceptions"), len(thrown)) + thrown
 
 
 def class_bytes(c: Class) -> bytes:
@@ -350,7 +372,11 @@ def class_bytes(c: Class) -> bytes:
     body += struct.pack(">H", len(c.methods))
     for m in c.methods:
         body += method_bytes(m, pool)
-    body += struct.pack(">H", 0)
+    if pool.bootstraps:
+        data = struct.pack(">H", len(pool.bootstraps)) + b"".join(pool.bootstraps)
+        body += struct.pack(">HHI", 1, pool.utf8("BootstrapMethods"), len(data)) + data
+    else:
+        body += struct.pack(">H", 0)
     return b"\xca\xfe\xba\xbe" + struct.pack(">HH", 0, c.version) + pool.write() + body
 
 

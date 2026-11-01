@@ -135,25 +135,27 @@ impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
     /// JVMS 4.10.1.2 `isJavaAssignable`, on internal names and array
     /// descriptors. Interfaces count as `Object` here; `invokeinterface`
     /// checks the receiver when it runs.
-    fn java_assignable(&mut self, from: &str, to: &str) -> VmResult<bool> {
-        if from == to || to == OBJECT {
-            return Ok(true);
-        }
-        match (from.strip_prefix('['), to.strip_prefix('[')) {
-            (Some(f), Some(t)) => match (element_name(f), element_name(t)) {
-                (Some(f), Some(t)) => self.java_assignable(f, t),
-                // Primitive arrays: only the identity, which failed above.
-                _ => Ok(false),
-            },
-            // Observed: any interface, where JVMS 4.10.1.2 lists two
-            // (tests/verify/good/ArrayAsAnyInterface).
-            (Some(_), None) => Ok(self.hierarchy.info(to)?.is_interface),
-            (None, Some(_)) => Ok(false),
-            (None, None) => {
-                if self.hierarchy.info(to)?.is_interface {
-                    return Ok(true);
+    fn java_assignable(&mut self, mut from: &str, mut to: &str) -> VmResult<bool> {
+        loop {
+            if from == to || to == OBJECT {
+                return Ok(true);
+            }
+            match (from.strip_prefix('['), to.strip_prefix('[')) {
+                (Some(f), Some(t)) => match (element_name(f), element_name(t)) {
+                    (Some(f), Some(t)) => (from, to) = (f, t),
+                    // Primitive arrays: only the identity, which failed above.
+                    _ => return Ok(false),
+                },
+                // Observed: any interface, where JVMS 4.10.1.2 lists two
+                // (tests/verify/good/ArrayAsAnyInterface).
+                (Some(_), None) => return Ok(self.hierarchy.info(to)?.is_interface),
+                (None, Some(_)) => return Ok(false),
+                (None, None) => {
+                    if self.hierarchy.info(to)?.is_interface {
+                        return Ok(true);
+                    }
+                    return self.is_subclass(from, to);
                 }
-                self.is_subclass(from, to)
             }
         }
     }

@@ -68,6 +68,7 @@ impl Hierarchy for Vm {
             is_interface: c.is_interface(),
             super_name,
             boot: c.from_boot,
+            members: c.methods.len() + c.fields.len(),
         })
     }
 

@@ -5,17 +5,12 @@
 use classfile::descriptor::{MethodDescriptor, parse_field, parse_method};
 use classfile::{ACC_PROTECTED, Constant, MemberRef};
 
-use super::check::Checker;
-use super::stackmap::Frame;
-use super::vtype::{OBJECT, THROWABLE, VType, array_of};
+use super::check::{Checker, declared_access};
+use super::vtype::{OBJECT, VType, array_of};
 use super::{Fail, Hierarchy, decode};
+use crate::class::package_of;
 
-/// `name`'s package, for the run-time package test (JVMS 5.3).
-fn package(name: &str) -> &str {
-    name.rsplit_once('/').map_or("", |(p, _)| p)
-}
-
-impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
+impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
     pub(super) fn ref_op(&mut self, op: u8) -> Result<(), Fail> {
         match op {
             0x12 => {
@@ -161,8 +156,14 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
     /// `invokespecial` of a method other than `<init>` names the current class,
     /// a superclass or a superinterface, on a receiver of the current class.
     /// A generated lambda class stands for its host.
+    /// The class whose rights the code has: a generated lambda class has its
+    /// host's (`Class::host`), here as at resolution.
+    fn current(&self) -> &'a str {
+        self.host.unwrap_or(&self.cf.this_class)
+    }
+
     fn invoke_special_receiver(&mut self, r: &MemberRef) -> Result<(), Fail> {
-        let current = self.host.unwrap_or(&self.cf.this_class).to_string();
+        let current = self.current();
         let index = self.u2_at(1)?;
         let names_interface = matches!(
             self.cf.pool.get(index),
@@ -175,7 +176,7 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
                 r.class
             )));
         }
-        let (this, owner) = (self.types.class(&current), self.types.class(&r.class));
+        let (this, owner) = (self.types.class(current), self.types.class(&r.class));
         if !self.types.assignable(this, owner)? {
             return Err(self.bad(format!(
                 "invokespecial of {}, not {current} or a supertype",
@@ -232,32 +233,12 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
                 *t = init;
             }
         }
-        self.check_handlers_after_init(target == VType::UninitThis)?;
+        let flag = target == VType::UninitThis || self.cur.this_uninit;
+        self.check_handlers_after_init(flag)?;
         if target == VType::UninitThis {
             return Ok(());
         }
         self.check_protected_init(r, init)
-    }
-
-    /// JVMS 4.10.1.9's note on `invokespecial`: if `<init>` throws, a handler
-    /// sees the rewritten locals with the old flag. So a frame that keeps
-    /// `this` or a `new` object uninitialized cannot be a handler's across the
-    /// call, and neither can one that drops `this` (`tests/verify/bad/HandlerAround*`).
-    fn check_handlers_after_init(&mut self, this_uninit: bool) -> Result<(), Fail> {
-        for h in &self.code.handlers {
-            let range = usize::from(h.start_pc)..usize::from(h.end_pc);
-            if !range.contains(&self.pc) {
-                continue;
-            }
-            let state = Frame {
-                locals: self.cur.locals.clone(),
-                stack: vec![self.types.class(THROWABLE)],
-                depth: 1,
-                this_uninit,
-            };
-            self.target_accepts_locals(usize::from(h.handler_pc), &state)?;
-        }
-        Ok(())
     }
 
     fn invokedynamic(&mut self) -> Result<(), Fail> {
@@ -321,18 +302,17 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
         self.require_current(target, r)
     }
 
-    /// The protected check on a `new` object's constructor: the value on top of
-    /// the outgoing stack is the initialized copy.
+    /// The protected check on a `new` object's constructor. The object itself is
+    /// judged (observed): JVMS 4.10.1.8's top of the stack may be something else.
     fn check_protected_init(&mut self, r: &MemberRef, init: VType) -> Result<(), Fail> {
         if self.protected_applies(&r.class, &r.name, &r.descriptor, true)? {
-            let target = self.cur.stack.last().copied().unwrap_or(init);
-            self.require_current(target, r)?;
+            self.require_current(init, r)?;
         }
         Ok(())
     }
 
     fn require_current(&mut self, target: VType, r: &MemberRef) -> Result<(), Fail> {
-        let this = self.types.class(&self.cf.this_class);
+        let this = self.types.class(self.current());
         if !self.types.assignable(target, this)? {
             let have = self.show(target);
             return Err(self.bad(format!(
@@ -352,7 +332,7 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
         descriptor: &str,
         method: bool,
     ) -> Result<bool, Fail> {
-        let this = &*self.cf.this_class;
+        let this = self.current();
         if class.starts_with('[') || class == this || !self.types.is_superclass(this, class)? {
             return Ok(false);
         }
@@ -362,12 +342,9 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
         let mut cur: Option<std::sync::Arc<str>> = Some(class.into());
         while let Some(c) = cur {
             let info = self.types.info(&c)?;
-            let access = self
-                .types
-                .hierarchy
-                .member_access(&c, name, descriptor, method)?;
-            if let Some(a) = access {
-                let other_package = info.boot != boot || package(this) != package(&c);
+            let wanted = (name, descriptor, method);
+            if let Some(a) = declared_access(self.types, self.budget, &c, wanted)? {
+                let other_package = info.boot != boot || package_of(this) != package_of(&c);
                 return Ok(a & ACC_PROTECTED != 0 && other_package);
             }
             if &*c == OBJECT {

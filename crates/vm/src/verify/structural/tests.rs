@@ -347,38 +347,36 @@ fn format_rejects_bad_method_flags() {
 
 #[test]
 fn format_checks_special_method_names() {
-    for (name, desc, access) in [
-        ("<init>", "()I", 0),
-        ("<init>", "()V", ACC_STATIC),
-        ("<init>", "()V", ACC_FINAL),
-        ("<foo>", "()V", 0),
-        ("a.b", "()V", 0),
-        ("a;b", "()V", 0),
-        ("a[b", "()V", 0),
-        ("a/b", "()V", 0),
+    for (name, desc, access, fragment) in [
+        ("<init>", "()I", 0, "must return void"),
+        ("<init>", "()V", ACC_STATIC, "illegal flags"),
+        ("<init>", "()V", ACC_FINAL, "illegal flags"),
+        ("<foo>", "()V", 0, "bad name"),
+        ("a.b", "()V", 0, "bad name"),
+        ("a;b", "()V", 0, "bad name"),
+        ("a[b", "()V", 0, "bad name"),
+        ("a/b", "()V", 0, "bad name"),
     ] {
-        let b = Build {
+        let cf = Build {
             method_name: name.into(),
             descriptor: desc.into(),
             method_access: access,
             ..build()
-        };
+        }
+        .class(&[0x03, 0xac]);
+        let found = check_format(&cf, MAX_CODE).err();
         assert!(
-            b.class(&[0x03, 0xac]).methods.len() == 1
-                && check_format(
-                    &Build {
-                        method_name: name.into(),
-                        descriptor: desc.into(),
-                        method_access: access,
-                        ..build()
-                    }
-                    .class(&[0x03, 0xac]),
-                    MAX_CODE
-                )
-                .is_err(),
-            "{name}{desc}"
+            found.as_deref().is_some_and(|e| e.contains(fragment)),
+            "{name}{desc}: {found:?}"
         );
     }
+}
+
+#[test]
+fn format_checks_the_exceptions_attribute() {
+    let mut cf = build().class(&[RET]);
+    cf.methods[0].exceptions = vec![0xfff];
+    assert!(check_format(&cf, MAX_CODE).is_err());
 }
 
 #[test]

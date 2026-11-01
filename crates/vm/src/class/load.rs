@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use classfile::{ACC_ABSTRACT, ACC_FINAL, ACC_PUBLIC, ClassFile};
 
-use super::{Class, ClassId, ClassKind, InitState, layout};
+use super::{Class, ClassId, ClassKind, InitState, layout, package_of};
 use crate::{Vm, VmError, VmResult};
 
 const NO_CLASS_DEF: &str = "java/lang/NoClassDefFoundError";
@@ -29,10 +29,7 @@ impl Vm {
         };
         // Only the class library may define classes in `java.*`.
         if !found.boot && name.starts_with("java/") {
-            let package = name
-                .rsplit_once('/')
-                .map_or(name, |(p, _)| p)
-                .replace('/', ".");
+            let package = package_of(name).replace('/', ".");
             let msg = format!("Prohibited package name: {package}");
             return Err(VmError::exception("java/lang/SecurityException", msg));
         }
@@ -142,8 +139,7 @@ impl Vm {
         what: &str,
     ) -> VmResult<()> {
         let s = self.class(sup);
-        let package = |n: &str| n.rfind('/').map_or(String::new(), |at| n[..at].to_string());
-        let same = s.from_boot == boot && package(&s.name) == package(&cf.this_class);
+        let same = s.from_boot == boot && package_of(&s.name) == package_of(&cf.this_class);
         if s.access & ACC_PUBLIC != 0 || same {
             return Ok(());
         }

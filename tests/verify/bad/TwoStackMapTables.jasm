@@ -1,0 +1,9 @@
+; rule: JVMS 4.7.4: at most one per Code
+; expect: java.lang.ClassFormatError
+; reason: two StackMapTable
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+return
+rawframes 0000
+rawframes 0000
+end

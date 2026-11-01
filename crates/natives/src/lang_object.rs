@@ -46,7 +46,7 @@ fn clone(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     }
     let body = match &vm.heap.get(this)?.body {
         Body::Fields(f) => Body::Fields(f.clone()),
-        Body::Array(a) => Body::Array(a.duplicate()),
+        Body::Array(a) => Body::Array(a.try_duplicate().ok_or(VmError::OutOfMemory)?),
     };
     ret_ref(Some(vm.heap.alloc(Object { class, body })?))
 }
