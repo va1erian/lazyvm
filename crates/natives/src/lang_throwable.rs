@@ -1,5 +1,6 @@
 //! `java.lang.Throwable`: recording and reading stack traces.
 
+use vm::TraceFrame;
 use vm::{Value, Vm, VmError, VmResult};
 
 use crate::{obj, ret_ref, ret_void};
@@ -29,12 +30,17 @@ fn fill_in(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
 /// runs while the new objects are only held here.
 fn get_stack_trace(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let this = obj(args, 0)?;
-    let class = vm.load_class(ELEMENT)?;
-    vm.initialize(class)?;
     let frames = match vm.get_field(this, vm.wk.throwable_backtrace)?.reference()? {
         Some(bt) => vm.decode_backtrace(bt)?,
         None => Vec::new(),
     };
+    ret_ref(Some(stack_elements(vm, &frames)?))
+}
+
+/// A `StackTraceElement[]` for `frames`.
+pub(crate) fn stack_elements(vm: &mut Vm, frames: &[TraceFrame]) -> VmResult<vm::Ref> {
+    let class = vm.load_class(ELEMENT)?;
+    vm.initialize(class)?;
     let len = i32::try_from(frames.len()).map_err(|_| VmError::OutOfMemory)?;
     let array = vm.new_array_of("Ljava/lang/StackTraceElement;", len)?;
     for (i, &f) in frames.iter().enumerate() {
@@ -54,7 +60,7 @@ fn get_stack_trace(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
             .array_mut(array)?
             .store(i, Value::Ref(Some(element)), false)?;
     }
-    ret_ref(Some(array))
+    Ok(array)
 }
 
 fn set(vm: &mut Vm, obj: vm::Ref, name: &str, v: Value) -> VmResult<()> {

@@ -2,6 +2,7 @@ package java.lang;
 
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.Properties;
 import lazy.internal.ConsoleInputStream;
 import lazy.internal.ConsoleOutputStream;
 import lazy.internal.VM;
@@ -12,6 +13,13 @@ public final class System {
     public static final PrintStream err;
 
     private static String lineSeparator;
+    /**
+     * The properties once a program changes them or asks for the table. Until
+     * then they are the set the VM started with, and no table need be loaded.
+     */
+    private static volatile Properties props;
+    /** Not System.class: a program holding that must not stop property calls. */
+    private static final Object PROPS_LOCK = new Object();
 
     static {
         // Spec I1: stdin is a BufferedInputStream, so it supports mark and reset.
@@ -36,7 +44,8 @@ public final class System {
 
     public static String getProperty(String key) {
         checkKey(key);
-        return VM.getProperty(key);
+        Properties p = props;
+        return p != null ? p.getProperty(key) : VM.getProperty(key);
     }
 
     public static String getProperty(String key, String def) {
@@ -49,12 +58,42 @@ public final class System {
         if (value == null) {
             throw new NullPointerException();
         }
-        return VM.setProperty(key, value);
+        // The cast fails on a value that is not a String, as on the oracle.
+        return (String) getProperties().setProperty(key, value);
     }
 
     public static String clearProperty(String key) {
         checkKey(key);
-        return VM.clearProperty(key);
+        return (String) getProperties().remove(key);
+    }
+
+    public static Properties getProperties() {
+        Properties p = props;
+        return p != null ? p : firstProperties();
+    }
+
+    private static Properties firstProperties() {
+        synchronized (PROPS_LOCK) {
+            if (props == null) {
+                props = startingProperties();
+            }
+            return props;
+        }
+    }
+
+    public static void setProperties(Properties p) {
+        synchronized (PROPS_LOCK) {
+            props = p != null ? p : startingProperties();
+        }
+    }
+
+    private static Properties startingProperties() {
+        Properties p = new Properties();
+        String[] pairs = VM.properties();
+        for (int i = 0; i < pairs.length; i += 2) {
+            p.setProperty(pairs[i], pairs[i + 1]);
+        }
+        return p;
     }
 
     private static void checkKey(String key) {
@@ -77,6 +116,25 @@ public final class System {
         return lazy.internal.Environment.map();
     }
 
+    public static void setIn(InputStream in) {
+        setIn0(in);
+    }
+
+    public static void setOut(PrintStream out) {
+        setOut0(out);
+    }
+
+    public static void setErr(PrintStream err) {
+        setErr0(err);
+    }
+
+    // The fields are final for javac, so only the VM can store to them.
+    private static native void setIn0(InputStream in);
+
+    private static native void setOut0(PrintStream out);
+
+    private static native void setErr0(PrintStream err);
+
     public static String lineSeparator() {
         if (lineSeparator == null) {
             String s = VM.getProperty("line.separator");
@@ -91,5 +149,9 @@ public final class System {
 
     public static void gc() {
         Runtime.getRuntime().gc();
+    }
+
+    public static void runFinalization() {
+        Runtime.getRuntime().runFinalization();
     }
 }

@@ -1,0 +1,29 @@
+java.lang.EnumConstantNotPresentException: lang.ApiExceptions$Color.BLUE | message lang.ApiExceptions$Color.BLUE | cause null | super java.lang.RuntimeException
+lang.ApiExceptions$Color BLUE
+initCause ok, now java.lang.Error: second
+null enum type java.lang.NullPointerException
+java.lang.EnumConstantNotPresentException: lang.ApiExceptions$Color.null | message lang.ApiExceptions$Color.null | cause null | super java.lang.RuntimeException
+java.util.MissingResourceException: text | message text | cause null | super java.lang.RuntimeException
+some.Bundle the.key
+initCause ok, now java.lang.Error: second
+java.util.MissingResourceException | message null | cause null | super java.lang.RuntimeException
+null null
+java.lang.TypeNotPresentException: Type no.Such not present | message Type no.Such not present | cause java.lang.RuntimeException: why | super java.lang.RuntimeException
+no.Such
+initCause java.lang.IllegalStateException
+java.lang.TypeNotPresentException: Type null not present | message Type null not present | cause null | super java.lang.RuntimeException
+initCause java.lang.IllegalStateException
+java.lang.reflect.InvocationTargetException | message null | cause java.lang.RuntimeException: why | super java.lang.ReflectiveOperationException
+java.lang.RuntimeException: why
+initCause java.lang.IllegalStateException
+java.lang.reflect.InvocationTargetException: text | message text | cause java.lang.RuntimeException: why | super java.lang.ReflectiveOperationException
+java.lang.reflect.InvocationTargetException | message null | cause null | super java.lang.ReflectiveOperationException
+java.lang.reflect.InvocationTargetException: text | message text | cause null | super java.lang.ReflectiveOperationException
+lang.ApiExceptions$1 | message null | cause java.lang.RuntimeException: why | super java.lang.reflect.InvocationTargetException
+java.lang.reflect.UndeclaredThrowableException | message null | cause java.lang.RuntimeException: why | super java.lang.RuntimeException
+java.lang.RuntimeException: why
+initCause java.lang.IllegalStateException
+java.lang.reflect.UndeclaredThrowableException: text | message text | cause java.lang.RuntimeException: why | super java.lang.RuntimeException
+java.lang.reflect.UndeclaredThrowableException | message null | cause null | super java.lang.RuntimeException
+java.lang.reflect.InvocationTargetException | message null | cause java.lang.Exception: from boom | super java.lang.ReflectiveOperationException
+java.lang.Exception: from boom | message from boom | cause null | super java.lang.Throwable

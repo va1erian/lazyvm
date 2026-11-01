@@ -73,7 +73,8 @@ public abstract class Charset implements Comparable<Charset> {
 
     // Spec N3: follows file.encoding, UTF-8 when that is not supported.
     public static Charset defaultCharset() {
-        String enc = System.getProperty("file.encoding");
+        // What the VM started with: changing the property later changes nothing (observed).
+        String enc = lazy.internal.VM.getProperty("file.encoding");
         try {
             if (enc != null && isSupported(enc)) {
                 return forName(enc);

@@ -27,6 +27,7 @@ pub use class::{Class, ClassId, ClassPath, MethodRef};
 pub use error::{VmError, VmResult};
 pub use interp::Frame;
 pub use native::NativeFn;
+pub use throw::TraceFrame;
 pub use value::{Ref, Value};
 
 /// Settings from the command line.
@@ -91,7 +92,7 @@ pub struct Vm {
     /// Numbers generated lambda class names.
     pub(crate) lambda_count: u64,
     /// System properties: values as UTF-16, so a path holds any Java string.
-    pub(crate) properties: BTreeMap<String, Vec<u16>>,
+    pub(crate) properties: BTreeMap<Vec<u16>, Vec<u16>>,
     pub options: Options,
     pub wk: WellKnown,
     /// Depth of nested `throw_new` calls, to stop runaway exception creation.

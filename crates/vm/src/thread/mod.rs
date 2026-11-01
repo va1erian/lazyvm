@@ -9,6 +9,7 @@
 mod gil;
 mod monitor;
 mod spawn;
+mod trace;
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};

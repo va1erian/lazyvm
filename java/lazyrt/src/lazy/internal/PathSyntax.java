@@ -11,7 +11,7 @@ import java.util.List;
  */
 public abstract class PathSyntax {
     private static final PathSyntax CURRENT =
-            "\\".equals(System.getProperty("file.separator")) ? new WindowsPaths() : new UnixPaths();
+            "\\".equals(VM.getProperty("file.separator")) ? new WindowsPaths() : new UnixPaths();
 
     public static PathSyntax current() {
         return CURRENT;

@@ -72,7 +72,7 @@ public class Executors {
     }
 
     public static ThreadFactory privilegedThreadFactory() {
-        return new NumberedThreads();
+        return new LoaderThreads();
     }
 
     public static <T> Callable<T> callable(Runnable task, T result) {
@@ -98,10 +98,23 @@ public class Executors {
     }
 
     public static <T> Callable<T> privilegedCallableUsingCurrentClassLoader(Callable<T> callable) {
-        return privilegedCallable(callable);
+        if (callable == null) {
+            throw new NullPointerException();
+        }
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        return () -> {
+            Thread t = Thread.currentThread();
+            ClassLoader before = t.getContextClassLoader();
+            t.setContextClassLoader(loader);
+            try {
+                return callable.call();
+            } finally {
+                t.setContextClassLoader(before);
+            }
+        };
     }
 
-    private static final class NumberedThreads implements ThreadFactory {
+    private static class NumberedThreads implements ThreadFactory {
         private static final AtomicInteger POOLS = new AtomicInteger();
 
         private final ThreadGroup group = Thread.currentThread().getThreadGroup();
@@ -114,6 +127,22 @@ public class Executors {
             t.setDaemon(false);
             t.setPriority(Thread.NORM_PRIORITY);
             return t;
+        }
+    }
+
+    /**
+     * Threads that take this factory's creator's context loader when they
+     * start, not before: until then they show their own creator's (observed).
+     */
+    private static final class LoaderThreads extends NumberedThreads {
+        private final ClassLoader loader = Thread.currentThread().getContextClassLoader();
+
+        @Override
+        public Thread newThread(Runnable r) {
+            return super.newThread(() -> {
+                Thread.currentThread().setContextClassLoader(loader);
+                r.run();
+            });
         }
     }
 

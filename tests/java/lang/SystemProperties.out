@@ -1,0 +1,27 @@
+line 1
+first set null
+class java.util.Properties, same true
+first 1, line 1
+missing []
+a 1 1
+b set null, in table 2
+b reset 2, in table 3
+a cleared 1, in table null
+b removed null def
+one two
+object null def
+set over object java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String
+object now s
+clear object java.lang.ClassCastException: java.lang.Integer cannot be cast to java.lang.String
+object2 now null
+own table true, 3 4 false
+clear from defaults null, still 4
+set in own null, old table 4
+back false false java.util.Properties
+gone null null null
+line again 1
+missing []
+separator kept true, property changed
+get null java.lang.NullPointerException: key can't be null
+table get null java.lang.NullPointerException
+finalization returned
