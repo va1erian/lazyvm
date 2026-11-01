@@ -189,6 +189,18 @@ public class GroupDestroy {
         show("interrupt", () -> { g.interrupt(); t.join(); return hit[0]; });
     }
 
+    /** Stack traces take no group lock: holding one while waiting for them does not hang. */
+    static void tracesPastALock() throws Exception {
+        ThreadGroup g = new ThreadGroup("locked");
+        Thread asker = new Thread(() -> System.out.println("traces " + Thread.getAllStackTraces().containsKey(Thread.currentThread())));
+        Held h = new Held(g, "in it").begin();
+        synchronized (g) {
+            asker.start();
+            asker.join();
+        }
+        h.finish();
+    }
+
     static void dispatch() throws Exception {
         ThreadGroup g = new ThreadGroup("two args") {
             @Override
@@ -280,6 +292,7 @@ public class GroupDestroy {
         halfway(new ThreadGroup("half"));
         throughHalfway(new ThreadGroup("through"));
         overridden();
+        tracesPastALock();
         dispatch();
         released();
         unstarted(top);

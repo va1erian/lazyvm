@@ -22,8 +22,6 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     private int unstarted;
     /** Once set, both lists stay empty, so whatever reads them needs no check. */
     private boolean destroyed;
-    /** Subgroups a failed destroy cut off, null once gone: only getAllStackTraces still finds their threads. */
-    private ThreadGroup[] cutOff = NO_GROUPS;
 
     /** The root group, which has no parent. */
     ThreadGroup() {
@@ -130,16 +128,11 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
             }
             subs = subgroups();
             destroyed = true;
-            // A copy: the loop below reads subs while the subgroups clear their entries here.
-            cutOff = subs.clone();
             groups = NO_GROUPS;
             groupCount = 0;
         }
         for (ThreadGroup g : subs) {
             g.destroy();
-        }
-        synchronized (this) {
-            cutOff = NO_GROUPS;
         }
         parent.removeGroup(this);
     }
@@ -152,11 +145,6 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         synchronized (this) {
             // The list is already empty, and ending again would leave the parent's.
             if (destroyed) {
-                for (int i = 0; i < cutOff.length; i++) {
-                    if (cutOff[i] == g) {
-                        cutOff[i] = null;
-                    }
-                }
                 return;
             }
             for (int i = 0; i < groupCount; i++) {
@@ -260,44 +248,16 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     }
 
     /**
-     * Every thread in this group and below, for Thread.getAllStackTraces, which the
-     * oracle answers for all live threads whatever subclasses or a failed destroy did.
+     * Holds the lock across the subclass code it calls, and reads the list live,
+     * so what that code adds or takes away counts; subgroups are read after (observed).
      */
-    Thread[] allThreads() {
-        java.util.ArrayList<Thread> all = new java.util.ArrayList<Thread>();
-        gather(all);
-        return all.toArray(new Thread[all.size()]);
-    }
-
-    private void gather(java.util.ArrayList<Thread> all) {
+    public final void interrupt() {
         ThreadGroup[] subs;
-        ThreadGroup[] cut;
         synchronized (this) {
             for (int i = 0; i < threadCount; i++) {
-                all.add(threads[i]);
+                threads[i].interrupt();
             }
             subs = subgroups();
-            cut = cutOff;
-        }
-        for (ThreadGroup g : subs) {
-            g.gather(all);
-        }
-        for (ThreadGroup g : cut) {
-            if (g != null) {
-                g.gather(all);
-            }
-        }
-    }
-
-    public final void interrupt() {
-        Thread[] own;
-        ThreadGroup[] subs;
-        synchronized (this) {
-            own = java.util.Arrays.copyOf(threads, threadCount);
-            subs = subgroups();
-        }
-        for (Thread t : own) {
-            t.interrupt();
         }
         for (ThreadGroup g : subs) {
             g.interrupt();
@@ -305,28 +265,30 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     }
 
     public void list() {
-        list("");
+        list(System.out, 0);
     }
 
-    /** Takes copies, so that no subclass's toString or stream runs under this lock. */
-    private void list(String indent) {
-        Thread[] own;
+    /** As interrupt; and all of it goes to the stream that was current at the start (observed). */
+    private void list(java.io.PrintStream out, int indent) {
         ThreadGroup[] subs;
         synchronized (this) {
-            own = java.util.Arrays.copyOf(threads, threadCount);
+            printIndented(out, indent, this);
+            for (int i = 0; i < threadCount; i++) {
+                printIndented(out, indent + 4, threads[i]);
+            }
             subs = subgroups();
         }
-        // The indent goes out first: a toString that prints or throws shows it (observed).
-        System.out.print(indent);
-        System.out.println(this);
-        String inner = indent + "    ";
-        for (Thread t : own) {
-            System.out.print(inner);
-            System.out.println(t);
-        }
         for (ThreadGroup g : subs) {
-            g.list(inner);
+            g.list(out, indent + 4);
         }
+    }
+
+    /** The indent goes out first: a toString that prints or throws shows it (observed). */
+    private static void printIndented(java.io.PrintStream out, int indent, Object o) {
+        for (int i = 0; i < indent; i++) {
+            out.print(" ");
+        }
+        out.println(o);
     }
 
     public final String getName() {

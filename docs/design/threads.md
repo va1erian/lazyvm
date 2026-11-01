@@ -307,9 +307,10 @@ Java monitors are not OS locks: a thread blocked on one has released the VM.
   until it starts; an explicit `destroy` ignores it, and the thread's `start` then throws.
   A `destroy` that meets a busy subgroup throws but is not undone: the group stays
   destroyed and listed in its parent, with its unreached subgroups cut off; listing
-  through it restarts `enumerate`'s count from 0, and only `getAllStackTraces` still finds
-  the threads below. `list` and `interrupt` do not hold the group's lock while they call
-  a subclass's `toString` or `interrupt`, which `holdsLock` can tell from the oracle. Group
+  through it restarts `enumerate`'s count from 0, and only `getAllStackTraces`, which asks
+  the VM and not the groups, still finds the threads below. `list` and `interrupt` hold
+  a group's lock while they call a subclass's `toString` or `interrupt`, and read the
+  list live, as the oracle does. Otherwise
   locks are taken one at a time, so `destroy` going down and a thread's end going up cannot
   deadlock. So a subgroup that ends itself just as its parent's `destroy` reaches it makes
   that `destroy` throw.

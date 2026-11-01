@@ -29,5 +29,27 @@ java.lang.ThreadGroup[name=noisy,maxpri=10]
 noisy
 java.lang.ThreadGroup[name=throwing,maxpri=10]
     java.lang.IllegalStateException: no string
+java.lang.ThreadGroup[name=re,maxpri=10]
+    java.lang.ThreadGroup[name=doomed,maxpri=10]
+    holds own true parent false
+grows
+        Thread[added by group,5,grows]
+        sub holds own true parent false
+first
+        java.lang.ThreadGroup[name=sub by group,maxpri=10]
+    killer
+    java.lang.ThreadGroup[name=late,maxpri=10]
+java.lang.ThreadGroup[name=under,maxpri=10]
+java.lang.ThreadGroup[name=thread grows,maxpri=10]
+    thread holds true
+t
+    Thread[more,5,thread grows]
+    java.lang.ThreadGroup[name=h2,maxpri=10]
+    java.lang.ThreadGroup[name=h3,maxpri=10]
+holds true
+first hit true
+added hit true
+in new hit true
+println[switches]print[ ]print[ ]print[ ]print[ ]println[java.lang.ThreadGroup[name=sub,maxpri=10]]
 caught: java.lang.ThreadGroup[name=caught,maxpri=10]
 interrupts its caller true

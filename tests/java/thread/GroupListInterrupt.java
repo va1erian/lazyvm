@@ -123,6 +123,142 @@ public class GroupListInterrupt {
         }
     }
 
+    /** Subclass code that changes the group while list runs, and what list then shows. */
+    static void reentrant() throws Exception {
+        ThreadGroup top = new ThreadGroup("re");
+        ThreadGroup doomed = new ThreadGroup(top, "doomed");
+        CountDownLatch end = new CountDownLatch(1);
+        Thread[] started = new Thread[1];
+        ThreadGroup g = new ThreadGroup(top, "grows") {
+            boolean once;
+
+            @Override
+            public String toString() {
+                if (!once) {
+                    once = true;
+                    started[0] = new Thread(this, () -> await(end), "added by group");
+                    started[0].start();
+                    new ThreadGroup(this, "sub by group");
+                    System.out.println("holds own " + Thread.holdsLock(this) + " parent " + Thread.holdsLock(top));
+                }
+                return "grows";
+            }
+        };
+        new ThreadGroup(g, "first") {
+            @Override
+            public String toString() {
+                System.out.println("sub holds own " + Thread.holdsLock(this) + " parent " + Thread.holdsLock(g));
+                return "first";
+            }
+        };
+        ThreadGroup killer = new ThreadGroup(top, "killer") {
+            @Override
+            public String toString() {
+                if (!doomed.isDestroyed()) {
+                    doomed.destroy();
+                }
+                return "killer";
+            }
+        };
+        ThreadGroup late = new ThreadGroup(top, "late");
+        top.list();
+        late.destroy();
+        new ThreadGroup(killer, "under").list();
+        end.countDown();
+        started[0].join();
+
+        ThreadGroup h = new ThreadGroup("thread grows");
+        ThreadGroup h1 = new ThreadGroup(h, "h1");
+        ThreadGroup h2 = new ThreadGroup(h, "h2");
+        CountDownLatch end2 = new CountDownLatch(1);
+        Thread[] more = new Thread[1];
+        Thread t = new Thread(h, () -> await(end2), "t") {
+            @Override
+            public String toString() {
+                if (more[0] == null) {
+                    more[0] = new Thread(h, () -> await(end2), "more");
+                    more[0].start();
+                    new ThreadGroup(h, "h3");
+                    h1.destroy();
+                    System.out.println("thread holds " + Thread.holdsLock(h));
+                }
+                return "t";
+            }
+        };
+        t.start();
+        h.list();
+        h2.destroy();
+        end2.countDown();
+        t.join();
+        more[0].join();
+    }
+
+    /** An interrupt override that adds a thread and a subgroup gets them interrupted too. */
+    static void reentrantInterrupt() throws Exception {
+        ThreadGroup g = new ThreadGroup("hits");
+        Sleeper[] made = new Sleeper[2];
+        Sleeper first = new Sleeper(g, "first") {
+            @Override
+            public void interrupt() {
+                try {
+                    if (made[0] == null) {
+                        System.out.println("holds " + Thread.holdsLock(g));
+                        made[0] = new Sleeper(g, "added").begin();
+                        made[1] = new Sleeper(new ThreadGroup(g, "new"), "in new").begin();
+                    }
+                } catch (Exception e) {
+                    System.out.println(e);
+                }
+                super.interrupt();
+            }
+        }.begin();
+        g.interrupt();
+        for (Sleeper s : new Sleeper[] {first, made[0], made[1]}) {
+            s.join();
+            System.out.println(s.getName() + " hit " + s.hit);
+        }
+    }
+
+    /** All of a listing goes to the stream it began with, an indent being one print per space. */
+    static void streams() throws Exception {
+        PrintStream real = System.out;
+        StringBuilder log = new StringBuilder();
+        PrintStream first = new PrintStream(new ByteArrayOutputStream(), true) {
+            @Override
+            public void print(String s) {
+                log.append("print[").append(s).append("]");
+            }
+
+            @Override
+            public void println(Object o) {
+                log.append("println[").append(o).append("]");
+            }
+        };
+        ThreadGroup g = new ThreadGroup("switches") {
+            @Override
+            public String toString() {
+                System.setOut(null);
+                return "switches";
+            }
+        };
+        new ThreadGroup(g, "sub");
+        System.setOut(first);
+        try {
+            g.list();
+        } finally {
+            System.setOut(real);
+        }
+        System.out.println(log);
+    }
+
+    static void await(CountDownLatch l) {
+        try {
+            l.await();
+        } catch (InterruptedException e) {
+            System.out.println(e);
+        }
+    }
+
     /** It writes to whatever System.out is now. */
     static void redirected() {
         PrintStream real = System.out;
@@ -146,6 +282,9 @@ public class GroupListInterrupt {
         layout();
         overrides();
         noisyToString();
+        reentrant();
+        reentrantInterrupt();
+        streams();
         redirected();
         self();
     }

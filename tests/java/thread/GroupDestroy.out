@@ -43,6 +43,7 @@ groups: 0 c after - -
 stack traces find them: true true true
 stack traces: true
 interrupt: true
+traces true
 one arg threads: 0
 one arg groups: 0
 two args: 50 60

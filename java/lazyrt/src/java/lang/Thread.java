@@ -388,14 +388,19 @@ public class Thread implements Runnable {
     public static Map<Thread, StackTraceElement[]> getAllStackTraces() {
         currentThread();
         Map<Thread, StackTraceElement[]> traces = new HashMap<Thread, StackTraceElement[]>();
-        for (Thread t : SYSTEM_GROUP.allThreads()) {
-            StackTraceElement[] trace = t.traceFromOutside();
-            if (t.isAlive()) {
-                traces.put(t, trace);
+        for (Thread t : liveThreads0()) {
+            if (t != null) {
+                StackTraceElement[] trace = t.traceFromOutside();
+                if (t.isAlive()) {
+                    traces.put(t, trace);
+                }
             }
         }
         return traces;
     }
+
+    /** From the VM, not the groups: no group lock, subclass or failed destroy hides one (observed); may hold nulls. */
+    private static native Thread[] liveThreads0();
 
     public static void setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
         defaultHandler = eh;
