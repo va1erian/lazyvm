@@ -21,7 +21,7 @@ const NO_SUCH_METHOD: &str = "java/lang/NoSuchMethodError";
 const INCOMPATIBLE: &str = "java/lang/IncompatibleClassChangeError";
 
 impl Vm {
-    fn cached(&self, from: ClassId, index: u16) -> Option<Resolved> {
+    pub(crate) fn cached(&self, from: ClassId, index: u16) -> Option<Resolved> {
         self.class(from)
             .cp_cache
             .get(usize::from(index))

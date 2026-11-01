@@ -1,5 +1,6 @@
 package java.lang;
 
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -79,7 +80,8 @@ public class Thread implements Runnable {
         this.target = target;
         this.daemon = parent.isDaemon();
         this.priority = Math.min(parent.getPriority(), group.getMaxPriority());
-        this.contextClassLoader = parent.contextClassLoader;
+        // Through the method, which a subclass may override (observed).
+        this.contextClassLoader = parent.getContextClassLoader();
         this.tid = nextId();
         inheritLocals(parent);
     }
@@ -96,6 +98,9 @@ public class Thread implements Runnable {
         this.priority = NORM_PRIORITY;
         this.tid = 1;
         this.status = STARTED;
+        this.contextClassLoader = ClassLoader.getSystemClassLoader();
+        // Last: what can run out of memory has run, so a retry adds main once.
+        group.add(this);
     }
 
     private static synchronized String nextName() {
@@ -177,13 +182,16 @@ public class Thread implements Runnable {
         if (status != NEW) {
             throw new IllegalThreadStateException();
         }
-        status = STARTED;
         boolean started = false;
         try {
+            // First: it can block on the group, and until it is in, the thread is still new.
+            group.add(this);
+            status = STARTED;
             start0(daemon);
             started = true;
         } finally {
             if (!started) {
+                group.remove(this);
                 status = NEW;
             }
         }
@@ -218,15 +226,20 @@ public class Thread implements Runnable {
 
     /** Ends this thread for Java code: wakes its joiners, drops its state. */
     private void exitByVm() {
-        synchronized (this) {
-            status = TERMINATED;
-            notifyAll();
+        try {
+            // Before the joiners wake: they must find it gone from its group.
+            group.remove(this);
+            group = null;
+            target = null;
+            handler = null;
+            locals = null;
+            inheritableLocals = null;
+        } finally {
+            synchronized (this) {
+                status = TERMINATED;
+                notifyAll();
+            }
         }
-        group = null;
-        target = null;
-        handler = null;
-        locals = null;
-        inheritableLocals = null;
     }
 
     public final void join() throws InterruptedException {
@@ -339,7 +352,8 @@ public class Thread implements Runnable {
             case 3:
                 return State.TIMED_WAITING;
             default:
-                return State.TERMINATED;
+                // Started, and the VM has no entry for it yet: start0 is under way.
+                return State.RUNNABLE;
         }
     }
 
@@ -347,6 +361,37 @@ public class Thread implements Runnable {
 
     public static void dumpStack() {
         new Exception("Stack trace").printStackTrace();
+    }
+
+    public static int activeCount() {
+        return currentThread().getThreadGroup().activeCount();
+    }
+
+    public static int enumerate(Thread[] tarray) {
+        return currentThread().getThreadGroup().enumerate(tarray);
+    }
+
+    public StackTraceElement[] getStackTrace() {
+        return this == currentThread() ? new Exception().getStackTrace() : traceFromOutside();
+    }
+
+    private StackTraceElement[] traceFromOutside() {
+        return isAlive() ? stackTrace0() : new StackTraceElement[0];
+    }
+
+    /** Every frame of this thread, as the VM sees it; empty if it has no entry there. */
+    private native StackTraceElement[] stackTrace0();
+
+    public static Map<Thread, StackTraceElement[]> getAllStackTraces() {
+        currentThread();
+        Map<Thread, StackTraceElement[]> traces = new HashMap<Thread, StackTraceElement[]>();
+        for (Thread t : SYSTEM_GROUP.allThreads()) {
+            StackTraceElement[] trace = t.traceFromOutside();
+            if (t.isAlive()) {
+                traces.put(t, trace);
+            }
+        }
+        return traces;
     }
 
     public static void setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler eh) {

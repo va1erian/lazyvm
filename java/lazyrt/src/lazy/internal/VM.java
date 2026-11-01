@@ -5,6 +5,7 @@ public final class VM {
     private VM() {
     }
 
+    /** A property of the set the VM started with, which Java code cannot change. */
     public static native String getProperty(String key);
 
     /** The process environment as name, value, name, value... */
@@ -13,10 +14,8 @@ public final class VM {
     /** Whether environment names compare ignoring case on this platform. */
     public static native boolean environmentIgnoresCase();
 
-    /** Sets a system property; returns the old value or null. */
-    public static native String setProperty(String key, String value);
-
-    public static native String clearProperty(String key);
+    /** The properties the VM started with, as name, value, name, value... */
+    public static native String[] properties();
 
     public static native void exit(int status);
 

@@ -17,18 +17,7 @@ pub fn register(vm: &mut Vm) {
         "(Ljava/lang/String;)Ljava/lang/String;",
         get_property,
     );
-    vm.register_native(
-        VM_CLASS,
-        "setProperty",
-        "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
-        set_property,
-    );
-    vm.register_native(
-        VM_CLASS,
-        "clearProperty",
-        "(Ljava/lang/String;)Ljava/lang/String;",
-        clear_property,
-    );
+    vm.register_native(VM_CLASS, "properties", "()[Ljava/lang/String;", properties);
     vm.register_native(
         VM_CLASS,
         "environment",
@@ -96,10 +85,19 @@ pub fn register(vm: &mut Vm) {
 /// The environment as name, value, name, value... in one String[].
 fn environment(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
     let pairs = platform::environment();
-    let len = i32::try_from(pairs.len() * 2).map_err(|_| VmError::OutOfMemory)?;
+    let units: Vec<&[u16]> = pairs
+        .iter()
+        .flat_map(|(n, v)| [n.as_slice(), v.as_slice()])
+        .collect();
+    string_array(vm, &units)
+}
+
+/// A new `String[]` of `units`.
+fn string_array(vm: &mut Vm, units: &[&[u16]]) -> VmResult<Option<Value>> {
+    let len = i32::try_from(units.len()).map_err(|_| VmError::OutOfMemory)?;
     let array = vm.new_array_of("Ljava/lang/String;", len)?;
-    for (i, units) in pairs.iter().flat_map(|(n, v)| [n, v]).enumerate() {
-        let s = vm.new_string_utf16(units)?;
+    for (i, u) in units.iter().enumerate() {
+        let s = vm.new_string_utf16(u)?;
         vm.heap
             .array_mut(array)?
             .store(i, Value::Ref(Some(s)), false)?;
@@ -111,31 +109,22 @@ fn units_arg(vm: &Vm, v: Value) -> VmResult<Vec<u16>> {
     vm.string_utf16(v.reference()?.ok_or_else(VmError::npe)?)
 }
 
-fn old_property(vm: &mut Vm, old: Option<Vec<u16>>) -> VmResult<Option<Value>> {
-    match old {
+fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let key = units_arg(vm, arg(args, 0)?)?;
+    match vm.property(&key).map(<[u16]>::to_vec) {
         Some(v) => ret_ref(Some(vm.new_string_utf16(&v)?)),
         None => ret_ref(None),
     }
 }
 
-fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = units_arg(vm, arg(args, 0)?)?;
-    let old = vm.property(&key).map(<[u16]>::to_vec);
-    old_property(vm, old)
-}
-
-fn set_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = units_arg(vm, arg(args, 0)?)?;
-    let value = obj(args, 1)?;
-    let units = vm.string_utf16(value)?;
-    let old = vm.set_property(&key, units);
-    old_property(vm, old)
-}
-
-fn clear_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let key = units_arg(vm, arg(args, 0)?)?;
-    let old = vm.clear_property(&key);
-    old_property(vm, old)
+/// The properties as name, value, name, value... in one String[].
+fn properties(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
+    let owned: Vec<Vec<u16>> = vm
+        .properties()
+        .flat_map(|(n, v)| [n.to_vec(), v.to_vec()])
+        .collect();
+    let units: Vec<&[u16]> = owned.iter().map(Vec::as_slice).collect();
+    string_array(vm, &units)
 }
 
 fn get_resource(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

@@ -33,6 +33,10 @@ public class Runtime {
         VM.gc();
     }
 
+    /** LazyVM has no finalization (files.md), so nothing is ever pending. */
+    public void runFinalization() {
+    }
+
     public long freeMemory() {
         return VM.freeMemory();
     }

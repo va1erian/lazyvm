@@ -20,8 +20,13 @@ public class File implements Serializable, Comparable<File> {
 
     public static final char separatorChar = SYNTAX.separator();
     public static final String separator = String.valueOf(separatorChar);
-    public static final char pathSeparatorChar = System.getProperty("path.separator").charAt(0);
+    public static final char pathSeparatorChar = lazy.internal.VM.getProperty("path.separator").charAt(0);
     public static final String pathSeparator = String.valueOf(pathSeparatorChar);
+
+    /** The temporary directory is fixed at its first use (observed), so in a class of its own. */
+    private static final class TempDir {
+        static final String PATH = System.getProperty("java.io.tmpdir");
+    }
 
     private final String path;
     private final transient int prefix;
@@ -407,7 +412,7 @@ public class File implements Serializable, Comparable<File> {
         }
         String s = suffix == null ? ".tmp" : suffix;
         File dir = directory != null ? directory
-                : new File(System.getProperty("java.io.tmpdir")).getCanonicalFile();
+                : new File(TempDir.PATH).getCanonicalFile();
         // Observed: the prefix is cut to its last name; a suffix that makes more than one name is
         // "Unable to create temporary file", so the file never lands outside the directory.
         String pre = new File(prefix).getName();

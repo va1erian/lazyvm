@@ -29,6 +29,22 @@ pub fn register(vm: &mut Vm) {
         "(Ljava/lang/Object;)I",
         |_, args| ret_int(opt(args, 0)?.map_or(0, identity_hash)),
     );
+    vm.register_native(SYSTEM, "setIn0", "(Ljava/io/InputStream;)V", |vm, a| {
+        set_stream(vm, "in", "Ljava/io/InputStream;", a)
+    });
+    vm.register_native(SYSTEM, "setOut0", "(Ljava/io/PrintStream;)V", |vm, a| {
+        set_stream(vm, "out", "Ljava/io/PrintStream;", a)
+    });
+    vm.register_native(SYSTEM, "setErr0", "(Ljava/io/PrintStream;)V", |vm, a| {
+        set_stream(vm, "err", "Ljava/io/PrintStream;", a)
+    });
+}
+
+/// Stores to one of `System`'s final stream fields, which null may fill too.
+fn set_stream(vm: &mut Vm, name: &str, desc: &str, args: &[Value]) -> VmResult<Option<Value>> {
+    let class = vm.load_class(SYSTEM)?;
+    vm.set_static_by_name(class, name, desc, Value::Ref(opt(args, 0)?))?;
+    ret_void()
 }
 
 fn arraycopy(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

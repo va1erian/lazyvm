@@ -226,7 +226,7 @@ final class FileOps {
 
     // Spec NF5: prefix ("" if null) + digits + suffix (".tmp" if null; none for a directory).
     static Path createTemp(Path dir, String prefix, String suffix, boolean directory) throws IOException {
-        Path base = dir != null ? dir : Paths.get(System.getProperty("java.io.tmpdir"));
+        Path base = dir != null ? dir : Paths.get(TempDir.PATH);
         String pre = prefix == null ? "" : prefix;
         String suf = directory ? "" : suffix == null ? ".tmp" : suffix;
         while (true) {
@@ -267,5 +267,10 @@ final class FileOps {
             lines.add(line);
         }
         return lines;
+    }
+
+    /** The temporary directory is fixed at its first use (observed), so in a class of its own. */
+    private static final class TempDir {
+        static final String PATH = System.getProperty("java.io.tmpdir");
     }
 }
