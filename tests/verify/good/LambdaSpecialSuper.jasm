@@ -1,0 +1,40 @@
+; REF_invokeSpecial of a superclass method runs on the caller
+class b/Sub super a/Base
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial a/Base <init> ()V
+return
+end
+method public go ()V stack 1 locals 1
+aload_0
+invokedynamic run (Lb/Sub;)Ljava/lang/Runnable; 7 a/Base p ()V ()V ()V
+invokeinterface java/lang/Runnable run ()V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new b/Sub
+dup
+invokespecial b/Sub <init> ()V
+invokevirtual b/Sub go ()V
+getstatic java/lang/System out Ljava/io/PrintStream;
+ldc string ok
+invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+return
+end
+class a/Base
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method protected <init> (I)V stack 1 locals 2
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method public p ()V stack 0 locals 1
+return
+end
+method protected m ()V stack 0 locals 1
+return
+end

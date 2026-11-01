@@ -1,5 +1,6 @@
 //! Loaded classes: the runtime form of a class file, arrays and primitives.
 
+mod access;
 mod hierarchy;
 mod layout;
 mod load;
@@ -10,6 +11,7 @@ use std::sync::Arc;
 
 use classfile::{ClassFile, Code};
 
+pub(crate) use access::package_of;
 pub use path::ClassPath;
 pub use resolve::Resolved;
 
@@ -120,6 +122,10 @@ pub struct Class {
     pub cp_cache: Vec<Option<Resolved>>,
     /// Loaded from the boot class path (`Class.getClassLoader` is null).
     pub from_boot: bool,
+    /// Verification passed, or nothing to check (`Vm::link_class`).
+    pub verified: bool,
+    /// A generated lambda class: the class it counts as part of.
+    pub host: Option<ClassId>,
 }
 
 impl Class {

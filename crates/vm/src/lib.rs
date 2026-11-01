@@ -18,6 +18,7 @@ mod strings;
 pub mod thread;
 mod throw;
 pub mod value;
+pub mod verify;
 pub use platform::wtf;
 
 use std::collections::{BTreeMap, HashMap};
@@ -44,6 +45,12 @@ pub struct Options {
     pub assertions: bool,
     pub trace_interp: bool,
     pub verbose_class: bool,
+    /// `-Xverify`: which classes the verifier checks.
+    pub verify: verify::VerifyMode,
+    /// Classes that may be loaded, arrays and primitives included.
+    pub max_classes: usize,
+    /// Bytes of code one method may have; the class file format stops at 65535.
+    pub max_method_code: usize,
 }
 
 impl Default for Options {
@@ -56,6 +63,9 @@ impl Default for Options {
             assertions: false,
             trace_interp: false,
             verbose_class: false,
+            verify: verify::VerifyMode::All,
+            max_classes: 1 << 20,
+            max_method_code: 65535,
         }
     }
 }
@@ -89,6 +99,11 @@ pub struct Vm {
     pub(crate) select_cache: HashMap<(ClassId, MethodRef), MethodRef>,
     /// Linked lambda call sites: (caller, InvokeDynamic index) to factory.
     pub(crate) lambda_sites: HashMap<(ClassId, u16, usize), MethodRef>,
+    /// Lambda classes of call sites that have not linked yet.
+    pub(crate) lambda_failed: HashMap<(ClassId, u16, usize), ClassId>,
+    /// The members of large classes, for the verifier: (name, descriptor, is a
+    /// method) to access flags. The keys share the class's own strings.
+    pub(crate) member_index: HashMap<ClassId, verify::MemberIndex>,
     /// Numbers generated lambda class names.
     pub(crate) lambda_count: u64,
     /// System properties: values as UTF-16, so a path holds any Java string.
@@ -153,6 +168,8 @@ impl Vm {
             natives: HashMap::new(),
             select_cache: HashMap::new(),
             lambda_sites: HashMap::new(),
+            lambda_failed: HashMap::new(),
+            member_index: HashMap::new(),
             lambda_count: 0,
             properties: BTreeMap::new(),
             options,

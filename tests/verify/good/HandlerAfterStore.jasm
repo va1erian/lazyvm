@@ -1,0 +1,21 @@
+; a handler is checked with the incoming locals: a store in its range does not count
+class Good
+method public static main ([Ljava/lang/String;)V stack 2 locals 2
+iconst_0
+istore_1
+A:
+fconst_0
+fstore_1
+B:
+goto C
+H:
+frame H locals [Ljava/lang/String; int stack java/lang/Throwable
+pop
+C:
+frame C locals [Ljava/lang/String; top stack
+getstatic java/lang/System out Ljava/io/PrintStream;
+ldc string ok
+invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+return
+handler A B H any
+end

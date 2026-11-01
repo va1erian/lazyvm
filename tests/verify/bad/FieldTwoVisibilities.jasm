@@ -1,0 +1,5 @@
+; rule: JVMS 4.5: one visibility
+; expect: java.lang.ClassFormatError
+; reason: more than one
+class Bad
+field public protected x I

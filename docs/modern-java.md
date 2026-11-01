@@ -53,7 +53,7 @@ unsupported javac option (section 3).
 | Feature (Java version) | What javac emits | On LazyVM |
 |---|---|---|
 | `var` (10), text blocks (15), switch expressions with `->` and `yield` (14), pattern `instanceof` (16) | ordinary bytecode | runs, output identical to the oracle |
-| Nest mates (11): inner classes reach each other's private members directly; private interface methods (9) | `NestHost`/`NestMembers`; `invokevirtual` and `invokeinterface` on private methods, which the Java 8 rules reject | runs, identical, because access checks do not exist yet (they come with the S8 verifier). A private method called through a subclass that declares the same name still selects the private one, as on the oracle |
+| Nest mates (11): inner classes reach each other's private members directly; private interface methods (9) | `NestHost`/`NestMembers`; `invokevirtual` and `invokeinterface` on private methods, which the Java 8 rules reject | ran, identical, when this was probed, before access checks existed; they came with S8 and follow the Java 8 rule, so nest mates would now need the rule below. A private method called through a subclass that declares the same name still selects the private one, as on the oracle |
 | String `+` (9) | `invokedynamic` to `StringConcatFactory` | avoided with `-XDstringConcat=inline`, which makes javac emit `StringBuilder` calls as in Java 8. Without the flag javac needs `StringConcatFactory` to compile at all |
 | Records (16) | superclass `java.lang.Record`; `equals`, `hashCode` and `toString` are `invokedynamic` to `java.lang.runtime.ObjectMethods.bootstrap`, whose static arguments are the record class, the component names joined with `;`, and one `REF_getField` handle per component field; javac also needs `java.lang.invoke.TypeDescriptor` to compile | with stub classes, compiles and runs up to the first `toString`, then `BootstrapMethodError: unsupported bootstrap method java/lang/runtime/ObjectMethods.bootstrap`. That is the only gap |
 | Sealed classes (17) | `PermittedSubclasses` attribute | runs; nothing checks it at load time (section 3) |
@@ -61,16 +61,16 @@ unsupported javac option (section 3).
 
 ## 3. Cost by feature
 
-- **Free once the cap moves:** the syntax-only row, and nest mates until S8.
-  No VM, library or verifier change for programs javac compiled together.
+- **Free once the cap moves:** the syntax-only row. No VM, library or verifier
+  change for programs javac compiled together.
 - **Load-time checks:** at the new versions a subclass of a sealed type
   that does not permit it fails to load (`IncompatibleClassChangeError`),
   and private access across a nest whose host does not list the member
   fails (`IllegalAccessError`). Without them LazyVM accepts separately compiled, inconsistent
   class files that the oracle rejects. Small VM work, done with the version
   change or recorded as a known difference.
-- **Nest mates in S8:** the verifier's access checks follow the Java 11
-  nest-mate rule instead of the Java 8 one.
+- **Nest mates:** the access checks of `class/access.rs` and the verifier's
+  `invokespecial` rule follow the Java 11 nest-mate rule instead of the Java 8 one.
 - **Records:** a second native linker next to the `LambdaMetafactory` one in
   `crates/vm/src/lambda`. It reads the record class and the field handles
   from the bootstrap arguments and links `equals`, `hashCode` and
@@ -136,7 +136,7 @@ The VM work is small; the rule changes are not.
    changes in section 4. Tests at this level carry `// ORACLE: modern`.
 2. **Next, each its own work item:** a native `StringConcatFactory` linker
    (so IDE and Gradle builds work without the hidden flag), and the
-   nest-mate rule inside the S8 verifier (required once S8 lands, if 1 is
+   nest-mate rule in the access checks and the verifier (required, if 1 is
    taken).
 3. **Later, its own decision:** the Java 21 switch bootstraps.
 4. **If the rule changes are not wanted:** stay at Java 8. A javac plugin

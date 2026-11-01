@@ -1,0 +1,8 @@
+; rule: JVMS 4.9.1: a target is an opcode
+; expect: java.lang.VerifyError
+; reason: not an instruction
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+bytes a7 00 01
+return
+end

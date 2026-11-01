@@ -111,3 +111,5 @@ and is to be curated, and the list trimmed, before S9-02 merges.
 | `zeno` | Apache-2.0 OR MIT | xui-bind (through swash) | High performance, low level 2D path rasterization |
 | `zune-core` | MIT OR Apache-2.0 OR Zlib | xui-bind (through zune-jpeg) | Core utilities for image processing in the zune family of crates |
 | `zune-jpeg` | MIT OR Apache-2.0 OR Zlib | xui-bind (through xui-core) | A fast, correct and safe jpeg decoder |
+
+The fuzz targets (`fuzz/`) are their own workspace and ship nothing. They use `libfuzzer-sys` (MIT OR Apache-2.0, bundling LLVM libFuzzer under the Apache-2.0 WITH LLVM-exception terms), with `arbitrary`, `cc`, `jobserver` and `shlex`, all MIT OR Apache-2.0.

@@ -1,0 +1,11 @@
+; rule: JVMS 4.10.1.9 dadd: needs doubles
+; expect: java.lang.VerifyError
+; reason: at offset 2
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+dconst_0
+lconst_0
+dadd
+pop2
+return
+end

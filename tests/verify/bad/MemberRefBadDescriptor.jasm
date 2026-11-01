@@ -1,0 +1,9 @@
+; rule: JVMS 4.3.2: descriptors in the pool
+; expect: java.lang.ClassFormatError
+; reason: descriptor
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+getstatic Bad f Q
+pop
+return
+end

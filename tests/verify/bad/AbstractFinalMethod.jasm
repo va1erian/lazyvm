@@ -1,0 +1,6 @@
+; rule: JVMS 4.6: abstract excludes final
+; expect: java.lang.ClassFormatError
+; reason: abstract method
+class Bad flags public abstract super
+method public abstract final f ()V
+end

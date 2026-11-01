@@ -1,0 +1,15 @@
+; rule: JVMS 4.10.1.9 invokespecial: a receiver of the current class
+; expect: java.lang.VerifyError
+; reason: Bad is needed
+class Bad
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+aload_0
+invokespecial java/lang/Object hashCode ()I
+pop
+return
+end

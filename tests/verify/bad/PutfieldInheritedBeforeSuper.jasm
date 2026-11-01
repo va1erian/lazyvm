@@ -1,0 +1,26 @@
+; rule: JVMS 4.10.1.9 putfield (observed): before super() only fields the class declares
+; expect: java.lang.VerifyError
+; reason: uninitializedThis
+class Bad super Base
+method public <init> ()V stack 2 locals 1
+aload_0
+iconst_1
+putfield Bad x I
+aload_0
+invokespecial Base <init> ()V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new Bad
+dup
+invokespecial Bad <init> ()V
+pop
+return
+end
+class Base
+field public x I
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end

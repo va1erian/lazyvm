@@ -1,0 +1,10 @@
+; rule: JVMS 6.5 pop: only category 1
+; expect: java.lang.VerifyError
+; reason: split
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+lconst_0
+pop
+pop
+return
+end

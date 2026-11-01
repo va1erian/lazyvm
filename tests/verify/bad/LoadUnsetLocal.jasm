@@ -1,0 +1,9 @@
+; rule: JVMS 4.10.1.7: a local holds top until set
+; expect: java.lang.VerifyError
+; reason: load of local 1
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iload_1
+pop
+return
+end

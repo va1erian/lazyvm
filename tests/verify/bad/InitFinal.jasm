@@ -1,0 +1,7 @@
+; rule: JVMS 4.6: <init> is not final
+; expect: java.lang.ClassFormatError
+; reason: illegal flags
+class Bad
+method public final <init> ()V stack 1 locals 2
+return
+end

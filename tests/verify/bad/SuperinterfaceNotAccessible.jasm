@@ -1,0 +1,9 @@
+; rule: JVMS 5.3.5: a superinterface must be accessible
+; expect: java.lang.IllegalAccessError
+; reason: cannot access its superinterface
+class Bad
+interfaces a/Hidden
+method public static main ([Ljava/lang/String;)V stack 0 locals 1
+return
+end
+class a/Hidden flags interface abstract

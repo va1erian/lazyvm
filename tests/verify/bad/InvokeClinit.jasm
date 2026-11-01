@@ -1,0 +1,8 @@
+; rule: JVMS 4.9.1: nothing calls <clinit>
+; expect: java.lang.ClassFormatError
+; reason: bad name
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+invokestatic Bad <clinit> ()V
+return
+end

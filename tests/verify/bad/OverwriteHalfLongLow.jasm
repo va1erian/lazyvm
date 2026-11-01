@@ -1,0 +1,17 @@
+; rule: JVMS 4.10.1.7: a store over the first half kills it
+; expect: java.lang.VerifyError
+; reason: load of local 1
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+lconst_0
+lstore_2
+iconst_0
+istore_1
+lconst_0
+lstore_1
+iconst_0
+istore_2
+lload_1
+pop2
+return
+end

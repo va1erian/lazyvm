@@ -30,7 +30,7 @@ pub struct Code {
     pub handlers: Vec<Handler>,
     /// `(start_pc, line)` pairs from every `LineNumberTable`, sorted by pc.
     pub line_numbers: Vec<(u16, u16)>,
-    /// The raw `StackMapTable`, read by the verifier in S8.
+    /// The raw `StackMapTable`, read by the verifier.
     pub stack_map: Option<Arc<[u8]>>,
 }
 
@@ -51,7 +51,7 @@ pub struct BootstrapMethod {
     pub arguments: Vec<u16>,
 }
 
-pub fn parse_code(data: &[u8], pool: &ConstantPool) -> Result<Code, FormatError> {
+pub fn parse_code(data: &[u8], pool: &ConstantPool, major: u16) -> Result<Code, FormatError> {
     let mut r = Reader::new(data);
     let max_stack = r.u2()?;
     let max_locals = r.u2()?;
@@ -94,6 +94,11 @@ pub fn parse_code(data: &[u8], pool: &ConstantPool) -> Result<Code, FormatError>
         let body = r.sized()?;
         match &*name {
             "LineNumberTable" => parse_lines(body, &mut code.line_numbers)?,
+            // The attribute means nothing before version 50 (JVMS 4.7.4).
+            "StackMapTable" if major < 50 => {}
+            "StackMapTable" if code.stack_map.is_some() => {
+                return Err(r.error("two StackMapTable attributes"));
+            }
             "StackMapTable" => code.stack_map = Some(body.into()),
             _ => {}
         }

@@ -1,0 +1,26 @@
+; rule: JVMS 4.10.1.5 doesNotOverrideFinalMethod
+; expect: java.lang.VerifyError
+; reason: overrides a final method
+class Bad super Base
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial Base <init> ()V
+return
+end
+method public f ()V stack 0 locals 1
+return
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new Bad
+pop
+return
+end
+class Base
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method public final f ()V stack 0 locals 1
+return
+end

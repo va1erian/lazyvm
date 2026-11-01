@@ -116,7 +116,7 @@ def code_ranges(data: bytes, pool_end: int, utf8: dict[int, str]) -> list[range]
 
 def crafted_atomics() -> bytes:
     """A class that passes natives arguments javac and a verifier would refuse: its casts to
-    Field and to array types are overwritten with `nop`. The VM has no verifier yet (S8).
+    Field and to array types are overwritten with `nop`. Its test runs with -Xverify:none.
     The scan does not decode instructions, so the exact count guards against a false match."""
     with tempfile.TemporaryDirectory() as out:
         javac.compile([CRAFTED_SOURCE], Path(out), bootclasspath=LAZYRT_CLASSES)

@@ -1,0 +1,11 @@
+; rule: JVMS 4.10.1.7: the second half of a long is top
+; expect: java.lang.VerifyError
+; reason: load of local 2
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+lconst_0
+lstore_1
+iload_2
+pop
+return
+end

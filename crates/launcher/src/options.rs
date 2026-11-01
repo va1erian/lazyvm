@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use platform::wtf;
 
 use vm::Options;
+use vm::verify::VerifyMode;
 
 pub const USAGE: &str = "usage: lazyvm [options] <main class> [args...]
        lazyvm [options] -jar <file> [args...]
@@ -15,6 +16,11 @@ pub const USAGE: &str = "usage: lazyvm [options] <main class> [args...]
   -D<name>=<value>         set a system property
   -Xmx<size>               heap limit, e.g. 256m
   -Xss<size>               stack size, e.g. 1m, the default (16384 frames per MiB)
+  -Xverify:<mode>          all (the default), remote (not the class library) or none
+  -noverify                the same as -Xverify:none
+  -Xverify:check           verify every class on the class paths, then exit; needs no main class
+  -Xmaxclasses:<n>         most classes that may be loaded
+  -Xmaxcode:<bytes>        most bytes of code one method may have, up to 65535
   -verbose:class           print each class as it loads
   -Xtrace:interp           print every instruction (slow)
   -version                 print the version";
@@ -29,7 +35,6 @@ const IGNORED_PREFIXES: &[&str] = &[
     "-dsa",
     "-disableassertions",
     "-Didea.",
-    "-Xverify",
     "-server",
     "-client",
     "-Xms",
@@ -67,6 +72,8 @@ pub struct Launch {
     pub args: Vec<Arg>,
     /// `-showversion`: print the version, then run.
     pub show_version: bool,
+    /// `-Xverify:check`: verify the class paths instead of running anything.
+    pub verify_check: bool,
 }
 
 fn text(a: &[u16]) -> String {
@@ -84,6 +91,7 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
     let mut properties = Vec::new();
     let mut options = Options::default();
     let mut show_version = false;
+    let mut verify_check = false;
     let mut i = 0;
     while i < args.len() {
         let a = text(&args[i]);
@@ -103,6 +111,7 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                 jar: None,
                 args: args[i + 1..].to_vec(),
                 show_version,
+                verify_check,
             })));
         }
         match a {
@@ -122,6 +131,16 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                 options.assertions = true
             }
             "-Xtrace:interp" => options.trace_interp = true,
+            "-Xverify" | "-Xverify:all" => options.verify = VerifyMode::All,
+            "-Xverify:remote" => options.verify = VerifyMode::Remote,
+            "-Xverify:none" | "-noverify" => options.verify = VerifyMode::None,
+            "-Xverify:check" => verify_check = true,
+            _ if a.starts_with("-Xmaxclasses:") => {
+                options.max_classes = parse_size(&a[13..])?;
+            }
+            _ if a.starts_with("-Xmaxcode:") => {
+                options.max_method_code = parse_size(&a[10..])?.min(65535);
+            }
             "-jar" => {
                 let jar = args.get(i + 1).ok_or("-jar needs a jar file")?;
                 let boot = boot
@@ -137,6 +156,7 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                     jar: Some(PathBuf::from(os(jar))),
                     args: args[i + 2..].to_vec(),
                     show_version,
+                    verify_check,
                 })));
             }
             _ if a.starts_with("-Xbootclasspath:") => {
@@ -161,6 +181,24 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
             _ => return Err(format!("unknown option {a}")),
         }
         i += 1;
+    }
+    if verify_check {
+        let classpath_text = classpath.unwrap_or_else(default_classpath);
+        let boot = boot
+            .or_else(default_boot)
+            .ok_or("cannot find lazyrt: pass -Xbootclasspath:<path>")?;
+        return Ok(Command::Run(Box::new(Launch {
+            classpath: split_classpath(&os(&classpath_text)),
+            classpath_text,
+            boot_classpath: boot,
+            properties,
+            options,
+            main_class: None,
+            jar: None,
+            args: Vec::new(),
+            show_version,
+            verify_check,
+        })));
     }
     Err("no main class given".into())
 }
@@ -259,6 +297,37 @@ mod tests {
         assert_eq!(l.args, [units("x"), units("-y")]);
         assert_eq!(l.properties, [(units("k"), units("v"))]);
         assert_eq!(l.options.heap_limit, 64 << 20);
+    }
+
+    #[test]
+    fn parses_verifier_and_limit_options() {
+        let run = |a: &[&str]| match parse(&strings(a)) {
+            Ok(Command::Run(l)) => *l,
+            other => panic!("{other:?}"),
+        };
+        let boot = "-Xbootclasspath:rt";
+        assert_eq!(run(&[boot, "Main"]).options.verify, VerifyMode::All);
+        assert_eq!(
+            run(&[boot, "-Xverify:none", "Main"]).options.verify,
+            VerifyMode::None
+        );
+        assert_eq!(
+            run(&[boot, "-noverify", "Main"]).options.verify,
+            VerifyMode::None
+        );
+        assert_eq!(
+            run(&[boot, "-Xverify:remote", "Main"]).options.verify,
+            VerifyMode::Remote
+        );
+        assert!(run(&[boot, "-Xverify:check"]).verify_check);
+        assert_eq!(
+            run(&[boot, "-Xmaxclasses:99", "Main"]).options.max_classes,
+            99
+        );
+        let code = run(&[boot, "-Xmaxcode:1m", "Main"]).options.max_method_code;
+        assert_eq!(code, 65535);
+        assert!(parse(&strings(&[boot, "-Xverify:bogus", "Main"])).is_err());
+        assert!(parse(&strings(&[boot, "-Xmaxclasses:0", "Main"])).is_err());
     }
 
     #[test]

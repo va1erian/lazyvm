@@ -1,0 +1,7 @@
+; rule: JVMS 4.1: not both final and abstract
+; expect: java.lang.ClassFormatError
+; reason: final and abstract
+class Bad flags public final abstract super
+method public static main ([Ljava/lang/String;)V stack 0 locals 1
+return
+end

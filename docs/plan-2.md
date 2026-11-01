@@ -7,19 +7,21 @@ table and S0-S7. The same rules apply ([`../AGENTS.md`](../AGENTS.md)).
 
 Goal: LazyVM is safe to run class files it did not build. This stage is
 required before S10's packages can install third-party jars and before S12-S13 run existing apps.
+The design, and where the oracle and the JVMS differ, is [`design/verifier.md`](design/verifier.md).
+Class files below version 50 are not type-checked (D1), so the goal holds from version 50 up.
 
-- [ ] S8-01 Structural checks (JVMS 4.8): code length, branch targets,
+- [x] S8-01 Structural checks (JVMS 4.8): code length, branch targets,
       exception ranges, constant-pool types per opcode, and access flags.
       Check: `cargo test -p vm verify::structural` with hand-made bad class files.
-- [ ] S8-02 Type-checking verifier (JVMS 4.10.1) driven by `StackMapTable`,
+- [x] S8-02 Type-checking verifier (JVMS 4.10.1) driven by `StackMapTable`,
       including `uninitializedThis`, subroutine-free code only, and the
       protected-access check. On failure it throws `VerifyError` with the
       method, offset and reason.
       Check: every class in `lazyrt.jar` and all tests verify; `tests/verify/bad/*` (one class per rule) all rejected.
-- [ ] S8-03 Fuzzing: `cargo fuzz` targets for the parser and the verifier, plus
+- [x] S8-03 Fuzzing: `cargo fuzz` targets for the parser and the verifier, plus
       a 1 h run in CI weekly.
       Check: 10 minutes of each target locally with no crash; the corpus is checked in.
-- [ ] S8-04 Limits: stack depth (`StackOverflowError`), heap, class count and
+- [x] S8-04 Limits: stack depth (`StackOverflowError`), heap, class count and
       a per-method code size, all configurable and surfaced as errors, never
       aborts.
       Check: `tests/java/s8/DeepRecursion`, `HugeArray`.

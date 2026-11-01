@@ -1,0 +1,10 @@
+; rule: JVMS 4.2.1: class names in the pool
+; oracle: differs, it loads the class and fails when the reference resolves; JVMS 4.2.1 makes this a format error
+; expect: java.lang.ClassFormatError
+; reason: bad class name
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+getstatic a//b f I
+pop
+return
+end

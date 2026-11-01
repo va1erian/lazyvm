@@ -1,0 +1,13 @@
+; rule: JVMS 4.10.1.2: a primitive array is no Object[]
+; expect: java.lang.VerifyError
+; reason: at offset
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+iconst_0
+newarray int
+invokestatic Bad f ([Ljava/lang/Object;)V
+return
+end
+method public static f ([Ljava/lang/Object;)V stack 0 locals 1
+return
+end

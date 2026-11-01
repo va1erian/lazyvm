@@ -1,0 +1,9 @@
+; rule: JVMS 4.10.1.9 monitorenter: needs a reference
+; expect: java.lang.VerifyError
+; reason: where a reference is needed
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_0
+monitorenter
+return
+end

@@ -1,0 +1,10 @@
+; rule: JVMS 4.10.1.9: uninitialized is not assignable to Object
+; expect: java.lang.VerifyError
+; reason: uninitialized(0)
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+new java/lang/Object
+invokestatic java/lang/String valueOf (Ljava/lang/Object;)Ljava/lang/String;
+pop
+return
+end

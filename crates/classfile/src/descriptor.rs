@@ -56,7 +56,7 @@ pub struct MethodDescriptor {
 
 impl MethodDescriptor {
     /// Argument slots, not counting `this`. A parsed descriptor has at most
-    /// 254, so the narrowing never saturates for one from `parse_method`.
+    /// 255, so the narrowing never saturates for one from `parse_method`.
     pub fn arg_slots(&self) -> u16 {
         u16::try_from(self.slot_count()).unwrap_or(u16::MAX)
     }
@@ -98,8 +98,9 @@ pub fn parse_method(desc: &str) -> Result<MethodDescriptor, String> {
         Some(ty)
     };
     let md = MethodDescriptor { params, ret };
-    // JVMS 4.3.3: at most 255 slots including `this`.
-    if md.slot_count() > 254 {
+    // JVMS 4.3.3: at most 255 slots. `this` counts for an instance method, which
+    // a descriptor does not say, so the class's format check adds it.
+    if md.slot_count() > 255 {
         return Err(format!("too many parameter slots in {desc:?}"));
     }
     Ok(md)
