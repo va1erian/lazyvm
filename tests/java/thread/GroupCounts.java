@@ -9,6 +9,34 @@ public class GroupCounts {
     static class Narrow extends Thread {
     }
 
+    static class NarrowGroup extends ThreadGroup {
+        NarrowGroup() {
+            super("narrow");
+        }
+    }
+
+    /** A start that blocks on the group has not happened yet. */
+    static void startBlocked() throws InterruptedException {
+        ThreadGroup held = new ThreadGroup("held");
+        Thread t = new Thread(held, WAITING(new CountDownLatch(0)), "blocked start");
+        Thread starter = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                t.start();
+            }
+        });
+        synchronized (held) {
+            starter.start();
+            while (starter.getState() != Thread.State.BLOCKED) {
+                Thread.sleep(1);
+            }
+            System.out.println("start blocked: " + t.getState() + " " + t.isAlive() + " " + held.activeCount());
+        }
+        starter.join();
+        t.join();
+        System.out.println("start done: " + t.getState() + " " + t.isAlive() + " " + held.activeCount());
+    }
+
     static final CountDownLatch END = new CountDownLatch(1);
     static final Runnable WAIT = new Runnable() {
         @Override
@@ -94,6 +122,11 @@ public class GroupCounts {
         } catch (ArrayStoreException e) {
             System.out.println("narrow array " + e);
         }
+        try {
+            main.enumerate(new NarrowGroup[4]);
+        } catch (ArrayStoreException e) {
+            System.out.println("narrow groups " + e);
+        }
         Thread[] marked = new Thread[8];
         Arrays.fill(marked, Thread.currentThread());
         int n = g1.enumerate(marked);
@@ -135,6 +168,7 @@ public class GroupCounts {
 
     public static void main(String[] args) throws Exception {
         ceilings();
+        startBlocked();
         ThreadGroup main = Thread.currentThread().getThreadGroup();
         counts("alone", main, new ThreadGroup("unused"));
 

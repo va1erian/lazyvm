@@ -182,10 +182,11 @@ public class Thread implements Runnable {
         if (status != NEW) {
             throw new IllegalThreadStateException();
         }
-        status = STARTED;
         boolean started = false;
         try {
+            // First: it can block on the group, and until it is in, the thread is still new.
             group.add(this);
+            status = STARTED;
             start0(daemon);
             started = true;
         } finally {
@@ -351,7 +352,8 @@ public class Thread implements Runnable {
             case 3:
                 return State.TIMED_WAITING;
             default:
-                return State.TERMINATED;
+                // Started, and the VM has no entry for it yet: start0 is under way.
+                return State.RUNNABLE;
         }
     }
 

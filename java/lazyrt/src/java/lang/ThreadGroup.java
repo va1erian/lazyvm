@@ -120,12 +120,17 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         ThreadGroup[] subs;
         synchronized (this) {
             subs = subgroups();
-            Object[] own = wantThreads ? threads : groups;
             int n = Math.min(room, wantThreads ? threadCount : groupCount);
-            // One by one: a store into a narrower array type fails as the oracle's does.
-            for (int i = 0; i < n; i++) {
-                into[at++] = own[i];
+            // Into a narrower array type, the oracle's failure names Thread, so one
+            // store at a time, and has no message for groups, like arraycopy's (observed).
+            if (wantThreads) {
+                for (int i = 0; i < n; i++) {
+                    into[at + i] = threads[i];
+                }
+            } else {
+                System.arraycopy(groups, 0, into, at, n);
             }
+            at += n;
         }
         if (recurse) {
             for (ThreadGroup g : subs) {

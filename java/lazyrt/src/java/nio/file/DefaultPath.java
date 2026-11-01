@@ -246,7 +246,7 @@ final class DefaultPath implements Path {
         if (isAbsolute()) {
             return this;
         }
-        String userDir = System.getProperty("user.dir");
+        String userDir = UserDir.PATH;
         String abs = SYNTAX.absolutePath(new PathSyntax.Parsed(root, names), userDir);
         // Observed: the string is kept as built, even with a trailing separator (Windows `C:`).
         PathSyntax.Parsed p = SYNTAX.parsePath(abs);
@@ -322,5 +322,10 @@ final class DefaultPath implements Path {
 
     public String toString() {
         return string;
+    }
+
+    /** Paths keep the directory of their first use (observed), unlike File, which reads it each time. */
+    private static final class UserDir {
+        static final String PATH = System.getProperty("user.dir");
     }
 }
