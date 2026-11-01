@@ -1,0 +1,8 @@
+; rule: JVMS 4.10.1.9 iinc: needs an int
+; expect: java.lang.VerifyError
+; reason: iinc of local 0
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iinc 0 1
+return
+end

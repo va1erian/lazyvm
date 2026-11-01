@@ -1,0 +1,14 @@
+; rule: JVMS 4.10.1.9 return: this must be initialized
+; expect: java.lang.VerifyError
+; reason: before the constructor
+class Bad
+method public <init> ()V stack 2 locals 1
+return
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new Bad
+dup
+invokespecial Bad <init> ()V
+pop
+return
+end

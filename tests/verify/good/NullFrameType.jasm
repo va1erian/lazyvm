@@ -1,0 +1,12 @@
+; a frame may give a local the null type
+class Good
+method public static main ([Ljava/lang/String;)V stack 2 locals 2
+aconst_null
+astore_1
+L:
+frame L locals [Ljava/lang/String; null stack
+getstatic java/lang/System out Ljava/io/PrintStream;
+ldc string ok
+invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+return
+end

@@ -1,0 +1,4 @@
+; rule: JVMS 4.1: an interface is not final
+; expect: java.lang.ClassFormatError
+; reason: interface is final
+class Bad flags public interface abstract final

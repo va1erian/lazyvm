@@ -1,0 +1,6 @@
+; rule: JVMS 4.6: interface methods are public or private
+; expect: java.lang.ClassFormatError
+; reason: public or private
+class Bad flags public interface abstract
+method protected abstract f ()V
+end

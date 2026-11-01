@@ -1,0 +1,14 @@
+; rule: JVMS 4.10.1.6: a caught exception needs one stack slot
+; expect: java.lang.VerifyError
+; reason: no room
+class Bad
+method public static main ([Ljava/lang/String;)V stack 0 locals 4
+A:
+nop
+B:
+return
+H:
+frame H locals [Ljava/lang/String; stack
+return
+handler A B H any
+end

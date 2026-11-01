@@ -1,0 +1,12 @@
+; rule: JVMS 4.10.1.9 aaload: an array
+; expect: java.lang.VerifyError
+; reason: array of references
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+aload_0
+checkcast java/lang/Object
+iconst_0
+aaload
+pop
+return
+end

@@ -1,0 +1,8 @@
+; rule: JVMS 4.9.1: only documented opcodes
+; expect: java.lang.VerifyError
+; reason: illegal opcode
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+bytes cb
+return
+end

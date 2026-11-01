@@ -1,0 +1,12 @@
+; rule: JVMS 4.10: type checking from version 50
+; expect: java.lang.VerifyError
+; reason: no stack map frame
+; oracle: differs, version 50 may fail over to the inference verifier, which LazyVM does not have (decisions.md D1)
+class Bad
+version 50
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+iconst_0
+ifeq L
+L:
+return
+end

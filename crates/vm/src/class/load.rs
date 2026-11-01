@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use classfile::{ACC_ABSTRACT, ACC_FINAL, ACC_INTERFACE, ACC_PUBLIC, ClassFile};
+use classfile::{ACC_ABSTRACT, ACC_FINAL, ACC_PUBLIC, ClassFile};
 
 use super::{Class, ClassId, ClassKind, InitState, layout};
 use crate::{Vm, VmError, VmResult};
@@ -11,6 +11,8 @@ const NO_CLASS_DEF: &str = "java/lang/NoClassDefFoundError";
 const INCOMPATIBLE: &str = "java/lang/IncompatibleClassChangeError";
 /// Superclass and superinterface chains longer than this are refused.
 const MAX_LOAD_DEPTH: usize = 2048;
+/// Classes past `Options::max_classes` that creating an exception may load.
+const ERROR_HEADROOM: usize = 256;
 
 impl Vm {
     /// Returns the class with this internal name, loading and linking it
@@ -56,6 +58,9 @@ impl Vm {
             };
             VmError::exception(class, format!("{name}: {e}"))
         })?;
+        crate::verify::structural::check_format(&cf, self.options.max_method_code).map_err(
+            |e| VmError::exception("java/lang/ClassFormatError", format!("{name}: {e}")),
+        )?;
         if &*cf.this_class != name {
             let msg = format!("{name} (wrong name: {})", cf.this_class);
             return Err(VmError::exception(NO_CLASS_DEF, msg));
@@ -71,7 +76,7 @@ impl Vm {
             ));
         }
         self.loading.push(name.into());
-        let supers = self.load_supers(&cf);
+        let supers = self.load_supers(&cf, boot);
         self.loading.pop();
         let (super_class, interfaces) = supers?;
         let id = self.next_id()?;
@@ -84,7 +89,11 @@ impl Vm {
     }
 
     /// Loads the superclass and superinterfaces and checks JVMS 5.3.5 step 3-4.
-    fn load_supers(&mut self, cf: &ClassFile) -> VmResult<(Option<ClassId>, Vec<ClassId>)> {
+    fn load_supers(
+        &mut self,
+        cf: &ClassFile,
+        boot: bool,
+    ) -> VmResult<(Option<ClassId>, Vec<ClassId>)> {
         let super_class = match &cf.super_class {
             None => None,
             Some(s) => {
@@ -98,6 +107,7 @@ impl Vm {
                     let msg = format!("Cannot inherit from final class {s}");
                     return Err(VmError::exception("java/lang/VerifyError", msg));
                 }
+                self.check_super_access(cf, boot, id, "superclass")?;
                 Some(id)
             }
         };
@@ -117,9 +127,32 @@ impl Vm {
                 );
                 return Err(VmError::exception(INCOMPATIBLE, msg));
             }
+            self.check_super_access(cf, boot, id, "superinterface")?;
             interfaces.push(id);
         }
         Ok((super_class, interfaces))
+    }
+
+    /// JVMS 5.3.5: a class must be able to access what it extends.
+    fn check_super_access(
+        &self,
+        cf: &ClassFile,
+        boot: bool,
+        sup: ClassId,
+        what: &str,
+    ) -> VmResult<()> {
+        let s = self.class(sup);
+        let package = |n: &str| n.rfind('/').map_or(String::new(), |at| n[..at].to_string());
+        let same = s.from_boot == boot && package(&s.name) == package(&cf.this_class);
+        if s.access & ACC_PUBLIC != 0 || same {
+            return Ok(());
+        }
+        let msg = format!(
+            "class {} cannot access its {what} {}",
+            cf.this_class.replace('/', "."),
+            s.java_name()
+        );
+        Err(VmError::exception("java/lang/IllegalAccessError", msg))
     }
 
     fn load_array_class(&mut self, name: &str) -> VmResult<ClassId> {
@@ -202,10 +235,22 @@ impl Vm {
         all.into()
     }
 
+    /// The next class's id, or the class limit's error (`Options::max_classes`).
     fn next_id(&self) -> VmResult<ClassId> {
-        u32::try_from(self.classes.len())
-            .map(ClassId)
-            .map_err(|_| VmError::Internal("too many classes".into()))
+        let limit = self.options.max_classes;
+        // The error itself needs classes: its own, and what its constructor loads.
+        let headroom = if self.creating_exception > 0 {
+            ERROR_HEADROOM
+        } else {
+            0
+        };
+        if self.classes.len() >= limit.saturating_add(headroom) {
+            let msg = format!("class limit of {limit} reached (-Xmaxclasses)");
+            return Err(VmError::exception("java/lang/OutOfMemoryError", msg));
+        }
+        u32::try_from(self.classes.len()).map(ClassId).map_err(|_| {
+            VmError::exception("java/lang/OutOfMemoryError", "class ids are exhausted")
+        })
     }
 
     fn insert(&mut self, class: Class) -> ClassId {
@@ -243,6 +288,8 @@ fn synthetic(
         mirror: None,
         cp_cache: Vec::new(),
         from_boot: true,
+        verified: true,
+        host: None,
     }
 }
 
@@ -251,15 +298,4 @@ fn sorted(ids: &[ClassId]) -> Box<[ClassId]> {
     v.sort_unstable();
     v.dedup();
     v.into()
-}
-
-/// `ACC_INTERFACE` without `ACC_ABSTRACT` is malformed (JVMS 4.1).
-pub(super) fn check_class_flags(access: u16) -> Result<(), String> {
-    if access & ACC_INTERFACE != 0 && access & ACC_ABSTRACT == 0 {
-        return Err("interface is not abstract".into());
-    }
-    if access & ACC_FINAL != 0 && access & ACC_ABSTRACT != 0 {
-        return Err("class is both final and abstract".into());
-    }
-    Ok(())
 }

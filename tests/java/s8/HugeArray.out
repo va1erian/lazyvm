@@ -1,0 +1,21 @@
+int max: OutOfMemoryError: Requested array size exceeds VM limit
+int max-1: OutOfMemoryError: Requested array size exceeds VM limit
+int max-2: OutOfMemoryError: Java heap space
+long: OutOfMemoryError: Java heap space
+double: OutOfMemoryError: Java heap space
+byte: OutOfMemoryError: Java heap space
+char: OutOfMemoryError: Java heap space
+short: OutOfMemoryError: Java heap space
+boolean: OutOfMemoryError: Java heap space
+float: OutOfMemoryError: Java heap space
+Object: OutOfMemoryError: Java heap space
+String: OutOfMemoryError: Requested array size exceeds VM limit
+two dims: OutOfMemoryError: Java heap space
+two dims, first: OutOfMemoryError: Java heap space
+three dims: OutOfMemoryError: Java heap space
+negative: java.lang.NegativeArraySizeException
+negative second: java.lang.NegativeArraySizeException
+small: made true
+filled the heap: true
+after: made true
+done

@@ -1,0 +1,15 @@
+; rule: JVMS 4.10.1.6 instructionSatisfiesHandler: incoming locals
+; expect: java.lang.VerifyError
+; reason: local 1 is
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+A:
+nop
+B:
+return
+H:
+frame H locals [Ljava/lang/String; int stack java/lang/Throwable
+pop
+return
+handler A B H any
+end

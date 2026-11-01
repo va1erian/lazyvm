@@ -1,0 +1,12 @@
+; rule: JVMS 4.10.1.9 aastore: value is a reference
+; expect: java.lang.VerifyError
+; reason: at offset
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_1
+anewarray java/lang/Object
+iconst_0
+iconst_0
+aastore
+return
+end

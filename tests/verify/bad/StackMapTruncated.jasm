@@ -1,0 +1,8 @@
+; rule: JVMS 4.7.4: the table holds its frames
+; expect: java.lang.ClassFormatError
+; reason: truncated
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+return
+rawframes 0001 ff00
+end

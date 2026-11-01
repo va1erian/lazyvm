@@ -1,0 +1,9 @@
+; rule: JVMS 4.10.1.9 invokestatic: arity
+; expect: java.lang.VerifyError
+; reason: underflow
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+invokestatic java/lang/Integer toString (I)Ljava/lang/String;
+pop
+return
+end

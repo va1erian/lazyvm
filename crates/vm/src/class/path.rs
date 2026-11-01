@@ -48,6 +48,25 @@ impl ClassPath {
             .flatten()
     }
 
+    /// Every class file's internal name on both paths, sorted and once each.
+    pub fn class_names(&self) -> Vec<String> {
+        let mut names = Vec::new();
+        for entry in self.boot.iter().chain(&self.app) {
+            match entry {
+                Entry::Dir(dir) => collect_class_names(dir, "", &mut names),
+                Entry::Jar(jar) => names.extend(
+                    jar.names()
+                        .iter()
+                        .filter(|n| !n.starts_with("META-INF/"))
+                        .filter_map(|n| n.strip_suffix(".class").map(str::to_string)),
+                ),
+            }
+        }
+        names.sort_unstable();
+        names.dedup();
+        names
+    }
+
     /// A resource by its `/`-separated name, without a leading slash, as
     /// Java finds it: in a directory, `.` and `..` are resolved (never above
     /// the root) and a directory reads as empty; in a jar the name must match
@@ -78,6 +97,21 @@ impl ClassPath {
             .iter()
             .find_map(lookup)
             .map(|bytes| Found { bytes, boot: false })
+    }
+}
+
+fn collect_class_names(dir: &Path, prefix: &str, out: &mut Vec<String>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let path = entry.path();
+        if path.is_dir() {
+            collect_class_names(&path, &format!("{prefix}{name}/"), out);
+        } else if let Some(stem) = name.strip_suffix(".class") {
+            out.push(format!("{prefix}{stem}"));
+        }
     }
 }
 

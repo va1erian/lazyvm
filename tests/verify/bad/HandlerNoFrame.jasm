@@ -1,0 +1,14 @@
+; rule: JVMS 4.10.1.6: a handler needs a frame
+; expect: java.lang.VerifyError
+; reason: no stack map frame at target
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+A:
+nop
+B:
+return
+H:
+pop
+return
+handler A B H any
+end

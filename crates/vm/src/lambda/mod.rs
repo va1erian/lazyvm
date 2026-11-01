@@ -138,6 +138,7 @@ impl Vm {
             Ok(c) => c,
             Err(e) => return Err(self.wrap_link_failure(e)),
         };
+        self.class_mut(class).host = Some(caller);
         self.initialize(class)?;
         // Initializing the interface can run code that links this same site;
         // the first link to finish wins, as in Java 8.

@@ -1,0 +1,14 @@
+; rule: JVMS 4.10.1.2: a class fits only its superclasses
+; expect: java.lang.VerifyError
+; reason: java/lang/Integer is needed
+class Bad
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new java/lang/Object
+dup
+invokespecial java/lang/Object <init> ()V
+invokestatic Bad f (Ljava/lang/Integer;)V
+return
+end
+method public static f (Ljava/lang/Integer;)V stack 0 locals 1
+return
+end

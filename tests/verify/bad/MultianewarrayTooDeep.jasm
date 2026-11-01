@@ -1,0 +1,11 @@
+; rule: JVMS 4.9.1 multianewarray dimensions
+; expect: java.lang.VerifyError
+; reason: multianewarray
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_0
+iconst_0
+multianewarray [I 2
+pop
+return
+end

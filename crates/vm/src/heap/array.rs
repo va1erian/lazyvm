@@ -70,7 +70,22 @@ impl ElemKind {
     }
 }
 
+/// From this many bytes, an array's memory is asked for first: a refusal by
+/// the OS is `OutOfMemoryError`, not the abort `vec!` would make of it.
+const PROBE_BYTES: usize = 1 << 20;
+
+/// Whether the OS would give `bytes` right now.
+fn can_allocate(bytes: usize) -> bool {
+    Vec::<u8>::new().try_reserve_exact(bytes).is_ok()
+}
+
 impl Array {
+    /// A zeroed array, or `None` if the OS has no memory for it.
+    pub fn try_new(kind: ElemKind, len: usize) -> Option<Array> {
+        let bytes = len.checked_mul(kind.bytes())?;
+        (bytes < PROBE_BYTES || can_allocate(bytes)).then(|| Array::new(kind, len))
+    }
+
     pub fn new(kind: ElemKind, len: usize) -> Array {
         match kind {
             ElemKind::Boolean | ElemKind::Byte => Array::Byte(vec![0; len].into()),

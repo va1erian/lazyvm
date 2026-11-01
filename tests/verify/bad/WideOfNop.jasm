@@ -1,0 +1,8 @@
+; rule: JVMS 4.9.1: wide modifies loads, stores and iinc
+; expect: java.lang.VerifyError
+; reason: wide of
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+bytes c4 00 00 00
+return
+end

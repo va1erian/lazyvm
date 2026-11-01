@@ -30,7 +30,7 @@ pub struct Code {
     pub handlers: Vec<Handler>,
     /// `(start_pc, line)` pairs from every `LineNumberTable`, sorted by pc.
     pub line_numbers: Vec<(u16, u16)>,
-    /// The raw `StackMapTable`, read by the verifier in S8.
+    /// The raw `StackMapTable`, read by the verifier.
     pub stack_map: Option<Arc<[u8]>>,
 }
 
@@ -94,6 +94,9 @@ pub fn parse_code(data: &[u8], pool: &ConstantPool) -> Result<Code, FormatError>
         let body = r.sized()?;
         match &*name {
             "LineNumberTable" => parse_lines(body, &mut code.line_numbers)?,
+            "StackMapTable" if code.stack_map.is_some() => {
+                return Err(r.error("two StackMapTable attributes"));
+            }
             "StackMapTable" => code.stack_map = Some(body.into()),
             _ => {}
         }

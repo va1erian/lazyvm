@@ -1,0 +1,11 @@
+; rule: JVMS 4.10.1.4 max_stack
+; expect: java.lang.VerifyError
+; reason: overflows max_stack
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 4
+iconst_0
+iconst_0
+pop
+pop
+return
+end

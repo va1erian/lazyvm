@@ -1,0 +1,29 @@
+; null passes verification for arrays and receivers
+class Good
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+getstatic java/lang/System out Ljava/io/PrintStream;
+ldc string ok
+invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+return
+end
+method public static f ()V stack 4 locals 0
+aconst_null
+iconst_0
+iaload
+pop
+aconst_null
+arraylength
+pop
+aconst_null
+iconst_0
+aaload
+pop
+aconst_null
+iconst_0
+iconst_0
+iastore
+aconst_null
+invokevirtual java/lang/String length ()I
+pop
+return
+end

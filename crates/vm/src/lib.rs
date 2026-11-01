@@ -18,6 +18,7 @@ mod strings;
 pub mod thread;
 mod throw;
 pub mod value;
+pub mod verify;
 pub use platform::wtf;
 
 use std::collections::{BTreeMap, HashMap};
@@ -44,6 +45,12 @@ pub struct Options {
     pub assertions: bool,
     pub trace_interp: bool,
     pub verbose_class: bool,
+    /// `-Xverify`: which classes the verifier checks.
+    pub verify: verify::VerifyMode,
+    /// Classes that may be loaded, arrays and primitives included.
+    pub max_classes: usize,
+    /// Bytes of code one method may have; the class file format stops at 65535.
+    pub max_method_code: usize,
 }
 
 impl Default for Options {
@@ -56,6 +63,9 @@ impl Default for Options {
             assertions: false,
             trace_interp: false,
             verbose_class: false,
+            verify: verify::VerifyMode::All,
+            max_classes: 1 << 20,
+            max_method_code: 65535,
         }
     }
 }

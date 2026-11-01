@@ -1,0 +1,7 @@
+; rule: JVMS 4.1: annotation needs interface
+; expect: java.lang.ClassFormatError
+; reason: annotation
+class Bad flags public super annotation
+method public static main ([Ljava/lang/String;)V stack 0 locals 1
+return
+end

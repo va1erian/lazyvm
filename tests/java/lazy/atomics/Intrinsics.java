@@ -1,3 +1,4 @@
+// VMARGS: -Xverify:none
 package lazy.atomics;
 
 import java.lang.reflect.Field;

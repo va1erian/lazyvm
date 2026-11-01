@@ -138,6 +138,9 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
         eprintln!("  boot class path: {:?}", launch.boot_classpath);
         return ExitCode::from(1);
     }
+    if launch.verify_check {
+        return verify_check(&mut vm);
+    }
     let main_class = launch.main_class.clone().unwrap_or_default();
     let result = match String::from_utf16(&main_class) {
         Ok(name) => run_main(&mut vm, &name, &launch.args),
@@ -153,6 +156,21 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
         Ended::Exit(code) => code,
         Ended::Main(code) => after_main(&mut vm, code),
     }
+}
+
+/// `-Xverify:check`: every class on the class paths, one line per failure.
+fn verify_check(vm: &mut Vm) -> ExitCode {
+    let names = vm.classpath.class_names();
+    let mut failed = 0;
+    for name in &names {
+        let linked = vm.load_class(name).and_then(|c| vm.link_class(c));
+        if let Err(e) = linked {
+            println!("FAIL {name}: {e}");
+            failed += 1;
+        }
+    }
+    println!("verified {} classes, {failed} failed", names.len());
+    ExitCode::from(u8::from(failed > 0))
 }
 
 /// How the main thread ended.

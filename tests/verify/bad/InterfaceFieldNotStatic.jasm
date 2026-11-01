@@ -1,0 +1,5 @@
+; rule: JVMS 4.5: interface fields are public static final
+; expect: java.lang.ClassFormatError
+; reason: public static final
+class Bad flags public interface abstract
+field public x I

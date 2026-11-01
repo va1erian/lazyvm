@@ -45,9 +45,10 @@ impl Vm {
         if len.saturating_mul(kind.bytes()) > self.heap.limit() {
             return Err(VmError::OutOfMemory);
         }
+        let array = Array::try_new(kind, len).ok_or(VmError::OutOfMemory)?;
         self.heap.alloc(Object {
             class,
-            body: Body::Array(Array::new(kind, len)),
+            body: Body::Array(array),
         })
     }
 

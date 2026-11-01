@@ -1,0 +1,11 @@
+plain: StackOverflowError
+went deep: true
+wide: StackOverflowError
+reflection: java.lang.StackOverflowError
+lambda: StackOverflowError
+constructor: StackOverflowError
+synchronized: StackOverflowError
+lock is free
+other thread: StackOverflowError
+again: StackOverflowError
+done

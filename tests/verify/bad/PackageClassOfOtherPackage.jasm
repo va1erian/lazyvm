@@ -1,0 +1,15 @@
+; rule: JVMS 5.4.4: a package-private class
+; expect: java.lang.IllegalAccessError
+; reason: tried to access class
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+new a/Hidden
+pop
+return
+end
+class a/Hidden flags super
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end

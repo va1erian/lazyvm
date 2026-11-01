@@ -1,0 +1,8 @@
+; rule: JVMS 4.10.1.6: code after return needs a frame
+; expect: java.lang.VerifyError
+; reason: after an unconditional branch
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+return
+return
+end

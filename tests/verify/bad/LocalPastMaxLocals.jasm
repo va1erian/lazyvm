@@ -1,0 +1,9 @@
+; rule: JVMS 4.9.1: local indices fit max_locals
+; expect: java.lang.VerifyError
+; reason: max_locals
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iload 200
+pop
+return
+end
