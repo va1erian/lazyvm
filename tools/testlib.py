@@ -11,6 +11,9 @@ Optional header lines in the source, before `package`:
     // VMARGS: -Xmx16m      extra arguments for both VMs
     // TIMEOUT: 120         seconds, default 60
     // ORACLE: modern       bless on JDK 19+ (docs/decisions.md D9: float printing)
+    // NEEDS: net           sockets: inside LazyOS, only under `lazyos_test.py --net`
+                            `not-lazyos` never inside LazyOS; `windows` needs Windows;
+                            `lazyos-net` only under `lazyos_test.py --net`
 """
 
 from __future__ import annotations
@@ -39,6 +42,7 @@ class Test:
     args: list[str] = field(default_factory=list)
     vm_args: list[str] = field(default_factory=list)
     timeout: int = DEFAULT_TIMEOUT
+    needs: str = ""
     modern_oracle: bool = False
 
     @property
@@ -72,6 +76,8 @@ def parse_test(source: Path) -> Test:
             if value.strip() != "modern":
                 die(f"{source}: ORACLE must be 'modern', got {value.strip()!r}")
             test.modern_oracle = True
+        elif key == "NEEDS":
+            test.needs = value.strip()
         elif key == "TIMEOUT":
             if not value.strip().isdigit():
                 die(f"{source}: TIMEOUT must be whole seconds, got {value.strip()!r}")

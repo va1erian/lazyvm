@@ -41,7 +41,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S4 | Language completeness: lambdas, annotations, reflection | in progress |
 | S5 | Core library | in progress |
 | S6 | Threads, concurrency, `CompletionStage`, the event loop | done |
-| S7 | `lazy.net` async TCP | not started |
+| S7 | `lazy.net` async TCP | done |
 | S8 | Verifier and hardening | not started |
 | S11 | Streams, `java.time`, logging, JDWP | not started |
 | S9 | `lazy.ui` on xui | in progress (S9-00, S9-00b, S9-01 and the S9-02 spike done) |
@@ -454,7 +454,7 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
 `java.nio.channels`, UDP, TLS and HTTP are deferred to S15 in
 [`plan-2.md`](plan-2.md), which builds on this item's platform layer.
 
-- [ ] S7-01 `lazy.net` over platform TCP sockets, as [`async.md`](async.md)
+- [x] S7-01 `lazy.net` over platform TCP sockets, as [`async.md`](async.md)
       designs it.
       - Platform: non-blocking TCP, IPv4 and IPv6, registered with the S6-06
         reactor; DNS through the platform resolver (on LazyOS, through `netd`
@@ -463,16 +463,15 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
         `Connection.read`, `readAll`, `write` and `close` returning stages;
         `Tcp.listen(host, port, onAccept)` delivering connections to a
         handler; backpressure by not reading; cancelling a stage closes the
-        socket; a 30 s limit per connect attempt. LazyOS has no IPv6 and no
-        loopback yet, so tests that need them run on Windows only.
+        socket; a 30 s limit per connect attempt. LazyOS has no IPv6 and 64
+        sockets for the whole system, so tests that need more run elsewhere.
       - Failures complete the stage exceptionally with an `IOException`;
         `lazy.net` adds no `java.net` types.
-      - `tools/lazyos_test.py --net`: boots with LazyOS's networking switch
-        and its host peers (`tools/net/hostpeers.py`), adds the `hostfwd`
-        rule into the guest's listening port, and passes the addresses to
-        the tests ([`async.md`](async.md), "Files").
-      Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/net.rs`, `crates/natives/src/lazy_async.rs`, `tools/lazyos_test.py`.
-      Check: `cargo test -p platform net`; on Windows `tests/java/lazy/net/AsyncEcho`, `ManyClients` (500 concurrent connections), `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `Ipv6Loopback`; on LazyOS (`tools/lazyos_test.py --net`) `tests/java/lazy/net/HostEcho`, `HostInbound`.
+      - `tools/lazyos_test.py --net`: the tests that need sockets, on an image
+        with `netd`, a card and the host peers (`tools/net/hostpeers.py`), through
+        LazyOS `tools/lazyvm/run.py --net` ([`async.md`](async.md), "Files").
+      Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/{net,net/conn,net/listen,resolver}.rs`, `crates/natives/src/lazy_async.rs`, `tools/lazyos_test.py`, `tools/testlib.py`.
+      Check: `cargo test -p platform net`; `tests/java/lazy/net/AsyncEcho`, `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `CloseRules`, `WriteOrder`, `ReadAllHeap` (both, LazyOS through `tools/lazyos_test.py --net`); `ManyClients` (500 concurrent connections), `Ipv6Loopback` (Windows); `HostEcho`, `HostInbound` (LazyOS, `--net`).
       Needs: S6-06.
 
 Gate: `samples/tcpget` sends a hand-written HTTP/1.0 `GET` over `lazy.net` to a

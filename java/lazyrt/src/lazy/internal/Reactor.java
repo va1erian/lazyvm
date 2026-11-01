@@ -10,9 +10,19 @@ import java.util.concurrent.CompletionStage;
  * The Java side of the event loop (docs/async.md, "Inside"): the table of operations, the count
  * of pending work, the dispatcher thread that delivers completions and runs tasks, and the keeper
  * thread that holds the VM open while anything is pending. The natives reach the reactor thread
- * in {@code platform::reactor}.
+ * in {@code platform::reactor} and its sockets in {@code platform::net}.
  */
 public final class Reactor {
+    /** What a stage completes with, made on the loop from what the reactor produced. */
+    public interface Result<T> {
+        T from(long handle, byte[] payload) throws Exception;
+    }
+
+    /** Sends a request for the operation {@code id}. */
+    private interface Request {
+        void send(long id) throws IOException;
+    }
+
     private static final int BATCH = 256;
 
     /**
@@ -25,6 +35,8 @@ public final class Reactor {
     private static final ArrayDeque<Runnable> TASKS = new ArrayDeque<>();
     /** Made here, so that a lack of memory reaches the first caller and not a dead dispatcher. */
     private static final long[] DONE = new long[BATCH];
+    private static final long[] HANDLES = new long[BATCH];
+    private static final Object[] PAYLOADS = new Object[BATCH];
     private static final Thread DISPATCHER = thread("lazy-loop", true, Reactor::dispatch);
     private static long nextId = 1;
     private static int pending;
@@ -42,10 +54,60 @@ public final class Reactor {
     /** A stage that completes after {@code nanos} (not negative). */
     public static CompletionStage<Void> delay(long nanos) {
         if (nanos < 0) throw new IllegalArgumentException("negative delay");
-        LoopFuture<Void> stage = begin();
+        return operation((handle, payload) -> null, null, id -> timer0(id, nanos));
+    }
+
+    public static <T> CompletionStage<T> connect(String host, int port, Result<T> result) {
+        return operation(result, null, id -> connect0(id, host, port));
+    }
+
+    public static <T> CompletionStage<T> listen(String host, int port, Result<T> result) {
+        return operation(result, null, id -> listen0(id, host, port));
+    }
+
+    public static <T> CompletionStage<T> accept(long listener, Result<T> result) {
+        return operation(result, null, id -> accept0(id, listener));
+    }
+
+    /** {@code freed} runs before the stage ends, so a handler may start the next read at once. */
+    public static CompletionStage<byte[]> read(long connection, boolean all, Runnable freed) {
+        return operation((handle, payload) -> payload, freed, id -> read0(id, connection, all));
+    }
+
+    public static CompletionStage<Void> write(long connection, byte[] bytes) {
+        return operation((handle, payload) -> null, null, id -> write0(id, connection, bytes));
+    }
+
+    public static CompletionStage<Void> close(long connection) {
+        return operation((handle, payload) -> null, null, id -> close0(id, connection));
+    }
+
+    public static CompletionStage<Void> closeListener(long listener) {
+        return operation((handle, payload) -> null, null, id -> closeListener0(id, listener));
+    }
+
+    /** A stage that fails with {@code cause} on the loop, as a real operation would. */
+    public static <T> CompletionStage<T> failed(IOException cause) {
+        LoopFuture<T> stage = begin(null, null);
+        failLater(stage, cause);
+        return stage;
+    }
+
+    /** Reports what nobody can be told about to the current thread's uncaught exception handler. */
+    public static void report(Throwable t) {
+        Thread me = Thread.currentThread();
+        try {
+            me.getUncaughtExceptionHandler().uncaughtException(me, t);
+        } catch (Throwable ignored) {
+            // A failing handler must not end the loop; a thread's end ignores it too.
+        }
+    }
+
+    private static <T> LoopFuture<T> operation(Result<T> result, Runnable beforeEnd, Request request) {
+        LoopFuture<T> stage = begin(result, beforeEnd);
         try {
             try {
-                timer0(stage.id(), nanos);
+                request.send(stage.id());
             } catch (IOException e) {
                 failLater(stage, e);
             }
@@ -68,12 +130,12 @@ public final class Reactor {
         return wakes0();
     }
 
-    private static <T> LoopFuture<T> begin() {
+    private static <T> LoopFuture<T> begin(Result<T> result, Runnable beforeEnd) {
         long id;
         synchronized (LOCK) {
             id = nextId++;
         }
-        LoopFuture<T> stage = new LoopFuture<>(id);
+        LoopFuture<T> stage = new LoopFuture<>(id, result, beforeEnd);
         enter(() -> OPERATIONS.put(id, stage));
         return stage;
     }
@@ -178,23 +240,42 @@ public final class Reactor {
         for (;;) {
             try {
                 while (next < taken) {
-                    deliver(DONE[next]);
+                    deliver(DONE[next], HANDLES[next], PAYLOADS[next]);
+                    PAYLOADS[next] = null;
                     next++;
                 }
                 runTasks();
-                taken = take0(DONE);
+                taken = take0(DONE, HANDLES, PAYLOADS);
                 next = 0;
             } catch (Throwable t) {
                 report(t);
+                pause();
             }
         }
     }
 
-    private static void deliver(long id) {
-        LoopFuture<?> stage = claim(id);
-        if (stage == null) return;
+    /** After a failure the dispatcher tries again, and a heap still full must not make it spin. */
+    private static void pause() {
         try {
-            stage.settle(null);
+            Thread.sleep(10);
+        } catch (Throwable ignored) {
+            // It only spaces the attempts out.
+        }
+    }
+
+    /**
+     * A stage settled from outside no longer wants this, so what the operation made or worked on
+     * is released: a socket it made, or the connection a cancelled read or write leaves in no
+     * useful state.
+     */
+    private static void deliver(long id, long handle, Object payload) {
+        LoopFuture<?> stage = claim(id);
+        if (stage == null) {
+            if (handle != 0) abort0(handle);
+            return;
+        }
+        try {
+            stage.settle(handle, payload);
         } catch (Throwable t) {
             report(t);
         } finally {
@@ -223,19 +304,21 @@ public final class Reactor {
         }
     }
 
-    private static void report(Throwable t) {
-        Thread me = Thread.currentThread();
-        try {
-            me.getUncaughtExceptionHandler().uncaughtException(me, t);
-        } catch (Throwable ignored) {
-            // A failing handler must not end the loop; a thread's end ignores it too.
-        }
-    }
-
     private static native void timer0(long id, long nanos) throws IOException;
     private static native void cancel0(long id);
-    /** Blocks until completions arrive or {@link #wake0} is called; returns how many ids it wrote. */
-    private static native int take0(long[] ids);
+    /**
+     * Blocks until completions arrive or {@link #wake0} is called; returns how many it wrote. A
+     * payload is a byte[], a String naming a failure, or null.
+     */
+    private static native int take0(long[] ids, long[] handles, Object[] payloads);
     private static native void wake0();
     private static native long wakes0();
+    private static native void connect0(long id, String host, int port) throws IOException;
+    private static native void listen0(long id, String host, int port) throws IOException;
+    private static native void accept0(long id, long listener) throws IOException;
+    private static native void read0(long id, long connection, boolean all) throws IOException;
+    private static native void write0(long id, long connection, byte[] bytes) throws IOException;
+    private static native void close0(long id, long connection) throws IOException;
+    private static native void closeListener0(long id, long listener) throws IOException;
+    private static native void abort0(long handle);
 }

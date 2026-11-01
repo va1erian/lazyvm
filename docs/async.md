@@ -1,8 +1,6 @@
 # `lazy.async` and `lazy.net`: the event loop and async TCP
 
-Status: `lazy.async` is built (S6-06); `lazy.net` (S7-01) is the design below.
-See [`plan.md`](plan.md). Where this page describes sockets, resolvers or
-completions with a payload, that is S7-01.
+Status: built (S6-06 and S7-01 in [`plan.md`](plan.md)).
 
 ## Why and what
 
@@ -77,8 +75,7 @@ public class Later {
 has work ("Lifetime" below). A stage the API returns fails with the
 `IOException` itself; a stage built from it (`thenCompose` and so on) fails
 with a `CompletionException` around it, hence `getCause()` in `Fetch` and
-not in `Echo`. `Echo` listens on every interface (`"0.0.0.0"`), which also
-works on LazyOS ("LazyOS" below).
+not in `Echo`, which listens on every interface (`"0.0.0.0"`).
 
 ## `lazy.async.Loop`
 
@@ -178,10 +175,10 @@ Safe to use from any thread.
   stream; a pending `readAll` fails, since its body is cut short. Queued
   writes are sent, then the sending side is shut down, and what the peer
   still sends is discarded until it closes too, so our last bytes are not
-  lost to a reset. After 10 s, or at once if the stage is cancelled, the
+  lost to a reset. After 10 s, or at once if this stage is cancelled, the
   socket is closed as it stands and writes not yet sent fail. The stage
   completes when the socket is closed. A second `close()` returns a new
-  stage that completes after the first.
+  stage that completes after the first, whose cancelling changes nothing else.
 - `String peer()`: the remote address as `host:port` with the numeric host
   (`127.0.0.1:52144`, `[::1]:7000`).
 
@@ -236,8 +233,8 @@ line.whenComplete((bytes, error) -> timer.cancel(true));
 ```
 
 **Lifetime.** The loop keeps the VM running while it has work pending: a
-task, a timer, a connect, a read or write in flight, a close still sending,
-or an open listener. An open connection with nothing pending does not. When
+task, a timer, a connect, a read or write in flight, a close still sending
+or waiting for the peer to close too (10 s at most), or an open listener. An open connection with nothing pending does not. When
 nothing is pending and `main` has returned (and no other non-daemon thread
 runs), the VM exits as usual. Handles that are never closed stay open until
 the VM exits, as files do (`design/files.md`).
@@ -263,7 +260,9 @@ the VM exits, as files do (`design/files.md`).
   Windows and 1.5 ms and 16.4 ms inside LazyOS. `mio` reports edges, so the reactor remembers each socket's readiness
   and tries a requested read or write at once when the socket is already
   ready. An `accept` that fails for lack of descriptors (`EMFILE`, `ENFILE`)
-  is retried on a 100 ms timer, since no new edge would come.
+  is retried on a 100 ms timer, since no new edge would come, as is any other
+  error that is not a client's own connection going away: a listener stays
+  open until it is closed.
 - **The resolvers** are up to four native threads, started on demand by
   names that are not literals, that run the platform's blocking lookup
   (`ToSocketAddrs`: the Windows resolver; on LazyOS musl's, querying the DNS
@@ -286,7 +285,8 @@ the VM exits, as files do (`design/files.md`).
   ends; it touches nothing else, so a new one overlapping an old one is
   harmless.
 
-Every stage is a `lazy.internal.LoopFuture`, a `CompletableFuture` subclass
+Every stage of an operation is a `lazy.internal.LoopFuture` (so not a second
+`close()`'s, a plain stage that follows the first), a `CompletableFuture` subclass
 that overrides `cancel`, `complete`, `completeExceptionally`,
 `obtrudeValue` and `obtrudeException`. Each operation settles exactly once:
 
@@ -318,11 +318,12 @@ through virtual dispatch, or these overrides would run for its internal
 completions too; the S6-05 item says so.
 
 The natives are in `lazy.internal.Reactor`, used by `lazy.async` and
-`lazy.net` only: each request (`timer`, and in S7-01 `connect`, `listen`,
-`accept`, `read`, `write`, `close`) names an operation id, `cancel(id)`
-withdraws one, and `take` fills an array with a batch of finished ids. S7-01
-makes those `(id, status, value, payload)` completions, where the payload is
-the bytes of a read or the text of an error. Read bytes are copied once, from the reactor's buffer into the new
+`lazy.net` only: each request (`timer`, `connect`, `listen`, `accept`, `read`,
+`write`, `close`) names an operation id, `cancel(id)` withdraws one, and `take`
+fills arrays with a batch of `(id, handle, payload)` completions. The payload is
+bytes, the text of a failure (a `String`), or null. The handle is what to release
+if the id has gone: the socket the operation made or worked on. A body the heap
+could never hold fails its stage and closes its connection. Read bytes are copied once, from the reactor's buffer into the new
 `byte[]`; the reactor reads only for a pending `read`, which is what makes
 backpressure hold.
 
@@ -349,9 +350,6 @@ document:
 - **No IPv6.** `AF_INET6` is refused, so IPv6 addresses fail and `connect`
   moves on to the next; an IPv6 literal fails the stage, and `listen`
   binds IPv4 only.
-- **No loopback.** A program cannot connect to its own machine, so tests
-  that listen and connect in one process run on Windows only; on LazyOS
-  they talk to the harness's host peers instead (see "Tests").
 - **One socket table.** 64 sockets for the whole system, shared with every
   other program, and a closed socket counts until `netd` has finished it;
   past that, `connect` and `listen` fail with `too many sockets`. (The 8 per
@@ -398,15 +396,18 @@ a new row). S6-06 records them in
 - `crates/platform/src/reactor.rs` (thread, poll, timers, requests, and in
   S10-02 the park trait), `crates/platform/src/timer.rs` (timed parking, moved
   from `crates/vm` so the reactor can use it), `crates/platform/src/net.rs`
-  (S7-01: sockets, resolvers);
+  (requests, connecting);
   `crates/natives/src/lazy_async.rs` (the `Reactor` natives).
-- `tools/lazyos_test.py --net` (S7-01): boots the image with LazyOS's
-  networking switch, adds the QEMU `hostfwd` rule that maps a host port to
-  the guest's 47773 (as LazyOS `tools/net/run.py` does), runs the host peers
-  of LazyOS `tools/net/hostpeers.py` (an echo server the guest reaches at
-  `10.0.2.2:47771`, and the inbound client, started when the guest test
-  prints its `listening` marker), and passes the addresses to the tests as
-  system properties.
+- `crates/platform/src/net/conn.rs` (open connections),
+  `crates/platform/src/net/listen.rs` (listeners),
+  `crates/platform/src/resolver.rs` (name lookups).
+- `tools/lazyos_test.py --net` (S7-01): runs the tests marked `NEEDS: net` or
+  `NEEDS: lazyos-net`, through LazyOS `tools/lazyvm/run.py --net`. That boots
+  an image with `netd` and a card, which starts the fixture when it has an
+  address, and runs the host peers of `tools/net/hostpeers.py`: an echo server
+  the guest reaches at `10.0.2.2:47771`, and a client that keeps connecting
+  into the guest's port 47773 until it has been served. Other boots have no
+  stack at all, so the default suite leaves those tests out.
 
 ## Tests
 
@@ -423,14 +424,17 @@ Hand-written goldens (`lazy.*`, D9). "Both" means Windows and LazyOS.
   thread that does not wake uses no CPU, and counting needs no `unsafe` thread
   clock, which `crates/platform` may not have and LazyOS lacks), and the S6
   gate `Pipeline`.
-- S7-01, Windows: `tests/java/lazy/net/AsyncEcho` (listen on port 0, connect,
-  echo, close both ends; each next `read` is started inside the previous
-  one's handler), `ManyClients` (500 at once), `ConnectRefused` (a
-  port whose listener was just closed), `Backpressure` (a peer that writes 8
-  MiB to a reader that waits still completes, with bounded heap),
-  `CancelRead`, `ReadTimeout` (the pattern above), `Ipv6Loopback`.
-- S7-01, LazyOS (`--net`): `tests/java/lazy/net/HostEcho` (connect to the host
-  echo server, echo 1 MiB, close), `HostInbound` (listen on `0.0.0.0:47773`,
-  print `listening`, and serve the host's client). Both use literal
-  addresses; name resolution on LazyOS is shown by the S7 gate, which
-  connects to a live host by name.
+- S7-01, both (`--net` inside LazyOS): `tests/java/lazy/net/AsyncEcho` (listen on
+  port 0, connect, echo, close both ends; each next `read` is started inside the
+  previous one's handler; `localhost`), `ConnectRefused` (a port whose listener was
+  just closed, an unknown host, a port in use, bad arguments), `Backpressure` (a peer
+  that writes 256 MiB to a reader that waits has to wait too, in a 32 MB heap),
+  `CancelRead`, `ReadTimeout` (the pattern above), `CloseRules` (our last bytes
+  survive unread input, a cut-short `readAll`, its limit, a handler that throws),
+  `WriteOrder` (overlapping writes in call order, a prompt close), `ReadAllHeap` (a
+  body past what the heap can hold fails, and the loop goes on).
+- S7-01, Windows or Linux only: `ManyClients` (500 at once; LazyOS has 64 sockets);
+  Windows only: `Ipv6Loopback`.
+- S7-01, LazyOS only (`--net`): `tests/java/lazy/net/HostEcho` (1 MiB through the
+  host's echo server), `HostInbound` (listen on `0.0.0.0:47773` and serve the host's
+  client). Name resolution on LazyOS is shown by the S7 gate, `samples/tcpget`.
