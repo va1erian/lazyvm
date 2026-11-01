@@ -1,9 +1,10 @@
+// VMARGS: -Xmx9g
 package concurrent;
 
 import java.util.*;
 import java.util.concurrent.*;
 
-/** The concurrent collections: what a scratch probe of their unpinned corners decided. */
+/** The concurrent collections: what a scratch probe of their unpinned corners decided. The large capacities need the oracle's full default heap. */
 public class CollectionEdges {
     interface Body { Object run() throws Throwable; }
 
