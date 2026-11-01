@@ -1,0 +1,22 @@
+; rule: JVMS 4.10.1.9 putfield: an assignable reference
+; expect: java.lang.VerifyError
+; reason: java/lang/String is needed
+class Bad
+field public x I
+field public s Ljava/lang/String;
+field public static t I
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 3 locals 1
+new Bad
+dup
+invokespecial Bad <init> ()V
+new java/lang/Object
+dup
+invokespecial java/lang/Object <init> ()V
+putfield Bad s Ljava/lang/String;
+return
+end

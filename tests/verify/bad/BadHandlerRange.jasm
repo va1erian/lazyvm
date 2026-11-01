@@ -1,0 +1,15 @@
+; rule: JVMS 4.7.3: start before end, on instructions
+; expect: java.lang.ClassFormatError
+; reason: bad exception
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+A:
+nop
+B:
+return
+H:
+frame H locals [Ljava/lang/String; stack java/lang/Throwable
+pop
+return
+handler B A H any
+end

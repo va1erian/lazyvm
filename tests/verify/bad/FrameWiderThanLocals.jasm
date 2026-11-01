@@ -1,0 +1,10 @@
+; rule: JVMS 4.7.4: a frame fits max_locals
+; expect: java.lang.ClassFormatError
+; reason: more locals than max_locals
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 1
+nop
+L:
+frame L locals [Ljava/lang/String; int stack
+return
+end

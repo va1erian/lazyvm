@@ -1,0 +1,10 @@
+; rule: JVMS 4.10.1.2: an array fits no class but Object
+; expect: java.lang.VerifyError
+; reason: java/lang/String is needed
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+aload_0
+invokevirtual java/lang/String length ()I
+pop
+return
+end

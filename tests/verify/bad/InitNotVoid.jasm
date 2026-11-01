@@ -1,0 +1,8 @@
+; rule: JVMS 4.6: <init> returns void
+; expect: java.lang.ClassFormatError
+; reason: must return void
+class Bad
+method public <init> ()I stack 1 locals 2
+iconst_0
+ireturn
+end

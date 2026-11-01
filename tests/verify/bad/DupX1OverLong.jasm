@@ -1,0 +1,10 @@
+; rule: JVMS 6.5 dup_x1: both category 1
+; expect: java.lang.VerifyError
+; reason: split
+class Bad
+method public static main ([Ljava/lang/String;)V stack 5 locals 4
+lconst_0
+iconst_0
+dup_x1
+return
+end

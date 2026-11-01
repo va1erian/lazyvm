@@ -1,0 +1,26 @@
+; rule: JVMS 4.9.2 (observed): invokespecial of a superinterface method names a direct one
+; expect: java.lang.VerifyError
+; reason: indirect
+class Good
+interfaces J
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new Good
+dup
+invokespecial Good <init> ()V
+invokespecial interface I f ()V
+getstatic java/lang/System out Ljava/io/PrintStream;
+ldc string ok
+invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+return
+end
+class J flags public interface abstract
+interfaces I
+class I flags public interface abstract
+method public f ()V stack 0 locals 1
+return
+end

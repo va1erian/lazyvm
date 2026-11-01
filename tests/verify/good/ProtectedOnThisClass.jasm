@@ -1,0 +1,39 @@
+; protected members on an object of the current class
+class b/Sub super a/Base
+method public <init> ()V stack 2 locals 1
+aload_0
+iconst_0
+invokespecial a/Base <init> (I)V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 3 locals 2
+new b/Sub
+dup
+invokespecial b/Sub <init> ()V
+astore_1
+aload_1
+getfield a/Base x I
+pop
+aload_1
+iconst_0
+putfield b/Sub x I
+aload_1
+invokevirtual a/Base m ()V
+getstatic a/Base s I
+pop
+getstatic java/lang/System out Ljava/io/PrintStream;
+ldc string ok
+invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+return
+end
+class a/Base
+field protected x I
+field protected static s I
+method protected <init> (I)V stack 1 locals 2
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method protected m ()V stack 0 locals 1
+return
+end

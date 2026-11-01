@@ -1,0 +1,10 @@
+; rule: JVMS 4.10.1.9 i2l: needs an int
+; expect: java.lang.VerifyError
+; reason: at offset 1
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+fconst_0
+i2l
+pop2
+return
+end

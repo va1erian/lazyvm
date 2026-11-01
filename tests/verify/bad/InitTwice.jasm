@@ -1,0 +1,13 @@
+; rule: JVMS 4.10.1.9 invokespecial: only on an uninitialized object
+; expect: java.lang.VerifyError
+; reason: <init> called on
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+new java/lang/Object
+dup
+dup
+invokespecial java/lang/Object <init> ()V
+invokespecial java/lang/Object <init> ()V
+pop
+return
+end

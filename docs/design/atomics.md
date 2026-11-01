@@ -79,9 +79,11 @@ wrong kind in a slot. It uses the descriptor read during the same validation,
 because initializing the class can run Java that changes the `Field`.
 `tests/java/lazy/atomics/Intrinsics` covers each row, forged `Field`s included.
 javac code cannot reach the row on the array's kind, or pass something other
-than a `Field`; until the verifier (S8) bytecode can, so the test loads
-`CraftedAtomics.class`, which `tools/fixtures.py` builds from
-`tools/crafted/CraftedAtomics.java` with the casts removed.
+than a `Field`, and verified bytecode cannot either. The natives still check,
+since `-Xverify:none` and old class versions skip the type checker, so the test
+runs with `-Xverify:none` and loads `CraftedAtomics.class`, which
+`tools/fixtures.py` builds from `tools/crafted/CraftedAtomics.java` with the
+casts removed.
 
 int and long fields need no read intrinsic (`getAndAdd` of zero is one), so the
 only plain read is `getRef`.

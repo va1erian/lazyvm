@@ -1,0 +1,18 @@
+; rule: JVMS 4.10.1.9 getfield: not on an uninitialized object
+; expect: java.lang.VerifyError
+; reason: uninitialized(0)
+class Bad
+field public x I
+field public s Ljava/lang/String;
+field public static t I
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new Bad
+getfield Bad x I
+pop
+return
+end

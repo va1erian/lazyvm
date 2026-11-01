@@ -1,0 +1,8 @@
+; rule: JVMS 4.4.2: a <init> reference returns void
+; expect: java.lang.ClassFormatError
+; reason: must return void
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+invokespecial java/lang/Object <init> ()I
+return
+end

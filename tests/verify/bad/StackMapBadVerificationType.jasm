@@ -1,0 +1,9 @@
+; rule: JVMS 4.7.4: verification type tags
+; expect: java.lang.ClassFormatError
+; reason: unknown verification type
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+nop
+return
+rawframes 0001 40 09
+end

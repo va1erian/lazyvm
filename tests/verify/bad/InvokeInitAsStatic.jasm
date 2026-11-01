@@ -1,0 +1,8 @@
+; rule: JVMS 4.9.1: only invokespecial calls <init>
+; expect: java.lang.VerifyError
+; reason: may not be called
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+invokestatic Bad <init> ()V
+return
+end

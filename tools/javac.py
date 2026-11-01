@@ -19,7 +19,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import die, find_tool  # noqa: E402
 
-FLAGS = ["-source", "8", "-target", "8", "-encoding", "UTF-8", "-Xlint:-options", "-g"]
+# -J-Xmx: left alone, javac's heap may grow to a quarter of the machine's memory.
+FLAGS = ["-J-Xmx1g", "-source", "8", "-target", "8", "-encoding", "UTF-8", "-Xlint:-options", "-g"]
 
 
 def compile(sources: list[Path], out: Path, bootclasspath: Path | None = None,

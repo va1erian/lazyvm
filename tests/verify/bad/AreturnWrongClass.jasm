@@ -1,0 +1,15 @@
+; rule: JVMS 4.10.1.9 areturn: assignable to the return type
+; expect: java.lang.VerifyError
+; reason: java/lang/String
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+invokestatic Bad f ()Ljava/lang/String;
+pop
+return
+end
+method public static f ()Ljava/lang/String; stack 1 locals 1
+new java/lang/Object
+dup
+invokespecial java/lang/Object <init> ()V
+areturn
+end

@@ -1,0 +1,11 @@
+; rule: JVMS 4.9.1 lookupswitch: sorted keys
+; expect: java.lang.VerifyError
+; reason: not sorted
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_0
+lookupswitch 5:A 1:A A
+A:
+frame A locals [Ljava/lang/String; stack
+return
+end

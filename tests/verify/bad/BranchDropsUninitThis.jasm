@@ -1,0 +1,22 @@
+; rule: JVMS 4.10.1.4 frameIsAssignable: flagThisUninit
+; expect: java.lang.VerifyError
+; reason: drops an uninitialized this
+class Bad
+method public <init> ()V stack 2 locals 1
+aconst_null
+astore_0
+iconst_0
+ifeq L
+L:
+frame L locals top stack
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new Bad
+dup
+invokespecial Bad <init> ()V
+pop
+return
+end

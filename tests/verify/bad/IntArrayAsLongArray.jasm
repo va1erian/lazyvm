@@ -1,0 +1,13 @@
+; rule: JVMS 4.10.1.2: primitive arrays need identity
+; expect: java.lang.VerifyError
+; reason: at offset
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+iconst_0
+newarray int
+invokestatic Bad f ([J)V
+return
+end
+method public static f ([J)V stack 0 locals 1
+return
+end

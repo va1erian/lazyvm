@@ -1,0 +1,4 @@
+; rule: JVMS 4.1: an interface is abstract
+; expect: java.lang.ClassFormatError
+; reason: not abstract
+class Bad flags public interface

@@ -1,0 +1,5 @@
+; rule: JVMS 4.2.2: no ; in names
+; expect: java.lang.ClassFormatError
+; reason: bad name
+class Bad
+field public a;b I

@@ -1,0 +1,11 @@
+; rule: JVMS 4.10.1.9 ifeq: needs an int
+; expect: java.lang.VerifyError
+; reason: at offset 1
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+fconst_0
+ifeq L
+L:
+frame L locals [Ljava/lang/String; stack
+return
+end

@@ -194,7 +194,11 @@ pub(super) fn impl_params(spec: &Spec, target: &MethodDescriptor) -> Vec<FieldTy
         REF_INVOKE_VIRTUAL | REF_INVOKE_SPECIAL | REF_INVOKE_INTERFACE
     );
     let mut params = Vec::with_capacity(target.params.len() + 1);
-    if has_receiver {
+    if spec.impl_kind == REF_INVOKE_SPECIAL {
+        // `invokespecial` runs on the caller's own kind of object, whichever
+        // superclass names the method (the `LambdaMetafactory` Javadoc).
+        params.push(FieldType::Object(Arc::clone(&spec.caller)));
+    } else if has_receiver {
         params.push(FieldType::Object(Arc::clone(&spec.impl_ref.class)));
     }
     params.extend(target.params.iter().cloned());

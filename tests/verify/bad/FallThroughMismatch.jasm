@@ -1,0 +1,10 @@
+; rule: JVMS 4.10.1.6: falling into a frame is checked too
+; expect: java.lang.VerifyError
+; reason: local 1 is
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+nop
+L:
+frame L locals [Ljava/lang/String; int stack
+return
+end

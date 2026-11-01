@@ -1,0 +1,9 @@
+; rule: JVMS 4.7.4: frame types 128 to 246 are reserved
+; expect: java.lang.ClassFormatError
+; reason: reserved
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+nop
+return
+rawframes 0001 80
+end

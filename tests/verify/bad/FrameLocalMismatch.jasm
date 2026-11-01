@@ -1,0 +1,11 @@
+; rule: JVMS 4.10.1.4 frameIsAssignable: locals
+; expect: java.lang.VerifyError
+; reason: local 1 is
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_0
+ifeq L
+L:
+frame L locals [Ljava/lang/String; int stack
+return
+end

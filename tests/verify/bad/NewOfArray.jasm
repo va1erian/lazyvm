@@ -1,0 +1,9 @@
+; rule: JVMS 4.9.1: new is not for arrays
+; expect: java.lang.VerifyError
+; reason: array type
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+new [I
+pop
+return
+end

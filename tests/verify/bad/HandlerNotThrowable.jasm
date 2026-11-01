@@ -1,0 +1,15 @@
+; rule: JVMS 4.10.1.6: a handler catches a Throwable
+; expect: java.lang.VerifyError
+; reason: not a Throwable
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+A:
+nop
+B:
+return
+H:
+frame H locals [Ljava/lang/String; stack java/lang/String
+pop
+return
+handler A B H java/lang/String
+end

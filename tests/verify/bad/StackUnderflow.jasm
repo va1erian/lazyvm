@@ -1,0 +1,8 @@
+; rule: JVMS 4.10.1.4 canPop
+; expect: java.lang.VerifyError
+; reason: underflow
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+pop
+return
+end

@@ -1,0 +1,8 @@
+; rule: JVMS 4.9.1: no ret from version 51
+; expect: java.lang.VerifyError
+; reason: jsr and ret
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+bytes a9 00
+return
+end

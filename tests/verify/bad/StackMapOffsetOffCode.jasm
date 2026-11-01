@@ -1,0 +1,8 @@
+; rule: JVMS 4.7.4: a frame is at an instruction
+; expect: java.lang.VerifyError
+; reason: not an instruction
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+return
+rawframes 0001 05
+end

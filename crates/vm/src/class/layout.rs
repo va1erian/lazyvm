@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use classfile::{ACC_STATIC, ClassFile, descriptor};
 
-use super::{Class, ClassId, ClassKind, Field, InitState, Method, load::check_class_flags};
+use super::{Class, ClassId, ClassKind, Field, InitState, Method};
 use crate::value::{Value, default_for};
 use crate::{VmError, VmResult};
 
@@ -16,12 +16,6 @@ pub(super) fn build(
     interfaces: Vec<ClassId>,
     super_template: Option<&[Value]>,
 ) -> VmResult<Class> {
-    check_class_flags(cf.access).map_err(|e| {
-        VmError::exception(
-            "java/lang/ClassFormatError",
-            format!("{}: {e}", cf.this_class),
-        )
-    })?;
     let mut template: Vec<Value> = super_template.map(<[Value]>::to_vec).unwrap_or_default();
     let mut statics = Vec::new();
     let mut fields = Vec::with_capacity(cf.fields.len());
@@ -45,7 +39,7 @@ pub(super) fn build(
     let methods = cf
         .methods
         .iter()
-        .map(build_method)
+        .map(|m| build_method(&cf, m))
         .collect::<VmResult<Vec<_>>>()?;
     let cp_len = cf.pool.len();
     Ok(Class {
@@ -65,18 +59,25 @@ pub(super) fn build(
         mirror: None,
         cp_cache: vec![None; cp_len],
         from_boot: false,
+        verified: false,
+        host: None,
     })
 }
 
-fn build_method(m: &classfile::Member) -> VmResult<Method> {
+fn build_method(cf: &ClassFile, m: &classfile::Member) -> VmResult<Method> {
     // The parser already validated the descriptor; this cannot fail.
     let md = descriptor::parse_method(&m.descriptor).map_err(VmError::Internal)?;
-    let this = u16::from(m.access & ACC_STATIC == 0);
+    let access = if crate::verify::structural::is_static_method(cf, m) {
+        m.access | ACC_STATIC
+    } else {
+        m.access
+    };
+    let this = u16::from(access & ACC_STATIC == 0);
     let params = u16::try_from(md.params.len()).map_err(|_| VmError::Internal("arity".into()))?;
     Ok(Method {
         name: m.name.clone(),
         descriptor: m.descriptor.clone(),
-        access: m.access,
+        access,
         code: m.code.clone().map(Arc::new),
         arg_slots: md.arg_slots() + this,
         arg_values: params + this,
