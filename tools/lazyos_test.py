@@ -27,7 +27,7 @@ import testlib  # noqa: E402
 from common import BUILD, DIST, ROOT, die  # noqa: E402
 
 TARGET = "x86_64-unknown-linux-musl"
-STAGE = BUILD / "lazyos" / "stage"
+WORK = BUILD / "lazyos"  # stage, command list and results; bench.py uses its own, so neither overwrites the other
 OS_ROOT = "/system/lazyvm"
 
 
@@ -38,20 +38,47 @@ def build_musl() -> Path:
     return ROOT / "target" / TARGET / "release" / "lazyvm"
 
 
-def stage(exe: Path) -> None:
-    """The layout LazyOS embeds under /system/lazyvm."""
-    shutil.rmtree(STAGE, ignore_errors=True)
+def stage(exe: Path, tests_jar: Path | None = None, work: Path = WORK) -> None:
+    """The layout LazyOS embeds under /system/lazyvm; `tests_jar` is the jar of programs to run."""
+    stage_dir = work / "stage"
+    shutil.rmtree(stage_dir, ignore_errors=True)
     for sub in ("bin", "lib", "tests"):
-        (STAGE / sub).mkdir(parents=True)
-    shutil.copyfile(exe, STAGE / "bin" / "lazyvm")
-    shutil.copyfile(DIST / "lazyrt.jar", STAGE / "lib" / "lazyrt.jar")
-    shutil.copyfile(testlib.tests_jar(), STAGE / "tests" / "tests.jar")
+        (stage_dir / sub).mkdir(parents=True)
+    shutil.copyfile(exe, stage_dir / "bin" / "lazyvm")
+    shutil.copyfile(DIST / "lazyrt.jar", stage_dir / "lib" / "lazyrt.jar")
+    shutil.copyfile(tests_jar or testlib.tests_jar(), stage_dir / "tests" / "tests.jar")
+
+
+def command_line(main_class: str, args: list[str], vm_args: list[str]) -> str:
+    argv = [f"{OS_ROOT}/bin/lazyvm", f"-Xbootclasspath:{OS_ROOT}/lib/lazyrt.jar", *vm_args,
+            "-cp", f"{OS_ROOT}/tests/tests.jar", main_class, *args]
+    return " ".join(shlex.quote(a) for a in argv)
 
 
 def command(test: testlib.Test) -> str:
-    argv = [f"{OS_ROOT}/bin/lazyvm", f"-Xbootclasspath:{OS_ROOT}/lib/lazyrt.jar", *test.vm_args,
-            "-cp", f"{OS_ROOT}/tests/tests.jar", test.main_class, *test.args]
-    return " ".join(shlex.quote(a) for a in argv)
+    return command_line(test.main_class, test.args, test.vm_args)
+
+
+def run_commands(lazyos: Path, lines: list[str], timeout: int, no_build: bool, work: Path = WORK,
+                 net: bool = False) -> Path:
+    """Boot LazyOS once over `lines` (staged by `stage`); the directory holding N.stdout, N.stderr
+    and N.exit for command N. Exits when the run itself fails."""
+    out = work / "out"
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir(parents=True)
+    commands = work / "commands.txt"
+    commands.write_text("".join(line + "\n" for line in lines), encoding="utf-8", newline="\n")
+    run = [sys.executable, "tools/lazyvm/run.py", "--commands", str(commands), "--out", str(out),
+           "--timeout", str(timeout),
+           "--image", str(work / "lazyos.img")]
+    if no_build:
+        run.append("--no-build")
+    if net:
+        run.append("--net")
+    env = dict(os.environ, LAZYOS_LAZYVM_STAGE=str(work / "stage"))
+    if subprocess.run(run, cwd=lazyos, env=env).returncode != 0:
+        die("LazyOS run failed (see its output above)")
+    return out
 
 
 def read_result(out: Path, n: int) -> str:
@@ -66,6 +93,7 @@ def read_result(out: Path, n: int) -> str:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # diffs hold any character
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--lazyos", type=Path, default=os.environ.get("LAZYOS_DIR"))
     parser.add_argument("--filter", nargs="*", help="substrings of test class names")
@@ -81,20 +109,7 @@ def main() -> None:
     if not args.no_build:
         testlib.build(tests)
         stage(build_musl())
-    out = BUILD / "lazyos" / "out"
-    shutil.rmtree(out, ignore_errors=True)
-    out.mkdir(parents=True)
-    commands = BUILD / "lazyos" / "commands.txt"
-    commands.write_text("".join(command(t) + "\n" for t in tests), encoding="utf-8", newline="\n")
-    run = [sys.executable, "tools/lazyvm/run.py", "--commands", str(commands), "--out", str(out),
-           "--timeout", str(args.timeout)]
-    if args.no_build:
-        run.append("--no-build")
-    if args.net:
-        run.append("--net")
-    env = dict(os.environ, LAZYOS_LAZYVM_STAGE=str(STAGE))
-    if subprocess.run(run, cwd=args.lazyos, env=env).returncode != 0:
-        die("LazyOS run failed (see its output above)")
+    out = run_commands(args.lazyos, [command(t) for t in tests], args.timeout, args.no_build, net=args.net)
     failed = 0
     for n, test in enumerate(tests, start=1):
         actual = read_result(out, n)

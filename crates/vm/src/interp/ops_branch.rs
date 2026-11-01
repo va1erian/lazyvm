@@ -55,7 +55,7 @@ impl Vm {
 }
 
 /// The six comparisons in opcode order: eq, ne, lt, ge, gt, le.
-fn cond(which: u8, o: std::cmp::Ordering) -> bool {
+pub(super) fn cond(which: u8, o: std::cmp::Ordering) -> bool {
     use std::cmp::Ordering::*;
     match which {
         0 => o == Equal,

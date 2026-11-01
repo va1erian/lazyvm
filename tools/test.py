@@ -35,6 +35,7 @@ def check(exe: Path, test: testlib.Test, classpath: Path, boot: Path) -> tuple[b
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # diffs hold any character
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--filter", nargs="*", help="substrings of test class names")
     parser.add_argument("--exe", type=Path, help="a prebuilt lazyvm binary")

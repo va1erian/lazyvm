@@ -356,7 +356,7 @@ pub(crate) fn array_name(name: &str) -> String {
 
 /// A field store must keep the field's value kind (a verifier would ensure it).
 fn same_kind(old: Value, new: Value) -> VmResult<()> {
-    if std::mem::discriminant(&old) == std::mem::discriminant(&new) {
+    if old.same_kind(new) {
         Ok(())
     } else {
         Err(VmError::verify(format!(
