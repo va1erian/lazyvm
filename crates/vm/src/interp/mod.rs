@@ -36,8 +36,8 @@ const OVERFLOW_HEADROOM: usize = 64;
 const OVERFLOW_NESTING: usize = 16;
 const OVERFLOW_SLOTS: usize = 64 * 1024;
 /// Locals and stack buffers kept for the next call; deeper recursion allocates.
-const MAX_SPARE_BUFFERS: usize = 64;
-const MAX_SPARE_SLOTS: usize = 256;
+const MAX_SPARE_BUFFERS: usize = 4;
+const MAX_SPARE_SLOTS: usize = 32;
 
 impl Vm {
     /// Calls a method from Rust and runs it to completion. Reference
