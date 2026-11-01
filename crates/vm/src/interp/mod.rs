@@ -4,6 +4,8 @@
 //! depth is bounded by `Options::max_frames` alone. A call into Java from
 //! Rust (`Vm::invoke`) runs a nested loop that stops when its frame returns.
 
+mod fast;
+mod fast_field;
 mod frame;
 mod lend;
 mod ops_array;
@@ -33,6 +35,9 @@ const OVERFLOW_HEADROOM: usize = 64;
 /// The same allowance for nested calls from Rust and for frame slots.
 const OVERFLOW_NESTING: usize = 16;
 const OVERFLOW_SLOTS: usize = 64 * 1024;
+/// Locals and stack buffers kept for the next call; deeper recursion allocates.
+const MAX_SPARE_BUFFERS: usize = 64;
+const MAX_SPARE_SLOTS: usize = 256;
 
 impl Vm {
     /// Calls a method from Rust and runs it to completion. Reference
@@ -97,7 +102,9 @@ impl Vm {
         if self.frame_slots + slots > self.options.max_frame_slots + self.headroom(OVERFLOW_SLOTS) {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
-        let frame = Frame::new(m, code, method.arg_slots, args)?;
+        let arg_slots = method.arg_slots;
+        let (locals, stack) = self.spare_buffers.pop().unwrap_or_default();
+        let frame = Frame::new(m, code, arg_slots, args, locals, stack)?;
         self.frame_slots += slots;
         self.frames.push(frame);
         Ok(())
@@ -120,6 +127,12 @@ impl Vm {
             if !f.monitors.is_empty() || f.method_lock.is_some() {
                 self.release_frame_monitors(&f);
             }
+            if self.spare_buffers.len() < MAX_SPARE_BUFFERS
+                && f.locals.capacity() <= MAX_SPARE_SLOTS
+                && f.stack.capacity() <= MAX_SPARE_SLOTS
+            {
+                self.spare_buffers.push((f.locals, f.stack));
+            }
         }
     }
 
@@ -139,6 +152,9 @@ impl Vm {
 
     fn run_loop(&mut self, base: usize) -> VmResult<Option<Value>> {
         loop {
+            if !self.options.trace_interp {
+                self.run_simple();
+            }
             if self.heap.wants_gc() {
                 self.collect_garbage();
             }

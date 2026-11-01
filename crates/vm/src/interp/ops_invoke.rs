@@ -5,6 +5,9 @@ use crate::class::MethodRef;
 use crate::value::Value;
 use crate::{Vm, VmError, VmResult};
 
+/// Arguments copied to the Rust stack for a call; more spill to the heap.
+const INLINE_ARGS: usize = 8;
+
 impl Vm {
     pub(super) fn op_invoke(&mut self, op: u8) -> VmResult<Flow> {
         let (from, index) = {
@@ -166,12 +169,20 @@ impl Vm {
         let at = f.stack.len() - n;
         // The arguments are still on this frame's stack, so they stay rooted
         // while this thread waits for a `synchronized` method's monitor.
-        let args: Vec<Value> = f.stack[at..].to_vec();
+        let mut inline = [Value::Top; INLINE_ARGS];
+        let spilled: Vec<Value>;
+        let args: &[Value] = if n <= INLINE_ARGS {
+            inline[..n].copy_from_slice(&f.stack[at..]);
+            &inline[..n]
+        } else {
+            spilled = f.stack[at..].to_vec();
+            &spilled
+        };
         if self.method(m).is_native() {
             let native = self.native_for(m)?;
-            let lock = self.lock_for_call(m, &args)?;
+            let lock = self.lock_for_call(m, args)?;
             // The arguments stay on this frame's stack during the call, so they are rooted.
-            let result = native(self, &args);
+            let result = native(self, args);
             self.drop_method_lock(lock);
             let result = result?;
             let ret = self.method(m).ret;
@@ -192,7 +203,7 @@ impl Vm {
             return Ok(Flow::Next);
         }
         self.top()?.stack.truncate(at);
-        self.push_frame(m, &args)?;
+        self.push_frame(m, args)?;
         self.lock_pushed_frame(m)?;
         self.safepoint();
         Ok(Flow::Next)
