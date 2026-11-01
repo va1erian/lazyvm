@@ -236,7 +236,8 @@ def build_driver(names: list[str]) -> None:
 
 
 def run(exe: Path, extra: list[str], stderr: int) -> subprocess.CompletedProcess:
-    cmd = [str(exe), f"-Xbootclasspath:{DIST / 'lazyrt.jar'}", *extra, "-cp", str(OUT), "Driver"]
+    # -Xverify:none: these classes must reach the interpreter, as they can for any user who turns it off.
+    cmd = [str(exe), f"-Xbootclasspath:{DIST / 'lazyrt.jar'}", "-Xverify:none", *extra, "-cp", str(OUT), "Driver"]
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=stderr, timeout=900)
 
 
