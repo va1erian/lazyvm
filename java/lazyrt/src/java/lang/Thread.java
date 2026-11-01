@@ -21,7 +21,7 @@ public class Thread implements Runnable {
 
     /** The parent of every group; the main thread's group is its child. */
     static final ThreadGroup SYSTEM_GROUP = new ThreadGroup();
-    private static final ThreadGroup MAIN_GROUP = new ThreadGroup(SYSTEM_GROUP, "main");
+    static final ThreadGroup MAIN_GROUP = new ThreadGroup(SYSTEM_GROUP, "main");
 
     private static int nextNumber;
     /** The main thread is 1; other threads count on from 2. */
@@ -75,6 +75,8 @@ public class Thread implements Runnable {
         if (group == null) {
             group = parent.getThreadGroup();
         }
+        // First: a destroyed group's refusal costs no id, and what fails below still holds it (observed).
+        group.addUnstarted();
         this.group = group;
         this.name = name;
         this.target = target;
@@ -100,6 +102,7 @@ public class Thread implements Runnable {
         this.status = STARTED;
         this.contextClassLoader = ClassLoader.getSystemClassLoader();
         // Last: what can run out of memory has run, so a retry adds main once.
+        group.addUnstarted();
         group.add(this);
     }
 
@@ -182,16 +185,16 @@ public class Thread implements Runnable {
         if (status != NEW) {
             throw new IllegalThreadStateException();
         }
+        // First: it can block on the group or be refused by it, and until it is in, the thread is still new.
+        group.add(this);
         boolean started = false;
         try {
-            // First: it can block on the group, and until it is in, the thread is still new.
-            group.add(this);
             status = STARTED;
             start0(daemon);
             started = true;
         } finally {
             if (!started) {
-                group.remove(this);
+                group.startFailed(this);
                 status = NEW;
             }
         }
@@ -385,14 +388,19 @@ public class Thread implements Runnable {
     public static Map<Thread, StackTraceElement[]> getAllStackTraces() {
         currentThread();
         Map<Thread, StackTraceElement[]> traces = new HashMap<Thread, StackTraceElement[]>();
-        for (Thread t : SYSTEM_GROUP.allThreads()) {
-            StackTraceElement[] trace = t.traceFromOutside();
-            if (t.isAlive()) {
-                traces.put(t, trace);
+        for (Thread t : liveThreads0()) {
+            if (t != null) {
+                StackTraceElement[] trace = t.traceFromOutside();
+                if (t.isAlive()) {
+                    traces.put(t, trace);
+                }
             }
         }
         return traces;
     }
+
+    /** From the VM, not the groups: no group lock, subclass or failed destroy hides one (observed); may hold nulls. */
+    private static native Thread[] liveThreads0();
 
     public static void setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
         defaultHandler = eh;

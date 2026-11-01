@@ -1,0 +1,4 @@
+main ended, group destroyed false
+refused java.lang.IllegalThreadStateException
+group destroyed false
+system destroyed false

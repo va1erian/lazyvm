@@ -60,6 +60,19 @@ pub fn register(vm: &mut Vm) {
         };
         ret_int(state)
     });
+    vm.register_native(THREAD, "liveThreads0", "()[Ljava/lang/Thread;", |vm, _| {
+        let len = vm.live_threads().len();
+        let size = i32::try_from(len).map_err(|_| VmError::OutOfMemory)?;
+        let array = vm.new_array_of("Ljava/lang/Thread;", size)?;
+        // Read after allocating, which can run the collector and let others in:
+        // what no longer fits has just started, and what is gone leaves a null.
+        for (i, t) in vm.live_threads().into_iter().take(len).enumerate() {
+            vm.heap
+                .array_mut(array)?
+                .store(i, Value::Ref(Some(t)), false)?;
+        }
+        ret_ref(Some(array))
+    });
     vm.register_native(
         THREAD,
         "stackTrace0",

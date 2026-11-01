@@ -15,9 +15,13 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     /** Started threads that have not ended, oldest first. */
     private Thread[] threads = new Thread[4];
     private int threadCount;
-    /** Subgroups, oldest first. They stay for good: there is no destroy() yet (threads.md). */
+    /** Subgroups, oldest first. */
     private ThreadGroup[] groups = NO_GROUPS;
     private int groupCount;
+    /** Threads made here and not started: they hold a daemon group, but not against destroy (observed). */
+    private int unstarted;
+    /** Once set, both lists stay empty, so whatever reads them needs no check. */
+    private boolean destroyed;
 
     /** The root group, which has no parent. */
     ThreadGroup() {
@@ -41,16 +45,41 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         parent.addGroup(this);
     }
 
+    /** Called when a thread is made, and for good: a constructor that fails later still counts (observed). */
+    synchronized void addUnstarted() {
+        refuseIfDestroyed();
+        unstarted++;
+    }
+
     /** Called when a thread starts. */
     synchronized void add(Thread t) {
+        refuseIfDestroyed();
         if (threadCount == threads.length) {
             threads = java.util.Arrays.copyOf(threads, threadCount * 2);
         }
         threads[threadCount++] = t;
+        unstarted--;
     }
 
-    /** Called when a thread ends or fails to start; closes the gap to keep the order. */
-    synchronized void remove(Thread t) {
+    /** Called when a thread could not start: it is unstarted again, so the group stays. */
+    synchronized void startFailed(Thread t) {
+        take(t);
+        unstarted++;
+    }
+
+    /** Called when a thread ends. */
+    void remove(Thread t) {
+        synchronized (this) {
+            take(t);
+            if (!endIfIdleDaemon()) {
+                return;
+            }
+        }
+        parent.removeGroup(this);
+    }
+
+    /** Closes the gap to keep the order. */
+    private void take(Thread t) {
         for (int i = 0; i < threadCount; i++) {
             if (threads[i] == t) {
                 System.arraycopy(threads, i + 1, threads, i, threadCount - i - 1);
@@ -60,7 +89,80 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         }
     }
 
+    private void refuseIfDestroyed() {
+        if (destroyed) {
+            throw new IllegalThreadStateException();
+        }
+    }
+
+    /**
+     * The oracle's system and main groups hold VM threads, even after main has returned,
+     * so they refuse destroy (observed); here nothing else would stop it. An idle daemon
+     * main group is the one difference (threads.md).
+     */
+    private boolean holdsVmThreads() {
+        return parent == null || this == Thread.MAIN_GROUP;
+    }
+
+    /** Whether this group just ended; the caller then leaves the parent, outside this lock. */
+    private boolean endIfIdleDaemon() {
+        if (!daemon || threadCount > 0 || unstarted > 0 || groupCount > 0 || holdsVmThreads()) {
+            return false;
+        }
+        destroyed = true;
+        return true;
+    }
+
+    /**
+     * One lock at a time, so that destroy and a thread's end, going opposite ways
+     * through the tree, cannot deadlock. A group that fails on a busy subgroup stays
+     * destroyed and stays in its parent's list; the subgroups it has not reached
+     * live on, cut off from it (observed).
+     */
+    public final void destroy() {
+        ThreadGroup[] subs;
+        synchronized (this) {
+            refuseIfDestroyed();
+            if (threadCount > 0 || holdsVmThreads()) {
+                throw new IllegalThreadStateException();
+            }
+            subs = subgroups();
+            destroyed = true;
+            groups = NO_GROUPS;
+            groupCount = 0;
+        }
+        for (ThreadGroup g : subs) {
+            g.destroy();
+        }
+        parent.removeGroup(this);
+    }
+
+    public synchronized boolean isDestroyed() {
+        return destroyed;
+    }
+
+    private void removeGroup(ThreadGroup g) {
+        synchronized (this) {
+            // The list is already empty, and ending again would leave the parent's.
+            if (destroyed) {
+                return;
+            }
+            for (int i = 0; i < groupCount; i++) {
+                if (groups[i] == g) {
+                    System.arraycopy(groups, i + 1, groups, i, groupCount - i - 1);
+                    groups[--groupCount] = null;
+                    break;
+                }
+            }
+            if (!endIfIdleDaemon()) {
+                return;
+            }
+        }
+        parent.removeGroup(this);
+    }
+
     private synchronized void addGroup(ThreadGroup g) {
+        refuseIfDestroyed();
         if (groupCount == groups.length) {
             // Not Arrays: the first currentThread comes here, and need not load it.
             ThreadGroup[] more = new ThreadGroup[Math.max(4, groupCount * 2)];
@@ -94,8 +196,9 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         return n;
     }
 
+    // Not through the two-argument forms, which a subclass may override (observed).
     public int enumerate(Thread[] list) {
-        return enumerate(list, true);
+        return collect(list, 0, true, true);
     }
 
     public int enumerate(Thread[] list, boolean recurse) {
@@ -103,7 +206,7 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     }
 
     public int enumerate(ThreadGroup[] list) {
-        return enumerate(list, true);
+        return collect(list, 0, true, false);
     }
 
     public int enumerate(ThreadGroup[] list, boolean recurse) {
@@ -116,9 +219,13 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
      * out. Returns where the next one would go.
      */
     private int collect(Object[] into, int at, boolean recurse, boolean wantThreads) {
-        int room = into.length - at;
         ThreadGroup[] subs;
         synchronized (this) {
+            // Back to the start, even part way through a parent's listing or with no array (observed).
+            if (destroyed) {
+                return 0;
+            }
+            int room = into.length - at;
             subs = subgroups();
             int n = Math.min(room, wantThreads ? threadCount : groupCount);
             // Into a narrower array type, the oracle's failure names Thread, so one
@@ -140,16 +247,48 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         return at;
     }
 
-    /** Every thread in this group and below, for Thread.getAllStackTraces. */
-    Thread[] allThreads() {
-        Thread[] all = new Thread[activeCount() + 1];
-        int n = enumerate(all);
-        // Full: more may have started since the count, so look again with more room.
-        while (n == all.length) {
-            all = new Thread[n * 2];
-            n = enumerate(all);
+    /**
+     * Holds the lock across the subclass code it calls, and reads the list live,
+     * so what that code adds or takes away counts; subgroups are read after (observed).
+     */
+    public final void interrupt() {
+        ThreadGroup[] subs;
+        synchronized (this) {
+            for (int i = 0; i < threadCount; i++) {
+                threads[i].interrupt();
+            }
+            subs = subgroups();
         }
-        return java.util.Arrays.copyOf(all, n);
+        for (ThreadGroup g : subs) {
+            g.interrupt();
+        }
+    }
+
+    public void list() {
+        list(System.out, 0);
+    }
+
+    /** As interrupt; and all of it goes to the stream that was current at the start (observed). */
+    private void list(java.io.PrintStream out, int indent) {
+        ThreadGroup[] subs;
+        synchronized (this) {
+            printIndented(out, indent, this);
+            for (int i = 0; i < threadCount; i++) {
+                printIndented(out, indent + 4, threads[i]);
+            }
+            subs = subgroups();
+        }
+        for (ThreadGroup g : subs) {
+            g.list(out, indent + 4);
+        }
+    }
+
+    /** The indent goes out first: a toString that prints or throws shows it (observed). */
+    private static void printIndented(java.io.PrintStream out, int indent, Object o) {
+        for (int i = 0; i < indent; i++) {
+            out.print(" ");
+        }
+        out.println(o);
     }
 
     public final String getName() {

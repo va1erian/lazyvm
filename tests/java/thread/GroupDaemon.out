@@ -1,0 +1,43 @@
+empty stays: g destroyed=false daemon=true active=0 groups=0
+two running: g destroyed=false daemon=true active=2 groups=0
+one ended: g destroyed=false daemon=true active=1 groups=0
+both ended: g destroyed=true daemon=true active=0 groups=0
+ended thread: null TERMINATED
+gone from top: 0
+new Thread: threw java.lang.IllegalThreadStateException
+destroy: threw java.lang.IllegalThreadStateException
+unstarted holds it: gu destroyed=false daemon=true active=0 groups=0
+one of two ran: gu destroyed=false daemon=true active=0 groups=0
+all ran: gu destroyed=true daemon=true active=0 groups=0
+destroy ignores unstarted: gv destroyed=true daemon=true active=0 groups=0
+its start: threw java.lang.IllegalThreadStateException
+unstarted holds it, subgroup gone: x destroyed=false daemon=true active=0 groups=0
+then it ran: x destroyed=true daemon=true active=0 groups=0
+set while running: late destroyed=true daemon=true active=0 groups=0
+cleared while running: cleared destroyed=false daemon=false active=0 groups=0
+set when idle: cleared destroyed=false daemon=true active=0 groups=0
+inherits: p1 destroyed=false daemon=true active=0 groups=0
+cascade: p1 destroyed=true daemon=true active=0 groups=0 | p destroyed=true daemon=true active=0 groups=0
+destroy the last subgroup: q1 destroyed=true daemon=true active=0 groups=0 | q destroyed=true daemon=true active=0 groups=0
+one of two: r destroyed=false daemon=true active=0 groups=1
+both: r destroyed=true daemon=true active=0 groups=0
+subgroup holds it: s destroyed=false daemon=true active=0 groups=1 | s1 destroyed=false daemon=false active=0 groups=0
+then it goes: s destroyed=true daemon=true active=0 groups=0 | s1 destroyed=true daemon=false active=0 groups=0
+parent not a daemon: w destroyed=false daemon=false active=0 groups=0 | w1 destroyed=true daemon=true active=0 groups=0
+live thread holds it: y destroyed=false daemon=true active=1 groups=0
+then it ended: y destroyed=true daemon=true active=0 groups=0
+destroy: threw java.lang.IllegalThreadStateException
+after: dtop destroyed=false daemon=true active=0 groups=1 | dc destroyed=true daemon=true active=0 groups=0 | dc1 destroyed=false daemon=true active=1 groups=0
+thread ended: dtop destroyed=false daemon=true active=0 groups=1 | dc destroyed=true daemon=true active=0 groups=0 | dc1 destroyed=true daemon=true active=0 groups=0
+parent destroy: threw java.lang.IllegalThreadStateException
+parent after: dtop destroyed=true daemon=true active=0 groups=0
+loader throws: threw java.lang.IllegalStateException: no loader
+destroyed group first: threw java.lang.IllegalThreadStateException
+held by that: f destroyed=false daemon=true active=0 groups=0
+childValue throws: threw java.lang.IllegalStateException: no child
+held by that: f2 destroyed=false daemon=true active=0 groups=0
+child: child destroyed=true daemon=true active=0 groups=0
+system destroyed: false
+handler: java.lang.RuntimeException: boom group=ex destroyed=false
+after: ex destroyed=true daemon=true active=0 groups=0
+left behind 0
