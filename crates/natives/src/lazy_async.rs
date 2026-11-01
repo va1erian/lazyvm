@@ -96,7 +96,8 @@ fn take0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let mut taken: std::collections::VecDeque<Completion> =
         vm.blocking(|| reactor::take(capacity)).into();
     let mut n = 0;
-    while let Some(c) = taken.pop_front() {
+    while let Some(mut c) = taken.pop_front() {
+        too_big_for_the_heap(vm, &mut c);
         // Making a payload can fail for lack of memory, and what was taken
         // must not be lost: the dispatcher goes on with what it has and takes
         // the rest again.
@@ -120,6 +121,17 @@ fn take0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         n += 1;
     }
     ret_int(n as i32)
+}
+
+/// A body the heap can never hold fails its stage, and its connection, with the
+/// stream cut: taking it again would wedge the loop for good.
+fn too_big_for_the_heap(vm: &Vm, c: &mut Completion) {
+    if let Outcome::Bytes(bytes) = &c.outcome
+        && bytes.len() > vm.heap.limit()
+    {
+        let _ = net::abort(c.handle);
+        c.outcome = Outcome::Failed("more to read than the heap holds".into());
+    }
 }
 
 fn set_long(vm: &mut Vm, array: Ref, i: usize, value: i64) -> VmResult<()> {

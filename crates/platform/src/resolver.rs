@@ -32,7 +32,9 @@ pub(crate) fn lookup(id: u64, host: String, port: u16) {
     let mut guard = queue();
     let q = guard.get_or_insert_with(Queue::default);
     q.waiting.push_back((id, host, port));
-    if q.idle == 0 && q.threads < MOST_THREADS {
+    // More waiting than idle threads: an idle one that was told but has not woken
+    // yet counts, and must not leave a second lookup behind a dead server's.
+    if q.waiting.len() > q.idle && q.threads < MOST_THREADS {
         let started = std::thread::Builder::new()
             .name("lazy-resolver".into())
             .stack_size(STACK_BYTES)

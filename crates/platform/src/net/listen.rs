@@ -8,10 +8,11 @@ use std::time::{Duration, Instant};
 use mio::net::{TcpListener, TcpStream};
 use mio::{Interest, Registry, Token};
 
-use super::{CLOSED, Lookup, Net, Target, describe, failed, no_such_family, out_of_descriptors};
+use super::{CLOSED, Lookup, Net, Target, describe, failed, no_such_family};
 use crate::reactor::{Completion, Due, Outcome, Timers, post};
 
-/// An accept that ran out of descriptors gets no new edge, so it tries again.
+/// An accept that failed gets no new edge, so it tries again: out of descriptors,
+/// say. A server must outlive what happens to one connection.
 const ACCEPT_RETRY: Duration = Duration::from_millis(100);
 /// How many times port 0 is tried when a free port turns out taken on another address.
 const BIND_TRIES: u32 = 8;
@@ -39,7 +40,7 @@ fn bind_all(addrs: &[SocketAddr], port: u16) -> io::Result<Vec<TcpListener>> {
                 chosen = socket.local_addr()?.port();
                 sockets.push(socket);
             }
-            Err(e) if no_such_family(&e) => {}
+            Err(e) if no_such_family(&e, addr) => {}
             Err(e) => return Err(e),
         }
     }
@@ -132,18 +133,21 @@ impl Net {
         let Some(id) = listener.accept else { return };
         match next_connection(listener) {
             Accepted::Nothing => return,
-            Accepted::OutOfDescriptors => {
+            Accepted::Retry => {
                 timers.add(Due::AcceptRetry(handle), Instant::now() + ACCEPT_RETRY);
                 return;
             }
-            Accepted::Failed(e) => failed(id, describe(&e, "accept")),
             Accepted::Connection(mut stream, peer) => {
                 let token = self.token();
                 let interest = Interest::READABLE | Interest::WRITABLE;
-                match registry.register(&mut stream, Token(token as usize), interest) {
-                    Ok(()) => self.add_conn(id, token, stream, peer),
-                    Err(e) => failed(id, describe(&e, "accept")),
+                if registry
+                    .register(&mut stream, Token(token as usize), interest)
+                    .is_err()
+                {
+                    timers.add(Due::AcceptRetry(handle), Instant::now() + ACCEPT_RETRY);
+                    return;
                 }
+                self.add_conn(id, token, stream, peer);
             }
         }
         self.operations.remove(&id);
@@ -171,8 +175,7 @@ impl Net {
 
 enum Accepted {
     Nothing,
-    OutOfDescriptors,
-    Failed(io::Error),
+    Retry,
     Connection(TcpStream, SocketAddr),
 }
 
@@ -184,13 +187,15 @@ fn next_connection(listener: &Listener) -> Accepted {
             match socket.accept() {
                 Ok((stream, peer)) => return Accepted::Connection(stream, peer),
                 Err(e) if e.kind() == ErrorKind::WouldBlock => break,
+                // What a client did to its own connection before we got to it.
                 Err(e)
                     if matches!(
                         e.kind(),
-                        ErrorKind::Interrupted | ErrorKind::ConnectionAborted
+                        ErrorKind::Interrupted
+                            | ErrorKind::ConnectionAborted
+                            | ErrorKind::ConnectionReset
                     ) => {}
-                Err(e) if out_of_descriptors(&e) => return Accepted::OutOfDescriptors,
-                Err(e) => return Accepted::Failed(e),
+                Err(_) => return Accepted::Retry,
             }
         }
     }

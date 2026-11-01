@@ -249,7 +249,17 @@ public final class Reactor {
                 next = 0;
             } catch (Throwable t) {
                 report(t);
+                pause();
             }
+        }
+    }
+
+    /** After a failure the dispatcher tries again, and a heap still full must not make it spin. */
+    private static void pause() {
+        try {
+            Thread.sleep(10);
+        } catch (Throwable ignored) {
+            // It only spaces the attempts out.
         }
     }
 

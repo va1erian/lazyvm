@@ -87,7 +87,7 @@ public final class Connection {
                 return closing;
             }
         }
-        return first.thenRunAsync(() -> { }, Loop.executor());
+        return first.handleAsync((v, failure) -> (Void) null, Loop.executor());
     }
 
     /** The remote address as {@code host:port} with the numeric host. */

@@ -204,7 +204,9 @@ fn run(mut poll: Poll) {
     let mut timers = Timers::default();
     let mut net = Net::default();
     loop {
-        for r in std::mem::take(&mut *locked(&REQUESTS)) {
+        // Out of the loop's head: a guard there would hold the queue through the handling.
+        let batch = std::mem::take(&mut *locked(&REQUESTS));
+        for r in batch {
             match r {
                 Request::Timer { id, deadline } => timers.add(Due::Operation(id), deadline),
                 Request::Cancel(id) => {

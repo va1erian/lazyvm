@@ -84,6 +84,9 @@ impl Net {
         let Some(conn) = self.conns.get_mut(&handle) else {
             return failed(id, CLOSED);
         };
+        if conn.closing.is_some() {
+            return failed(id, CLOSED);
+        }
         if let Some(reason) = &conn.broken {
             return failed(id, reason.clone());
         }
@@ -106,6 +109,9 @@ impl Net {
         let Some(conn) = self.conns.get_mut(&handle) else {
             return failed(id, CLOSED);
         };
+        if conn.closing.is_some() {
+            return failed(id, CLOSED);
+        }
         if let Some(reason) = &conn.broken {
             return failed(id, reason.clone());
         }
@@ -174,7 +180,12 @@ impl Net {
                 return;
             }
             match conn.stream.read(&mut self.read_buffer) {
-                Ok(0) => conn.ended = true,
+                // LazyOS reports a reset as the end of the stream plus `SO_ERROR`:
+                // a cut-short body must not pass for the whole.
+                Ok(0) => match conn.stream.take_error() {
+                    Ok(Some(e)) => return self.broke(handle, &e, registry, timers),
+                    _ => conn.ended = true,
+                },
                 Ok(n) => {
                     if !self.got(handle, n, registry, timers) {
                         return;

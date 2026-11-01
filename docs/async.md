@@ -233,8 +233,8 @@ line.whenComplete((bytes, error) -> timer.cancel(true));
 ```
 
 **Lifetime.** The loop keeps the VM running while it has work pending: a
-task, a timer, a connect, a read or write in flight, a close still sending,
-or an open listener. An open connection with nothing pending does not. When
+task, a timer, a connect, a read or write in flight, a close still sending
+or waiting for the peer to close too (10 s at most), or an open listener. An open connection with nothing pending does not. When
 nothing is pending and `main` has returned (and no other non-daemon thread
 runs), the VM exits as usual. Handles that are never closed stay open until
 the VM exits, as files do (`design/files.md`).
@@ -260,7 +260,9 @@ the VM exits, as files do (`design/files.md`).
   Windows and 1.5 ms and 16.4 ms inside LazyOS. `mio` reports edges, so the reactor remembers each socket's readiness
   and tries a requested read or write at once when the socket is already
   ready. An `accept` that fails for lack of descriptors (`EMFILE`, `ENFILE`)
-  is retried on a 100 ms timer, since no new edge would come.
+  is retried on a 100 ms timer, since no new edge would come, as is any other
+  error that is not a client's own connection going away: a listener stays
+  open until it is closed.
 - **The resolvers** are up to four native threads, started on demand by
   names that are not literals, that run the platform's blocking lookup
   (`ToSocketAddrs`: the Windows resolver; on LazyOS musl's, querying the DNS
@@ -315,11 +317,12 @@ through virtual dispatch, or these overrides would run for its internal
 completions too; the S6-05 item says so.
 
 The natives are in `lazy.internal.Reactor`, used by `lazy.async` and
-`lazy.net` only: each request (`timer`, and in S7-01 `connect`, `listen`,
-`accept`, `read`, `write`, `close`) names an operation id, `cancel(id)`
-withdraws one, and `take` fills an array with a batch of finished ids. S7-01
-makes those `(id, status, value, payload)` completions, where the payload is
-the bytes of a read or the text of an error. Read bytes are copied once, from the reactor's buffer into the new
+`lazy.net` only: each request (`timer`, `connect`, `listen`, `accept`, `read`,
+`write`, `close`) names an operation id, `cancel(id)` withdraws one, and `take`
+fills arrays with a batch of `(id, handle, payload)` completions. The payload is
+bytes, the text of a failure (a `String`), or null. The handle is what to release
+if the id has gone: the socket the operation made or worked on. A body the heap
+could never hold fails its stage and closes its connection. Read bytes are copied once, from the reactor's buffer into the new
 `byte[]`; the reactor reads only for a pending `read`, which is what makes
 backpressure hold.
 

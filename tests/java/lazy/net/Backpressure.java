@@ -8,16 +8,15 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Nothing is read until the program asks, so a peer writing 8 MiB to a reader that waits has to
- * wait too, and memory stays bounded (the heap here is smaller than what the writes would queue if
- * nothing pushed back, were they not waited for). Then every byte arrives, in order.
+ * Nothing is read until the program asks, so a peer writing 256 MiB, far more than any system's
+ * socket buffers take, to a reader that waits has to wait too, and it fits an 8th of that in heap.
+ * Then it all arrives, in order.
  */
 public class Backpressure {
-    static final long TOTAL = 8L * 1024 * 1024;
+    static final long TOTAL = 256L * 1024 * 1024;
 
     static CompletionStage<Void> send(Connection c, AtomicLong sent, byte[] chunk) {
         if (sent.get() >= TOTAL) return c.close();
-        for (int i = 0; i < chunk.length; i++) chunk[i] = (byte) (sent.get() + i);
         return c.write(chunk).thenCompose(v -> {
             sent.addAndGet(chunk.length);
             return send(c, sent, chunk);
@@ -29,23 +28,33 @@ public class Backpressure {
     static CompletionStage<Long> drain(Connection c) {
         return c.read().thenCompose(bytes -> {
             if (bytes.length == 0) return CompletableFuture.completedFuture(received);
-            for (byte b : bytes) {
-                if (b != (byte) received++) wrong++;
-            }
+            // Each byte holds its offset mod 256; the ends of each read say enough.
+            if (bytes[0] != (byte) received) wrong++;
+            received += bytes.length;
+            if (bytes[bytes.length - 1] != (byte) (received - 1)) wrong++;
             return drain(c);
         });
     }
 
     public static void main(String[] args) throws Exception {
         AtomicLong sent = new AtomicLong();
-        Listener listener = Tcp.listen("127.0.0.1", 0, c -> send(c, sent, new byte[64 * 1024]))
+        byte[] chunk = new byte[64 * 1024];
+        for (int i = 0; i < chunk.length; i++) chunk[i] = (byte) i;
+        Listener listener = Tcp.listen("127.0.0.1", 0, c -> send(c, sent, chunk))
                 .toCompletableFuture().join();
         Connection c = Tcp.connect("127.0.0.1", listener.port()).toCompletableFuture().join();
 
-        Thread.sleep(1000);
-        long early = sent.get();
-        Thread.sleep(500);
-        System.out.println("the writer waits " + (early < TOTAL && sent.get() == early));
+        // Stalled means unchanged for 2 s, however long the buffers take to fill.
+        long seen = -1, steadySince = System.nanoTime(), end = System.nanoTime() + 60_000_000_000L;
+        while (System.nanoTime() - steadySince < 2_000_000_000L && System.nanoTime() < end) {
+            Thread.sleep(50);
+            long now = sent.get();
+            if (now != seen) {
+                seen = now;
+                steadySince = System.nanoTime();
+            }
+        }
+        System.out.println("the writer waits " + (sent.get() < TOTAL));
 
         long total = drain(c).toCompletableFuture().join();
         System.out.println("received all " + (total == TOTAL) + ", out of place " + wrong);

@@ -138,8 +138,17 @@ fn out_of_descriptors(e: &io::Error) -> bool {
 }
 
 /// The platform has no such address: no IPv6 on LazyOS, or no `::1` on a machine.
-fn no_such_family(e: &io::Error) -> bool {
-    raw_is(e, 97, 10047) || e.kind() == ErrorKind::AddrNotAvailable
+/// Any other address not being available is an error like any other.
+fn no_such_family(e: &io::Error, addr: &SocketAddr) -> bool {
+    raw_is(e, 97, 10047) || (e.kind() == ErrorKind::AddrNotAvailable && addr.ip().is_loopback())
+}
+
+/// A connect's failure, in the words of [`describe`].
+fn describe_connect(e: &io::Error, what: &str) -> String {
+    if e.kind() == ErrorKind::TimedOut {
+        return format!("connect timed out: {what}");
+    }
+    describe(e, what)
 }
 
 /// Our own text, the same on both platforms, so goldens can print it.
@@ -152,7 +161,7 @@ fn describe(e: &io::Error, what: &str) -> String {
         ErrorKind::ConnectionReset | ErrorKind::ConnectionAborted | ErrorKind::BrokenPipe => {
             "connection reset"
         }
-        ErrorKind::TimedOut => "connect timed out",
+        ErrorKind::TimedOut => "timed out",
         ErrorKind::AddrInUse => "address in use",
         ErrorKind::PermissionDenied => "permission denied",
         ErrorKind::HostUnreachable | ErrorKind::NetworkUnreachable => "unreachable",
@@ -335,16 +344,16 @@ impl Net {
         while let Some(addr) = attempts.addrs.pop_front() {
             let mut stream = match TcpStream::connect(addr) {
                 Ok(stream) => stream,
-                Err(e) if no_such_family(&e) => continue,
+                Err(e) if no_such_family(&e, &addr) => continue,
                 Err(e) => {
-                    attempts.failure = Some(describe(&e, &attempts.what));
+                    attempts.failure = Some(describe_connect(&e, &attempts.what));
                     continue;
                 }
             };
             let interest = Interest::READABLE | Interest::WRITABLE;
             let token = attempts.token;
             if let Err(e) = registry.register(&mut stream, Token(token as usize), interest) {
-                attempts.failure = Some(describe(&e, &attempts.what));
+                attempts.failure = Some(describe_connect(&e, &attempts.what));
                 continue;
             }
             self.operations
@@ -382,7 +391,7 @@ impl Net {
         };
         let what = c.attempts.what.clone();
         if let Ok(Some(e)) | Err(e) = c.stream.take_error() {
-            return self.attempt_ended(token, describe(&e, &what), registry, timers);
+            return self.attempt_ended(token, describe_connect(&e, &what), registry, timers);
         }
         match c.stream.peer_addr() {
             Ok(peer) => {
@@ -393,7 +402,7 @@ impl Net {
                 }
             }
             Err(e) if matches!(e.kind(), ErrorKind::NotConnected | ErrorKind::WouldBlock) => {}
-            Err(e) => self.attempt_ended(token, describe(&e, &what), registry, timers),
+            Err(e) => self.attempt_ended(token, describe_connect(&e, &what), registry, timers),
         }
     }
 }

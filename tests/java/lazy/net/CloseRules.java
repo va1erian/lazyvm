@@ -29,8 +29,7 @@ public class CloseRules {
         // The peer writes and closes at once with our bytes unread: the last ones still arrive.
         byte[] big = new byte[2 * 1024 * 1024];
         Listener writer = join(Tcp.listen("127.0.0.1", 0, peer -> {
-            peer.write(big);
-            peer.close();
+            peer.write(big).thenCompose(v -> peer.close());
         }));
         Connection a = join(Tcp.connect("127.0.0.1", writer.port()));
         join(a.write("never read by anyone".getBytes(UTF_8)));
@@ -45,11 +44,14 @@ public class CloseRules {
         System.out.println("readAll cut short " + failure(all));
         join(closing);
         System.out.println("write after close " + failure(b.write(new byte[1])));
+        // A close cancelled to force it: a second one still just completes, later.
+        Connection forced = join(Tcp.connect("127.0.0.1", silent.port()));
+        forced.close().toCompletableFuture().cancel(true);
+        System.out.println("second close " + failure(forced.close()));
         join(silent.close());
 
         Listener flood = join(Tcp.listen("127.0.0.1", 0, peer -> {
-            peer.write(new byte[17 * 1024 * 1024]);
-            peer.close();
+            peer.write(new byte[17 * 1024 * 1024]).thenCompose(v -> peer.close());
         }));
         Connection d = join(Tcp.connect("127.0.0.1", flood.port()));
         System.out.println("over the limit "

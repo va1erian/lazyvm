@@ -1,12 +1,15 @@
 package lazy.net;
 
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import lazy.async.Loop;
 import lazy.internal.Reactor;
 
 /** A listening socket (docs/async.md). It keeps the VM running until it is closed. */
 public final class Listener {
+    private static final long RETRY_MILLIS = 100;
+
     private final long handle;
     private final int port;
     private final Consumer<Connection> onAccept;
@@ -33,7 +36,7 @@ public final class Listener {
                 return closing;
             }
         }
-        return first.thenRunAsync(() -> { }, Loop.executor());
+        return first.handleAsync((v, failure) -> (Void) null, Loop.executor());
     }
 
     private synchronized boolean closed() {
@@ -42,18 +45,30 @@ public final class Listener {
 
     /** One accept at a time: on the loop's thread, nothing can complete before it is attached. */
     void acceptNext() {
-        Reactor.accept(handle, Tcp::connection).whenComplete((connection, failure) -> {
-            if (failure != null) {
-                if (!closed()) Reactor.report(failure);
-                return;
-            }
-            if (closed()) {
-                connection.close();
-                return;
-            }
-            serve(connection);
-            acceptNext();
-        });
+        try {
+            Reactor.accept(handle, Tcp::connection).whenComplete(this::accepted);
+        } catch (Throwable t) {
+            retry(t);
+        }
+    }
+
+    private void accepted(Connection connection, Throwable failure) {
+        if (failure != null) {
+            if (!closed()) retry(failure);
+            return;
+        }
+        if (closed()) {
+            connection.close();
+            return;
+        }
+        serve(connection);
+        acceptNext();
+    }
+
+    /** It stays open until it is closed, so whatever went wrong it goes on listening. */
+    private void retry(Throwable failure) {
+        Reactor.report(failure);
+        Loop.delay(RETRY_MILLIS, TimeUnit.MILLISECONDS).thenRun(this::acceptNext);
     }
 
     private void serve(Connection connection) {

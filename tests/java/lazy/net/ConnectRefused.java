@@ -1,7 +1,9 @@
 // NEEDS: net
 package lazy.net;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import lazy.async.Loop;
 
 /** Failures of the network fail the stage, in our own words; bad arguments throw in the call. */
 public class ConnectRefused {
@@ -30,10 +32,15 @@ public class ConnectRefused {
         int port = listener.port();
         listener.close().toCompletableFuture().join();
 
-        CompletionStage<Connection> refused = Tcp.connect("127.0.0.1", port);
-        // A failure comes later, on the loop, like any other result.
-        System.out.println("failed in the call " + refused.toCompletableFuture().isCompletedExceptionally());
-        fails("refused", refused, port);
+        // A failure comes later, on the loop, like any other result: nothing can complete
+        // while this task holds the loop.
+        CompletableFuture<CompletionStage<Connection>> made = new CompletableFuture<>();
+        Loop.executor().execute(() -> {
+            CompletionStage<Connection> stage = Tcp.connect("127.0.0.1", port);
+            System.out.println("failed in the call " + stage.toCompletableFuture().isDone());
+            made.complete(stage);
+        });
+        fails("refused", made.join(), port);
         fails("unknown", Tcp.connect("nosuch.invalid", 80), port);
 
         Listener held = Tcp.listen("127.0.0.1", 0, c -> { }).toCompletableFuture().join();
