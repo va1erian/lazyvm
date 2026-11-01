@@ -15,15 +15,18 @@ public class FirstUseProperties {
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println("path " + under(Paths.get("a").toAbsolutePath()));
+        // Only made, not resolved: that is already its first use.
+        Path made = Paths.get("a");
         File first = File.createTempFile("first", ".tmp");
         Path firstPath = Files.createTempFile("first", ".tmp");
         first.delete();
         Files.delete(firstPath);
 
+        // Their first use is past too, and the paths above are the first of all.
         System.setProperty("user.dir", ELSEWHERE);
         System.setProperty("java.io.tmpdir", ELSEWHERE);
-        System.out.println("path after " + under(Paths.get("a").toAbsolutePath()));
+        System.out.println("path after " + under(made.toAbsolutePath()));
+        System.out.println("new path after " + under(Paths.get("a").toAbsolutePath()));
         System.out.println("file after " + under(new File("a").getAbsolutePath()));
         File second = File.createTempFile("second", ".tmp");
         Path secondPath = Files.createTempFile("second", ".tmp");
