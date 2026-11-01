@@ -106,6 +106,7 @@ python tools/fixtures.py --check       # checked-in class files match their sour
 python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
 python tools/launcher_test.py          # -jar, manifests and jar errors
+python tools/fastloop_test.py         # malformed bytecode: the interpreter's tight loop matches -Xtrace:interp
 python tools/size.py                   # binary + lazyrt.jar under the 4 MB budget (D14)
 cargo build --release -p launcher-ui && python tools/size.py --exe target/release/lazyvm-ui.exe   # the lazy.ui binary too
 python tools/lazyos_test.py --lazyos <LazyOS checkout>   # the suite inside LazyOS; slow, before each PR
