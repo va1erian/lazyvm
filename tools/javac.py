@@ -19,7 +19,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import die, find_tool  # noqa: E402
 
-FLAGS = ["-source", "8", "-target", "8", "-encoding", "UTF-8", "-Xlint:-options", "-g"]
+# The heap cap keeps parallel builds from taking a quarter of the machine each.
+FLAGS = ["-J-Xmx1g", "-J-XX:+UseSerialGC", "-source", "8", "-target", "8", "-encoding", "UTF-8", "-Xlint:-options", "-g"]
 
 
 def compile(sources: list[Path], out: Path, bootclasspath: Path | None = None,
