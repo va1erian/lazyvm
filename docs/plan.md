@@ -471,7 +471,7 @@ whose every operation returns a `CompletionStage`. Blocking `java.net`,
         with `netd`, a card and the host peers (`tools/net/hostpeers.py`), through
         LazyOS `tools/lazyvm/run.py --net` ([`async.md`](async.md), "Files").
       Files: `java/lazyrt/src/lazy/net/*.java`, `crates/platform/src/{net,net/conn,resolver}.rs`, `crates/natives/src/lazy_async.rs`, `tools/lazyos_test.py`, `tools/testlib.py`.
-      Check: `cargo test -p platform net`; `tests/java/lazy/net/AsyncEcho`, `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `CloseRules` (both, LazyOS through `tools/lazyos_test.py --net`); `ManyClients` (500 concurrent connections), `Ipv6Loopback` (Windows); `HostEcho`, `HostInbound` (LazyOS, `--net`).
+      Check: `cargo test -p platform net`; `tests/java/lazy/net/AsyncEcho`, `ConnectRefused`, `Backpressure`, `CancelRead`, `ReadTimeout`, `CloseRules`, `WriteOrder`, `ReadAllHeap` (both, LazyOS through `tools/lazyos_test.py --net`); `ManyClients` (500 concurrent connections), `Ipv6Loopback` (Windows); `HostEcho`, `HostInbound` (LazyOS, `--net`).
       Needs: S6-06.
 
 Gate: `samples/tcpget` sends a hand-written HTTP/1.0 `GET` over `lazy.net` to a

@@ -7,4 +7,6 @@ write pending true
 cancel true
 write after IOException: closed
 cancel connect true
+cancel a finished connect true
+its socket released true
 nothing pending

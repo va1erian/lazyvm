@@ -428,7 +428,9 @@ Hand-written goldens (`lazy.*`, D9). "Both" means Windows and LazyOS.
   just closed, an unknown host, a port in use, bad arguments), `Backpressure` (a peer
   that writes 8 MiB to a reader that waits has to wait too, in a 32 MB heap),
   `CancelRead`, `ReadTimeout` (the pattern above), `CloseRules` (our last bytes
-  survive unread input, a cut-short `readAll`, its limit, a handler that throws).
+  survive unread input, a cut-short `readAll`, its limit, a handler that throws),
+  `WriteOrder` (overlapping writes in call order, a prompt close), `ReadAllHeap` (a
+  body past what the heap can hold fails, and the loop goes on).
 - S7-01, Windows or Linux only: `ManyClients` (500 at once; LazyOS has 64 sockets);
   Windows only: `Ipv6Loopback`.
 - S7-01, LazyOS only (`--net`): `tests/java/lazy/net/HostEcho` (1 MiB through the

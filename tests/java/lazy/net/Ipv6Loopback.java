@@ -25,5 +25,14 @@ public class Ipv6Loopback {
         } catch (java.util.concurrent.CompletionException e) {
             System.out.println(e.getCause().getMessage().replace(":" + port, ":PORT"));
         }
+
+        // "localhost" is both families, on one port, even when it was left to choose.
+        Listener both = join(Tcp.listen("localhost", 0, peer -> peer.close()));
+        for (String host : new String[] {"127.0.0.1", "::1"}) {
+            Connection d = join(Tcp.connect(host, both.port()));
+            System.out.println(host + " " + join(d.readAll()).length);
+            join(d.close());
+        }
+        join(both.close());
     }
 }

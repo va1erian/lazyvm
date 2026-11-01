@@ -66,6 +66,26 @@ public class CancelRead {
                 cancelled.complete(Tcp.connect("127.0.0.1", silent.port()).toCompletableFuture().cancel(true)));
         System.out.println("cancel connect " + cancelled.join());
 
+        // A cancel that loses the race: the connect has finished, its result is on its way, and
+        // the loop is held until the cancel. The socket it made is released, and the peer sees it.
+        CompletableFuture<byte[]> released = new CompletableFuture<>();
+        Listener watcher = Tcp.listen("127.0.0.1", 0, peer ->
+                peer.read().whenComplete((bytes, error) -> {
+                    released.complete(bytes);
+                    peer.close();
+                })).toCompletableFuture().join();
+        Loop.executor().execute(() -> {
+            CompletableFuture<Connection> late = Tcp.connect("127.0.0.1", watcher.port()).toCompletableFuture();
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
+            System.out.println("cancel a finished connect " + late.cancel(true));
+        });
+        System.out.println("its socket released " + (released.get(30, TimeUnit.SECONDS).length == 0));
+        watcher.close().toCompletableFuture().join();
+
         listener.close();
         silent.close().toCompletableFuture().join();
         pendingIs(0);
