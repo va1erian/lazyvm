@@ -23,11 +23,6 @@ fn cached(f: &Frame, classes: &[Class], want_static: bool) -> Option<(ClassId, u
     }
 }
 
-/// A field store keeps the field's value kind, as `same_kind` checks on the full path.
-fn same_kind(old: Value, new: Value) -> bool {
-    std::mem::discriminant(&old) == std::mem::discriminant(&new)
-}
-
 pub(super) fn get_field(f: &mut Frame, heap: &Heap, classes: &[Class]) -> bool {
     let Some((_, slot)) = cached(f, classes, false) else {
         return false;
@@ -62,7 +57,7 @@ pub(super) fn put_field(f: &mut Frame, heap: &mut Heap, classes: &[Class]) -> bo
     else {
         return false;
     };
-    if !same_kind(*field, v) {
+    if !field.same_kind(v) {
         return false;
     }
     *field = v;
@@ -105,7 +100,7 @@ pub(super) fn put_static(f: &mut Frame, classes: &mut [Class]) -> bool {
     let Some(s) = c.statics.get_mut(slot as usize) else {
         return false;
     };
-    if !same_kind(*s, v) {
+    if !s.same_kind(v) {
         return false;
     }
     *s = v;

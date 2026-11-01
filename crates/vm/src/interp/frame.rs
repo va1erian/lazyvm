@@ -206,12 +206,19 @@ impl Frame {
 
     /// Jumps by a signed offset from the current instruction.
     pub fn jump(&mut self, offset: i32) -> VmResult<()> {
-        let target = self.pc as i64 + i64::from(offset);
-        if target < 0 || target as usize >= self.code.bytecode.len() {
-            return Err(VmError::verify("branch target outside the code"));
-        }
-        self.pc = target as usize;
+        self.pc = self
+            .target(offset)
+            .ok_or_else(|| VmError::verify("branch target outside the code"))?;
         Ok(())
+    }
+
+    /// The address `offset` from the current instruction, if it is inside the code.
+    #[inline]
+    pub fn target(&self, offset: i32) -> Option<usize> {
+        let target = self.pc as i64 + i64::from(offset);
+        usize::try_from(target)
+            .ok()
+            .filter(|&t| t < self.code.bytecode.len())
     }
 
     /// The source line of the current instruction, -1 if unknown.

@@ -16,6 +16,7 @@
 use super::Frame;
 use super::fast_field::{get_field, get_static, put_field, put_static};
 use super::ops_array::kind_matches;
+use super::ops_branch::cond;
 use crate::Vm;
 use crate::class::Class;
 use crate::heap::Heap;
@@ -140,10 +141,10 @@ fn unary(f: &mut Frame, r: impl FnOnce(i32) -> i32) -> bool {
 
 /// Moves to `pc + offset` if that is inside the code; says whether it did.
 fn jump(f: &mut Frame, offset: i32) -> bool {
-    if !jump_ok(f, offset) {
+    let Some(target) = f.target(offset) else {
         return false;
-    }
-    f.pc = (f.pc as i64 + i64::from(offset)) as usize;
+    };
+    f.pc = target;
     true
 }
 
@@ -154,34 +155,18 @@ fn take(f: &mut Frame, taken: bool, pops: usize) -> bool {
         return false;
     };
     let offset = i32::from(i16::from_be_bytes([bytes[0], bytes[1]]));
-    if taken && !jump_ok(f, offset) {
-        return false;
-    }
+    let target = if taken {
+        let Some(target) = f.target(offset) else {
+            return false;
+        };
+        target
+    } else {
+        f.pc + 3
+    };
     let keep = f.stack.len() - pops;
     f.stack.truncate(keep);
-    if taken {
-        f.pc = (f.pc as i64 + i64::from(offset)) as usize;
-    } else {
-        f.pc += 3;
-    }
+    f.pc = target;
     true
-}
-
-fn jump_ok(f: &Frame, offset: i32) -> bool {
-    let target = f.pc as i64 + i64::from(offset);
-    target >= 0 && (target as usize) < f.code.bytecode.len()
-}
-
-/// The six int comparisons of `ifeq`..`ifle` (and `if_icmpeq`..`if_icmple`).
-fn compare(which: u8, a: i32, b: i32) -> bool {
-    match which {
-        0 => a == b,
-        1 => a != b,
-        2 => a < b,
-        3 => a >= b,
-        4 => a > b,
-        _ => a <= b,
-    }
 }
 
 fn array_load(f: &mut Frame, heap: &Heap, kind: u8) -> bool {
@@ -308,9 +293,9 @@ fn run(f: &mut Frame, heap: &mut Heap, classes: &mut [Class]) -> bool {
             0x91 => unary(f, |a| i32::from(a as i8)),
             0x92 => unary(f, |a| i32::from(a as u16)),
             0x93 => unary(f, |a| i32::from(a as i16)),
-            0x99..=0x9e => int_at(f, 0).is_some_and(|a| take(f, compare(op - 0x99, a, 0), 1)),
+            0x99..=0x9e => int_at(f, 0).is_some_and(|a| take(f, cond(op - 0x99, a.cmp(&0)), 1)),
             0x9f..=0xa4 => match (int_at(f, 1), int_at(f, 0)) {
-                (Some(a), Some(b)) => take(f, compare(op - 0x9f, a, b), 2),
+                (Some(a), Some(b)) => take(f, cond(op - 0x9f, a.cmp(&b)), 2),
                 _ => false,
             },
             0xa5 | 0xa6 => match (ref_at(f, 1), ref_at(f, 0)) {
