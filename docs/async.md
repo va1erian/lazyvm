@@ -1,8 +1,8 @@
 # `lazy.async` and `lazy.net`: the event loop and async TCP
 
-Status: design for S6-06 (`lazy.async`) and S7-01 (`lazy.net`) in
-[`plan.md`](plan.md). Code waits for S6-01 to S6-05 (threads, monitors,
-`CompletableFuture`), which another branch is writing.
+Status: `lazy.async` is built (S6-06); `lazy.net` (S7-01) is the design below.
+See [`plan.md`](plan.md). Where this page describes sockets, resolvers or
+completions with a payload, that is S7-01.
 
 ## Why and what
 
@@ -245,10 +245,14 @@ the VM exits, as files do (`design/files.md`).
 
 - **The reactor** is a native thread that never runs bytecode and makes every
   socket system call. It creates, on itself after it starts, a `mio::Poll`, the sockets (in a numbered
-  handle table, like `platform::files`), a min-heap of timers, and a queue of
+  handle table, like `platform::files`), its timers by deadline, and a queue of
   requests the natives push and wake it for (`mio::Waker`). It parks in
-  `Poll::poll` with the next timer as its timeout, so an idle loop uses no
-  CPU. `mio` reports edges, so the reactor remembers each socket's readiness
+  `Poll::poll` until 20 ms before the next timer, so an idle loop uses no CPU,
+  and a helper, the *sleeper*, times that last stretch and wakes it: `poll`'s
+  timeout ends on the system tick on Windows (`delay` of 1 ms took 15.5 ms, of
+  16 ms 29 ms). The sleeper parks through `platform::timer`, as `Thread.sleep`
+  does (`design/threads.md`, "Timed waits"), which gives 1.2 ms and 16.3 ms on
+  Windows and 1.5 ms and 16.4 ms inside LazyOS. `mio` reports edges, so the reactor remembers each socket's readiness
   and tries a requested read or write at once when the socket is already
   ready. An `accept` that fails for lack of descriptors (`EMFILE`, `ENFILE`)
   is retried on a 100 ms timer, since no new edge would come.
@@ -277,8 +281,9 @@ Every stage is a `lazy.internal.LoopFuture`, a `CompletableFuture` subclass
 that overrides `cancel`, `complete`, `completeExceptionally`,
 `obtrudeValue` and `obtrudeException`. Each operation settles exactly once:
 
-- Operation ids come from a 64-bit counter and are never reused. One table
-  maps ids to their futures, under the same lock as `pending`.
+- Operation ids come from a 64-bit counter in Java and are never reused. One
+  table maps ids to their futures, under the same lock as `pending`, and an id
+  is in it before the reactor hears of it, so no completion can arrive first.
 - Whoever removes the id from the table settles it: the dispatcher on a
   completion, or an override called from outside. On a future that is
   already done, the overrides keep `CompletableFuture`'s contract by
@@ -304,11 +309,11 @@ through virtual dispatch, or these overrides would run for its internal
 completions too; the S6-05 item says so.
 
 The natives are in `lazy.internal.Reactor`, used by `lazy.async` and
-`lazy.net` only: each request (`connect`, `listen`, `accept`, `read`,
-`write`, `close`, `timer`) returns an operation id, `cancel(id)` withdraws
-one, and `take` fills arrays with a batch of `(id, status, value, payload)`
-completions, where the payload is the bytes of a read or the text of an
-error. Read bytes are copied once, from the reactor's buffer into the new
+`lazy.net` only: each request (`timer`, and in S7-01 `connect`, `listen`,
+`accept`, `read`, `write`, `close`) names an operation id, `cancel(id)`
+withdraws one, and `take` fills an array with a batch of finished ids. S7-01
+makes those `(id, status, value, payload)` completions, where the payload is
+the bytes of a read or the text of an error. Read bytes are copied once, from the reactor's buffer into the new
 `byte[]`; the reactor reads only for a pending `read`, which is what makes
 backpressure hold.
 
@@ -368,7 +373,7 @@ implementation is the default, and the launcher installs
 
 ## Dependencies and size
 
-`mio` (MIT), with the `os-poll` and `net` features; on Windows the
+`mio` (MIT), with the `os-poll` feature (S7-01 adds `net`); on Windows the
 `windows-sys` it brings (MIT or Apache-2.0; its `THIRD_PARTY.md` row gains
 `platform` beside `gfx`), and on the musl build `libc` (MIT or Apache-2.0,
 a new row). S6-06 records them in
@@ -381,8 +386,10 @@ a new row). S6-06 records them in
   `java/lazyrt/src/lazy/internal/{Reactor,LoopFuture}.java`. The `lazy.*`
   API lives in `lazyrt` beside `lazy.gfx` until D10's `java/lazy-api`
   exists ([`gfx.md`](gfx.md), "Layout").
-- `crates/platform/src/reactor.rs` (thread, poll, timers, requests, the park
-  trait), `crates/platform/src/net.rs` (sockets, resolvers);
+- `crates/platform/src/reactor.rs` (thread, poll, timers, requests, and in
+  S10-02 the park trait), `crates/platform/src/timer.rs` (timed parking, moved
+  from `crates/vm` so the reactor can use it), `crates/platform/src/net.rs`
+  (S7-01: sockets, resolvers);
   `crates/natives/src/lazy_async.rs` (the `Reactor` natives).
 - `tools/lazyos_test.py --net` (S7-01): boots the image with LazyOS's
   networking switch, adds the QEMU `hostfwd` rule that maps a host port to
@@ -403,11 +410,10 @@ Hand-written goldens (`lazy.*`, D9). "Both" means Windows and LazyOS.
   it, and each `cancel` or `complete` from outside reaches its `LoopFuture`
   override exactly once, which checks S6-05's no-self-call rule), `ExecutorOrder` (tasks run in the order
   given, on one thread, and a throwing task does not stop the loop), `Idle`
-  (the reactor's CPU time over an idle 2 s is at most two ticks of the
-  platform's thread clock, read by `Reactor.cpuNanos`, a test-only native:
-  `GetThreadTimes` on Windows, the reactor itself calling
-  `getrusage(RUSAGE_THREAD)` on LazyOS, whose `clock_gettime` has no
-  thread clock), and the S6 gate `Pipeline`.
+  (the reactor wakes at most once over an idle 2 s, read by `Reactor.wakes`: a
+  thread that does not wake uses no CPU, and counting needs no `unsafe` thread
+  clock, which `crates/platform` may not have and LazyOS lacks), and the S6
+  gate `Pipeline`.
 - S7-01, Windows: `tests/java/lazy/net/AsyncEcho` (listen on port 0, connect,
   echo, close both ends; each next `read` is started inside the previous
   one's handler), `ManyClients` (500 at once), `ConnectRefused` (a

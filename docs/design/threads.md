@@ -8,10 +8,10 @@ how the collector stops the world, how monitors and class initialization
 block, and what later items (S6-03 to S6-06) can rely on.
 
 Code: `crates/vm/src/thread/` (`gil.rs` the lock, `mod.rs` the thread table
-and parking, `timer.rs` timed parking, `monitor.rs` monitors, `spawn.rs` start,
+and parking, `monitor.rs` monitors, `spawn.rs` start,
 end and VM exit),
 `crates/vm/src/interp/sync.rs` (the bytecodes and `synchronized` methods),
-`crates/vm/src/init.rs` (class initialization), `crates/natives/src/lang_thread.rs`,
+`crates/vm/src/init.rs` (class initialization), `crates/platform/src/timer.rs` (timed parking), `crates/natives/src/lang_thread.rs`,
 and in `lazyrt` `Thread`, `ThreadGroup`, `ThreadLocal`,
 `InheritableThreadLocal` and the package-private `Shutdown`.
 
@@ -176,7 +176,7 @@ of 1 ms and of 5 ms all took 15.6 ms; the tick is confirmed as the cause), so
 `Thread.sleep(1)` took 16 ms. `std::thread::sleep` is finer there (to the next
 0.5 ms, on a high-resolution timer) but cannot be woken. So the last 20 ms of any
 timed wait (`sleep`, `wait`, `join`, `parkNanos`) are timed by one helper thread,
-`thread/timer.rs`: the waiting thread parks, and the helper sleeps and unparks it
+`platform/src/timer.rs`: the waiting thread parks, and the helper sleeps and unparks it
 when its time comes, yielding through the last 100 us. A thread woken earlier takes
 its entry back: left there, the entries of threads hopping on `wait(10)` piled up
 and kept the helper busy, and a hop cost 3.5 us against 1.7 for `wait(1000)`

@@ -5,6 +5,8 @@
 //! get their own crates in S9 (docs/decisions.md D10).
 
 pub mod files;
+pub mod reactor;
+pub mod timer;
 pub mod wtf;
 
 use std::ffi::OsString;

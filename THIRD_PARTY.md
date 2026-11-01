@@ -27,7 +27,8 @@ license outside the allowed list (`docs/decisions.md` D2).
 | `tracing` | MIT | gfx, Windows only (through winit) | winit's internal logging, unused by LazyVM |
 | `tracing-core` | MIT | gfx, Windows only (through tracing) | The same |
 | `pin-project-lite` | Apache-2.0 OR MIT | gfx, Windows only (through tracing) | The same |
-| `windows-sys` | MIT OR Apache-2.0 | gfx, Windows only (through winit, softbuffer) | Win32 bindings |
+| `mio` | MIT | platform | The reactor's poll and waker (docs/async.md) |
+| `windows-sys` | MIT OR Apache-2.0 | gfx, platform, Windows only (through winit, softbuffer, mio) | Win32 bindings |
 | `windows-targets` | MIT OR Apache-2.0 | gfx, Windows only (through windows-sys) | Win32 import libraries |
 | `windows_x86_64_msvc` | MIT OR Apache-2.0 | gfx, Windows only (through windows-targets) | The same, for x86_64 MSVC |
 | `windows-link` | MIT OR Apache-2.0 | gfx, Windows only (through windows-sys) | Win32 linking |
@@ -60,7 +61,7 @@ and is to be curated, and the list trimmed, before S9-02 merges.
 | `glutin_wgl_sys` | Apache-2.0 | xui-bind (through glutin) | The wgl bindings for glutin |
 | `harfrust` | MIT | xui-bind (through cosmic-text) | A complete HarfBuzz shaping algorithm port to Rust |
 | `khronos_api` | Apache-2.0 | xui-bind (through gl_generator) | The Khronos XML API Registry, exposed as byte string constants |
-| `libc` | MIT OR Apache-2.0 | xui-bind (through winit) | Raw FFI bindings to platform libraries like libc |
+| `libc` | MIT OR Apache-2.0 | platform (through mio); xui-bind (through winit) | Raw FFI bindings to platform libraries like libc |
 | `libloading` | ISC | xui-bind (through glutin) | Bindings around the platform's dynamic library loading primitives with greatly improved me |
 | `linebender_resource_handle` | Apache-2.0 OR MIT | xui-bind (through cosmic-text) | Raw resource handle for immutable blobs with dynamic lifetimes |
 | `log` | MIT OR Apache-2.0 | xui-bind (through arboard) | A lightweight logging facade for Rust |

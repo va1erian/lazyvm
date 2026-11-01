@@ -40,7 +40,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S3 | Class path, jars, launcher, IntelliJ | in progress |
 | S4 | Language completeness: lambdas, annotations, reflection | in progress |
 | S5 | Core library | in progress |
-| S6 | Threads, concurrency, `CompletionStage`, the event loop | in progress |
+| S6 | Threads, concurrency, `CompletionStage`, the event loop | done |
 | S7 | `lazy.net` async TCP | not started |
 | S8 | Verifier and hardening | not started |
 | S11 | Streams, `java.time`, logging, JDWP | not started |
@@ -431,7 +431,7 @@ platform completions into `CompletableFuture`.
       completion goes through private helpers, so S6-06's subclass can
       override them ([`async.md`](async.md), "Inside").
       Check: `tests/java/concurrent/CompletableFutures`. (The rule is checked through S6-06's `LoopFuture` in `tests/java/lazy/async/Cancel`: a `java.*` golden would record the oracle's own internal calls.)
-- [ ] S6-06 `lazy.async.Loop` as [`async.md`](async.md) designs it: the
+- [x] S6-06 `lazy.async.Loop` as [`async.md`](async.md) designs it: the
       reactor thread of [`decisions.md`](decisions.md) D8, `Loop.executor()`
       and timers (`Loop.delay(time, unit)` returning `CompletionStage<Void>`),
       with completions on the loop's executor, never on the reactor thread,
@@ -441,8 +441,8 @@ platform completions into `CompletableFuture`.
       epoll `WAIT_FD`, when Messenger calls join the loop. It adds `mio`
       (MIT): recorded in `THIRD_PARTY.md`, with the `tools/size.py` delta in
       the PR.
-      Files: `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/{Reactor,LoopFuture}.java`, `crates/platform/src/reactor.rs`, `crates/natives/src/lazy_async.rs`.
-      Check: `tests/java/lazy/async/Timers`, `Cancel`, `ExecutorOrder` (both); no polling: `tests/java/lazy/async/Idle` asserts the reactor thread's CPU time over an idle 2 s is at most two ticks of the platform's thread clock (both); `python tools/licenses.py`; `python tools/size.py`.
+      Files: `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/{Reactor,LoopFuture}.java`, `crates/platform/src/{reactor,timer}.rs`, `crates/natives/src/lazy_async.rs`.
+      Check: `tests/java/lazy/async/Timers`, `Cancel`, `ExecutorOrder` (both); no polling: `tests/java/lazy/async/Idle` asserts the reactor thread wakes at most once over an idle 2 s (both); `python tools/licenses.py`; `python tools/size.py`.
 
 Gate: `tests/java/lazy/async/Pipeline` (1000 chained timer stages fanned in with
 `allOf`) passes on both platforms.

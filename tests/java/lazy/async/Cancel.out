@@ -1,0 +1,24 @@
+pending 1
+dependent on main with CancellationException
+cancel true
+pending 0
+cancelled true
+cancel again true
+complete after false
+exceptionally after false
+pending 0
+cancelled delay ran false, dependent failed true
+complete true true null
+pending 0
+exceptionally true true
+pending 0
+null cause leaves it pending true 1
+null obtrude leaves it pending true 1
+obtrudeValue true false
+pending 0
+obtrude on done true
+pending 0
+obtrudeException true
+pending 0
+race mismatches 0
+exits with nothing pending

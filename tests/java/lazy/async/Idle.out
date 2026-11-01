@@ -1,0 +1,3 @@
+at most one wake true
+a withdrawn timer does not wake it true
+a request wakes it true

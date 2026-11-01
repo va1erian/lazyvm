@@ -12,7 +12,7 @@ use std::time::Instant;
 
 /// Parks until `deadline`, or until the thread is unparked. Wakeups can be
 /// spurious, or early: callers loop on their condition and on the clock.
-pub(super) fn park_until(deadline: Instant) {
+pub fn park_until(deadline: Instant) {
     #[cfg(windows)]
     windows::park_until(deadline);
     #[cfg(not(windows))]

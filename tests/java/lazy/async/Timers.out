@@ -1,0 +1,10 @@
+order [100, 200, 300]
+not early true
+on lazy-loop
+zero done in the call false
+negative done in the call false
+zero and negative done later
+woke a parked reactor, far done false false
+null unit NullPointerException
+main returns
+after main
