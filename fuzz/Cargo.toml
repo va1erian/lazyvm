@@ -1,0 +1,31 @@
+[package]
+name = "lazyvm-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+classfile = { path = "../crates/classfile" }
+vm = { path = "../crates/vm" }
+
+# Not in the root workspace: it needs nightly and libFuzzer, and ships nothing.
+[workspace]
+
+[[bin]]
+name = "parser"
+path = "fuzz_targets/parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "verifier"
+path = "fuzz_targets/verifier.rs"
+test = false
+doc = false
+bench = false
