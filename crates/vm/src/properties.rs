@@ -1,24 +1,26 @@
-//! System properties: names are Java strings, stored under `wtf::escape` so that every
-//! distinct name (lone surrogates included) has its own entry. These methods are the
-//! only way in or out of the map.
+//! The system properties the VM started with: what the launcher sets before boot. Java
+//! code cannot change them: once a program does, `java.lang.System` holds its own table
+//! on top. So an option read here (`lazy.gfx`) is one given on the command line. Names
+//! are Java strings, and these methods are the only way in or out of the map.
 
 use crate::Vm;
-use crate::wtf;
 
 impl Vm {
     /// The value of the property `name` (UTF-16 units), if set.
     pub fn property(&self, name: &[u16]) -> Option<&[u16]> {
-        self.properties.get(&wtf::escape(name)).map(Vec::as_slice)
+        self.properties.get(name).map(Vec::as_slice)
+    }
+
+    /// Every property, as (name, value).
+    pub fn properties(&self) -> impl Iterator<Item = (&[u16], &[u16])> {
+        self.properties
+            .iter()
+            .map(|(k, v)| (k.as_slice(), v.as_slice()))
     }
 
     /// Sets a property, returning the old value.
     pub fn set_property(&mut self, name: &[u16], value: Vec<u16>) -> Option<Vec<u16>> {
-        self.properties.insert(wtf::escape(name), value)
-    }
-
-    /// Removes a property, returning the old value.
-    pub fn clear_property(&mut self, name: &[u16]) -> Option<Vec<u16>> {
-        self.properties.remove(&wtf::escape(name))
+        self.properties.insert(name.to_vec(), value)
     }
 
     /// A property named by text, read as text (lossily, for options such as `lazy.gfx`).
@@ -42,9 +44,6 @@ mod tests {
         for (i, n) in names.iter().enumerate() {
             assert_eq!(vm.property(n), Some(&[i as u16][..]));
         }
-        assert_eq!(vm.clear_property(names[0]), Some(vec![0]));
-        assert_eq!(vm.property(names[0]), None);
-        assert_eq!(vm.property(names[1]), Some(&[1u16][..]));
         assert_eq!(vm.property_text("k"), Some(String::from_utf16_lossy(&[3])));
     }
 }

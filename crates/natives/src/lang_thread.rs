@@ -60,6 +60,15 @@ pub fn register(vm: &mut Vm) {
         };
         ret_int(state)
     });
+    vm.register_native(
+        THREAD,
+        "stackTrace0",
+        "()[Ljava/lang/StackTraceElement;",
+        |vm, a| {
+            let frames = vm.thread_backtrace(obj(a, 0)?);
+            ret_ref(Some(crate::lang_throwable::stack_elements(vm, &frames)?))
+        },
+    );
     vm.register_native(LOCK_SUPPORT, "park0", "(J)V", |vm, a| {
         // Java passes 0 for no limit and a positive time otherwise.
         vm.park_thread(u64::try_from(long(a, 0)?).ok().filter(|n| *n > 0));

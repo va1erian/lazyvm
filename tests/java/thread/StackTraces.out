@@ -1,0 +1,64 @@
+own (3)
+  java.lang.Thread.getStackTrace
+  thread.StackTraces.ownTrace:122
+  thread.StackTraces.main:186
+own deeper (6)
+  java.lang.Thread.getStackTrace
+  thread.StackTraces.deeper:118
+  thread.StackTraces.deeper:118
+  thread.StackTraces.deeper:118
+  thread.StackTraces.ownTrace:123
+  thread.StackTraces.main:186
+unstarted (0)
+ended (0)
+unstarted in all false
+ended in all false
+main joining (5)
+  java.lang.Object.wait native
+  java.lang.Thread.join
+  java.lang.Thread.join
+  thread.StackTraces.mainFromOutside:152
+  thread.StackTraces.main:188
+base thread.StackTraces$2.run
+sleeping (3)
+  java.lang.Thread.sleep native
+  thread.StackTraces$Sleeper.nap:39
+  thread.StackTraces$Sleeper.run:32
+waiting (4)
+  java.lang.Object.wait native
+  java.lang.Object.wait
+  thread.StackTraces$Waiter.run:50
+  java.lang.Thread.run
+blocked (2)
+  thread.StackTraces$Blocker.run:68
+  java.lang.Thread.run
+blocker in
+blocked on method (3)
+  thread.StackTraces$MethodBlocker.locked:91
+  thread.StackTraces$MethodBlocker.run:86
+  java.lang.Thread.run
+locked
+blocked on static (3)
+  thread.StackTraces$MethodBlocker.lockedStatic:95
+  thread.StackTraces$MethodBlocker.run:84
+  java.lang.Thread.run
+locked static
+map java.util.HashMap
+main in all true
+sleeper in all true
+waiter in all true
+in group in all true
+sleeping in all (3)
+  java.lang.Thread.sleep native
+  thread.StackTraces$Sleeper.nap:39
+  thread.StackTraces$Sleeper.run:32
+waiting in all (4)
+  java.lang.Object.wait native
+  java.lang.Object.wait
+  thread.StackTraces$Waiter.run:50
+  java.lang.Thread.run
+own in all ends thread.StackTraces.main
+map is a copy true
+sleeper sleep interrupted
+waiter null
+traces of ended 0

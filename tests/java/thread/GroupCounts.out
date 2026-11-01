@@ -1,0 +1,35 @@
+alone: static 1, main 1, groups 1, g1 0, g1 groups 0
+unstarted: static 1, main 1, groups 4, g1 0, g1 groups 1
+started: static 6, main 6, groups 4, g1 3, g1 groups 1
+all 6: main a5 a3 a1 a2 a4
+own 2: main a5
+g1 3: a3 a1 a2
+g1 own 2: a3 a1
+static 6: main a5 a3 a1 a2 a4
+small 3: main a5 a3
+zero 0
+untouched past the end true
+groups 4: unused g1 g3 g2
+own groups 3: unused g1 g3
+one group 1: unused
+threads null java.lang.NullPointerException
+groups null java.lang.NullPointerException
+static null java.lang.NullPointerException
+empty threads null java.lang.NullPointerException
+empty groups null java.lang.NullPointerException
+system parent null, name system
+a2 under system true
+system own misses a2 true
+a1 group after join null
+a2 group after join null
+a3 group after join null
+a4 group after join null
+a5 group after join null
+ended: static 1, main 1, groups 5, g1 0, g1 groups 1
+left 1: main
+gap closed 3: main second third
+restart java.lang.IllegalThreadStateException
+after a failed restart 1
+crowd 21: main c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19
+crowd gone 1
+never NEW g1

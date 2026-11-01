@@ -136,4 +136,25 @@ impl Vm {
         let slot = self.class(owner).fields[i].slot;
         self.set_field(obj, slot, v)
     }
+
+    /// Stores to a static field of `class`, final or not.
+    pub fn set_static_by_name(
+        &mut self,
+        class: ClassId,
+        name: &str,
+        desc: &str,
+        v: Value,
+    ) -> VmResult<()> {
+        let (owner, i) = self
+            .lookup_field(class, name, desc)
+            .ok_or_else(|| VmError::Internal(format!("no field {name} {desc}")))?;
+        let slot = self.class(owner).fields[i].slot as usize;
+        let s = self
+            .class_mut(owner)
+            .statics
+            .get_mut(slot)
+            .ok_or_else(|| VmError::Internal("static slot".into()))?;
+        *s = v;
+        Ok(())
+    }
 }

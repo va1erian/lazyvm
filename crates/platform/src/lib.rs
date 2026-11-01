@@ -94,14 +94,36 @@ pub fn default_properties() -> Vec<(String, OsString)> {
         .unwrap_or_default();
     let home = std::env::var_os(if windows { "USERPROFILE" } else { "HOME" }).unwrap_or_default();
     let tmp = std::env::temp_dir().into_os_string();
+    let user = std::env::var_os(if windows { "USERNAME" } else { "USER" }).unwrap_or_default();
+    // Where the VM's own files are: its binary's directory.
+    let vm_home = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|d| d.as_os_str().to_owned()))
+        .unwrap_or_default();
     let os = if windows { "Windows" } else { "Linux" };
     [
         ("java.version", "1.8.0"),
         ("java.specification.version", "1.8"),
         ("java.class.version", "52.0"),
+        ("java.specification.name", "SE 8 API Specification"),
+        ("java.specification.vendor", "LazyVM"),
         ("java.vendor", "LazyVM"),
+        ("java.vendor.url", "https://github.com/va1erian/lazyvm"),
         ("java.vm.name", "LazyVM"),
+        ("java.vm.vendor", "LazyVM"),
         ("java.vm.version", env!("CARGO_PKG_VERSION")),
+        (
+            "java.vm.specification.name",
+            "SE 8 Virtual Machine Specification",
+        ),
+        ("java.vm.specification.vendor", "LazyVM"),
+        ("java.vm.specification.version", "1.8"),
+        // Set because the Javadoc of System.getProperties says they are; nothing here
+        // uses them: extensions and native libraries are not loaded from directories.
+        ("java.ext.dirs", ""),
+        ("java.library.path", ""),
+        // std has no call for it, and no program should branch on it.
+        ("os.version", ""),
         ("os.name", os),
         ("os.arch", "amd64"),
         ("file.separator", if windows { "\\" } else { "/" }),
@@ -120,6 +142,8 @@ pub fn default_properties() -> Vec<(String, OsString)> {
     .chain([
         ("user.dir".to_owned(), dir),
         ("user.home".to_owned(), home),
+        ("user.name".to_owned(), user),
+        ("java.home".to_owned(), vm_home),
         ("java.io.tmpdir".to_owned(), tmp),
     ])
     .collect()

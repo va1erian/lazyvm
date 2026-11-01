@@ -3,6 +3,7 @@
 use classfile::encode_mutf8;
 
 use crate::class::{ClassId, MethodRef};
+use crate::interp::Frame;
 use crate::objects::ARRAY_LIMIT;
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
@@ -12,7 +13,7 @@ use crate::{Vm, VmError, VmResult};
 const MAX_EXCEPTION_NESTING: u32 = 8;
 
 /// Observed on Java 8: a trace holds the innermost 1024 frames at most.
-const MAX_TRACE: usize = 1024;
+pub(crate) const MAX_TRACE: usize = 1024;
 /// Observed on Java 8: a trace of a VM-made `OutOfMemoryError` holds 32 at most.
 const OOM_TRACE: usize = 32;
 
@@ -258,6 +259,15 @@ impl Vm {
         }
         let vm_oom = self.creating_exception > 0 && &*self.class(tclass).name == OOM;
         let limit = if vm_oom { OOM_TRACE } else { MAX_TRACE };
+        Ok(self.trace_frames(frames, limit))
+    }
+
+    /// At most `limit` of `frames`, innermost first, as a trace shows them.
+    pub(crate) fn trace_frames<'a>(
+        &self,
+        frames: impl Iterator<Item = &'a Frame>,
+        limit: usize,
+    ) -> Vec<TraceFrame> {
         let mut out: Vec<TraceFrame> = frames
             .take(limit)
             .map(|f| TraceFrame {
@@ -270,7 +280,7 @@ impl Vm {
         if out.last().is_some_and(|f| self.is_thread_entry(f.method)) {
             out.pop();
         }
-        Ok(out)
+        out
     }
 
     fn is_thread_entry(&self, m: MethodRef) -> bool {
@@ -282,11 +292,16 @@ impl Vm {
     pub fn describe_frame(&self, t: TraceFrame) -> (String, String, Option<String>, i32) {
         let class = self.class(t.method.class);
         let method = self.method(t.method);
-        let line = method
-            .code
-            .as_ref()
-            .and_then(|c| c.line_at(t.pc))
-            .map_or(-1, i32::from);
+        // -2 is how StackTraceElement says "native" (its Javadoc).
+        let line = if method.is_native() {
+            -2
+        } else {
+            method
+                .code
+                .as_ref()
+                .and_then(|c| c.line_at(t.pc))
+                .map_or(-1, i32::from)
+        };
         (
             class.java_name(),
             method.name.to_string(),

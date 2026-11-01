@@ -288,6 +288,16 @@ Java monitors are not OS locks: a thread blocked on one has released the VM.
   lock decides who runs.
 - Stack traces of a started thread start at `run`: the VM's entry frame
   (`runByVm`) is left out, as the oracle shows no frame below `run`.
+- A thread can read another's stack (`Thread.getStackTrace`, `Vm::thread_backtrace`)
+  without stopping it, because the reader holds the VM and so every other thread's
+  frames sit still in its entry. Natives have no frames: a blocked thread's top frame is
+  still at the call, and the trace adds the native from that (`Thread.sleep(Native
+  Method)`). `getAllStackTraces` reads one thread at a time, so it is no one instant.
+- A `ThreadGroup` lists its started threads and its subgroups, in plain arrays, and a
+  thread leaves before its joiners wake. There is no `DestroyJavaVM` thread: after main
+  has returned, `Thread.activeCount` in another thread is one lower than on the oracle.
+- The main thread's context class loader is the system loader; a new thread takes its
+  parent's through `getContextClassLoader`, as subclasses can see. It survives the thread.
 - `ThreadLocal` values live in an identity map on the `Thread`. The map holds
   its `ThreadLocal` keys strongly, so a value lives until `remove` or the end
   of its thread (the Java 8 implementation lets an unreachable key go).

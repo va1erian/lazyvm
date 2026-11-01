@@ -1,0 +1,16 @@
+out [captured] same true, back true
+err first [captured errjava.lang.Exception: printed]
+err uncaught true
+in 65 66 -1
+in back true
+thread [from a thread]
+null null null null
+null out java.lang.NullPointerException
+in public static final
+out public static final
+err public static final
+restored
+main's exception in the replacement true
+--- stderr ---
+restored err
+--- exit 1 ---
