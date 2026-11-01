@@ -68,7 +68,8 @@ def run_commands(lazyos: Path, lines: list[str], timeout: int, no_build: bool, w
     commands = work / "commands.txt"
     commands.write_text("".join(line + "\n" for line in lines), encoding="utf-8", newline="\n")
     run = [sys.executable, "tools/lazyvm/run.py", "--commands", str(commands), "--out", str(out),
-           "--timeout", str(timeout)]
+           "--timeout", str(timeout),
+           "--image", str(work / "lazyos.img")]
     if no_build:
         run.append("--no-build")
     env = dict(os.environ, LAZYOS_LAZYVM_STAGE=str(work / "stage"))

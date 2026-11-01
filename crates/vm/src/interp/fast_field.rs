@@ -4,6 +4,7 @@
 //! and reports errors itself (JVMS 5.4.3.2, 5.5).
 
 use super::Frame;
+use super::fast::can_push;
 use crate::class::{Class, ClassId, InitState, Resolved};
 use crate::heap::Heap;
 use crate::value::Value;
@@ -73,7 +74,7 @@ pub(super) fn get_static(f: &mut Frame, classes: &[Class]) -> bool {
     let Some(c) = classes.get(owner.0 as usize) else {
         return false;
     };
-    if c.state != InitState::Initialized || f.stack.len() >= usize::from(f.code.max_stack) {
+    if c.state != InitState::Initialized || !can_push(f) {
         return false;
     }
     let Some(&v) = c.statics.get(slot as usize) else {

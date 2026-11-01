@@ -158,6 +158,8 @@ def compare(base: dict, new: dict, threshold: float) -> tuple[list[str], list[st
             failures.append(f"{name}: checksum {old['checksum']} became {cur['checksum']}")
         elif change > threshold:
             failures.append(f"{name}: {change:+.1f}% is slower than the {threshold:.0f}% threshold")
+    lines += [f"{name:<10} new in the second file, nothing to compare" for name in new["results"]
+              if name not in base["results"]]
     return lines, failures
 
 

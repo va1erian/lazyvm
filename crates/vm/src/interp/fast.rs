@@ -10,7 +10,8 @@
 //! single place that decides what malformed code does.
 //!
 //! It never allocates, resolves a constant-pool entry or calls a method, so it
-//! needs no collector root and no class-initialisation check. A taken backward
+//! needs no collector root. Static field access only goes ahead for a class
+//! already initialised (JVMS 5.5); any other state takes the full path. A taken backward
 //! branch ends the run and polls for a safepoint, as `op_branch` does.
 
 use super::Frame;
@@ -64,7 +65,7 @@ fn ref_at(f: &Frame, depth: usize) -> Option<Option<Ref>> {
     }
 }
 
-fn can_push(f: &Frame) -> bool {
+pub(super) fn can_push(f: &Frame) -> bool {
     f.stack.len() < usize::from(f.code.max_stack)
 }
 

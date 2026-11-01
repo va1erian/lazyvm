@@ -69,6 +69,14 @@ public class FastLoop {
                 p("oob", e.getMessage() + " line " + e.getStackTrace()[0].getLineNumber());
             }
         }
+        // The loop above throws on its stores first, so loads past the end need their own pass.
+        for (int i = -1; i < 6; i += 3) {
+            try {
+                p("load", a[i] + c[i] + s[i] + b[i] + " " + z[i] + " " + o[i]);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                p("oobload", e.getMessage() + " line " + e.getStackTrace()[0].getLineNumber());
+            }
+        }
         int[] none = null;
         try {
             p("null", none[0]);
@@ -120,6 +128,98 @@ public class FastLoop {
         p("refs", hits);
     }
 
+    /** A class whose static initialiser sleeps, so another thread meets it half initialised. */
+    static class Slow {
+        static int v;
+
+        static {
+            sleep(300);
+            v = 42;
+        }
+    }
+
+    static class SlowWrite {
+        static int v;
+
+        static {
+            sleep(300);
+            v = 42;
+        }
+    }
+
+    static class Broken {
+        static int v;
+
+        static {
+            if (sfield >= 0) {
+                throw new IllegalStateException("broken");
+            }
+        }
+    }
+
+    static void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static int readSlow() {
+        return Slow.v;
+    }
+
+    static void writeSlow(int x) {
+        SlowWrite.v = x;
+    }
+
+    static int readBroken() {
+        return Broken.v;
+    }
+
+    static void writeBroken(int x) {
+        Broken.v = x;
+    }
+
+    /** Static reads and writes through an already resolved field must still wait for, or fail with, class initialisation. */
+    static void initStates() throws InterruptedException {
+        int[] seen = new int[2];
+        Thread first = new Thread(() -> seen[0] = readSlow());
+        Thread second = new Thread(() -> {
+            sleep(100);
+            seen[1] = readSlow();
+        });
+        first.start();
+        second.start();
+        first.join();
+        second.join();
+        p("slow read", seen[0] + " " + seen[1]);
+        // The reader that starts the initialisation resolves the field; the writer then finds it resolved.
+        Thread starter = new Thread(() -> writeSlow(1));
+        Thread writer = new Thread(() -> {
+            sleep(100);
+            writeSlow(7);
+        });
+        starter.start();
+        writer.start();
+        starter.join();
+        writer.join();
+        p("slow write", SlowWrite.v);
+        for (int i = 0; i < 3; i++) {
+            try {
+                p("broken read", readBroken());
+            } catch (Throwable t) {
+                p("broken read", t.getClass().getName());
+            }
+            try {
+                writeBroken(i);
+                p("broken write", "returned");
+            } catch (Throwable t) {
+                p("broken write", t.getClass().getName());
+            }
+        }
+    }
+
     static void spin() throws InterruptedException {
         Thread t = new Thread(() -> {
             long n = 0;
@@ -143,6 +243,7 @@ public class FastLoop {
         arrays();
         fields();
         references();
+        initStates();
         spin();
     }
 }

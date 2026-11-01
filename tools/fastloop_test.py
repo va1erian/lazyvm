@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import javac  # noqa: E402
 import lazyrt  # noqa: E402
-from common import BUILD, DIST, LAZYRT_CLASSES, ROOT, cargo_build_launcher, die  # noqa: E402
+from common import BUILD, DIST, LAZYRT_CLASSES, cargo_build_launcher, die  # noqa: E402
 
 OUT = BUILD / "fastloop"
 
@@ -56,11 +56,17 @@ def getstatic(index: int) -> bytes:
     return bytes([0xB2]) + struct.pack(">H", index)
 
 
-def cases(f: int, g: int) -> list[tuple[str, int, int, bytes]]:
+def cases(f: int, g: int, c: int) -> list[tuple[str, int, int, bytes]]:
     """(name, max_stack, max_locals, code); every method takes one int, local 0."""
     gs, ps = getstatic(f), bytes([0xB3]) + struct.pack(">H", f)
     gf, pf = bytes([0xB4]) + struct.pack(">H", g), bytes([0xB5]) + struct.pack(">H", g)
     ret = b"\xb1"
+    new = bytes([0xBB]) + struct.pack(">H", c)
+    gf_static = bytes([0xB4]) + struct.pack(">H", f)  # getfield of a static fieldref
+    gs_inst = bytes([0xB2]) + struct.pack(">H", g)  # getstatic of an instance fieldref
+    ps_inst = bytes([0xB3]) + struct.pack(">H", g)
+    pf_static = bytes([0xB5]) + struct.pack(">H", f)
+    ints, bytes_, chars = bytes([0xBC, 10]), bytes([0xBC, 8]), bytes([0xBC, 5])
     return [
         # Stack overflow at max_stack.
         ("overflow_bipush", 1, 1, bytes([0x10, 1, 0x10, 1]) + ret),
@@ -140,7 +146,41 @@ def cases(f: int, g: int) -> list[tuple[str, int, int, bytes]]:
         ("local_astore_n", 1, 2, bytes([0x01, 0x4E]) + ret),
         ("local_iinc", 1, 2, bytes([0x84, 200, 1]) + ret),
         ("local_iinc_edge", 1, 2, bytes([0x84, 2, 1]) + ret),
-        # Not malformed: a taken backward branch and an unresolved static, as controls.
+        # Real arrays and objects: elements of the wrong kind, indexes out of range, fields of the
+        # wrong kind or the wrong staticness, and half of a wide local overwritten.
+        ("array_load_byte_of_int", 2, 1, bytes([0x04]) + ints + bytes([0x03, 0x33]) + ret),
+        ("array_load_char_of_int", 2, 1, bytes([0x04]) + ints + bytes([0x03, 0x34]) + ret),
+        ("array_load_short_of_int", 2, 1, bytes([0x04]) + ints + bytes([0x03, 0x35]) + ret),
+        ("array_load_int_of_byte", 2, 1, bytes([0x04]) + bytes_ + bytes([0x03, 0x2E]) + ret),
+        ("array_load_int_of_char", 2, 1, bytes([0x04]) + chars + bytes([0x03, 0x2E]) + ret),
+        ("array_load_ref_of_int", 2, 1, bytes([0x04]) + ints + bytes([0x03, 0x32]) + ret),
+        ("array_store_char_into_int", 3, 1, bytes([0x04]) + ints + bytes([0x03, 0x04, 0x55]) + ret),
+        ("array_store_short_into_int", 3, 1, bytes([0x04]) + ints + bytes([0x03, 0x04, 0x56]) + ret),
+        ("array_store_int_into_char", 3, 1, bytes([0x04]) + chars + bytes([0x03, 0x04, 0x4F]) + ret),
+        ("array_store_int_into_byte", 3, 1, bytes([0x04]) + bytes_ + bytes([0x03, 0x04, 0x4F]) + ret),
+        ("array_store_ref_value", 3, 1, bytes([0x04]) + ints + bytes([0x03, 0x01, 0x4F]) + ret),
+        ("array_load_oob", 2, 1, bytes([0x04]) + ints + bytes([0x04, 0x2E]) + ret),
+        ("array_load_oob_far", 2, 1, bytes([0x04]) + ints + bytes([0x10, 100, 0x2E]) + ret),
+        ("array_load_negative", 2, 1, bytes([0x04]) + ints + bytes([0x02, 0x2E]) + ret),
+        ("array_store_oob", 3, 1, bytes([0x04]) + ints + bytes([0x04, 0x04, 0x4F]) + ret),
+        ("array_store_negative", 3, 1, bytes([0x04]) + ints + bytes([0x02, 0x04, 0x4F]) + ret),
+        ("array_length_of_object", 1, 1, new + bytes([0xBE]) + ret),
+        ("array_load_of_object", 2, 1, new + bytes([0x03, 0x2E]) + ret),
+        ("obj_putfield_ref_into_int", 2, 1, new + bytes([0x01]) + pf + ret),
+        ("obj_putfield_int_into_int_array", 2, 1, bytes([0x04]) + ints + bytes([0x04]) + pf + ret),
+        ("obj_getfield_of_array", 1, 1, bytes([0x04]) + ints + gf + ret),
+        ("obj_getfield_static_ref", 1, 1, new + gf_static + ret),
+        ("obj_putfield_static_ref", 2, 1, new + bytes([0x04]) + pf_static + ret),
+        ("obj_getstatic_instance_ref", 1, 1, gs_inst + ret),
+        ("obj_putstatic_instance_ref", 1, 1, bytes([0x04]) + ps_inst + ret),
+        ("wide_istore_over_lstore", 2, 3, bytes([0x09, 0x40, 0x04, 0x3D, 0x1F]) + ret),
+        ("wide_astore_over_lstore", 2, 3, bytes([0x09, 0x40, 0x01, 0x4E, 0x1F]) + ret),
+        ("wide_iinc_over_lstore", 2, 3, bytes([0x09, 0x40, 0x84, 2, 1, 0x1F]) + ret),
+        # Not malformed: controls that must run.
+        ("control_array_roundtrip", 4, 1, bytes([0x04]) + ints + bytes([0x59, 0x03, 0x10, 7, 0x4F, 0x03, 0x2E, 0x57]) + ret),
+        ("control_object_roundtrip", 3, 1, new + bytes([0x59, 0x10, 5]) + pf + gf + bytes([0x57]) + ret),
+        ("control_wide_local", 2, 3, bytes([0x09, 0x40, 0x04, 0x3B, 0x1F, 0x58]) + ret),
+        ("control_static_roundtrip", 2, 1, bytes([0x10, 9]) + ps + gs + bytes([0x57]) + ret),
         ("control_loop", 2, 2, bytes([0x03, 0x3C, 0x84, 1, 1, 0x1B, 0x10, 50, 0xA1, 0xFF, 0xFA]) + ret),
     ]
 
@@ -158,8 +198,8 @@ def crafted_class() -> tuple[bytes, list[str]]:
     inst = pool.field("Crafted", "g", "I")
     field_info = struct.pack(">HHHH", 0x0009, pool.utf8("f"), pool.utf8("I"), 0)
     field_info += struct.pack(">HHHH", 0x0001, pool.utf8("g"), pool.utf8("I"), 0)
-    methods = [method_info(pool, *c) for c in cases(field, inst)]
-    names = [c[0] for c in cases(field, inst)]
+    methods = [method_info(pool, *c) for c in cases(field, inst, this)]
+    names = [c[0] for c in cases(field, inst, this)]
     head = b"\xca\xfe\xba\xbe" + struct.pack(">HHH", 0, 52, len(pool.items) + 1)
     tail = struct.pack(">HHHHH", 0x0021, this, sup, 0, 2) + field_info
     tail += struct.pack(">H", len(methods)) + b"".join(methods) + struct.pack(">H", 0)
@@ -222,12 +262,18 @@ def main() -> None:
     a, b = fast.stdout.decode().splitlines(), full.stdout.decode().splitlines()
     if a != b:
         problems += [f"fast: {x!r}\n  trace: {y!r}" for x, y in zip(a, b) if x != y] or ["line counts differ"]
-    # Every case is a VerifyError except a getfield on null, which is a plain NullPointerException.
-    wanted = {"kind_getfield_null": "java.lang.NullPointerException", "control_loop": "returned"}
+    # Every case is a VerifyError except those that throw a real Java exception, and the controls.
+    aioobe, icce = "java.lang.ArrayIndexOutOfBoundsException", "java.lang.IncompatibleClassChangeError"
+    wanted = {"kind_getfield_null": "java.lang.NullPointerException",
+              "array_load_oob": aioobe, "array_load_oob_far": aioobe, "array_load_negative": aioobe,
+              "array_store_oob": aioobe, "array_store_negative": aioobe,
+              "obj_getfield_static_ref": icce, "obj_putfield_static_ref": icce,
+              "obj_getstatic_instance_ref": icce, "obj_putstatic_instance_ref": icce}
     for n in names:
         for i in (1, 2):
             line = next((x for x in a if x.startswith(f"{n} #{i} ")), "")
-            if wanted.get(n, "java.lang.VerifyError") not in line:
+            expect = "returned" if n.startswith("control_") else wanted.get(n, "java.lang.VerifyError")
+            if expect not in line:
                 problems.append(f"{n} #{i}: unexpected result {line!r}")
     if problems:
         die("fast loop differs from the full path:\n  " + "\n  ".join(problems))
