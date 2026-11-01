@@ -30,20 +30,22 @@ pub(super) struct Checker<'a, 't, 'h, H: Hierarchy + ?Sized> {
     /// Moves whenever a local may have changed, so a handler's frame is
     /// compared again only then.
     pub locals_version: u64,
+    /// Indices of the handlers covering `pc`.
+    pub active: Vec<u32>,
     pub pc: usize,
     pub ret: Option<VType>,
     pub is_init: bool,
 }
 
-/// The flags of a member `class` declares. Finding it scans the class's
-/// members, so that is what is charged.
+/// The flags of a member `class` declares. A lookup reads the name and
+/// descriptor, so that is what is charged.
 pub(super) fn declared_access<H: Hierarchy + ?Sized>(
     types: &mut Types<'_, H>,
     budget: &mut Budget,
     class: &str,
     (name, descriptor, method): (&str, &str, bool),
 ) -> Result<Option<u16>, Fail> {
-    budget.charge(types.info(class)?.members.max(1))?;
+    budget.charge(name.len() + descriptor.len() + 1)?;
     Ok(types
         .hierarchy
         .member_access(class, name, descriptor, method)?)
@@ -59,9 +61,11 @@ pub(super) fn not_overriding_final<H: Hierarchy + ?Sized>(
     if m.access & (ACC_PRIVATE | ACC_STATIC) != 0 || m.name.starts_with('<') {
         return Ok(());
     }
+    let boot = types.info(&cf.this_class)?.boot;
     let mut cur = cf.super_class.clone();
     while let Some(class) = cur {
         let wanted = (&*m.name, &*m.descriptor, true);
+        let info = types.info(&class)?;
         match declared_access(types, budget, &class, wanted)? {
             // A private or static method is not overridden: a final one ends the
             // search, any other is skipped.
@@ -70,21 +74,22 @@ pub(super) fn not_overriding_final<H: Hierarchy + ?Sized>(
                     break;
                 }
             }
-            // Observed: a package-private final method is out of reach from another
-            // run-time package, where JVMS 4.10.1.5 does not say so.
-            Some(a) if a & ACC_FINAL != 0 && a & (ACC_PUBLIC | ACC_PROTECTED) == 0 => {
-                let same_loader = types.info(&class)?.boot == types.info(&cf.this_class)?.boot;
-                if same_loader && package_of(&class) == package_of(&cf.this_class) {
-                    return Err(fail_at(0, format!("overrides a final method of {class}")));
+            Some(a) => {
+                // Observed: a package-private method of another run-time package
+                // is out of reach, so it neither counts nor ends the search
+                // (good/PackageFinalOtherPackage, bad/FinalPastOtherPackage).
+                let same_package =
+                    info.boot == boot && package_of(&class) == package_of(&cf.this_class);
+                if a & (ACC_PUBLIC | ACC_PROTECTED) != 0 || same_package {
+                    if a & ACC_FINAL != 0 {
+                        return Err(fail_at(0, format!("overrides a final method of {class}")));
+                    }
+                    break;
                 }
             }
-            Some(a) if a & ACC_FINAL != 0 => {
-                return Err(fail_at(0, format!("overrides a final method of {class}")));
-            }
-            Some(_) => break,
             None => {}
         }
-        cur = types.info(&class)?.super_name;
+        cur = info.super_name;
     }
     Ok(())
 }
@@ -115,6 +120,7 @@ pub(super) fn check_method<H: Hierarchy + ?Sized>(
         cur,
         dead: false,
         locals_version: 0,
+        active: Vec::new(),
         pc: 0,
         ret,
         is_init,
@@ -126,7 +132,11 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
     fn walk(&mut self) -> Result<(), Fail> {
         self.check_handler_types()?;
         let len = self.code.bytecode.len();
-        let mut handler_seen = vec![u64::MAX; self.code.handlers.len()];
+        let handlers = &self.code.handlers;
+        let mut handler_seen = vec![u64::MAX; handlers.len()];
+        let mut order: Vec<u32> = (0..handlers.len() as u32).collect();
+        order.sort_unstable_by_key(|&i| handlers[i as usize].start_pc);
+        let mut next_handler = 0;
         let mut next_frame = 0;
         while self.pc < len {
             if self
@@ -146,6 +156,7 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
             } else if self.dead {
                 return Err(self.bad("no stack map frame after an unconditional branch"));
             }
+            self.update_active(&order, &mut next_handler);
             self.check_handlers(&mut handler_seen)?;
             self.step()?;
             self.budget.charge(1 + self.types.take_slow())?;
@@ -189,20 +200,45 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
         Ok(self.types.class(name))
     }
 
+    /// Handlers whose range covers `pc` become `active`, and the others stop
+    /// being looked at: a method of many small `try` blocks costs what they do,
+    /// not their count on every instruction. `pc` only grows, and `order` is by start.
+    fn update_active(&mut self, order: &[u32], next: &mut usize) {
+        let handlers = &self.code.handlers;
+        while let Some(&i) = order.get(*next) {
+            if usize::from(handlers[i as usize].start_pc) > self.pc {
+                break;
+            }
+            self.active.push(i);
+            *next += 1;
+        }
+        let pc = self.pc;
+        self.active
+            .retain(|&i| usize::from(handlers[i as usize].end_pc) > pc);
+    }
+
     /// JVMS 4.10.1.6 `instructionSatisfiesHandlers`, with the incoming locals:
     /// what an instruction throws cannot have seen its own writes.
     fn check_handlers(&mut self, seen: &mut [u64]) -> Result<(), Fail> {
-        self.budget.charge(self.code.handlers.len())?;
+        let active = std::mem::take(&mut self.active);
+        let result = self.judge_handlers(&active, seen);
+        self.active = active;
+        result
+    }
+
+    fn judge_handlers(&mut self, active: &[u32], seen: &mut [u64]) -> Result<(), Fail> {
+        self.budget.charge(active.len())?;
         let version = self.locals_version;
-        for (i, h) in self.code.handlers.iter().enumerate() {
-            let range = usize::from(h.start_pc)..usize::from(h.end_pc);
-            if !range.contains(&self.pc) || seen[i] == version {
+        for &i in active {
+            let i = i as usize;
+            if seen[i] == version {
                 continue;
             }
             seen[i] = version;
             if self.code.max_stack == 0 {
                 return Err(self.bad("max_stack leaves no room for a caught exception"));
             }
+            let h = &self.code.handlers[i];
             let class = self.handler_class(h)?;
             let flag = self.cur.this_uninit;
             self.flows_to(usize::from(h.handler_pc), Some(class), flag)?;
@@ -215,15 +251,19 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
     /// `this` or a `new` object uninitialized cannot be a handler's across the
     /// call, and neither can one that drops `this` (`tests/verify/bad/HandlerAround*`).
     pub(super) fn check_handlers_after_init(&mut self, this_uninit: bool) -> Result<(), Fail> {
-        self.budget.charge(self.code.handlers.len())?;
-        for h in &self.code.handlers {
-            let range = usize::from(h.start_pc)..usize::from(h.end_pc);
-            if range.contains(&self.pc) {
-                let class = self.handler_class(h)?;
-                self.flows_to(usize::from(h.handler_pc), Some(class), this_uninit)?;
+        let active = std::mem::take(&mut self.active);
+        let mut result = self.budget.charge(active.len());
+        for &i in &active {
+            if result.is_err() {
+                break;
             }
+            let h = &self.code.handlers[i as usize];
+            result = self.handler_class(h).and_then(|class| {
+                self.flows_to(usize::from(h.handler_pc), Some(class), this_uninit)
+            });
         }
-        Ok(())
+        self.active = active;
+        result
     }
 
     /// The current stack and locals flowing into a branch target.

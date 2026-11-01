@@ -41,8 +41,6 @@ pub struct ClassInfo {
     pub super_name: Option<Arc<str>>,
     /// Loaded from the boot path: part of the run-time package (JVMS 5.3).
     pub boot: bool,
-    /// Fields and methods declared: what a member lookup in it costs.
-    pub members: usize,
 }
 
 /// The class world the checker asks about. A class that cannot be loaded is
@@ -50,7 +48,8 @@ pub struct ClassInfo {
 pub trait Hierarchy {
     fn info(&mut self, name: &str) -> VmResult<ClassInfo>;
 
-    /// The access flags of the field or method `class` itself declares.
+    /// The access flags of the field or method `class` itself declares. This
+    /// must not scan a large class: it runs for most methods and member uses.
     fn member_access(
         &mut self,
         class: &str,

@@ -101,6 +101,9 @@ pub struct Vm {
     pub(crate) lambda_sites: HashMap<(ClassId, u16, usize), MethodRef>,
     /// Lambda classes of call sites that have not linked yet.
     pub(crate) lambda_failed: HashMap<(ClassId, u16, usize), ClassId>,
+    /// The members of large classes, for the verifier: (name, descriptor, is a
+    /// method) to access flags.
+    pub(crate) member_index: HashMap<ClassId, HashMap<(String, String, bool), u16>>,
     /// Numbers generated lambda class names.
     pub(crate) lambda_count: u64,
     /// System properties: values as UTF-16, so a path holds any Java string.
@@ -164,6 +167,7 @@ impl Vm {
             select_cache: HashMap::new(),
             lambda_sites: HashMap::new(),
             lambda_failed: HashMap::new(),
+            member_index: HashMap::new(),
             lambda_count: 0,
             properties: BTreeMap::new(),
             options,

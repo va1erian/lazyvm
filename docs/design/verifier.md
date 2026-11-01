@@ -64,7 +64,10 @@ that error propagates as itself (`tests/verify/bad/CatchUnloadable`).
   gets 2^30 units of work (slots compared or copied, members scanned, bytes of names
   and descriptors read), and a method's declared frames 2^24 slots; past either it is
   a `VerifyError`. The pool's names are checked once per string, since that runs
-  before any budget, and remembered answers stop being kept past 2^20 per class. `verify/tests.rs` builds the worst cases.
+  before any budget, remembered answers stop being kept past 2^20 per class, and a
+  class's member names and descriptors may add up to 64 MiB. A legal method could
+  pass the frame limit only with thousands of locals and thousands of branches
+  together: it is rejected, as a limit we accept. `verify/tests.rs` builds the worst cases.
 
 ## Where the oracle and the JVMS differ
 
@@ -80,7 +83,7 @@ except as marked. Each row has a test.
 | Handler across `<init>` | checked with the incoming state | also with the rewritten locals, as 4.10.1.9's note says | `bad/HandlerAround*` |
 | The protected check | looks at the class the reference names | looks from that class up, for the declaring class | `bad/ProtectedThroughMiddleClass` |
 | The protected check on `new` | the top of the stack after the call | the object being initialized | `bad/ProtectedInitUnderThis` |
-| Overriding a final method | any non-private, non-static one | not a package-private one of another package | `good/PackageFinalOtherPackage` |
+| Overriding a final method | any non-private, non-static one | a package-private one of another package neither counts nor ends the search | `good/PackageFinalOtherPackage`, `bad/FinalPastOtherPackage` |
 | `Object.clone` on an array | fails the protected check | allowed | `good/ObjectCloneOnArray` |
 | `invokespecial` of an interface method | nothing more than assignability | the interface must be a direct one | `bad/SpecialIndirectInterface` |
 | `invokespecial` of an interface method, receiver | an interface counts as `Object`, so any object passes | passes verification, then `IllegalAccessError` when it runs unless it is of the current class | `bad/InterfaceReceiverNotCurrent` |

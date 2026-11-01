@@ -39,7 +39,6 @@ impl Hierarchy for World {
             is_interface: h % 7 == 0,
             super_name,
             boot: h % 2 == 0,
-            members: (h % 64) as usize,
         })
     }
 

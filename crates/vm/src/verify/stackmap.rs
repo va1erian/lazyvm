@@ -1,5 +1,7 @@
 //! Frames and the `StackMapTable` attribute (JVMS 4.7.4, 4.10.1.4).
 
+use std::collections::HashMap;
+
 use classfile::descriptor::{FieldType, MethodDescriptor};
 use classfile::{ClassFile, Code, Constant};
 
@@ -116,6 +118,7 @@ pub fn parse_frames<H: Hierarchy + ?Sized>(
         layout,
         types,
         text: 0,
+        classes: HashMap::new(),
     };
     let count = r.u2().map_err(|e| format_error(0, e))?;
     let mut frames: Vec<(u16, Frame)> = Vec::with_capacity(usize::from(count).min(data.len()));
@@ -157,6 +160,8 @@ struct FrameParser<'a, 't, 'h, H: Hierarchy + ?Sized> {
     types: &'t mut Types<'h, H>,
     /// Bytes of class names read since the last charge.
     text: usize,
+    /// Types by pool index: a frame can name one long class 65535 times.
+    classes: HashMap<u16, VType>,
 }
 
 impl<H: Hierarchy + ?Sized> FrameParser<'_, '_, '_, H> {
@@ -253,9 +258,14 @@ impl<H: Hierarchy + ?Sized> FrameParser<'_, '_, '_, H> {
             6 => VType::UninitThis,
             7 => {
                 let index = r.u2()?;
+                if let Some(&t) = self.classes.get(&index) {
+                    return Ok(t);
+                }
                 let name = self.cf.pool.class_name(index)?.clone();
                 self.text += name.len();
-                self.types.class(&name)
+                let t = self.types.class(&name);
+                self.classes.insert(index, t);
+                t
             }
             8 => {
                 let offset = r.u2()?;

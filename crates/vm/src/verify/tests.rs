@@ -28,7 +28,6 @@ impl Hierarchy for World {
             is_interface: name == "t/Iface",
             super_name,
             boot: name.starts_with("java/"),
-            members: 0,
         })
     }
 
@@ -226,6 +225,34 @@ fn many_stores_under_many_handlers_stop_at_the_budget() {
     map.extend_from_slice(&[0, 0]);
     c.stack_map = Some(map.into());
     finishes_quickly(&cf);
+}
+
+#[test]
+fn many_small_try_blocks_fit_the_budget() {
+    // A long method of one-instruction `try` blocks, as a code generator writes.
+    let mut pool = Pool::default();
+    let throwable = pool.class("java/lang/Throwable").to_be_bytes();
+    let n: u16 = 60000;
+    let mut code = vec![0u8; usize::from(n)];
+    code.extend_from_slice(&[RET, 0x57, RET]);
+    let mut cf = class("()V", 1, 0, &code, pool);
+    let c = cf.methods[0]
+        .code
+        .as_mut()
+        .unwrap_or_else(|| panic!("code"));
+    c.handlers = (0..n)
+        .map(|pc| Handler {
+            start_pc: pc,
+            end_pc: pc + 1,
+            handler_pc: n + 1,
+            catch_type: 0,
+        })
+        .collect();
+    let mut map = vec![0, 1, 255];
+    map.extend_from_slice(&(n + 1).to_be_bytes());
+    map.extend_from_slice(&[0, 0, 0, 1, 7, throwable[0], throwable[1]]);
+    c.stack_map = Some(map.into());
+    assert_eq!(verdict(&cf), Ok(()));
 }
 
 #[test]

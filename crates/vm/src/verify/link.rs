@@ -9,6 +9,10 @@ use super::{ClassInfo, Hierarchy, verify_class};
 use crate::class::ClassId;
 use crate::{Vm, VmResult};
 
+/// Up to this many members a class is scanned, which also saves building an
+/// index for the small classes nearly all are.
+const LINEAR_MEMBERS: usize = 128;
+
 /// `-Xverify`: which classes are checked. `All` is the default.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VerifyMode {
@@ -68,7 +72,6 @@ impl Hierarchy for Vm {
             is_interface: c.is_interface(),
             super_name,
             boot: c.from_boot,
-            members: c.methods.len() + c.fields.len(),
         })
     }
 
@@ -81,11 +84,31 @@ impl Hierarchy for Vm {
     ) -> VmResult<Option<u16>> {
         let id = self.load_class(class)?;
         let c = self.class(id);
-        Ok(if method {
-            c.find_method(name, descriptor)
-                .map(|i| c.methods[usize::from(i)].access)
-        } else {
-            c.find_field(name, descriptor).map(|f| f.access)
-        })
+        if c.methods.len() + c.fields.len() <= LINEAR_MEMBERS {
+            return Ok(if method {
+                c.find_method(name, descriptor)
+                    .map(|i| c.methods[usize::from(i)].access)
+            } else {
+                c.find_field(name, descriptor).map(|f| f.access)
+            });
+        }
+        let index = self.member_index.entry(id).or_insert_with(|| {
+            let c = &self.classes[id.0 as usize];
+            let methods = c
+                .methods
+                .iter()
+                .map(|m| (&m.name, &m.descriptor, m.access, true));
+            let fields = c
+                .fields
+                .iter()
+                .map(|f| (&f.name, &f.descriptor, f.access, false));
+            methods
+                .chain(fields)
+                .rev()
+                .map(|(n, d, a, m)| ((n.to_string(), d.to_string(), m), a))
+                .collect()
+        });
+        let key = (name.to_string(), descriptor.to_string(), method);
+        Ok(index.get(&key).copied())
     }
 }

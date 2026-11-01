@@ -143,14 +143,19 @@ impl Vm {
                     Err(e) => return Err(self.wrap_link_failure(e)),
                 };
                 self.class_mut(class).host = Some(caller);
-                self.lambda_failed.insert(key, class);
                 class
             }
         };
         if let Err(e) = self.link_class(class) {
+            self.lambda_failed.insert(key, class);
             return Err(self.wrap_link_failure(e));
         }
-        self.initialize(class)?;
+        // Only a class that failed is kept: code this initialization runs can
+        // reach the same site, and must not get this half-initialized class.
+        if let Err(e) = self.initialize(class) {
+            self.lambda_failed.insert(key, class);
+            return Err(e);
+        }
         self.lambda_failed.remove(&key);
         // Initializing the interface can run code that links this same site;
         // the first link to finish wins, as in Java 8.

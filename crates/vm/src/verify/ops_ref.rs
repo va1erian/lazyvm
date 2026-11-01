@@ -180,7 +180,10 @@ impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
         self.budget
             .charge(usize::from(names_interface) * self.cf.interfaces.len())?;
         // Observed on the oracle; a class's own interface methods stay callable.
-        if names_interface && *r.class != *current && !self.cf.interfaces.contains(&r.class) {
+        // A generated class's own interfaces say nothing about its host's, so it
+        // may only reach the host's own methods this way.
+        let direct = self.host.is_none() && self.cf.interfaces.contains(&r.class);
+        if names_interface && *r.class != *current && !direct {
             return Err(self.bad(format!(
                 "invokespecial of {}, an indirect superinterface",
                 r.class

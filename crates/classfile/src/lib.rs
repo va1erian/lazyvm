@@ -40,6 +40,12 @@ pub const ACC_SYNTHETIC: u16 = 0x1000;
 pub const ACC_ANNOTATION: u16 = 0x2000;
 pub const ACC_ENUM: u16 = 0x4000;
 
+/// Bytes of names and descriptors one class's fields, or its methods, may add up
+/// to. Members can all share one 65535-byte string, and each is read several
+/// times on the way to running, so without this a small file costs minutes.
+/// No compiled class comes near it: 65535 methods at a kilobyte each.
+const MAX_MEMBER_TEXT: usize = 64 << 20;
+
 /// The newest class file version accepted: Java 8.
 pub const MAX_MAJOR: u16 = 52;
 pub const MIN_MAJOR: u16 = 45;
@@ -269,8 +275,13 @@ fn parse_members(
     let mut out: Vec<Member> = Vec::with_capacity(usize::from(count));
     // A set, not a scan: 65535 members must not cost 65535^2 comparisons.
     let mut seen = std::collections::HashSet::with_capacity(usize::from(count));
+    let mut text = 0;
     for _ in 0..count {
         let member = parse_member(r, pool, methods, major)?;
+        text += member.name.len() + member.descriptor.len();
+        if text > MAX_MEMBER_TEXT {
+            return Err(r.error("member names and descriptors are too long"));
+        }
         if !seen.insert((member.name.clone(), member.descriptor.clone())) {
             return Err(r.error(format!(
                 "duplicate member {}{}",
