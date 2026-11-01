@@ -297,14 +297,20 @@ Java monitors are not OS locks: a thread blocked on one has released the VM.
   thread leaves before its joiners wake. There is no `DestroyJavaVM` thread: after main
   has returned, `Thread.activeCount` in another thread is one lower than on the oracle
   (which lists it there, observed). It and the system group's own VM threads are why the
-  oracle's main and system groups refuse `destroy` for good; here that is a plain check.
+  oracle's main and system groups refuse `destroy`; here that is a plain check. One
+  difference stays: a daemon main group with nothing else in it ends with main on the
+  oracle, and the process then exits at once, with no wait for other threads and no
+  shutdown hooks (observed). Here it stays and the process ends as usual.
 - `ThreadGroup.destroy` and a daemon group's end follow the oracle, including its odd
   parts (`tests/java/thread/GroupDestroy`, `GroupDaemon`). A thread counts as unstarted
   from the top of its constructor, even one that then fails, and holds a daemon group
   until it starts; an explicit `destroy` ignores it, and the thread's `start` then throws.
   A `destroy` that meets a busy subgroup throws but is not undone: the group stays
-  destroyed and listed in its parent, with its unreached subgroups cut off. Group locks
-  are taken one at a time, so `destroy` going down and a thread's end going up cannot
+  destroyed and listed in its parent, with its unreached subgroups cut off; listing
+  through it restarts `enumerate`'s count from 0, and only `getAllStackTraces` still finds
+  the threads below. `list` and `interrupt` do not hold the group's lock while they call
+  a subclass's `toString` or `interrupt`, which `holdsLock` can tell from the oracle. Group
+  locks are taken one at a time, so `destroy` going down and a thread's end going up cannot
   deadlock. So a subgroup that ends itself just as its parent's `destroy` reaches it makes
   that `destroy` throw.
 - The main thread's context class loader is the system loader; a new thread takes its

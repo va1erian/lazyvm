@@ -37,6 +37,12 @@ c3 takes threads: c3
 c2 goes: c2 destroyed=true parent=c active=0 groups=0 maxpri=10 | c destroyed=true parent=half active=0 groups=0 maxpri=10
 c3 goes: c3 destroyed=true parent=c active=0 groups=0 maxpri=10 | c destroyed=true parent=half active=0 groups=0 maxpri=10
 top still lists c: -3
+destroy: threw java.lang.IllegalThreadStateException
+threads: 1 ha - - - 
+groups: 0 c after - - 
+stack traces find them: true true true
+stack traces: true
+interrupt: true
 not counted: u destroyed=false parent=top active=0 groups=0 maxpri=10
 no hold on destroy: u destroyed=true parent=top active=0 groups=0 maxpri=10
 its group: java.lang.ThreadGroup[name=u,maxpri=10]

@@ -22,6 +22,8 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     private int unstarted;
     /** Once set, both lists stay empty, so whatever reads them needs no check. */
     private boolean destroyed;
+    /** Subgroups a failed destroy cut off: only getAllStackTraces still finds their threads. */
+    private ThreadGroup[] cutOff = NO_GROUPS;
 
     /** The root group, which has no parent. */
     ThreadGroup() {
@@ -96,8 +98,9 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     }
 
     /**
-     * The oracle's system and main groups always hold a VM thread, even after main
-     * has returned, so they refuse destroy (observed); here nothing else would stop it.
+     * The oracle's system and main groups hold VM threads, even after main has returned,
+     * so they refuse destroy (observed); here nothing else would stop it. An idle daemon
+     * main group is the one difference (threads.md).
      */
     private boolean holdsVmThreads() {
         return parent == null || this == Thread.MAIN_GROUP;
@@ -127,11 +130,15 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
             }
             subs = subgroups();
             destroyed = true;
+            cutOff = subs;
             groups = NO_GROUPS;
             groupCount = 0;
         }
         for (ThreadGroup g : subs) {
             g.destroy();
+        }
+        synchronized (this) {
+            cutOff = NO_GROUPS;
         }
         parent.removeGroup(this);
     }
@@ -220,6 +227,10 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         int room = into.length - at;
         ThreadGroup[] subs;
         synchronized (this) {
+            // Back to the start, even part way through a parent's listing (observed).
+            if (destroyed) {
+                return 0;
+            }
             subs = subgroups();
             int n = Math.min(room, wantThreads ? threadCount : groupCount);
             // Into a narrower array type, the oracle's failure names Thread, so one
@@ -241,21 +252,46 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         return at;
     }
 
-    /** Every thread in this group and below, for Thread.getAllStackTraces. */
+    /**
+     * Every thread in this group and below, for Thread.getAllStackTraces, which the
+     * oracle answers for all live threads whatever subclasses or a failed destroy did.
+     */
     Thread[] allThreads() {
-        Thread[] all = new Thread[activeCount() + 1];
-        int n = enumerate(all);
-        // Full: more may have started since the count, so look again with more room.
-        while (n == all.length) {
-            all = new Thread[n * 2];
-            n = enumerate(all);
+        java.util.ArrayList<Thread> all = new java.util.ArrayList<Thread>();
+        gather(all);
+        return all.toArray(new Thread[all.size()]);
+    }
+
+    private void gather(java.util.ArrayList<Thread> all) {
+        ThreadGroup[] subs;
+        ThreadGroup[] cut;
+        synchronized (this) {
+            for (int i = 0; i < threadCount; i++) {
+                all.add(threads[i]);
+            }
+            subs = subgroups();
+            cut = cutOff;
         }
-        return java.util.Arrays.copyOf(all, n);
+        for (ThreadGroup g : subs) {
+            g.gather(all);
+        }
+        for (ThreadGroup g : cut) {
+            g.gather(all);
+        }
     }
 
     public final void interrupt() {
-        for (Thread t : allThreads()) {
+        Thread[] own;
+        ThreadGroup[] subs;
+        synchronized (this) {
+            own = java.util.Arrays.copyOf(threads, threadCount);
+            subs = subgroups();
+        }
+        for (Thread t : own) {
             t.interrupt();
+        }
+        for (ThreadGroup g : subs) {
+            g.interrupt();
         }
     }
 
@@ -271,10 +307,13 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
             own = java.util.Arrays.copyOf(threads, threadCount);
             subs = subgroups();
         }
-        System.out.println(indent + this);
+        // The indent goes out first: a toString that prints or throws shows it (observed).
+        System.out.print(indent);
+        System.out.println(this);
         String inner = indent + "    ";
         for (Thread t : own) {
-            System.out.println(inner + t);
+            System.out.print(inner);
+            System.out.println(t);
         }
         for (ThreadGroup g : subs) {
             g.list(inner);

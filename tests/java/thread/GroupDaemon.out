@@ -36,6 +36,8 @@ destroyed group first: threw java.lang.IllegalThreadStateException
 held by that: f destroyed=false daemon=true active=0 groups=0
 childValue throws: threw java.lang.IllegalStateException: no child
 held by that: f2 destroyed=false daemon=true active=0 groups=0
+child: child destroyed=true daemon=true active=0 groups=0
+system destroyed: false
 handler: java.lang.RuntimeException: boom group=ex destroyed=false
 after: ex destroyed=true daemon=true active=0 groups=0
 left behind 0

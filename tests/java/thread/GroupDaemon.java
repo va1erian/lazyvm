@@ -185,6 +185,17 @@ public class GroupDaemon {
         show("held by that", () -> st(f2));
     }
 
+    /** The root is never ended, even as a daemon group losing a subgroup. */
+    static void root() throws Exception {
+        ThreadGroup system = Thread.currentThread().getThreadGroup().getParent();
+        system.setDaemon(true);
+        ThreadGroup child = new ThreadGroup(system, "child");
+        runOne(child);
+        show("child", () -> st(child));
+        show("system destroyed", () -> system.isDestroyed());
+        system.setDaemon(false);
+    }
+
     static void handler(ThreadGroup top) throws Exception {
         ThreadGroup g = new ThreadGroup(top, "ex") {
             @Override
@@ -231,6 +242,7 @@ public class GroupDaemon {
         subgroups(top);
         halfway(top);
         failedConstructors(top);
+        root();
         handler(top);
         concurrent(top);
     }

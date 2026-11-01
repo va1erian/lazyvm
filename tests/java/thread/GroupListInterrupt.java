@@ -98,6 +98,31 @@ public class GroupListInterrupt {
         System.out.println("hit " + t.hit);
     }
 
+    /** The indent is out before toString runs. */
+    static void noisyToString() {
+        ThreadGroup o = new ThreadGroup("noisy");
+        new ThreadGroup(o, "n") {
+            @Override
+            public String toString() {
+                System.out.println("[toString runs]");
+                return "noisy";
+            }
+        };
+        o.list();
+        ThreadGroup t = new ThreadGroup("throwing");
+        new ThreadGroup(t, "n") {
+            @Override
+            public String toString() {
+                throw new IllegalStateException("no string");
+            }
+        };
+        try {
+            t.list();
+        } catch (IllegalStateException e) {
+            System.out.println(e);
+        }
+    }
+
     /** It writes to whatever System.out is now. */
     static void redirected() {
         PrintStream real = System.out;
@@ -120,6 +145,7 @@ public class GroupListInterrupt {
     public static void main(String[] args) throws Exception {
         layout();
         overrides();
+        noisyToString();
         redirected();
         self();
     }

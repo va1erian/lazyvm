@@ -24,5 +24,10 @@ custom group o
     custom sub
 interrupt override
 hit true
+java.lang.ThreadGroup[name=noisy,maxpri=10]
+    [toString runs]
+noisy
+java.lang.ThreadGroup[name=throwing,maxpri=10]
+    java.lang.IllegalStateException: no string
 caught: java.lang.ThreadGroup[name=caught,maxpri=10]
 interrupts its caller true

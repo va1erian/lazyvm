@@ -126,6 +126,69 @@ public class GroupDestroy {
         show("top still lists c", () -> top.activeGroupCount() - before);
     }
 
+    static String names(Object[] list) {
+        StringBuilder b = new StringBuilder();
+        for (Object o : list) {
+            b.append(o == null ? "-" : o instanceof Thread ? ((Thread) o).getName() : ((ThreadGroup) o).getName()).append(' ');
+        }
+        return b.toString();
+    }
+
+    /** Listing through a half-destroyed group restarts the count; stack traces still find everyone. */
+    static void throughHalfway(ThreadGroup top) throws Exception {
+        Held own = new Held(top, "own").begin();
+        ThreadGroup c = new ThreadGroup(top, "c");
+        Held cut = new Held(new ThreadGroup(c, "busy"), "cut").begin();
+        show("destroy", () -> { c.destroy(); return "ok"; });
+        ThreadGroup after = new ThreadGroup(top, "after");
+        Held ha = new Held(after, "ha").begin();
+        Thread[] threads = new Thread[4];
+        show("threads", () -> top.enumerate(threads) + " " + names(threads));
+        ThreadGroup[] groups = new ThreadGroup[4];
+        show("groups", () -> top.enumerate(groups) + " " + names(groups));
+        show("stack traces find them", () -> {
+            java.util.Map<Thread, StackTraceElement[]> all = Thread.getAllStackTraces();
+            return all.containsKey(own) + " " + all.containsKey(cut) + " " + all.containsKey(ha);
+        });
+        cut.finish();
+        own.finish();
+        ha.finish();
+    }
+
+    /** interrupt and stack traces do not go through what a subclass overrides. */
+    static void overridden() throws Exception {
+        ThreadGroup g = new ThreadGroup("lying") {
+            @Override
+            public int activeCount() {
+                return -5;
+            }
+
+            @Override
+            public int enumerate(Thread[] list) {
+                return 0;
+            }
+
+            @Override
+            public int enumerate(Thread[] list, boolean recurse) {
+                return 0;
+            }
+        };
+        final boolean[] hit = new boolean[1];
+        final CountDownLatch up = new CountDownLatch(1);
+        Thread t = new Thread(g, () -> {
+            up.countDown();
+            try {
+                new CountDownLatch(1).await();
+            } catch (InterruptedException e) {
+                hit[0] = true;
+            }
+        }, "lied about");
+        t.start();
+        up.await();
+        show("stack traces", () -> Thread.getAllStackTraces().containsKey(t));
+        show("interrupt", () -> { g.interrupt(); t.join(); return hit[0]; });
+    }
+
     static void unstarted(ThreadGroup top) throws Exception {
         ThreadGroup u = new ThreadGroup(top, "u");
         Thread t = new Thread(u, "ut");
@@ -172,6 +235,8 @@ public class GroupDestroy {
         basics(top);
         busy(top);
         halfway(new ThreadGroup("half"));
+        throughHalfway(new ThreadGroup("through"));
+        overridden();
         unstarted(top);
         refusedCosts(top);
         fromInside(top);
