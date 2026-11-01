@@ -31,7 +31,10 @@ impl Vm {
                 if self.method(resolved).is_static() {
                     return Err(incompatible("Expecting non-static method", resolved, self));
                 }
-                self.receiver(resolved)?;
+                let receiver = self.receiver(resolved)?;
+                if interface {
+                    self.check_interface_receiver(from, receiver)?;
+                }
                 let target = self.select_special(from, resolved)?;
                 self.call(target, 3)
             }
@@ -102,6 +105,22 @@ impl Vm {
             .peek(depth)?
             .reference()?
             .ok_or_else(VmError::npe)
+    }
+
+    /// The verifier counts an interface as `Object`, so it cannot see this
+    /// (tests/verify/bad/InterfaceReceiverNotCurrent; the message is the oracle's).
+    fn check_interface_receiver(&self, from: crate::ClassId, receiver: crate::Ref) -> VmResult<()> {
+        let current = self.accessor(from);
+        let rc = self.heap.class_of(receiver)?;
+        if self.is_assignable(rc, current) {
+            return Ok(());
+        }
+        let msg = format!(
+            "Receiver class {} must be the current class or a subtype of interface {}",
+            self.class(rc).name,
+            self.class(current).name
+        );
+        Err(VmError::exception("java/lang/IllegalAccessError", msg))
     }
 
     fn select_for_receiver(&mut self, resolved: MethodRef) -> VmResult<MethodRef> {

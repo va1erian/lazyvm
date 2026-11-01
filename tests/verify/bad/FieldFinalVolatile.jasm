@@ -1,0 +1,5 @@
+; rule: JVMS 4.5: not both final and volatile
+; expect: java.lang.ClassFormatError
+; reason: final and volatile
+class Bad
+field public final volatile x I

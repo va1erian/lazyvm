@@ -1,0 +1,22 @@
+; rule: JVMS 4.10.1.9 invokespecial note: a handler around super() sees the new local and the old flag
+; expect: java.lang.VerifyError
+; reason: local 0 is
+class Bad
+method public <init> ()V stack 2 locals 1
+A:
+aload_0
+invokespecial java/lang/Object <init> ()V
+B:
+return
+H:
+frame H locals uninitThis stack java/lang/Throwable
+athrow
+handler A B H any
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+new Bad
+dup
+invokespecial Bad <init> ()V
+pop
+return
+end

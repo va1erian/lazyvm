@@ -103,6 +103,7 @@ python tools/case_marks.py --check     # CaseMarks.java matches the oracle (loca
 python tools/locale_symbols.py --check # LocaleSymbolData.java matches the oracle (local gate: needs the Java 8 oracle)
 python tools/lazyrt.py                 # the class library builds
 python tools/fixtures.py --check       # checked-in class files match their sources (javac 25)
+python tools/verify_test.py            # every class verifies, tests/verify/bad is rejected, limits never abort
 python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
 python tools/launcher_test.py          # -jar, manifests and jar errors
@@ -142,6 +143,8 @@ python tools/test.py --filter <area>   # differential suite on lazyvm
 python tools/golden.py --bless tests/java/<area>/<Name>.java
 python tools/lazyos_test.py --lazyos <LazyOS checkout> --filter <area>   # inside LazyOS (QEMU)
 python tools/sdk.py                    # dist/lazyvm-sdk for IntelliJ (docs/intellij.md)
+python tools/verify_test.py --oracle   # the verifier's classes on Java 8 too (docs/design/verifier.md)
+cargo +nightly fuzz run verifier --fuzz-dir fuzz fuzz/corpus/verifier   # or parser
 python tools/check_rules.py
 python tools/licenses.py
 python tools/unicode.py                # regenerate + verify crates/natives/data/unicode.bin on the Java 8 oracle

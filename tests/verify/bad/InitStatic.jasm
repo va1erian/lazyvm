@@ -1,0 +1,7 @@
+; rule: JVMS 4.6: <init> is not static
+; expect: java.lang.ClassFormatError
+; reason: illegal flags
+class Bad
+method public static <init> ()V stack 1 locals 2
+return
+end

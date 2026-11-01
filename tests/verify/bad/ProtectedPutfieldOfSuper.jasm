@@ -1,0 +1,33 @@
+; rule: JVMS 4.10.1.8: putfield too
+; expect: java.lang.VerifyError
+; reason: protected a/Base.x
+class b/Sub super a/Base
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial a/Base <init> ()V
+return
+end
+method public static main ([Ljava/lang/String;)V stack 3 locals 1
+new a/Base
+dup
+invokespecial a/Base <init> ()V
+iconst_0
+putfield a/Base x I
+return
+end
+class a/Base
+field protected x I
+field protected static s I
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method protected m ()V stack 0 locals 1
+return
+end
+method protected <init> (I)V stack 1 locals 2
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end

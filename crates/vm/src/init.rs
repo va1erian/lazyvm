@@ -38,6 +38,8 @@ impl Vm {
                 InitState::Linked => break,
             }
         }
+        // No Java runs while linking, so no other thread can start this class meanwhile.
+        self.link_class(class)?;
         self.class_mut(class).state = InitState::Initializing(me);
         let from_boot = self.class(class).from_boot;
         let result = self.initialize_steps(class);
@@ -77,6 +79,9 @@ impl Vm {
             return Ok(());
         };
         let clinit = crate::MethodRef { class, index };
+        if !self.method(clinit).is_static() {
+            return Ok(());
+        }
         match self.invoke(clinit, &[]) {
             Ok(_) => Ok(()),
             Err(VmError::Throw(ex)) => Err(self.wrap_in_initializer_error(ex)),

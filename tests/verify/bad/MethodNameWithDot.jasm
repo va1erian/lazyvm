@@ -1,0 +1,7 @@
+; rule: JVMS 4.2.2: no . in names
+; expect: java.lang.ClassFormatError
+; reason: bad name
+class Bad
+method public static a.b ()V stack 1 locals 2
+return
+end

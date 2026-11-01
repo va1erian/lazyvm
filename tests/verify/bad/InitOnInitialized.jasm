@@ -1,0 +1,9 @@
+; rule: JVMS 4.10.1.9 invokespecial
+; expect: java.lang.VerifyError
+; reason: <init> called on
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end

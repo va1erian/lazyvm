@@ -1,0 +1,13 @@
+; rule: JVMS 5.3.5: the superclass must be accessible
+; expect: java.lang.IllegalAccessError
+; reason: cannot access its superclass
+class Bad super a/Hidden
+method public static main ([Ljava/lang/String;)V stack 0 locals 1
+return
+end
+class a/Hidden flags super
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end

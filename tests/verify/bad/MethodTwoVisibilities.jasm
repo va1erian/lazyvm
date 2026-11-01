@@ -1,0 +1,7 @@
+; rule: JVMS 4.6: one visibility
+; expect: java.lang.ClassFormatError
+; reason: more than one
+class Bad
+method public private static f ()V stack 1 locals 2
+return
+end

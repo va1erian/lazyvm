@@ -40,9 +40,8 @@ result may be any reference, cast to the base wrapper (`Number`, `Boolean`,
 else is a linkage error: `BootstrapMethodError` caused by
 `LambdaConversionException`.
 
-The class is defined like a loaded class, so it is parsed and checked the
-same way, and the verifier (S8) will check it too. It has the caller's
-loader. The linked factory is cached per instruction (caller, method, pc):
+The class is defined like a loaded class, so it is parsed, checked and
+verified the same way (`design/verifier.md`). It has the caller's loader. The linked factory is cached per instruction (caller, method, pc):
 each `invokedynamic` is its own call site.
 
 ## Limits
@@ -53,5 +52,6 @@ each `invokedynamic` is its own call site.
   `ClassCastException`.
 - Serializable lambdas link and run, but serialization does not exist, so
   `writeReplace` is not generated.
-- Access checks arrive in S8; generated classes call the caller's private
-  `lambda$...` methods, so S8 must treat them as part of the caller.
+- Generated classes call the caller's private `lambda$...` methods, so they
+  count as part of the caller (`Class::host`) for access checks and for the
+  verifier's `invokespecial` rule.

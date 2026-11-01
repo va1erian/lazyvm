@@ -18,8 +18,9 @@ decision marked **(proposed)** is not in force until the owner confirms it.
 - Out of scope: general `MethodHandle`/`MethodType` behaviour,
   `SecurityManager`, the `jsr`/`ret` opcodes (no javac since 6 emits them,
   and they are rejected), and the old type-inference verifier. The
-  `StackMapTable` type-checking verifier lands in S8, before any jar we did not
-  build ourselves is run.
+  `StackMapTable` type-checking verifier (S8, `design/verifier.md`) runs by default
+  on class files of version 50 and up; older ones get its structural checks only, so
+  they are not safe to run untrusted (`design/verifier.md`, "Choices").
 
 ## D2. Standards and licenses
 

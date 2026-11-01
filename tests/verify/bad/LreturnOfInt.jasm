@@ -1,0 +1,13 @@
+; rule: JVMS 4.10.1.9 lreturn
+; expect: java.lang.VerifyError
+; reason: at offset 1
+class Bad
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+invokestatic Bad f ()J
+pop2
+return
+end
+method public static f ()J stack 2 locals 0
+iconst_0
+lreturn
+end

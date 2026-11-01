@@ -1,0 +1,10 @@
+; rule: JVMS 4.10.1.9 invokestatic: argument types
+; expect: java.lang.VerifyError
+; reason: int is needed
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+fconst_0
+invokestatic java/lang/Integer toString (I)Ljava/lang/String;
+pop
+return
+end

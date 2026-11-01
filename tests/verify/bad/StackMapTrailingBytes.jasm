@@ -1,0 +1,8 @@
+; rule: JVMS 4.7.4: nothing after the frames
+; expect: java.lang.ClassFormatError
+; reason: trailing bytes
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+return
+rawframes 0000 00
+end

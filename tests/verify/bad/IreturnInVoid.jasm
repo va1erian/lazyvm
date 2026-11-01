@@ -1,0 +1,8 @@
+; rule: JVMS 4.10.1.9 ireturn
+; expect: java.lang.VerifyError
+; reason: does not fit
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_0
+ireturn
+end

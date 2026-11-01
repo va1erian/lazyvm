@@ -1,0 +1,11 @@
+; rule: JVMS 4.10.1.9 iadd: needs ints
+; expect: java.lang.VerifyError
+; reason: at offset 2
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_0
+fconst_0
+iadd
+pop
+return
+end

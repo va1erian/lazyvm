@@ -1,0 +1,11 @@
+; rule: JVMS 4.7.4: a frame fits max_stack
+; expect: java.lang.ClassFormatError
+; reason: deeper than max_stack
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+iconst_0
+L:
+frame L locals [Ljava/lang/String; stack long
+pop2
+return
+end

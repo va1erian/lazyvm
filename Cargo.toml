@@ -2,6 +2,8 @@
 resolver = "3"
 members = ["crates/classfile", "crates/platform", "crates/vm", "crates/natives", "crates/gfx", "crates/xui-bind", "crates/lazyvm-win", "crates/natives-ui", "crates/launcher", "crates/launcher-ui"]
 
+exclude = ["fuzz"]
+
 [workspace.package]
 version = "0.1.0"
 edition = "2024"

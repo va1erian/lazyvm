@@ -1,0 +1,8 @@
+; rule: JVMS 4.10.1.9 athrow: needs a Throwable
+; expect: java.lang.VerifyError
+; reason: java/lang/Throwable
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+aload_0
+athrow
+end

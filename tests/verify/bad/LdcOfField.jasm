@@ -1,0 +1,9 @@
+; rule: JVMS 4.9.1 ldc: which constants
+; expect: java.lang.VerifyError
+; reason: ldc of
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+bytes 13 00 01
+pop
+return
+end

@@ -1,0 +1,42 @@
+; JVMS 5.4.3: a call site that failed to link fails again
+class b/Sub super a/Base
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial a/Base <init> ()V
+return
+end
+method static t ()V stack 2 locals 0
+A:
+new a/Base
+dup
+invokespecial a/Base <init> ()V
+invokedynamic run (La/Base;)Ljava/lang/Runnable; 5 a/Base m ()V ()V ()V
+pop
+B:
+goto C
+H:
+frame H locals stack java/lang/BootstrapMethodError
+pop
+C:
+frame C locals stack
+return
+handler A B H java/lang/BootstrapMethodError
+end
+method public static main ([Ljava/lang/String;)V stack 2 locals 1
+invokestatic b/Sub t ()V
+invokestatic b/Sub t ()V
+invokestatic b/Sub t ()V
+getstatic java/lang/System out Ljava/io/PrintStream;
+ldc string ok
+invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+return
+end
+class a/Base
+method public <init> ()V stack 1 locals 1
+aload_0
+invokespecial java/lang/Object <init> ()V
+return
+end
+method protected m ()V stack 0 locals 1
+return
+end

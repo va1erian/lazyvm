@@ -1,0 +1,12 @@
+; rule: JVMS 4.10.1.9 iaload: the index
+; expect: java.lang.VerifyError
+; reason: at offset
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_1
+newarray int
+fconst_0
+iaload
+pop
+return
+end

@@ -1,0 +1,12 @@
+; rule: JVMS 4.10.1.9 return
+; expect: java.lang.VerifyError
+; reason: returns a value
+class Bad
+method public static main ([Ljava/lang/String;)V stack 1 locals 1
+invokestatic Bad f ()I
+pop
+return
+end
+method public static f ()I stack 1 locals 0
+return
+end

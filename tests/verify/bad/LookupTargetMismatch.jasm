@@ -1,0 +1,13 @@
+; rule: JVMS 4.10.1.9 lookupswitch: every target
+; expect: java.lang.VerifyError
+; reason: no stack map frame at target
+class Bad
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+iconst_0
+lookupswitch 0:A B
+A:
+frame A locals [Ljava/lang/String; stack
+return
+B:
+return
+end

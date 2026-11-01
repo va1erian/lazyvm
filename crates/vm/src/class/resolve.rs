@@ -1,5 +1,5 @@
-//! Constant pool resolution (JVMS 5.4.3) and method selection (JVMS 5.4.6).
-//! Access checks (`IllegalAccessError`) arrive with the verifier in S8.
+//! Constant pool resolution (JVMS 5.4.3, with the access checks of 5.4.4) and
+//! method selection (JVMS 5.4.6).
 
 use super::{ClassId, MethodRef};
 use crate::value::Ref;
@@ -49,6 +49,7 @@ impl Vm {
         let file = self.pool_of(from)?;
         let name = file.pool.class_name(index).map_err(VmError::verify)?;
         let id = self.load_class(name)?;
+        self.check_class_access(from, id)?;
         self.cache(from, index, Resolved::Class(id));
         Ok(id)
     }
@@ -71,11 +72,14 @@ impl Vm {
         let file = self.pool_of(from)?;
         let r = file.pool.member_ref(index).map_err(VmError::verify)?;
         let owner = self.load_class(&r.class)?;
+        self.check_class_access(from, owner)?;
         let Some((class, i)) = self.lookup_field(owner, &r.name, &r.descriptor) else {
             return Err(VmError::exception("java/lang/NoSuchFieldError", &*r.name));
         };
         let field = &self.class(class).fields[i];
-        let (slot, is_static) = (field.slot, field.is_static());
+        let (slot, is_static, access) = (field.slot, field.is_static(), field.access);
+        let what = format!("field {}.{}", self.class(class).java_name(), r.name);
+        self.check_member_access(from, class, owner, access, is_static, &what)?;
         self.cache(
             from,
             index,
@@ -146,6 +150,7 @@ impl Vm {
         let file = self.pool_of(from)?;
         let r = file.pool.member_ref(index).map_err(VmError::verify)?;
         let owner = self.load_class(&r.class)?;
+        self.check_class_access(from, owner)?;
         if self.class(owner).is_interface() != interface {
             let what = if interface {
                 "Found class, but interface was expected"
@@ -181,6 +186,18 @@ impl Vm {
                 format!("{}.{}{}", r.class.replace('/', "."), r.name, r.descriptor),
             ));
         };
+        let method = self.method(m);
+        let (access, is_static) = (method.access, method.is_static());
+        // JVMS 6.5: an array's `clone` is public, though `Object`'s is protected.
+        if !(self.class(owner).is_array() && &*r.name == "clone") {
+            let what = format!(
+                "method {}.{}{}",
+                self.class(m.class).java_name(),
+                r.name,
+                r.descriptor
+            );
+            self.check_member_access(from, m.class, owner, access, is_static, &what)?;
+        }
         self.cache(from, index, Resolved::Method(m));
         Ok(m)
     }

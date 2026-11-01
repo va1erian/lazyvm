@@ -1,0 +1,18 @@
+; a handler's frame may widen the caught class
+class Good
+method public static main ([Ljava/lang/String;)V stack 4 locals 4
+A:
+nop
+B:
+goto C
+H:
+frame H locals [Ljava/lang/String; stack java/lang/Throwable
+pop
+C:
+frame C locals [Ljava/lang/String; stack
+handler A B H java/lang/Exception
+getstatic java/lang/System out Ljava/io/PrintStream;
+ldc string ok
+invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+return
+end
