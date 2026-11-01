@@ -22,7 +22,7 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     private int unstarted;
     /** Once set, both lists stay empty, so whatever reads them needs no check. */
     private boolean destroyed;
-    /** Subgroups a failed destroy cut off: only getAllStackTraces still finds their threads. */
+    /** Subgroups a failed destroy cut off, null once gone: only getAllStackTraces still finds their threads. */
     private ThreadGroup[] cutOff = NO_GROUPS;
 
     /** The root group, which has no parent. */
@@ -130,7 +130,8 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
             }
             subs = subgroups();
             destroyed = true;
-            cutOff = subs;
+            // A copy: the loop below reads subs while the subgroups clear their entries here.
+            cutOff = subs.clone();
             groups = NO_GROUPS;
             groupCount = 0;
         }
@@ -151,6 +152,11 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         synchronized (this) {
             // The list is already empty, and ending again would leave the parent's.
             if (destroyed) {
+                for (int i = 0; i < cutOff.length; i++) {
+                    if (cutOff[i] == g) {
+                        cutOff[i] = null;
+                    }
+                }
                 return;
             }
             for (int i = 0; i < groupCount; i++) {
@@ -202,8 +208,9 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         return n;
     }
 
+    // Not through the two-argument forms, which a subclass may override (observed).
     public int enumerate(Thread[] list) {
-        return enumerate(list, true);
+        return collect(list, 0, true, true);
     }
 
     public int enumerate(Thread[] list, boolean recurse) {
@@ -211,7 +218,7 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     }
 
     public int enumerate(ThreadGroup[] list) {
-        return enumerate(list, true);
+        return collect(list, 0, true, false);
     }
 
     public int enumerate(ThreadGroup[] list, boolean recurse) {
@@ -224,13 +231,13 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
      * out. Returns where the next one would go.
      */
     private int collect(Object[] into, int at, boolean recurse, boolean wantThreads) {
-        int room = into.length - at;
         ThreadGroup[] subs;
         synchronized (this) {
-            // Back to the start, even part way through a parent's listing (observed).
+            // Back to the start, even part way through a parent's listing or with no array (observed).
             if (destroyed) {
                 return 0;
             }
+            int room = into.length - at;
             subs = subgroups();
             int n = Math.min(room, wantThreads ? threadCount : groupCount);
             // Into a narrower array type, the oracle's failure names Thread, so one
@@ -276,7 +283,9 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
             g.gather(all);
         }
         for (ThreadGroup g : cut) {
-            g.gather(all);
+            if (g != null) {
+                g.gather(all);
+            }
         }
     }
 

@@ -189,6 +189,49 @@ public class GroupDestroy {
         show("interrupt", () -> { g.interrupt(); t.join(); return hit[0]; });
     }
 
+    static void dispatch() throws Exception {
+        ThreadGroup g = new ThreadGroup("two args") {
+            @Override
+            public int enumerate(Thread[] list, boolean recurse) {
+                return 50;
+            }
+
+            @Override
+            public int enumerate(ThreadGroup[] list, boolean recurse) {
+                return 60;
+            }
+        };
+        show("one arg threads", () -> g.enumerate(new Thread[1]));
+        show("one arg groups", () -> g.enumerate(new ThreadGroup[1]));
+        show("two args", () -> g.enumerate(new Thread[1], true) + " " + g.enumerate(new ThreadGroup[1], true));
+        ThreadGroup live = new ThreadGroup("live");
+        show("null on live", () -> live.enumerate((Thread[]) null));
+        live.destroy();
+        show("null on destroyed", () -> live.enumerate((Thread[]) null) + " " + live.enumerate((ThreadGroup[]) null));
+        show("null on destroyed, no recursion", () -> live.enumerate((Thread[]) null, false));
+    }
+
+    /** A half-destroyed group does not keep subgroups that have gone since. */
+    static void released() throws Exception {
+        ThreadGroup c = new ThreadGroup("keeper");
+        java.lang.ref.WeakReference<?>[] refs = cutOffSubgroups(c);
+        System.gc();
+        show("released", () -> (refs[0].get() == null) + " " + (refs[1].get() == null));
+        show("keeper", () -> st(c));
+    }
+
+    static java.lang.ref.WeakReference<?>[] cutOffSubgroups(ThreadGroup c) throws Exception {
+        ThreadGroup first = new ThreadGroup(c, "first");
+        ThreadGroup busy = new ThreadGroup(c, "busy");
+        Held h = new Held(busy, "h").begin();
+        show("destroy", () -> { c.destroy(); return "ok"; });
+        h.finish();
+        busy.destroy();
+        return new java.lang.ref.WeakReference<?>[] {
+            new java.lang.ref.WeakReference<ThreadGroup>(first), new java.lang.ref.WeakReference<ThreadGroup>(busy)
+        };
+    }
+
     static void unstarted(ThreadGroup top) throws Exception {
         ThreadGroup u = new ThreadGroup(top, "u");
         Thread t = new Thread(u, "ut");
@@ -237,6 +280,8 @@ public class GroupDestroy {
         halfway(new ThreadGroup("half"));
         throughHalfway(new ThreadGroup("through"));
         overridden();
+        dispatch();
+        released();
         unstarted(top);
         refusedCosts(top);
         fromInside(top);

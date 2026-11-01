@@ -43,6 +43,15 @@ groups: 0 c after - -
 stack traces find them: true true true
 stack traces: true
 interrupt: true
+one arg threads: 0
+one arg groups: 0
+two args: 50 60
+null on live: threw java.lang.NullPointerException
+null on destroyed: 0 0
+null on destroyed, no recursion: 0
+destroy: threw java.lang.IllegalThreadStateException
+released: true true
+keeper: keeper destroyed=true parent=main active=0 groups=0 maxpri=10
 not counted: u destroyed=false parent=top active=0 groups=0 maxpri=10
 no hold on destroy: u destroyed=true parent=top active=0 groups=0 maxpri=10
 its group: java.lang.ThreadGroup[name=u,maxpri=10]
