@@ -9,7 +9,6 @@
 mod gil;
 mod monitor;
 mod spawn;
-mod timer;
 mod trace;
 
 use std::sync::Arc;
@@ -196,7 +195,7 @@ impl Vm {
         self.set_blocked(blocked, true);
         self.blocking(|| match deadline {
             None => std::thread::park(),
-            Some(d) => timer::park_until(d),
+            Some(d) => platform::timer::park_until(d),
         });
         self.set_blocked(Blocked::No, false);
     }
