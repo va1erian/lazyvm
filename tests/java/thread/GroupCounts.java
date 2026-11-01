@@ -103,7 +103,29 @@ public class GroupCounts {
                 + ", g1 groups " + g1.activeGroupCount());
     }
 
+    /** The ceiling goes down, and back up, through every subgroup. */
+    static void ceilings() {
+        ThreadGroup top = new ThreadGroup("top");
+        ThreadGroup mid = new ThreadGroup(top, "mid");
+        ThreadGroup low = new ThreadGroup(mid, "low");
+        low.setMaxPriority(8);
+        System.out.println("low only " + top.getMaxPriority() + " " + mid.getMaxPriority() + " " + low.getMaxPriority());
+        top.setMaxPriority(3);
+        System.out.println("down " + top.getMaxPriority() + " " + mid.getMaxPriority() + " " + low.getMaxPriority());
+        mid.setMaxPriority(9);
+        System.out.println("mid above top " + top.getMaxPriority() + " " + mid.getMaxPriority() + " " + low.getMaxPriority());
+        top.setMaxPriority(9);
+        System.out.println("up " + top.getMaxPriority() + " " + mid.getMaxPriority() + " " + low.getMaxPriority());
+        top.setMaxPriority(0);
+        top.setMaxPriority(11);
+        System.out.println("out of range " + top.getMaxPriority() + " " + low.getMaxPriority());
+        Thread t = new Thread(low, "t");
+        top.setMaxPriority(1);
+        System.out.println("thread keeps " + t.getPriority() + ", low " + low.getMaxPriority());
+    }
+
     public static void main(String[] args) throws Exception {
+        ceilings();
         ThreadGroup main = Thread.currentThread().getThreadGroup();
         counts("alone", main, new ThreadGroup("unused"));
 

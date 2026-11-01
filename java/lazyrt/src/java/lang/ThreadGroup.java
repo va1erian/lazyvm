@@ -6,6 +6,8 @@ package java.lang;
  * that adding the main thread, perhaps with the heap full, allocates nothing.
  */
 public class ThreadGroup implements Thread.UncaughtExceptionHandler {
+    private static final ThreadGroup[] NO_GROUPS = new ThreadGroup[0];
+
     private final String name;
     private final ThreadGroup parent;
     private int maxPriority;
@@ -13,8 +15,8 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     /** Started threads that have not ended, oldest first. */
     private Thread[] threads = new Thread[4];
     private int threadCount;
-    /** Subgroups, oldest first. They stay for good: there is no destroy() yet. */
-    private ThreadGroup[] groups = new ThreadGroup[0];
+    /** Subgroups, oldest first. They stay for good: there is no destroy() yet (threads.md). */
+    private ThreadGroup[] groups = NO_GROUPS;
     private int groupCount;
 
     /** The root group, which has no parent. */
@@ -59,12 +61,15 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     }
 
     private synchronized void addGroup(ThreadGroup g) {
-        groups = java.util.Arrays.copyOf(groups, groupCount + 1);
+        if (groupCount == groups.length) {
+            groups = java.util.Arrays.copyOf(groups, Math.max(4, groupCount * 2));
+        }
         groups[groupCount++] = g;
     }
 
     private synchronized ThreadGroup[] subgroups() {
-        return java.util.Arrays.copyOf(groups, groupCount);
+        // The empty array is never written to, so it needs no copy.
+        return groupCount == 0 ? NO_GROUPS : java.util.Arrays.copyOf(groups, groupCount);
     }
 
     public int activeCount() {
@@ -153,6 +158,9 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
             return;
         }
         maxPriority = parent != null ? Math.min(pri, parent.maxPriority) : pri;
+        for (ThreadGroup g : subgroups()) {
+            g.setMaxPriority(pri);
+        }
     }
 
     public final boolean isDaemon() {

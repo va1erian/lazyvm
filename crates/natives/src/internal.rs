@@ -85,10 +85,19 @@ pub fn register(vm: &mut Vm) {
 /// The environment as name, value, name, value... in one String[].
 fn environment(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
     let pairs = platform::environment();
-    let len = i32::try_from(pairs.len() * 2).map_err(|_| VmError::OutOfMemory)?;
+    let units: Vec<&[u16]> = pairs
+        .iter()
+        .flat_map(|(n, v)| [n.as_slice(), v.as_slice()])
+        .collect();
+    string_array(vm, &units)
+}
+
+/// A new `String[]` of `units`.
+fn string_array(vm: &mut Vm, units: &[&[u16]]) -> VmResult<Option<Value>> {
+    let len = i32::try_from(units.len()).map_err(|_| VmError::OutOfMemory)?;
     let array = vm.new_array_of("Ljava/lang/String;", len)?;
-    for (i, units) in pairs.iter().flat_map(|(n, v)| [n, v]).enumerate() {
-        let s = vm.new_string_utf16(units)?;
+    for (i, u) in units.iter().enumerate() {
+        let s = vm.new_string_utf16(u)?;
         vm.heap
             .array_mut(array)?
             .store(i, Value::Ref(Some(s)), false)?;
@@ -110,19 +119,12 @@ fn get_property(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
 
 /// The properties as name, value, name, value... in one String[].
 fn properties(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
-    let units: Vec<Vec<u16>> = vm
+    let owned: Vec<Vec<u16>> = vm
         .properties()
         .flat_map(|(n, v)| [n.to_vec(), v.to_vec()])
         .collect();
-    let len = i32::try_from(units.len()).map_err(|_| VmError::OutOfMemory)?;
-    let array = vm.new_array_of("Ljava/lang/String;", len)?;
-    for (i, u) in units.iter().enumerate() {
-        let s = vm.new_string_utf16(u)?;
-        vm.heap
-            .array_mut(array)?
-            .store(i, Value::Ref(Some(s)), false)?;
-    }
-    ret_ref(Some(array))
+    let units: Vec<&[u16]> = owned.iter().map(Vec::as_slice).collect();
+    string_array(vm, &units)
 }
 
 fn get_resource(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {

@@ -77,7 +77,7 @@ public final class System {
         return props;
     }
 
-    public static void setProperties(Properties p) {
+    public static synchronized void setProperties(Properties p) {
         props = p != null ? p : startingProperties();
     }
 

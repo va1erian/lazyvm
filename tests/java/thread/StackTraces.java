@@ -172,7 +172,7 @@ public class StackTraces {
         };
         spinner.start();
         going.await();
-        // Wherever it is, it bottoms out in Thread.run and then its own run.
+        // Wherever it is, its base is its own run: it overrides Thread.run.
         StackTraceElement[] trace = spinner.getStackTrace();
         StackTraceElement base = trace[trace.length - 1];
         System.out.println("base " + base.getClassName() + "." + base.getMethodName());

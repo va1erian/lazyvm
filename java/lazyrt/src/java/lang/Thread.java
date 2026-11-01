@@ -225,16 +225,19 @@ public class Thread implements Runnable {
 
     /** Ends this thread for Java code: wakes its joiners, drops its state. */
     private void exitByVm() {
-        // Before the joiners wake: they must find it gone from its group.
-        group.remove(this);
-        group = null;
-        target = null;
-        handler = null;
-        locals = null;
-        inheritableLocals = null;
-        synchronized (this) {
-            status = TERMINATED;
-            notifyAll();
+        try {
+            // Before the joiners wake: they must find it gone from its group.
+            group.remove(this);
+            group = null;
+            target = null;
+            handler = null;
+            locals = null;
+            inheritableLocals = null;
+        } finally {
+            synchronized (this) {
+                status = TERMINATED;
+                notifyAll();
+            }
         }
     }
 

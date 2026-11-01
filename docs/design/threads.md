@@ -295,7 +295,10 @@ Java monitors are not OS locks: a thread blocked on one has released the VM.
   Method)`). `getAllStackTraces` reads one thread at a time, so it is no one instant.
 - A `ThreadGroup` lists its started threads and its subgroups, in plain arrays, and a
   thread leaves before its joiners wake. There is no `DestroyJavaVM` thread: after main
-  has returned, `Thread.activeCount` in another thread is one lower than on the oracle.
+  has returned, `Thread.activeCount` in another thread is one lower than on the oracle
+  (which lists it there, observed). There is no `destroy` either, so a daemon group stays
+  after its last thread ends and still counts in `activeGroupCount`, where the oracle
+  removes it (observed), and a group's subgroups live as long as it does.
 - The main thread's context class loader is the system loader; a new thread takes its
   parent's through `getContextClassLoader`, as subclasses can see. It survives the thread.
 - `ThreadLocal` values live in an identity map on the `Thread`. The map holds

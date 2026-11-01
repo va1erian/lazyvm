@@ -31,11 +31,7 @@ public class ContextLoaders {
         @Override
         public void run() {
             Thread child = new Thread("child");
-            System.out.println("child of override " + who(childLoader(child)));
-        }
-
-        static ClassLoader childLoader(Thread child) {
-            return child.getContextClassLoader();
+            System.out.println("child of override " + of(child));
         }
     }
 
