@@ -1,0 +1,8 @@
+same executor true
+out of order 0
+lazy-loop daemon true
+reported boom on lazy-loop
+reported bang on lazy-loop
+queued from the loop, runs after this
+null task NullPointerException
+timer ran beside a spinning task

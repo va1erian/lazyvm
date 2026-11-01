@@ -1,0 +1,18 @@
+peer true
+pingpong
+second read a read is pending
+readAll beside it a read is pending
+close ends the read with 0
+port chosen true
+one
+two
+closed
+closed again
+port chosen true
+one
+two
+closed
+closed again
+bye
+0 0
+done
