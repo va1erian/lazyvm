@@ -6,7 +6,7 @@ use classfile::{ACC_ABSTRACT, ACC_FINAL, ACC_INTERFACE, ACC_PUBLIC, ACC_STATIC, 
 use classfile::{ClassFile, Handler};
 
 use super::{check_code, check_format};
-use crate::verify::Fail;
+use crate::verify::{Budget, Fail};
 
 const MAX_CODE: usize = 65535;
 
@@ -59,7 +59,7 @@ impl Build {
 fn verdict(cf: &ClassFile) -> Option<String> {
     let m = &cf.methods[0];
     let code = m.code.as_ref().unwrap_or_else(|| panic!("no code"));
-    match check_code(cf, code) {
+    match check_code(cf, code, &mut Budget(u64::MAX)) {
         Ok(_) => None,
         Err(Fail::Bad { reason, .. }) => Some(reason),
         Err(Fail::Format { reason, .. }) => Some(reason),

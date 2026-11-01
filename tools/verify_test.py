@@ -58,13 +58,18 @@ def run_case(cmd: list[str], out: Path, main: str) -> tuple[str, int]:
     return text, done.returncode
 
 
+def crashed(text: str, code: int) -> bool:
+    """Anything but a clean exit or a reported exception, a killed process included."""
+    return code not in (0, 1) or "panicked" in text or "internal error" in text
+
+
 def judge(source: Path, cmd: list[str], is_lazyvm: bool) -> str | None:
     """Why this case failed on this VM, or None if it passed."""
     out, main, text = build_case(source)
     if not is_lazyvm and header(text, "oracle"):
         return None
     actual, code = run_case(cmd, out, main)
-    if code == 70 or "panicked" in actual or "internal error" in actual:
+    if crashed(actual, code):
         return f"the VM failed: {actual}"
     if source.parent.name == "good":
         return None if actual.strip() == "ok" and code == 0 else f"expected ok, got: {actual}"
@@ -97,7 +102,9 @@ def run_cases(name: str, cmd: list[str], filters: list[str] | None, is_lazyvm: b
 
 def check_all_classes(exe: Path, boot: Path) -> int:
     """Everything we ship or test verifies."""
-    done = subprocess.run([str(exe), f"-Xbootclasspath:{boot}", "-Xverify:check", "-cp", str(TESTS_CLASSES)],
+    # The -Xverify:none must not disarm the check.
+    done = subprocess.run([str(exe), f"-Xbootclasspath:{boot}", "-Xverify:none", "-Xverify:check",
+                           "-cp", str(TESTS_CLASSES)],
                           capture_output=True, text=True, timeout=600)
     lines = done.stdout.splitlines()
     failures = [line for line in lines if line.startswith("FAIL ")]
@@ -120,7 +127,7 @@ def check_limits(exe: Path, boot: Path) -> int:
     base = [str(exe), f"-Xbootclasspath:{boot}"]
     for limit in [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233]:
         text, code = run_case([*base, f"-Xmaxclasses:{limit}"], out, main_name)
-        if code == 70 or "panicked" in text or "internal error" in text:
+        if crashed(text, code):
             print(f"FAIL -Xmaxclasses:{limit}: {text}")
             failed += 1
     text, code = run_case([*base, "-Xmaxclasses:100000"], out, main_name)
@@ -129,7 +136,7 @@ def check_limits(exe: Path, boot: Path) -> int:
         failed += 1
     # Any method in the class library is longer than this, so nothing can start.
     text, code = run_case([*base, "-Xmaxcode:1"], out, main_name)
-    if code in (0, 70) or "-Xmaxcode" not in text:
+    if code == 0 or crashed(text, code) or "-Xmaxcode" not in text:
         print(f"FAIL -Xmaxcode:1 (exit {code}): {text}")
         failed += 1
     text, code = run_case([*base, "-Xmaxcode:65535"], out, main_name)

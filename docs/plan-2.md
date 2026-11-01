@@ -8,6 +8,7 @@ table and S0-S7. The same rules apply ([`../AGENTS.md`](../AGENTS.md)).
 Goal: LazyVM is safe to run class files it did not build. This stage is
 required before S10's packages can install third-party jars and before S12-S13 run existing apps.
 The design, and where the oracle and the JVMS differ, is [`design/verifier.md`](design/verifier.md).
+Class files below version 50 are not type-checked (D1), so the goal holds from version 50 up.
 
 - [x] S8-01 Structural checks (JVMS 4.8): code length, branch targets,
       exception ranges, constant-pool types per opcode, and access flags.

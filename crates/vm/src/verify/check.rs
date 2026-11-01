@@ -8,7 +8,7 @@ use classfile::{
 };
 
 use super::stackmap::{Frame, initial_frame, parse_frames, return_type};
-use super::structural::Layout;
+use super::structural::{Layout, is_static_method};
 use super::vtype::{THROWABLE, Types, VType};
 use super::{Budget, Fail, Hierarchy, fail_at};
 use crate::class::package_of;
@@ -100,7 +100,7 @@ pub(super) fn check_method<H: Hierarchy + ?Sized>(
 ) -> Result<(), Fail> {
     let md = parse_method(&m.descriptor).map_err(|e| fail_at(0, e))?;
     let is_init = &*m.name == "<init>";
-    let is_static = m.access & ACC_STATIC != 0;
+    let is_static = is_static_method(cf, m);
     let cur = initial_frame(cf, is_static, is_init, &md, types);
     let ret = return_type(md.ret.as_ref(), types);
     let frames = parse_frames(cf, code, layout, &cur, types, budget)?;
@@ -148,7 +148,7 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
             }
             self.check_handlers(&mut handler_seen)?;
             self.step()?;
-            self.budget.charge(1)?;
+            self.budget.charge(1 + self.types.take_slow())?;
             self.pc = self.layout.next(self.pc);
         }
         if !self.dead {
@@ -185,6 +185,7 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
             .pool
             .class_name(h.catch_type)
             .map_err(|e| fail_at(usize::from(h.start_pc), e))?;
+        self.budget.charge(name.len())?;
         Ok(self.types.class(name))
     }
 
@@ -291,6 +292,7 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
                 return Err(self.bad(format!("stack holds {a} where the frame has {b}")));
             }
         }
+        self.budget.charge(self.types.take_slow())?;
         if this_uninit && !to.this_uninit {
             return Err(self.bad("the frame drops an uninitialized this"));
         }

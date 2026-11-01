@@ -35,6 +35,7 @@ const MAX_STORED_SLOTS: usize = 1 << 24;
 const FIRST_TYPE_CHECKED: u16 = 50;
 
 /// What the checker needs to know about a class other than the one it checks.
+/// Superclass chains must end: loading guarantees that.
 pub struct ClassInfo {
     pub is_interface: bool,
     pub super_name: Option<Arc<str>>,
@@ -128,7 +129,7 @@ fn verify_method<H: Hierarchy + ?Sized>(
     let Some(code) = &m.code else {
         return Ok(());
     };
-    let layout = structural::check_code(cf, code)?;
+    let layout = structural::check_code(cf, code, budget)?;
     if cf.major < FIRST_TYPE_CHECKED {
         return Ok(());
     }

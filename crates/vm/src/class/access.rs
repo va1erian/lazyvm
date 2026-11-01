@@ -17,7 +17,7 @@ pub(crate) fn package_of(name: &str) -> &str {
 
 impl Vm {
     /// The class whose rights `from` has.
-    fn accessor(&self, from: ClassId) -> ClassId {
+    pub(crate) fn accessor(&self, from: ClassId) -> ClassId {
         self.class(from).host.unwrap_or(from)
     }
 

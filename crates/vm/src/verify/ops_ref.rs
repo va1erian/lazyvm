@@ -6,6 +6,7 @@ use classfile::descriptor::{MethodDescriptor, parse_field, parse_method};
 use classfile::{ACC_PROTECTED, Constant, MemberRef};
 
 use super::check::{Checker, declared_access};
+use super::structural::member_text;
 use super::vtype::{OBJECT, VType, array_of};
 use super::{Fail, Hierarchy, decode};
 use crate::class::package_of;
@@ -46,13 +47,16 @@ impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
         }
     }
 
-    fn pool_class(&self, operand: usize) -> Result<std::sync::Arc<str>, Fail> {
+    fn pool_class(&mut self, operand: usize) -> Result<std::sync::Arc<str>, Fail> {
         let index = self.u2_at(operand)?;
-        self.cf
+        let name = self
+            .cf
             .pool
             .class_name(index)
             .cloned()
-            .map_err(|e| self.bad(e))
+            .map_err(|e| self.bad(e))?;
+        self.budget.charge(name.len())?;
+        Ok(name)
     }
 
     fn ldc(&mut self, index: u16) -> Result<(), Fail> {
@@ -72,7 +76,8 @@ impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
         self.push(t)
     }
 
-    fn member(&self, index: u16) -> Result<MemberRef, Fail> {
+    fn member(&mut self, index: u16) -> Result<MemberRef, Fail> {
+        self.budget.charge(member_text(self.cf, index))?;
         self.cf.pool.member_ref(index).map_err(|e| self.bad(e))
     }
 
@@ -91,7 +96,7 @@ impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
             }
             _ => {
                 self.pop_as(t)?;
-                if self.may_store_before_super(&r) {
+                if self.may_store_before_super(&r)? {
                     self.pop()?;
                     return Ok(());
                 }
@@ -104,15 +109,18 @@ impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
     /// A constructor may set fields its own class declares before calling
     /// `super()`, as javac does for captured variables (observed on the oracle:
     /// `tests/verify/good/PutfieldBeforeSuper`).
-    fn may_store_before_super(&self, r: &MemberRef) -> bool {
-        self.is_init
-            && self.cur.stack.last() == Some(&VType::UninitThis)
-            && r.class == self.cf.this_class
-            && self
-                .cf
-                .fields
-                .iter()
-                .any(|f| f.name == r.name && f.descriptor == r.descriptor)
+    fn may_store_before_super(&mut self, r: &MemberRef) -> Result<bool, Fail> {
+        if !self.is_init
+            || self.cur.stack.last() != Some(&VType::UninitThis)
+            || r.class != self.cf.this_class
+        {
+            return Ok(false);
+        }
+        self.budget.charge(self.cf.fields.len())?;
+        let fields = &self.cf.fields;
+        Ok(fields
+            .iter()
+            .any(|f| f.name == r.name && f.descriptor == r.descriptor))
     }
 
     fn pop_args(&mut self, md: &MethodDescriptor) -> Result<(), Fail> {
@@ -153,15 +161,15 @@ impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
         self.push_result(&md)
     }
 
-    /// `invokespecial` of a method other than `<init>` names the current class,
-    /// a superclass or a superinterface, on a receiver of the current class.
-    /// A generated lambda class stands for its host.
     /// The class whose rights the code has: a generated lambda class has its
     /// host's (`Class::host`), here as at resolution.
     fn current(&self) -> &'a str {
         self.host.unwrap_or(&self.cf.this_class)
     }
 
+    /// `invokespecial` of a method other than `<init>` names the current class,
+    /// a superclass or a superinterface, on a receiver of the current class.
+    /// A generated lambda class stands for its host.
     fn invoke_special_receiver(&mut self, r: &MemberRef) -> Result<(), Fail> {
         let current = self.current();
         let index = self.u2_at(1)?;
@@ -169,6 +177,8 @@ impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
             self.cf.pool.get(index),
             Some(Constant::InterfaceMethodRef { .. })
         );
+        self.budget
+            .charge(usize::from(names_interface) * self.cf.interfaces.len())?;
         // Observed on the oracle; a class's own interface methods stay callable.
         if names_interface && *r.class != *current && !self.cf.interfaces.contains(&r.class) {
             return Err(self.bad(format!(
@@ -251,6 +261,7 @@ impl<'a, H: Hierarchy + ?Sized> Checker<'a, '_, '_, H> {
             .pool
             .name_and_type(*name_and_type)
             .map_err(|e| self.bad(e))?;
+        self.budget.charge(desc.len())?;
         let md = parse_method(desc).map_err(|e| self.bad(e))?;
         self.pop_args(&md)?;
         self.push_result(&md)

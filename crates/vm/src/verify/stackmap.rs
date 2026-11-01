@@ -115,6 +115,7 @@ pub fn parse_frames<H: Hierarchy + ?Sized>(
         code,
         layout,
         types,
+        text: 0,
     };
     let count = r.u2().map_err(|e| format_error(0, e))?;
     let mut frames: Vec<(u16, Frame)> = Vec::with_capacity(usize::from(count).min(data.len()));
@@ -132,6 +133,7 @@ pub fn parse_frames<H: Hierarchy + ?Sized>(
             ));
         }
         offset = next;
+        budget.charge(std::mem::take(&mut parser.text))?;
         stored += frame.locals.len() + frame.stack.len();
         budget.charge(frame.locals.len() + frame.stack.len())?;
         if stored > super::MAX_STORED_SLOTS {
@@ -153,6 +155,8 @@ struct FrameParser<'a, 't, 'h, H: Hierarchy + ?Sized> {
     code: &'a Code,
     layout: &'a Layout,
     types: &'t mut Types<'h, H>,
+    /// Bytes of class names read since the last charge.
+    text: usize,
 }
 
 impl<H: Hierarchy + ?Sized> FrameParser<'_, '_, '_, H> {
@@ -250,6 +254,7 @@ impl<H: Hierarchy + ?Sized> FrameParser<'_, '_, '_, H> {
             7 => {
                 let index = r.u2()?;
                 let name = self.cf.pool.class_name(index)?.clone();
+                self.text += name.len();
                 self.types.class(&name)
             }
             8 => {

@@ -5,7 +5,7 @@
 mod code;
 mod format;
 
-pub(crate) use code::{Layout, check_code};
+pub(crate) use code::{Layout, check_code, member_text};
 pub use format::{check_format, is_static_method};
 
 #[cfg(test)]

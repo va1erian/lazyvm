@@ -2,6 +2,8 @@
 //! 4.6), names (4.2), the names and descriptors the constant pool holds (4.4)
 //! and `ConstantValue` types (4.7.2). A failure is `ClassFormatError`.
 
+use std::collections::HashSet;
+
 use classfile::descriptor::{FieldType, parse_field, parse_method};
 use classfile::{
     ACC_ABSTRACT, ACC_ANNOTATION, ACC_BRIDGE, ACC_ENUM, ACC_FINAL, ACC_INTERFACE, ACC_NATIVE,
@@ -67,24 +69,63 @@ fn check_class_names(cf: &ClassFile) -> Result<(), String> {
     Ok(())
 }
 
+/// What a Utf8 constant is used as: the same text can be read several ways.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum Text {
+    Class,
+    FieldName,
+    FieldDescriptor,
+    MethodName,
+    MethodDescriptor,
+}
+
+/// Runs `check` on the Utf8 at `index`, the first time it is used this way.
+/// Any number of pool entries can share one long string, and a class is checked
+/// before there is a budget, so the cost must follow the file's size.
+fn once(
+    pool: &ConstantPool,
+    seen: &mut HashSet<(u16, Text)>,
+    index: u16,
+    use_as: Text,
+    check: fn(&str) -> Result<(), String>,
+) -> Result<(), String> {
+    if seen.insert((index, use_as)) {
+        return check(pool.utf8(index)?);
+    }
+    Ok(())
+}
+
 /// Every name and descriptor the pool holds is checked once here, so the rest
 /// of the VM and the verifier can parse them without new failure paths.
 fn check_pool(pool: &ConstantPool) -> Result<(), String> {
+    let mut seen = HashSet::new();
     for i in 0..pool.len() {
-        let index = i as u16;
-        let check = match pool.get(index) {
-            Some(Constant::Class(_)) => pool.class_name(index).and_then(|n| check_class_name(n)),
-            Some(Constant::FieldRef { .. }) => check_member_ref(pool, index, false),
-            Some(Constant::MethodRef { .. } | Constant::InterfaceMethodRef { .. }) => {
-                check_member_ref(pool, index, true)
+        let check = match pool.get(i as u16) {
+            Some(Constant::Class(n)) => once(pool, &mut seen, *n, Text::Class, check_class_name),
+            Some(Constant::FieldRef { name_and_type, .. }) => {
+                check_field_ref(pool, &mut seen, *name_and_type)
             }
-            Some(Constant::MethodType(d)) => pool
-                .utf8(*d)
-                .and_then(|d| parse_method(d).and_then(|m| check_types(&m.params, m.ret.as_ref()))),
+            Some(
+                Constant::MethodRef { name_and_type, .. }
+                | Constant::InterfaceMethodRef { name_and_type, .. },
+            ) => check_method_ref(pool, &mut seen, *name_and_type),
+            Some(Constant::MethodType(d)) => once(
+                pool,
+                &mut seen,
+                *d,
+                Text::MethodDescriptor,
+                check_method_descriptor,
+            ),
             Some(Constant::InvokeDynamic { name_and_type, .. }) => {
-                pool.name_and_type(*name_and_type).and_then(|(name, desc)| {
-                    check_unqualified(name, true)?;
-                    parse_method(desc).and_then(|m| check_types(&m.params, m.ret.as_ref()))
+                name_and_descriptor(pool, *name_and_type).and_then(|(name, desc)| {
+                    once(pool, &mut seen, name, Text::MethodName, check_method_name)?;
+                    once(
+                        pool,
+                        &mut seen,
+                        desc,
+                        Text::MethodDescriptor,
+                        check_method_descriptor,
+                    )
                 })
             }
             _ => Ok(()),
@@ -94,22 +135,58 @@ fn check_pool(pool: &ConstantPool) -> Result<(), String> {
     Ok(())
 }
 
-fn check_member_ref(pool: &ConstantPool, index: u16, method: bool) -> Result<(), String> {
-    let r = pool.member_ref(index)?;
-    if !method {
-        check_unqualified(&r.name, false)?;
-        let t = parse_field(&r.descriptor)?;
-        return check_types(std::slice::from_ref(&t), None);
+fn name_and_descriptor(pool: &ConstantPool, index: u16) -> Result<(u16, u16), String> {
+    match pool.get(index) {
+        Some(Constant::NameAndType { name, descriptor }) => Ok((*name, *descriptor)),
+        other => Err(format!("constant {index} is not NameAndType: {other:?}")),
     }
-    let md = parse_method(&r.descriptor)?;
-    check_types(&md.params, md.ret.as_ref())?;
-    if &*r.name == "<init>" {
-        if md.ret.is_some() {
-            return Err(format!("<init> must return void: {}", r.descriptor));
+}
+
+fn check_field_ref(
+    pool: &ConstantPool,
+    seen: &mut HashSet<(u16, Text)>,
+    name_and_type: u16,
+) -> Result<(), String> {
+    let (name, desc) = name_and_descriptor(pool, name_and_type)?;
+    once(pool, seen, name, Text::FieldName, |n| {
+        check_unqualified(n, false)
+    })?;
+    once(pool, seen, desc, Text::FieldDescriptor, |d| {
+        let t = parse_field(d)?;
+        check_types(std::slice::from_ref(&t), None)
+    })
+}
+
+fn check_method_ref(
+    pool: &ConstantPool,
+    seen: &mut HashSet<(u16, Text)>,
+    name_and_type: u16,
+) -> Result<(), String> {
+    let (name, desc) = name_and_descriptor(pool, name_and_type)?;
+    once(
+        pool,
+        seen,
+        desc,
+        Text::MethodDescriptor,
+        check_method_descriptor,
+    )?;
+    if &**pool.utf8(name)? == "<init>" {
+        let text = pool.utf8(desc)?;
+        if !text.ends_with(")V") {
+            return Err(format!("<init> must return void: {text}"));
         }
         return Ok(());
     }
-    check_unqualified(&r.name, true)
+    once(pool, seen, name, Text::MethodName, check_method_name)
+}
+
+fn check_method_name(name: &str) -> Result<(), String> {
+    check_unqualified(name, true)
+}
+
+fn check_method_descriptor(desc: &str) -> Result<(), String> {
+    let m = parse_method(desc)?;
+    check_types(&m.params, m.ret.as_ref())
 }
 
 /// JVMS 4.2.1: a class name, or an array descriptor where the pool allows one.

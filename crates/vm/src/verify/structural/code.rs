@@ -5,7 +5,7 @@ use classfile::descriptor::{MethodDescriptor, parse_field, parse_method};
 use classfile::{ClassFile, Code, Constant, Handler};
 
 use crate::verify::decode::{self, OP_GOTO_W, OP_JSR, OP_JSR_W, OP_NEW, OP_RET, OP_WIDE};
-use crate::verify::{Fail, fail_at};
+use crate::verify::{Budget, Fail, fail_at};
 
 const MAX_DIMENSIONS: usize = 255;
 
@@ -32,8 +32,16 @@ impl Layout {
     }
 }
 
+/// The text a field or method reference makes the checker read: reading it is
+/// what such an instruction costs, and one reference can name 65535 bytes.
+pub(crate) fn member_text(cf: &ClassFile, index: u16) -> usize {
+    cf.pool
+        .member_ref(index)
+        .map_or(0, |r| r.class.len() + r.name.len() + r.descriptor.len())
+}
+
 /// Checks one method body, returning its instruction layout.
-pub(crate) fn check_code(cf: &ClassFile, code: &Code) -> Result<Layout, Fail> {
+pub(crate) fn check_code(cf: &ClassFile, code: &Code, budget: &mut Budget) -> Result<Layout, Fail> {
     let bytes = &code.bytecode;
     if bytes.is_empty() || bytes.len() > 65535 {
         return Err(fail_at(
@@ -44,6 +52,10 @@ pub(crate) fn check_code(cf: &ClassFile, code: &Code) -> Result<Layout, Fail> {
     let layout = layout(bytes)?;
     let mut pc = 0;
     while pc < bytes.len() {
+        if matches!(bytes[pc], 0xb2..=0xb9) {
+            let index = decode::u2(bytes, pc + 1).map_err(|e| fail_at(pc, e))?;
+            budget.charge(member_text(cf, index))?;
+        }
         check_instruction(cf, code, &layout, pc).map_err(|e| fail_at(pc, e))?;
         pc = layout.next(pc);
     }

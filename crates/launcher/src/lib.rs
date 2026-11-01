@@ -11,6 +11,7 @@ mod options;
 use std::process::ExitCode;
 
 use options::{Command, Launch};
+use vm::verify::VerifyMode;
 use vm::{ClassPath, Value, Vm, VmError};
 
 /// The exit status for an internal VM failure, as in `sysexits.h`.
@@ -115,6 +116,10 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
                 return ExitCode::from(1);
             }
         }
+    }
+    // A check of everything, whatever other `-Xverify` the command line has.
+    if launch.verify_check {
+        launch.options.verify = VerifyMode::All;
     }
     let classpath = ClassPath::open(&launch.boot_classpath, &launch.classpath);
     let mut vm = Vm::new(classpath, launch.options.clone());

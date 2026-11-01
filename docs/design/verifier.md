@@ -1,7 +1,8 @@
 # The verifier (S8)
 
-LazyVM checks class files in three places, so a class it did not build is an
-error or a working program, never a confused VM.
+LazyVM checks class files in four places, so a class of version 50 or later that
+it did not build is an error or a working program. Older classes are the known gap
+(see "Choices").
 
 | When | What | Failure | Code |
 |---|---|---|---|
@@ -32,16 +33,24 @@ that error propagates as itself (`tests/verify/bad/CatchUnloadable`).
   run. The interpreter and natives keep their own checks, and a confused class
   gets `VerifyError` or an exception when it reaches one of them
   (`tests/java/lazy/atomics/Intrinsics`).
-- `-Xverify:check`: verifies every class on both class paths, prints one line per
-  failure, and exits. It needs no main class.
+- `-Xverify:check`: verifies every class on both class paths whatever other
+  `-Xverify` is given, prints one line per failure, and exits. It needs no main
+  class; name a jar with `-cp`, since `-jar` still asks for its `Main-Class`.
 
 ## Choices
 
-- **Before version 50 there is no type checking.** Those classes have no stack
-  maps, and the inference verifier is out of scope (D1). They get the structural
-  checks, including no `jsr`/`ret`, and the interpreter's own checks. So the
-  interpreter's checks stay: S11-05 may not remove one on the ground that "the
-  verifier proved it" while such classes, or `-Xverify:none`, can reach it.
+- **Before version 50 there is no type checking, and that is a real gap.** Those
+  classes have no stack maps, and the inference verifier is out of scope (D1). They
+  get the structural checks, including no `jsr`/`ret`, and the interpreter's own
+  checks. Those keep memory safe and stop most misuse, but not all of it: the
+  interpreter does not check a field's receiver against the field's class, so a
+  version 49 class can `getfield` a `String`'s private `value` through an unrelated
+  class and change an interned string. Setting those two version bytes opts any
+  class out of type checking, so **old class files are not safe to run untrusted**.
+  Closing the gap needs an owner's decision on D1: an inference verifier, or refusing
+  such classes off the boot path. The interpreter's checks stay for the same reason:
+  S11-05 may not remove one on the ground that "the verifier proved it" while such
+  classes, or `-Xverify:none`, can reach it.
 - **Version 50 does not fail over.** The JVMS lets a version 50 class that fails
   type checking fall back to inference, and the oracle does. Here it stays
   rejected (`bad/Version50NeedsFrames`).
@@ -52,8 +61,10 @@ that error propagates as itself (`tests/verify/bad/CatchUnloadable`).
 - **Hostile input has a budget.** Types are interned to one small `Copy` value,
   a frame stores only the locals it declares, comparing frames copies neither, and
   a handler's frame is compared again only when the locals changed. A class then
-  gets 2^30 units of work (slots compared or copied, members scanned), and a
-  method's declared frames 2^24 slots; past either it is a `VerifyError`. `verify/tests.rs` builds the worst cases.
+  gets 2^30 units of work (slots compared or copied, members scanned, bytes of names
+  and descriptors read), and a method's declared frames 2^24 slots; past either it is
+  a `VerifyError`. The pool's names are checked once per string, since that runs
+  before any budget, and remembered answers stop being kept past 2^20 per class. `verify/tests.rs` builds the worst cases.
 
 ## Where the oracle and the JVMS differ
 
@@ -72,6 +83,7 @@ except as marked. Each row has a test.
 | Overriding a final method | any non-private, non-static one | not a package-private one of another package | `good/PackageFinalOtherPackage` |
 | `Object.clone` on an array | fails the protected check | allowed | `good/ObjectCloneOnArray` |
 | `invokespecial` of an interface method | nothing more than assignability | the interface must be a direct one | `bad/SpecialIndirectInterface` |
+| `invokespecial` of an interface method, receiver | an interface counts as `Object`, so any object passes | passes verification, then `IllegalAccessError` when it runs unless it is of the current class | `bad/InterfaceReceiverNotCurrent` |
 | `<clinit>` that is not static (51+) | 4.6 asks for it to be static | loads, and never runs | `good/ClinitNotStaticIsIgnored` |
 | `<init>` in an interface | 4.6 forbids it | loads | `good/InterfaceInitLoads` |
 | Bad names in the pool, such as `a//b` | format error | **LazyVM follows the JVMS**: the oracle fails later, at resolution | `bad/MemberRefBadClassName` |

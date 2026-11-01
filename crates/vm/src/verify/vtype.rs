@@ -14,10 +14,12 @@ use crate::VmResult;
 pub const OBJECT: &str = "java/lang/Object";
 pub const THROWABLE: &str = "java/lang/Throwable";
 
-/// Superclass chains longer than this cannot come from loading
-/// (`MAX_LOAD_DEPTH` is smaller), so a walk this long found a cycle in a
-/// stand-in hierarchy such as the fuzzer's.
-const MAX_CHAIN: usize = 1 << 16;
+/// Remembered answers per class. They save time, so past this they stop
+/// being kept: a hostile class could otherwise fill memory with pairs.
+const MAX_MEMO: usize = 1 << 20;
+/// What working out an unremembered assignment costs against the budget, in the
+/// budget's units: it reads names and walks classes where a known one compares two words.
+pub const SLOW_ASSIGNMENT: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct NameId(u32);
@@ -63,6 +65,8 @@ pub struct Types<'h, H: Hierarchy + ?Sized> {
     assignable: HashMap<(NameId, NameId), bool>,
     /// `(sub, sup)` pairs the protected check has already walked.
     superclass: HashMap<(NameId, NameId), bool>,
+    /// Assignments worked out since the last `take_slow`.
+    slow: usize,
 }
 
 impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
@@ -73,7 +77,13 @@ impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
             index: HashMap::new(),
             assignable: HashMap::new(),
             superclass: HashMap::new(),
+            slow: 0,
         }
+    }
+
+    /// The budget units of the assignments worked out since the last call.
+    pub fn take_slow(&mut self) -> usize {
+        std::mem::take(&mut self.slow) * SLOW_ASSIGNMENT
     }
 
     pub fn intern(&mut self, name: &str) -> NameId {
@@ -126,9 +136,12 @@ impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
         if let Some(&known) = self.assignable.get(&(from, to)) {
             return Ok(known);
         }
+        self.slow += 1;
         let (f, t) = (self.name(from), self.name(to));
         let answer = self.java_assignable(&f, &t)?;
-        self.assignable.insert((from, to), answer);
+        if self.assignable.len() < MAX_MEMO {
+            self.assignable.insert((from, to), answer);
+        }
         Ok(answer)
     }
 
@@ -148,10 +161,10 @@ impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
                 },
                 // Observed: any interface, where JVMS 4.10.1.2 lists two
                 // (tests/verify/good/ArrayAsAnyInterface).
-                (Some(_), None) => return Ok(self.hierarchy.info(to)?.is_interface),
+                (Some(_), None) => return Ok(self.info(to)?.is_interface),
                 (None, Some(_)) => return Ok(false),
                 (None, None) => {
-                    if self.hierarchy.info(to)?.is_interface {
+                    if self.info(to)?.is_interface {
                         return Ok(true);
                     }
                     return self.is_subclass(from, to);
@@ -163,16 +176,15 @@ impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
     /// Whether `sup` is `sub` or one of its superclasses.
     pub fn is_subclass(&mut self, sub: &str, sup: &str) -> VmResult<bool> {
         let mut cur: Arc<str> = sub.into();
-        for _ in 0..MAX_CHAIN {
+        loop {
             if &*cur == sup {
                 return Ok(true);
             }
-            match self.hierarchy.info(&cur)?.super_name {
+            match self.info(&cur)?.super_name {
                 Some(next) => cur = next,
                 None => return Ok(false),
             }
         }
-        Ok(false)
     }
 
     /// [`Types::is_subclass`], remembered: every member access asks this.
@@ -182,7 +194,9 @@ impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
             return Ok(known);
         }
         let answer = self.is_subclass(sub, sup)?;
-        self.superclass.insert(key, answer);
+        if self.superclass.len() < MAX_MEMO {
+            self.superclass.insert(key, answer);
+        }
         Ok(answer)
     }
 
