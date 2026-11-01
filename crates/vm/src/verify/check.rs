@@ -157,7 +157,7 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
             } else if self.dead {
                 return Err(self.bad("no stack map frame after an unconditional branch"));
             }
-            self.update_active(&order, &mut next_handler);
+            self.update_active(&order, &mut next_handler)?;
             self.check_handlers(&mut handler_seen)?;
             self.step()?;
             self.budget.charge(1 + self.types.take_slow())?;
@@ -204,20 +204,25 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
     /// Handlers whose range covers `pc` become `active`, and the others stop
     /// being looked at: a method of many small `try` blocks costs what they do,
     /// not their count on every instruction. `pc` only grows, and `order` is by start.
-    fn update_active(&mut self, order: &[u32], next: &mut usize) {
+    fn update_active(&mut self, order: &[u32], next: &mut usize) -> Result<(), Fail> {
         let handlers = &self.code.handlers;
+        let first_new = *next;
         while let Some(&i) = order.get(*next) {
             if usize::from(handlers[i as usize].start_pc) > self.pc {
                 break;
             }
-            // In table order, which decides the error when several would fail.
-            let at = self.active.partition_point(|&a| a < i);
-            self.active.insert(at, i);
+            self.active.push(i);
             *next += 1;
+        }
+        // In table order, which decides the error when several would fail.
+        if *next > first_new {
+            self.budget.charge(self.active.len())?;
+            self.active.sort_unstable();
         }
         let pc = self.pc;
         self.active
             .retain(|&i| usize::from(handlers[i as usize].end_pc) > pc);
+        Ok(())
     }
 
     /// JVMS 4.10.1.6 `instructionSatisfiesHandlers`, with the incoming locals:

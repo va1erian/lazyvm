@@ -62,9 +62,20 @@ impl Vm {
             return e;
         }
         match self.materialize(e) {
+            // Observed: one that already is this error passes through unwrapped.
+            Ok(cause) if self.is_bootstrap_error(cause) => VmError::Throw(cause),
             Ok(cause) => self.bootstrap_error("call site initialization exception", cause),
             Err(e) => e,
         }
+    }
+
+    fn is_bootstrap_error(&mut self, ex: crate::Ref) -> bool {
+        let Ok(class) = self.load_class("java/lang/BootstrapMethodError") else {
+            return false;
+        };
+        self.heap
+            .class_of(ex)
+            .is_ok_and(|c| self.is_subclass(c, class))
     }
 
     fn bootstrap_error(&mut self, msg: &str, cause: crate::Ref) -> VmError {

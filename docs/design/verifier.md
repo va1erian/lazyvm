@@ -92,6 +92,10 @@ except as marked. Each row has a test.
 | Bad names in the pool, such as `a//b` | format error | **LazyVM follows the JVMS**: the oracle fails later, at resolution | `bad/MemberRefBadClassName` |
 | A long reaching a frame's stack of `top`, `top` | allowed | **LazyVM refuses**, as does a frame of one `top`: it keeps one entry per value, like its interpreter, and no compiler declares `top` on a stack | `bad/LongIntoTwoTops` |
 
+On a retry after a lambda's interface failed to initialize, the `BootstrapMethodError`
+matches but its cause's message names the generated class, where the oracle names
+the interface. That name is LazyVM's own, so it is left as it is.
+
 Timing differs in one way: the oracle reports a malformed `StackMapTable` when the
 class loads and LazyVM when it links, which only a `Class.forName(name, false, ...)`
 that never initializes the class can see.

@@ -1,0 +1,6 @@
+nested:
+  java.lang.BootstrapMethodError: call site initialization exception
+  java.lang.ExceptionInInitializerError: null
+  java.lang.IllegalStateException: boom
+direct:
+  java.lang.BootstrapMethodError: x
