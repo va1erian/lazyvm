@@ -59,7 +59,8 @@ def command(test: testlib.Test) -> str:
     return command_line(test.main_class, test.args, test.vm_args)
 
 
-def run_commands(lazyos: Path, lines: list[str], timeout: int, no_build: bool, work: Path = WORK) -> Path:
+def run_commands(lazyos: Path, lines: list[str], timeout: int, no_build: bool, work: Path = WORK,
+                 net: bool = False) -> Path:
     """Boot LazyOS once over `lines` (staged by `stage`); the directory holding N.stdout, N.stderr
     and N.exit for command N. Exits when the run itself fails."""
     out = work / "out"
@@ -72,6 +73,8 @@ def run_commands(lazyos: Path, lines: list[str], timeout: int, no_build: bool, w
            "--image", str(work / "lazyos.img")]
     if no_build:
         run.append("--no-build")
+    if net:
+        run.append("--net")
     env = dict(os.environ, LAZYOS_LAZYVM_STAGE=str(work / "stage"))
     if subprocess.run(run, cwd=lazyos, env=env).returncode != 0:
         die("LazyOS run failed (see its output above)")
@@ -96,14 +99,17 @@ def main() -> None:
     parser.add_argument("--filter", nargs="*", help="substrings of test class names")
     parser.add_argument("--no-build", action="store_true", help="reuse the last image (same tests)")
     parser.add_argument("--timeout", type=int, default=120, help="seconds per test inside LazyOS")
+    parser.add_argument("--net", action="store_true",
+                        help="only the tests that need the network, on an image with netd and a card")
     args = parser.parse_args()
     if args.lazyos is None or not (args.lazyos / "tools" / "lazyvm" / "run.py").is_file():
         die("pass --lazyos <LazyOS checkout with tools/lazyvm/run.py> or set LAZYOS_DIR")
-    tests = [t for t in testlib.discover(args.filter) if t.golden.is_file()]
+    wanted = ("net", "lazyos-net") if args.net else ("",)
+    tests = [t for t in testlib.discover(args.filter) if t.golden.is_file() and t.needs in wanted]
     if not args.no_build:
         testlib.build(tests)
         stage(build_musl())
-    out = run_commands(args.lazyos, [command(t) for t in tests], args.timeout, args.no_build)
+    out = run_commands(args.lazyos, [command(t) for t in tests], args.timeout, args.no_build, net=args.net)
     failed = 0
     for n, test in enumerate(tests, start=1):
         actual = read_result(out, n)

@@ -45,7 +45,8 @@ def main() -> None:
     parser.add_argument("--jar", action="store_true",
                         help="run from tests.jar with lazyrt.jar as the boot path (S3-02)")
     args = parser.parse_args()
-    tests = testlib.discover(args.filter)
+    tests = [t for t in testlib.discover(args.filter) if t.needs != "lazyos-net"
+             and (t.needs != "windows" or sys.platform == "win32")]
     if not args.no_build:
         testlib.build(tests)
     classpath, boot = TESTS_CLASSES, LAZYRT_CLASSES
