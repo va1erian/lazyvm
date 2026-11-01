@@ -18,6 +18,8 @@ public final class System {
      * then they are the set the VM started with, and no table need be loaded.
      */
     private static volatile Properties props;
+    /** Not System.class: a program holding that must not stop property calls. */
+    private static final Object PROPS_LOCK = new Object();
 
     static {
         // Spec I1: stdin is a BufferedInputStream, so it supports mark and reset.
@@ -70,15 +72,19 @@ public final class System {
         return p != null ? p : firstProperties();
     }
 
-    private static synchronized Properties firstProperties() {
-        if (props == null) {
-            props = startingProperties();
+    private static Properties firstProperties() {
+        synchronized (PROPS_LOCK) {
+            if (props == null) {
+                props = startingProperties();
+            }
+            return props;
         }
-        return props;
     }
 
-    public static synchronized void setProperties(Properties p) {
-        props = p != null ? p : startingProperties();
+    public static void setProperties(Properties p) {
+        synchronized (PROPS_LOCK) {
+            props = p != null ? p : startingProperties();
+        }
     }
 
     private static Properties startingProperties() {

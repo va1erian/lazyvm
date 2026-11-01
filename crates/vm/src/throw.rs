@@ -13,7 +13,7 @@ use crate::{Vm, VmError, VmResult};
 const MAX_EXCEPTION_NESTING: u32 = 8;
 
 /// Observed on Java 8: a trace holds the innermost 1024 frames at most.
-pub(crate) const MAX_TRACE: usize = 1024;
+const MAX_TRACE: usize = 1024;
 /// Observed on Java 8: a trace of a VM-made `OutOfMemoryError` holds 32 at most.
 const OOM_TRACE: usize = 32;
 

@@ -377,14 +377,14 @@ public class Thread implements Runnable {
         return isAlive() ? stackTrace0() : new StackTraceElement[0];
     }
 
-    /** The trace of a thread other than the caller; empty if it has no entry in the VM. */
+    /** Every frame of this thread, as the VM sees it; empty if it has no entry there. */
     private native StackTraceElement[] stackTrace0();
 
     public static Map<Thread, StackTraceElement[]> getAllStackTraces() {
-        Thread me = currentThread();
+        currentThread();
         Map<Thread, StackTraceElement[]> traces = new HashMap<Thread, StackTraceElement[]>();
         for (Thread t : SYSTEM_GROUP.allThreads()) {
-            StackTraceElement[] trace = t == me ? new Exception().getStackTrace() : t.traceFromOutside();
+            StackTraceElement[] trace = t.traceFromOutside();
             if (t.isAlive()) {
                 traces.put(t, trace);
             }

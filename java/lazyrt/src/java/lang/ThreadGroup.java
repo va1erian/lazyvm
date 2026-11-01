@@ -62,7 +62,10 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
 
     private synchronized void addGroup(ThreadGroup g) {
         if (groupCount == groups.length) {
-            groups = java.util.Arrays.copyOf(groups, Math.max(4, groupCount * 2));
+            // Not Arrays: the first currentThread comes here, and need not load it.
+            ThreadGroup[] more = new ThreadGroup[Math.max(4, groupCount * 2)];
+            System.arraycopy(groups, 0, more, 0, groupCount);
+            groups = more;
         }
         groups[groupCount++] = g;
     }
@@ -117,9 +120,12 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         ThreadGroup[] subs;
         synchronized (this) {
             subs = subgroups();
+            Object[] own = wantThreads ? threads : groups;
             int n = Math.min(room, wantThreads ? threadCount : groupCount);
-            System.arraycopy(wantThreads ? threads : groups, 0, into, at, n);
-            at += n;
+            // One by one: a store into a narrower array type fails as the oracle's does.
+            for (int i = 0; i < n; i++) {
+                into[at++] = own[i];
+            }
         }
         if (recurse) {
             for (ThreadGroup g : subs) {

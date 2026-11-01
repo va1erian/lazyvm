@@ -114,6 +114,38 @@ public class StackTraces {
         s.join();
     }
 
+    /** Deep stacks: an exception's trace has a limit, and another thread's has not. */
+    static void deepStacks() throws InterruptedException {
+        Thread deep = new Thread("deep") {
+            @Override
+            public void run() {
+                sink(5000);
+            }
+
+            void sink(int n) {
+                if (n > 0) {
+                    sink(n - 1);
+                    return;
+                }
+                StackTraceElement[] own = getStackTrace();
+                System.out.println("deep own " + own.length);
+                try {
+                    Thread.sleep(600000);
+                } catch (InterruptedException e) {
+                    System.out.println("deep " + e.getMessage());
+                }
+            }
+        };
+        deep.start();
+        await(deep, Thread.State.TIMED_WAITING);
+        StackTraceElement[] trace = deep.getStackTrace();
+        System.out.println("deep seen " + trace.length + ", base " + trace[trace.length - 1].getMethodName());
+        StackTraceElement[] inAll = Thread.getAllStackTraces().get(deep);
+        System.out.println("deep in all " + inAll.length);
+        deep.interrupt();
+        deep.join();
+    }
+
     static StackTraceElement[] deeper(int n) {
         return n == 0 ? Thread.currentThread().getStackTrace() : deeper(n - 1);
     }
@@ -208,6 +240,7 @@ public class StackTraces {
         }
         blocker.join();
         blockedOnMethods();
+        deepStacks();
 
         ThreadGroup grouped = new ThreadGroup("grouped");
         CountDownLatch end = new CountDownLatch(1);

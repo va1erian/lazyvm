@@ -14,6 +14,7 @@ g1 own 2: a3 a1
 static 6: main a5 a3 a1 a2 a4
 small 3: main a5 a3
 zero 0
+narrow array java.lang.ArrayStoreException: java.lang.Thread
 untouched past the end true
 groups 6: top unused g1 g3 mid low
 own groups 4: top unused g1 g3

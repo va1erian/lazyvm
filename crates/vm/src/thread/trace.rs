@@ -5,34 +5,33 @@ use super::Blocked;
 use crate::Vm;
 use crate::class::{MethodRef, Resolved};
 use crate::interp::Frame;
-use crate::throw::{MAX_TRACE, TraceFrame};
+use crate::throw::TraceFrame;
 use crate::value::Ref;
 
 const MONITORENTER: u8 = 0xc2;
 
 impl Vm {
-    /// The frames of live thread `t`, innermost first; none if it has no entry.
+    /// The frames of live thread `t`, the caller included, innermost first
+    /// and all of them: only an exception's trace has a limit (observed). None
+    /// if it has no entry.
     pub fn thread_backtrace(&self, t: Ref) -> Vec<TraceFrame> {
         let entry = self.threads.find(t).and_then(|i| self.threads.get(i));
         let Some(entry) = entry else {
             return Vec::new();
         };
-        let Some(state) = &entry.state else {
-            return Vec::new();
-        };
+        let frames = entry.state.as_ref().map_or(&self.frames, |s| &s.frames);
         let mut out = Vec::new();
         // A native has no frame of its own, but a blocked thread's top frame
         // is still at the instruction that called it.
         if entry.blocked != Blocked::No {
-            let native = state.frames.last().and_then(|f| self.called_native(f));
+            let native = frames.last().and_then(|f| self.called_native(f));
             out.extend(native.map(|method| TraceFrame { method, pc: 0 }));
         }
-        let shown = out.len();
-        out.extend(self.trace_frames(state.frames.iter().rev(), MAX_TRACE - shown));
+        out.extend(self.trace_frames(frames.iter().rev(), usize::MAX));
         // Waiting to enter a monitor, the oracle's frame is already past the
         // `monitorenter`, which can be the line after it (observed).
         if entry.blocked == Blocked::Monitor
-            && state.frames.last().and_then(|f| f.u1(0).ok()) == Some(MONITORENTER)
+            && frames.last().and_then(|f| f.u1(0).ok()) == Some(MONITORENTER)
             && let Some(top) = out.first_mut()
         {
             top.pc += 1;

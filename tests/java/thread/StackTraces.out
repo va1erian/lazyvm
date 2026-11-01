@@ -1,14 +1,14 @@
 own (3)
   java.lang.Thread.getStackTrace
-  thread.StackTraces.ownTrace:122
-  thread.StackTraces.main:186
+  thread.StackTraces.ownTrace:154
+  thread.StackTraces.main:218
 own deeper (6)
   java.lang.Thread.getStackTrace
-  thread.StackTraces.deeper:118
-  thread.StackTraces.deeper:118
-  thread.StackTraces.deeper:118
-  thread.StackTraces.ownTrace:123
-  thread.StackTraces.main:186
+  thread.StackTraces.deeper:150
+  thread.StackTraces.deeper:150
+  thread.StackTraces.deeper:150
+  thread.StackTraces.ownTrace:155
+  thread.StackTraces.main:218
 unstarted (0)
 ended (0)
 unstarted in all false
@@ -17,9 +17,9 @@ main joining (5)
   java.lang.Object.wait native
   java.lang.Thread.join
   java.lang.Thread.join
-  thread.StackTraces.mainFromOutside:152
-  thread.StackTraces.main:188
-base thread.StackTraces$2.run
+  thread.StackTraces.mainFromOutside:184
+  thread.StackTraces.main:220
+base thread.StackTraces$3.run
 sleeping (3)
   java.lang.Thread.sleep native
   thread.StackTraces$Sleeper.nap:39
@@ -43,6 +43,10 @@ blocked on static (3)
   thread.StackTraces$MethodBlocker.run:84
   java.lang.Thread.run
 locked static
+deep own 1024
+deep seen 5003, base run
+deep in all 5003
+deep sleep interrupted
 map java.util.HashMap
 main in all true
 sleeper in all true

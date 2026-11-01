@@ -5,6 +5,10 @@ import java.util.concurrent.CountDownLatch;
 
 /** Who a ThreadGroup counts and lists, and in what order. */
 public class GroupCounts {
+    /** No thread is one, so listing into an array of them fails. */
+    static class Narrow extends Thread {
+    }
+
     static final CountDownLatch END = new CountDownLatch(1);
     static final Runnable WAIT = new Runnable() {
         @Override
@@ -85,6 +89,11 @@ public class GroupCounts {
         Thread[] small = new Thread[3];
         System.out.println("small " + names(small, main.enumerate(small)));
         System.out.println("zero " + main.enumerate(new Thread[0]));
+        try {
+            main.enumerate(new Narrow[4]);
+        } catch (ArrayStoreException e) {
+            System.out.println("narrow array " + e);
+        }
         Thread[] marked = new Thread[8];
         Arrays.fill(marked, Thread.currentThread());
         int n = g1.enumerate(marked);

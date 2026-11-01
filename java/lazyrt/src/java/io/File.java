@@ -20,7 +20,7 @@ public class File implements Serializable, Comparable<File> {
 
     public static final char separatorChar = SYNTAX.separator();
     public static final String separator = String.valueOf(separatorChar);
-    public static final char pathSeparatorChar = System.getProperty("path.separator").charAt(0);
+    public static final char pathSeparatorChar = lazy.internal.VM.getProperty("path.separator").charAt(0);
     public static final String pathSeparator = String.valueOf(pathSeparatorChar);
 
     private final String path;
