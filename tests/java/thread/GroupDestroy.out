@@ -1,0 +1,56 @@
+fresh: a destroyed=false parent=top active=0 groups=0 maxpri=10
+destroy: a destroyed=true parent=top active=0 groups=0 maxpri=10
+again: threw java.lang.IllegalThreadStateException
+top: top destroyed=false parent=main active=0 groups=0 maxpri=10
+top's list: 0
+new Thread: threw java.lang.IllegalThreadStateException
+new ThreadGroup: threw java.lang.IllegalThreadStateException
+null name: threw java.lang.NullPointerException: name cannot be null
+setMaxPriority: a destroyed=true parent=top active=0 groups=0 maxpri=3
+setDaemon: true
+enumerate: 0
+enumerate groups: 0
+parentOf: true true
+toString: java.lang.ThreadGroup[name=a,maxpri=3]
+interrupt: ok
+live thread: threw java.lang.IllegalThreadStateException
+still: b destroyed=false parent=top active=1 groups=0 maxpri=10
+thread ended: b destroyed=false parent=top active=0 groups=0 maxpri=10
+destroy now: b destroyed=true parent=top active=0 groups=0 maxpri=10
+busy parent: threw java.lang.IllegalThreadStateException
+its subgroup untouched: f1 destroyed=false parent=f active=0 groups=0 maxpri=10
+deep: d destroyed=true parent=top active=0 groups=0 maxpri=10 | d1 destroyed=true parent=d active=0 groups=0 maxpri=10 | d11 destroyed=true parent=d1 active=0 groups=0 maxpri=10
+child first: e destroyed=false parent=top active=0 groups=0 maxpri=10 | e1 destroyed=true parent=e active=0 groups=0 maxpri=10
+then parent: e destroyed=true parent=top active=0 groups=0 maxpri=10
+busy middle: threw java.lang.IllegalThreadStateException
+c: c destroyed=true parent=half active=0 groups=0 maxpri=10
+c1: c1 destroyed=true parent=c active=0 groups=0 maxpri=10
+c2: c2 destroyed=false parent=c active=1 groups=0 maxpri=10
+c3: c3 destroyed=false parent=c active=0 groups=0 maxpri=10
+top's count change: -3
+top sees its thread: 0
+c's ceiling stops at c: c destroyed=true parent=half active=0 groups=0 maxpri=2 | c3 destroyed=false parent=c active=0 groups=0 maxpri=10
+top's ceiling reaches c: c destroyed=true parent=half active=0 groups=0 maxpri=1 | c3 destroyed=false parent=c active=0 groups=0 maxpri=10
+c interrupts nobody: false
+destroy again: threw java.lang.IllegalThreadStateException
+c3 takes threads: c3
+c2 goes: c2 destroyed=true parent=c active=0 groups=0 maxpri=10 | c destroyed=true parent=half active=0 groups=0 maxpri=10
+c3 goes: c3 destroyed=true parent=c active=0 groups=0 maxpri=10 | c destroyed=true parent=half active=0 groups=0 maxpri=10
+top still lists c: -3
+not counted: u destroyed=false parent=top active=0 groups=0 maxpri=10
+no hold on destroy: u destroyed=true parent=top active=0 groups=0 maxpri=10
+its group: java.lang.ThreadGroup[name=u,maxpri=10]
+its toString: Thread[ut,5,u]
+setPriority: 7
+start: threw java.lang.IllegalThreadStateException
+after: NEW alive=false java.lang.ThreadGroup[name=u,maxpri=10]
+start again: threw java.lang.IllegalThreadStateException
+refused auto name: threw java.lang.IllegalThreadStateException
+names used 1
+refused: threw java.lang.IllegalThreadStateException
+ids used 0
+own group: threw java.lang.IllegalThreadStateException
+after: i destroyed=false parent=top active=0 groups=0 maxpri=10
+main group: threw java.lang.IllegalThreadStateException
+system group: threw java.lang.IllegalThreadStateException
+destroyed false false

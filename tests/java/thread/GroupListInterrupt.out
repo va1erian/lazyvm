@@ -1,0 +1,28 @@
+java.lang.ThreadGroup[name=n,maxpri=7]
+    Thread[a,5,n]
+    java.lang.ThreadGroup[name=n1,maxpri=7]
+        Thread[b,5,n1]
+        Thread[c,5,n1]
+        java.lang.ThreadGroup[name=deep,maxpri=7]
+            Thread[d,5,deep]
+    java.lang.ThreadGroup[name=n2,maxpri=7]
+java.lang.ThreadGroup[name=empty,maxpri=10]
+a hit true
+b hit true
+c hit true
+d hit true
+unstarted not hit true
+java.lang.ThreadGroup[name=n,maxpri=7]
+    java.lang.ThreadGroup[name=n1,maxpri=7]
+        java.lang.ThreadGroup[name=deep,maxpri=7]
+    java.lang.ThreadGroup[name=n2,maxpri=7]
+java.lang.ThreadGroup[name=n,maxpri=7]
+    java.lang.ThreadGroup[name=n2,maxpri=7]
+java.lang.ThreadGroup[name=gone,maxpri=10]
+custom group o
+    custom thread
+    custom sub
+interrupt override
+hit true
+caught: java.lang.ThreadGroup[name=caught,maxpri=10]
+interrupts its caller true

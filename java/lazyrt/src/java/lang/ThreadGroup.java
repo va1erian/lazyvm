@@ -15,9 +15,13 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
     /** Started threads that have not ended, oldest first. */
     private Thread[] threads = new Thread[4];
     private int threadCount;
-    /** Subgroups, oldest first. They stay for good: there is no destroy() yet (threads.md). */
+    /** Subgroups, oldest first. */
     private ThreadGroup[] groups = NO_GROUPS;
     private int groupCount;
+    /** Threads made here and not started: they hold a daemon group, but not against destroy (observed). */
+    private int unstarted;
+    /** Once set, both lists stay empty, so whatever reads them needs no check. */
+    private boolean destroyed;
 
     /** The root group, which has no parent. */
     ThreadGroup() {
@@ -41,16 +45,41 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         parent.addGroup(this);
     }
 
+    /** Called when a thread is made, and for good: a constructor that fails later still counts (observed). */
+    synchronized void addUnstarted() {
+        refuseIfDestroyed();
+        unstarted++;
+    }
+
     /** Called when a thread starts. */
     synchronized void add(Thread t) {
+        refuseIfDestroyed();
         if (threadCount == threads.length) {
             threads = java.util.Arrays.copyOf(threads, threadCount * 2);
         }
         threads[threadCount++] = t;
+        unstarted--;
     }
 
-    /** Called when a thread ends or fails to start; closes the gap to keep the order. */
-    synchronized void remove(Thread t) {
+    /** Called when a thread could not start: it is unstarted again, so the group stays. */
+    synchronized void startFailed(Thread t) {
+        take(t);
+        unstarted++;
+    }
+
+    /** Called when a thread ends. */
+    void remove(Thread t) {
+        synchronized (this) {
+            take(t);
+            if (!endIfIdleDaemon()) {
+                return;
+            }
+        }
+        parent.removeGroup(this);
+    }
+
+    /** Closes the gap to keep the order. */
+    private void take(Thread t) {
         for (int i = 0; i < threadCount; i++) {
             if (threads[i] == t) {
                 System.arraycopy(threads, i + 1, threads, i, threadCount - i - 1);
@@ -60,7 +89,79 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
         }
     }
 
+    private void refuseIfDestroyed() {
+        if (destroyed) {
+            throw new IllegalThreadStateException();
+        }
+    }
+
+    /**
+     * The oracle's system and main groups always hold a VM thread, even after main
+     * has returned, so they refuse destroy (observed); here nothing else would stop it.
+     */
+    private boolean holdsVmThreads() {
+        return parent == null || this == Thread.MAIN_GROUP;
+    }
+
+    /** Whether this group just ended; the caller then leaves the parent, outside this lock. */
+    private boolean endIfIdleDaemon() {
+        if (!daemon || threadCount > 0 || unstarted > 0 || groupCount > 0 || holdsVmThreads()) {
+            return false;
+        }
+        destroyed = true;
+        return true;
+    }
+
+    /**
+     * One lock at a time, so that destroy and a thread's end, going opposite ways
+     * through the tree, cannot deadlock. A group that fails on a busy subgroup stays
+     * destroyed and stays in its parent's list; the subgroups it has not reached
+     * live on, cut off from it (observed).
+     */
+    public final void destroy() {
+        ThreadGroup[] subs;
+        synchronized (this) {
+            refuseIfDestroyed();
+            if (threadCount > 0 || holdsVmThreads()) {
+                throw new IllegalThreadStateException();
+            }
+            subs = subgroups();
+            destroyed = true;
+            groups = NO_GROUPS;
+            groupCount = 0;
+        }
+        for (ThreadGroup g : subs) {
+            g.destroy();
+        }
+        parent.removeGroup(this);
+    }
+
+    public synchronized boolean isDestroyed() {
+        return destroyed;
+    }
+
+    private void removeGroup(ThreadGroup g) {
+        synchronized (this) {
+            // The list is already empty, and ending again would leave the parent's.
+            if (destroyed) {
+                return;
+            }
+            for (int i = 0; i < groupCount; i++) {
+                if (groups[i] == g) {
+                    System.arraycopy(groups, i + 1, groups, i, groupCount - i - 1);
+                    groups[--groupCount] = null;
+                    break;
+                }
+            }
+            if (!endIfIdleDaemon()) {
+                return;
+            }
+        }
+        parent.removeGroup(this);
+    }
+
     private synchronized void addGroup(ThreadGroup g) {
+        refuseIfDestroyed();
         if (groupCount == groups.length) {
             // Not Arrays: the first currentThread comes here, and need not load it.
             ThreadGroup[] more = new ThreadGroup[Math.max(4, groupCount * 2)];
@@ -150,6 +251,34 @@ public class ThreadGroup implements Thread.UncaughtExceptionHandler {
             n = enumerate(all);
         }
         return java.util.Arrays.copyOf(all, n);
+    }
+
+    public final void interrupt() {
+        for (Thread t : allThreads()) {
+            t.interrupt();
+        }
+    }
+
+    public void list() {
+        list("");
+    }
+
+    /** Takes copies, so that no subclass's toString or stream runs under this lock. */
+    private void list(String indent) {
+        Thread[] own;
+        ThreadGroup[] subs;
+        synchronized (this) {
+            own = java.util.Arrays.copyOf(threads, threadCount);
+            subs = subgroups();
+        }
+        System.out.println(indent + this);
+        String inner = indent + "    ";
+        for (Thread t : own) {
+            System.out.println(inner + t);
+        }
+        for (ThreadGroup g : subs) {
+            g.list(inner);
+        }
     }
 
     public final String getName() {
