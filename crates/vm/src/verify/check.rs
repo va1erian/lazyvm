@@ -37,15 +37,15 @@ pub(super) struct Checker<'a, 't, 'h, H: Hierarchy + ?Sized> {
     pub is_init: bool,
 }
 
-/// The flags of a member `class` declares. A lookup reads the name and
-/// descriptor, so that is what is charged.
+/// The flags of a member `class` declares. A lookup reads the class's name, the
+/// member's name and its descriptor, so that is what is charged.
 pub(super) fn declared_access<H: Hierarchy + ?Sized>(
     types: &mut Types<'_, H>,
     budget: &mut Budget,
     class: &str,
     (name, descriptor, method): (&str, &str, bool),
 ) -> Result<Option<u16>, Fail> {
-    budget.charge(name.len() + descriptor.len() + 1)?;
+    budget.charge(class.len() + name.len() + descriptor.len() + 1)?;
     Ok(types
         .hierarchy
         .member_access(class, name, descriptor, method)?)
@@ -61,6 +61,7 @@ pub(super) fn not_overriding_final<H: Hierarchy + ?Sized>(
     if m.access & (ACC_PRIVATE | ACC_STATIC) != 0 || m.name.starts_with('<') {
         return Ok(());
     }
+    budget.charge(cf.this_class.len())?;
     let boot = types.info(&cf.this_class)?.boot;
     let mut cur = cf.super_class.clone();
     while let Some(class) = cur {
@@ -209,7 +210,9 @@ impl<H: Hierarchy + ?Sized> Checker<'_, '_, '_, H> {
             if usize::from(handlers[i as usize].start_pc) > self.pc {
                 break;
             }
-            self.active.push(i);
+            // In table order, which decides the error when several would fail.
+            let at = self.active.partition_point(|&a| a < i);
+            self.active.insert(at, i);
             *next += 1;
         }
         let pc = self.pc;

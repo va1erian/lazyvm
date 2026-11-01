@@ -152,11 +152,11 @@ impl Vm {
         }
         // Only a class that failed is kept: code this initialization runs can
         // reach the same site, and must not get this half-initialized class.
+        self.lambda_failed.remove(&key);
         if let Err(e) = self.initialize(class) {
             self.lambda_failed.insert(key, class);
-            return Err(e);
+            return Err(self.wrap_link_failure(e));
         }
-        self.lambda_failed.remove(&key);
         // Initializing the interface can run code that links this same site;
         // the first link to finish wins, as in Java 8.
         if let Some(&m) = self.lambda_sites.get(&key) {

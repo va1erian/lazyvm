@@ -15,6 +15,7 @@ mod stackmap;
 pub mod structural;
 mod vtype;
 
+pub(crate) use link::MemberIndex;
 pub use link::VerifyMode;
 
 use std::sync::Arc;

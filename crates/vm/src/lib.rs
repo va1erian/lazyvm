@@ -102,8 +102,8 @@ pub struct Vm {
     /// Lambda classes of call sites that have not linked yet.
     pub(crate) lambda_failed: HashMap<(ClassId, u16, usize), ClassId>,
     /// The members of large classes, for the verifier: (name, descriptor, is a
-    /// method) to access flags.
-    pub(crate) member_index: HashMap<ClassId, HashMap<(String, String, bool), u16>>,
+    /// method) to access flags. The keys share the class's own strings.
+    pub(crate) member_index: HashMap<ClassId, verify::MemberIndex>,
     /// Numbers generated lambda class names.
     pub(crate) lambda_count: u64,
     /// System properties: values as UTF-16, so a path holds any Java string.

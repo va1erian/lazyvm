@@ -18,7 +18,8 @@ pub const THROWABLE: &str = "java/lang/Throwable";
 /// being kept: a hostile class could otherwise fill memory with pairs.
 const MAX_MEMO: usize = 1 << 20;
 /// What working out an unremembered assignment costs against the budget, in the
-/// budget's units: it reads names and walks classes where a known one compares two words.
+/// budget's units: it reads names and walks classes where a known one compares two
+/// words. Also how many name bytes make one more such unit.
 pub const SLOW_ASSIGNMENT: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -65,7 +66,8 @@ pub struct Types<'h, H: Hierarchy + ?Sized> {
     assignable: HashMap<(NameId, NameId), bool>,
     /// `(sub, sup)` pairs the protected check has already walked.
     superclass: HashMap<(NameId, NameId), bool>,
-    /// Assignments worked out since the last `take_slow`.
+    /// Assignments worked out and classes walked since the last `take_slow`,
+    /// long names counting for more.
     slow: usize,
 }
 
@@ -136,8 +138,8 @@ impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
         if let Some(&known) = self.assignable.get(&(from, to)) {
             return Ok(known);
         }
-        self.slow += 1;
         let (f, t) = (self.name(from), self.name(to));
+        self.slow += 1 + (f.len() + t.len()) / SLOW_ASSIGNMENT;
         let answer = self.java_assignable(&f, &t)?;
         if self.assignable.len() < MAX_MEMO {
             self.assignable.insert((from, to), answer);
@@ -180,6 +182,7 @@ impl<'h, H: Hierarchy + ?Sized> Types<'h, H> {
             if &*cur == sup {
                 return Ok(true);
             }
+            self.slow += 1 + cur.len() / SLOW_ASSIGNMENT;
             match self.info(&cur)?.super_name {
                 Some(next) => cur = next,
                 None => return Ok(false),

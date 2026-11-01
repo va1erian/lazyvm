@@ -4,14 +4,18 @@
 //! (JVMS 5.4.3; observed on the oracle: the same `VerifyError` each time).
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use super::{ClassInfo, Hierarchy, verify_class};
 use crate::class::ClassId;
 use crate::{Vm, VmResult};
 
+/// A large class's members: (name, descriptor, is a method) to access flags.
+pub(crate) type MemberIndex = std::collections::HashMap<(Arc<str>, Arc<str>, bool), u16>;
+
 /// Up to this many members a class is scanned, which also saves building an
 /// index for the small classes nearly all are.
-const LINEAR_MEMBERS: usize = 128;
+const LINEAR_MEMBERS: usize = 16;
 
 /// `-Xverify`: which classes are checked. `All` is the default.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -105,10 +109,10 @@ impl Hierarchy for Vm {
             methods
                 .chain(fields)
                 .rev()
-                .map(|(n, d, a, m)| ((n.to_string(), d.to_string(), m), a))
+                .map(|(n, d, a, m)| ((n.clone(), d.clone(), m), a))
                 .collect()
         });
-        let key = (name.to_string(), descriptor.to_string(), method);
+        let key = (Arc::from(name), Arc::from(descriptor), method);
         Ok(index.get(&key).copied())
     }
 }
