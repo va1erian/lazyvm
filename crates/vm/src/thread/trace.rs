@@ -11,6 +11,12 @@ use crate::value::Ref;
 const MONITORENTER: u8 = 0xc2;
 
 impl Vm {
+    /// Every thread the VM has a `java.lang.Thread` for, however far it has got.
+    pub fn live_threads(&self) -> Vec<Ref> {
+        let entries = self.threads.entries.iter().flatten();
+        entries.filter_map(|e| e.java).collect()
+    }
+
     /// The frames of live thread `t`, the caller included, innermost first
     /// and all of them: only an exception's trace has a limit (observed). None
     /// if it has no entry.
