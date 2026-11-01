@@ -33,6 +33,7 @@ from common import BUILD, DIST, LAZYRT_CLASSES, ROOT, cargo_build_launcher, die 
 
 SRC = ROOT / "bench"
 CLASSES = BUILD / "bench" / "classes"
+LAZYOS_WORK = BUILD / "bench" / "lazyos"  # its own stage: tests.jar there is the bench jar
 LINE = re.compile(r"^BENCH (\w+) checksum=(-?\d+) ns=(\d+)\r?$", re.M)
 DEFAULT_THRESHOLD = 10.0
 TIMEOUT = 600
@@ -82,10 +83,10 @@ def run_lazyos(lazyos: Path, jar: Path, names: dict[str, str], runs: int, scale:
     if not (lazyos / "tools" / "lazyvm" / "run.py").is_file():
         die(f"{lazyos} has no tools/lazyvm/run.py")
     if not no_build:
-        lazyos_test.stage(lazyos_test.build_musl(), jar)
+        lazyos_test.stage(lazyos_test.build_musl(), jar, LAZYOS_WORK)
     order = [(name, main) for _ in range(runs) for name, main in names.items()]
     lines = [lazyos_test.command_line(main, [str(scale)], []) for _, main in order]
-    out = lazyos_test.run_commands(lazyos, lines, TIMEOUT, no_build)
+    out = lazyos_test.run_commands(lazyos, lines, TIMEOUT, no_build, LAZYOS_WORK)
     samples: dict[str, list[tuple[int, int]]] = {n: [] for n in names}
     for n, (name, _) in enumerate(order, start=1):
         code = (out / f"{n}.exit").read_text().strip() if (out / f"{n}.exit").is_file() else "?"
@@ -162,8 +163,9 @@ def compare(base: dict, new: dict, threshold: float) -> tuple[list[str], list[st
 
 def cmd_compare(args: argparse.Namespace) -> None:
     base, new = (json.loads(p.read_text(encoding="utf-8")) for p in (args.base, args.new))
-    if base["scale"] != new["scale"]:
-        die("the two files ran at different scales")
+    for key in ("scale", "platform"):
+        if base[key] != new[key]:
+            die(f"the two files differ in {key}: {base[key]!r} and {new[key]!r}")
     lines, failures = compare(base, new, args.threshold)
     print("\n".join(lines))
     for failure in failures:

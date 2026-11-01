@@ -8,7 +8,7 @@ public final class CaseMap {
     }
 
     public static void main(String[] args) {
-        int rounds = 1000 * Report.scale(args);
+        int rounds = 8000 * Report.scale(args);
         String[] words = {"Stone Pickaxe", "iron ore", "OAK PLANKS", "health: 10/10", "score", "Lava Bucket", "x", "MiXeD cAsE 123"};
         long start = System.nanoTime();
         long sum = 0;
