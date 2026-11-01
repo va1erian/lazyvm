@@ -136,7 +136,7 @@ decision marked **(proposed)** is not in force until the owner confirms it.
 | `java.net` | S15 (`file:`/`jar:` URLs in S5) | `InetAddress` (DNS through the platform), `Socket`, `ServerSocket`, `DatagramSocket`, `URI`, `URL`, `URLEncoder`/`URLDecoder`, `HttpURLConnection` (`http`, and `https` through rustls) |
 | `java.nio.channels` | S15 | `SocketChannel`, `ServerSocketChannel`, `Selector` (non-blocking), `AsynchronousSocketChannel` bridged onto the reactor |
 | `java.util.stream` | S11 | Sequential streams in full; `parallel()` accepted and run sequentially |
-| `java.time` | S11 | `Instant`, `Duration`, `LocalDate`, `LocalTime`, `LocalDateTime`, `ZoneOffset`, `DateTimeFormatter` (ISO and pattern); no zone database at first |
+| `java.time` | S11 | Only what the Minicraft port calls: `LocalDateTime` (`now()` in UTC, `of`, `parse`, `toString`, `format`, getters), `Month`, `DateTimeFormatter.ofPattern` with the letters `y u M d H m s S` and the single letters `a` (AM/PM) and `A` (milli of day), and the supporting `TemporalAccessor`, `TemporalField`, `ChronoField`, exceptions. The rest (`Instant`, `Duration`, `LocalDate`, `LocalTime`, zones, clocks, text letters, parsing with patterns) waits until a real app needs it (`docs/design/time.md`) |
 | `java.util.logging` | S11 | `Logger`, `Level`, `ConsoleHandler` |
 | `java.awt` on xui | S12 (explore) | Drawing, images, events, containers and layouts with no native peers; see plan-2 S12 |
 | Swing and media | S13 (explore) | A `javax.swing` subset with one look and feel, `javax.imageio` (PNG, JPEG, BMP) and `javax.sound.sampled`; see plan-2 S13 |

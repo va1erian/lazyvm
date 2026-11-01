@@ -1,0 +1,109 @@
+round trip 2020-01-02T03:04: true
+round trip 2020-01-02T03:04:05: true
+round trip 2020-01-02T03:04:05.120: true
+round trip 2020-01-02T03:04:05.123456: true
+round trip 2020-01-02T03:04:05.123456789: true
+round trip 2020-01-02T03:04:00.000000007: true
+round trip 0000-01-01T00:00: true
+round trip -0005-12-31T23:59:59: true
+round trip +10000-01-01T00:00: true
+round trip -10000-06-06T06:06: true
+round trip +999999999-12-31T23:59:59.999999999: true
+round trip -999999999-01-01T00:00: true
+round trip 2020-02-29T12:00: true
+round trip 1900-02-28T12:00: true
+round trip 2000-02-29T12:00: true
+<2020-01-02T03:04>: 2020-01-02T03:04
+<2020-01-02T03:04:05>: 2020-01-02T03:04:05
+<2020-01-02T03:04:05.>: 2020-01-02T03:04:05
+<2020-01-02T03:04:05.1>: 2020-01-02T03:04:05.100
+<2020-01-02T03:04:05.123456789>: 2020-01-02T03:04:05.123456789
+<2020-01-02t03:04>: 2020-01-02T03:04
+<2020-01-02T00:00>: 2020-01-02T00:00
+<2020-01-02T23:59:59.999999999>: 2020-01-02T23:59:59.999999999
+<+12345-01-02T03:04>: +12345-01-02T03:04
+<-12345-01-02T03:04>: -12345-01-02T03:04
+<-0001-01-02T03:04>: -0001-01-02T03:04
+<+02020-01-02T03:04>: 2020-01-02T03:04
+<0000-01-01T00:00>: 0000-01-01T00:00
+<2020-02-29T00:00>: 2020-02-29T00:00
+<2000-02-29T00:00>: 2000-02-29T00:00
+<-0004-02-29T00:00>: -0004-02-29T00:00
+<0000-02-29T00:00>: 0000-02-29T00:00
+<+999999999-12-31T23:59:59>: +999999999-12-31T23:59:59
+<-999999999-01-01T00:00>: -999999999-01-01T00:00
+<2020-12-31T23:59:60>: Text '2020-12-31T23:59:60' could not be parsed: Invalid value for SecondOfMinute (valid values 0 - 59): 60 |idx=0 parsed=2020-12-31T23:59:60 cause=java.time.DateTimeException
+<>: Text '' could not be parsed at index 0 |idx=0 parsed= cause=null
+<x>: Text 'x' could not be parsed at index 0 |idx=0 parsed=x cause=null
+<2020>: Text '2020' could not be parsed at index 4 |idx=4 parsed=2020 cause=null
+<2020-01>: Text '2020-01' could not be parsed at index 7 |idx=7 parsed=2020-01 cause=null
+<2020-01-02>: Text '2020-01-02' could not be parsed at index 10 |idx=10 parsed=2020-01-02 cause=null
+<2020-01-02T>: Text '2020-01-02T' could not be parsed at index 11 |idx=11 parsed=2020-01-02T cause=null
+<2020-01-02T03>: Text '2020-01-02T03' could not be parsed at index 13 |idx=13 parsed=2020-01-02T03 cause=null
+<2020-01-02T03:>: Text '2020-01-02T03:' could not be parsed at index 14 |idx=14 parsed=2020-01-02T03: cause=null
+<2020-01-02T3:04>: Text '2020-01-02T3:04' could not be parsed at index 11 |idx=11 parsed=2020-01-02T3:04 cause=null
+<2020-01-02T03:4>: Text '2020-01-02T03:4' could not be parsed at index 14 |idx=14 parsed=2020-01-02T03:4 cause=null
+<2020-1-02T03:04>: Text '2020-1-02T03:04' could not be parsed at index 5 |idx=5 parsed=2020-1-02T03:04 cause=null
+<2020-01-2T03:04>: Text '2020-01-2T03:04' could not be parsed at index 8 |idx=8 parsed=2020-01-2T03:04 cause=null
+<2020-01-02 03:04>: Text '2020-01-02 03:04' could not be parsed at index 10 |idx=10 parsed=2020-01-02 03:04 cause=null
+<2020/01/02T03:04>: Text '2020/01/02T03:04' could not be parsed at index 4 |idx=4 parsed=2020/01/02T03:04 cause=null
+<20200102T0304>: Text '20200102T0304' could not be parsed at index 0 |idx=0 parsed=20200102T0304 cause=null
+<2020-01-02T03:04:5>: Text '2020-01-02T03:04:5' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04:5 cause=null
+<2020-01-02T03:04:05.1234567890>: Text '2020-01-02T03:04:05.1234567890' could not be parsed, unparsed text found at index 29 |idx=29 parsed=2020-01-02T03:04:05.1234567890 cause=null
+<2020-01-02T03:04:05.x>: Text '2020-01-02T03:04:05.x' could not be parsed, unparsed text found at index 20 |idx=20 parsed=2020-01-02T03:04:05.x cause=null
+<2020-01-02T03:04:>: Text '2020-01-02T03:04:' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04: cause=null
+<2020-01-02T03.04>: Text '2020-01-02T03.04' could not be parsed at index 13 |idx=13 parsed=2020-01-02T03.04 cause=null
+< 2020-01-02T03:04>: Text ' 2020-01-02T03:04' could not be parsed at index 0 |idx=0 parsed= 2020-01-02T03:04 cause=null
+<-0000-01-01T00:00>: Text '-0000-01-01T00:00' could not be parsed at index 0 |idx=0 parsed=-0000-01-01T00:00 cause=null
+<+0000-01-01T00:00>: Text '+0000-01-01T00:00' could not be parsed at index 0 |idx=0 parsed=+0000-01-01T00:00 cause=null
+<+2020-01-01T00:00>: Text '+2020-01-01T00:00' could not be parsed at index 0 |idx=0 parsed=+2020-01-01T00:00 cause=null
+<12345-01-01T00:00>: Text '12345-01-01T00:00' could not be parsed at index 0 |idx=0 parsed=12345-01-01T00:00 cause=null
+<+123-01-01T00:00>: Text '+123-01-01T00:00' could not be parsed at index 1 |idx=1 parsed=+123-01-01T00:00 cause=null
+<-1-01-01T00:00>: Text '-1-01-01T00:00' could not be parsed at index 1 |idx=1 parsed=-1-01-01T00:00 cause=null
+<+1000000000-01-01T00:00>: Text '+1000000000-01-01T00:00' could not be parsed: Invalid value for Year (valid values -999999999 - 999999999): 1000000000 |idx=0 parsed=+1000000000-01-01T00:00 cause=java.time.DateTimeException
+<-9999999999-01-01T00:00>: Text '-9999999999-01-01T00:00' could not be parsed: Invalid value for Year (valid values -999999999 - 999999999): -9999999999 |idx=0 parsed=-9999999999-01-01T00:00 cause=java.time.DateTimeException
+<+99999999999-01-01T00:00>: Text '+99999999999-01-01T00:00' could not be parsed at index 11 |idx=11 parsed=+99999999999-01-01T00:00 cause=null
+<٢020-01-02T03:04>: Text '٢020-01-02T03:04' could not be parsed at index 0 |idx=0 parsed=٢020-01-02T03:04 cause=null
+<2020-01-02T03:04:05.١>: Text '2020-01-02T03:04:05.١' could not be parsed, unparsed text found at index 20 |idx=20 parsed=2020-01-02T03:04:05.١ cause=null
+<2020-01-02T03:04Z>: Text '2020-01-02T03:04Z' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04Z cause=null
+<2020-01-02T03:04+01:00>: Text '2020-01-02T03:04+01:00' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04+01:00 cause=null
+<2020-01-02T03:04:05Z>: Text '2020-01-02T03:04:05Z' could not be parsed, unparsed text found at index 19 |idx=19 parsed=2020-01-02T03:04:05Z cause=null
+<2020-01-02T03:04[UTC]>: Text '2020-01-02T03:04[UTC]' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04[UTC] cause=null
+<2020-01-02T03:04 >: Text '2020-01-02T03:04 ' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04  cause=null
+<2020-01-02T03:04:05.123x>: Text '2020-01-02T03:04:05.123x' could not be parsed, unparsed text found at index 23 |idx=23 parsed=2020-01-02T03:04:05.123x cause=null
+<2020-01-02T03:04:05.123456789123>: Text '2020-01-02T03:04:05.123456789123' could not be parsed, unparsed text found at index 29 |idx=29 parsed=2020-01-02T03:04:05.123456789123 cause=null
+<2020-01-02T03:04:05..>: Text '2020-01-02T03:04:05..' could not be parsed, unparsed text found at index 20 |idx=20 parsed=2020-01-02T03:04:05.. cause=null
+<2020-01-02T03:04:05:06>: Text '2020-01-02T03:04:05:06' could not be parsed, unparsed text found at index 19 |idx=19 parsed=2020-01-02T03:04:05:06 cause=null
+<2020-13-01T00:00>: Text '2020-13-01T00:00' could not be parsed: Invalid value for MonthOfYear (valid values 1 - 12): 13 |idx=0 parsed=2020-13-01T00:00 cause=java.time.DateTimeException
+<2020-00-01T00:00>: Text '2020-00-01T00:00' could not be parsed: Invalid value for MonthOfYear (valid values 1 - 12): 0 |idx=0 parsed=2020-00-01T00:00 cause=java.time.DateTimeException
+<2020-01-32T00:00>: Text '2020-01-32T00:00' could not be parsed: Invalid value for DayOfMonth (valid values 1 - 28/31): 32 |idx=0 parsed=2020-01-32T00:00 cause=java.time.DateTimeException
+<2020-01-00T00:00>: Text '2020-01-00T00:00' could not be parsed: Invalid value for DayOfMonth (valid values 1 - 28/31): 0 |idx=0 parsed=2020-01-00T00:00 cause=java.time.DateTimeException
+<2020-02-30T00:00>: Text '2020-02-30T00:00' could not be parsed: Invalid date 'FEBRUARY 30' |idx=0 parsed=2020-02-30T00:00 cause=java.time.DateTimeException
+<2021-02-29T00:00>: Text '2021-02-29T00:00' could not be parsed: Invalid date 'February 29' as '2021' is not a leap year |idx=0 parsed=2021-02-29T00:00 cause=java.time.DateTimeException
+<1900-02-29T00:00>: Text '1900-02-29T00:00' could not be parsed: Invalid date 'February 29' as '1900' is not a leap year |idx=0 parsed=1900-02-29T00:00 cause=java.time.DateTimeException
+<2020-04-31T00:00>: Text '2020-04-31T00:00' could not be parsed: Invalid date 'APRIL 31' |idx=0 parsed=2020-04-31T00:00 cause=java.time.DateTimeException
+<2020-06-31T00:00>: Text '2020-06-31T00:00' could not be parsed: Invalid date 'JUNE 31' |idx=0 parsed=2020-06-31T00:00 cause=java.time.DateTimeException
+<2020-09-31T00:00>: Text '2020-09-31T00:00' could not be parsed: Invalid date 'SEPTEMBER 31' |idx=0 parsed=2020-09-31T00:00 cause=java.time.DateTimeException
+<2020-11-31T00:00>: Text '2020-11-31T00:00' could not be parsed: Invalid date 'NOVEMBER 31' |idx=0 parsed=2020-11-31T00:00 cause=java.time.DateTimeException
+<2020-01-02T25:00>: Text '2020-01-02T25:00' could not be parsed: Invalid value for HourOfDay (valid values 0 - 23): 25 |idx=0 parsed=2020-01-02T25:00 cause=java.time.DateTimeException
+<2020-01-02T24:00>: Text '2020-01-02T24:00' could not be parsed: Invalid value for HourOfDay (valid values 0 - 23): 24 |idx=0 parsed=2020-01-02T24:00 cause=java.time.DateTimeException
+<2020-01-02T24:00:00>: Text '2020-01-02T24:00:00' could not be parsed: Invalid value for HourOfDay (valid values 0 - 23): 24 |idx=0 parsed=2020-01-02T24:00:00 cause=java.time.DateTimeException
+<2020-01-02T24:01>: Text '2020-01-02T24:01' could not be parsed: Invalid value for HourOfDay (valid values 0 - 23): 24 |idx=0 parsed=2020-01-02T24:01 cause=java.time.DateTimeException
+<2020-01-02T03:60>: Text '2020-01-02T03:60' could not be parsed: Invalid value for MinuteOfHour (valid values 0 - 59): 60 |idx=0 parsed=2020-01-02T03:60 cause=java.time.DateTimeException
+<2020-01-02T03:04:61>: Text '2020-01-02T03:04:61' could not be parsed: Invalid value for SecondOfMinute (valid values 0 - 59): 61 |idx=0 parsed=2020-01-02T03:04:61 cause=java.time.DateTimeException
+<2020-01-02T03:04:60>: Text '2020-01-02T03:04:60' could not be parsed: Invalid value for SecondOfMinute (valid values 0 - 59): 60 |idx=0 parsed=2020-01-02T03:04:60 cause=java.time.DateTimeException
+<2020-01-02T99:99>: Text '2020-01-02T99:99' could not be parsed: Invalid value for MinuteOfHour (valid values 0 - 59): 99 |idx=0 parsed=2020-01-02T99:99 cause=java.time.DateTimeException
+<+1000000000-01-01T00:00>: Text '+1000000000-01-01T00:00' could not be parsed: Invalid value for Year (valid values -999999999 - 999999999): 1000000000 |idx=0 parsed=+1000000000-01-01T00:00 cause=java.time.DateTimeException
+<-1000000000-01-01T00:00>: Text '-1000000000-01-01T00:00' could not be parsed: Invalid value for Year (valid values -999999999 - 999999999): -1000000000 |idx=0 parsed=-1000000000-01-01T00:00 cause=java.time.DateTimeException
+<+1000000000-13-01T00:00>: Text '+1000000000-13-01T00:00' could not be parsed: Invalid value for Year (valid values -999999999 - 999999999): 1000000000 |idx=0 parsed=+1000000000-13-01T00:00 cause=java.time.DateTimeException
+<2020-13-99T99:99>: Text '2020-13-99T99:99' could not be parsed: Invalid value for MonthOfYear (valid values 1 - 12): 13 |idx=0 parsed=2020-13-99T99:99 cause=java.time.DateTimeException
+<2020-01-02T99:00:99>: Text '2020-01-02T99:00:99' could not be parsed: Invalid value for HourOfDay (valid values 0 - 23): 99 |idx=0 parsed=2020-01-02T99:00:99 cause=java.time.DateTimeException
+<2020-01-02T00:99:99>: Text '2020-01-02T00:99:99' could not be parsed: Invalid value for MinuteOfHour (valid values 0 - 59): 99 |idx=0 parsed=2020-01-02T00:99:99 cause=java.time.DateTimeException
+<2020-01-02T03:04:99>: Text '2020-01-02T03:04:99' could not be parsed: Invalid value for SecondOfMinute (valid values 0 - 59): 99 |idx=0 parsed=2020-01-02T03:04:99 cause=java.time.DateTimeException
+StringBuilder: 2020-01-02T03:04
+StringBuffer: 2020-01-02T03:04:05
+null: java.lang.NullPointerException: text
+<2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>: Text '2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx cause=null
+<2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>: Text '2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx cause=null
+<2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>: Text '2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx cause=null
+<2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>: Text '2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...' could not be parsed, unparsed text found at index 16 |idx=16 parsed=2020-01-02T03:04xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx cause=null

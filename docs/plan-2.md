@@ -42,9 +42,10 @@ never a panic.
 - [ ] S11-01 `java.util.stream`: all stream types and collectors, sequential
       only (`parallel()` is accepted and ignored).
       Check: `tests/java/stream/*`.
-- [ ] S11-02 `java.time` subset ([`decisions.md`](decisions.md) D6) and the
-      `%t` conversions of `Formatter`.
-      Check: `tests/java/time/*` (fixed clocks only).
+- [x] S11-02 minimal `java.time` for Minicraft (`LocalDateTime`, `Month`,
+      `DateTimeFormatter.ofPattern` with the letters `y u M d H m s S a A`; [`decisions.md`](decisions.md) D6,
+      `docs/design/time.md`) and the `%t` conversions of `Formatter`.
+      Check: `tests/java/time/*` (`now()` only in a test whose output does not depend on the clock).
 - [ ] S11-03 `java.util.logging` minimal.
       Check: `tests/java/util/Logging`.
 - [ ] S11-04 JDWP over a socket (`-agentlib:jdwp=transport=dt_socket,…`):

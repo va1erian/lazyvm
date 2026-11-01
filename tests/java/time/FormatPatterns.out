@@ -1,0 +1,227 @@
+game: 2020-01-05_03.04.05
+game 2: 1999-12-31_23.59.59
+y [2020][5][6][12345]
+yy [20][05][06][45]
+yyy [2020][005][006][12345]
+yyyy [2020][0005][0006][+12345]
+yyyyy [02020][00005][00006][12345]
+yyyyyy [002020][000005][000006][012345]
+yyyyyyyyyy [0000002020][0000000005][0000000006][0000012345]
+u [2020][5][-5][12345]
+uu [20][05][05][45]
+uuu [2020][005][-005][12345]
+uuuu [2020][0005][-0005][+12345]
+uuuuu [02020][00005][-00005][12345]
+uuuuuu [002020][000005][-000005][012345]
+M [1][12][7][2]
+MM [01][12][07][02]
+d [5][25][31][28]
+dd [05][25][31][28]
+H [3][15][0][12]
+HH [03][15][00][12]
+m [4][0][0][30]
+mm [04][00][00][30]
+s [5][0][59][59]
+ss [05][00][59][59]
+S [0][0][1][9]
+SS [00][00][12][99]
+SSS [006][000][120][999]
+SSSS [0067][0000][1200][9999]
+SSSSSS [006789][000000][120000][999999]
+SSSSSSSSS [006789000][000000000][120000000][999999999]
+yyyyMMdd [20200105][00051225][00060731][+123450228]
+HHmmss [030405][150000][000059][123059]
+Hmm [304][1500][000][1230]
+y y [2020 2020][5 5][6 6][12345 12345]
+d/M/u [5/1/2020][25/12/5][31/7/-5][28/2/12345]
+uuuu-MM-dd'T'HH:mm:ss.SSS [2020-01-05T03:04:05.006][0005-12-25T15:00:00.000][-0005-07-31T00:00:59.120][+12345-02-28T12:30:59.999]
+yyyy-MM-dd HH:mm:ss.SSSSSSSSS [2020-01-05 03:04:05.006789000][0005-12-25 15:00:00.000000000][0006-07-31 00:00:59.120000000][+12345-02-28 12:30:59.999999999]
+year 123456 y: 123456
+year 123456 yy: 56
+year 123456 yyy: 123456
+year 123456 yyyy: +123456
+year 123456 yyyyy: +123456
+year 123456 yyyyyy: 123456
+year 123456 u: 123456
+year 123456 uu: 56
+year 123456 uuu: 123456
+year 123456 uuuu: +123456
+year 123456 uuuuu: +123456
+year 123456 uuuuuu: 123456
+year 99999 y: 99999
+year 99999 yy: 99
+year 99999 yyy: 99999
+year 99999 yyyy: +99999
+year 99999 yyyyy: 99999
+year 99999 yyyyyy: 099999
+year 99999 u: 99999
+year 99999 uu: 99
+year 99999 uuu: 99999
+year 99999 uuuu: +99999
+year 99999 uuuuu: 99999
+year 99999 uuuuuu: 099999
+year -99999 y: 100000
+year -99999 yy: 00
+year -99999 yyy: 100000
+year -99999 yyyy: +100000
+year -99999 yyyyy: +100000
+year -99999 yyyyyy: 100000
+year -99999 u: -99999
+year -99999 uu: 99
+year -99999 uuu: -99999
+year -99999 uuuu: -99999
+year -99999 uuuuu: -99999
+year -99999 uuuuuu: -099999
+year 10000 y: 10000
+year 10000 yy: 00
+year 10000 yyy: 10000
+year 10000 yyyy: +10000
+year 10000 yyyyy: 10000
+year 10000 yyyyyy: 010000
+year 10000 u: 10000
+year 10000 uu: 00
+year 10000 uuu: 10000
+year 10000 uuuu: +10000
+year 10000 uuuuu: 10000
+year 10000 uuuuuu: 010000
+year 9999 y: 9999
+year 9999 yy: 99
+year 9999 yyy: 9999
+year 9999 yyyy: 9999
+year 9999 yyyyy: 09999
+year 9999 yyyyyy: 009999
+year 9999 u: 9999
+year 9999 uu: 99
+year 9999 uuu: 9999
+year 9999 uuuu: 9999
+year 9999 uuuuu: 09999
+year 9999 uuuuuu: 009999
+year 0 y: 1
+year 0 yy: 01
+year 0 yyy: 001
+year 0 yyyy: 0001
+year 0 yyyyy: 00001
+year 0 yyyyyy: 000001
+year 0 u: 0
+year 0 uu: 00
+year 0 uuu: 000
+year 0 uuuu: 0000
+year 0 uuuuu: 00000
+year 0 uuuuuu: 000000
+year -1 y: 2
+year -1 yy: 02
+year -1 yyy: 002
+year -1 yyyy: 0002
+year -1 yyyyy: 00002
+year -1 yyyyyy: 000002
+year -1 u: -1
+year -1 uu: 01
+year -1 uuu: -001
+year -1 uuuu: -0001
+year -1 uuuuu: -00001
+year -1 uuuuuu: -000001
+year 1 y: 1
+year 1 yy: 01
+year 1 yyy: 001
+year 1 yyyy: 0001
+year 1 yyyyy: 00001
+year 1 yyyyyy: 000001
+year 1 u: 1
+year 1 uu: 01
+year 1 uuu: 001
+year 1 uuuu: 0001
+year 1 uuuuu: 00001
+year 1 uuuuuu: 000001
+year 999999999 y: 999999999
+year 999999999 yy: 99
+year 999999999 yyy: 999999999
+year 999999999 yyyy: +999999999
+year 999999999 yyyyy: +999999999
+year 999999999 yyyyyy: +999999999
+year 999999999 u: 999999999
+year 999999999 uu: 99
+year 999999999 uuu: 999999999
+year 999999999 uuuu: +999999999
+year 999999999 uuuuu: +999999999
+year 999999999 uuuuuu: +999999999
+year -999999999 y: 1000000000
+year -999999999 yy: 00
+year -999999999 yyy: 1000000000
+year -999999999 yyyy: +1000000000
+year -999999999 yyyyy: +1000000000
+year -999999999 yyyyyy: +1000000000
+year -999999999 u: -999999999
+year -999999999 uu: 99
+year -999999999 uuu: -999999999
+year -999999999 uuuu: -999999999
+year -999999999 uuuuu: -999999999
+year -999999999 uuuuuu: -999999999
+10 y: 0000002020
+19 y: 0000000000000002020
+19 u: -0000000000000000005
+20 y: java.lang.IllegalArgumentException: The minimum width must be from 1 to 19 inclusive but was 20
+20 u: java.lang.IllegalArgumentException: The minimum width must be from 1 to 19 inclusive but was 20
+26 y: java.lang.IllegalArgumentException: The minimum width must be from 1 to 19 inclusive but was 26
+'''' ['][']['][']
+'''''' ['']['']['']['']
+'''a' ['a]['a]['a]['a]
+'a''' [a'][a'][a'][a']
+a'' [AM'][PM'][AM'][PM']
+''a ['AM]['PM]['AM]['PM]
+'a''b''c' [a'b'c][a'b'c][a'b'c][a'b'c]
+'' ['][']['][']
+'abc' [abc][abc][abc][abc]
+'HH' [HH][HH][HH][HH]
+H'H'H [3H3][15H15][0H0][12H12]
+yyyy'-'MM [2020-01][0005-12][0006-07][+12345-02]
+-.: / [-.: /][-.: /][-.: /][-.: /]
+'T' [T][T][T][T]
+' [[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: '][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: '][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: '][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: ']
+'abc [[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: 'abc][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: 'abc][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: 'abc][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: 'abc]
+''' [[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: '''][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: '''][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: '''][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: ''']
+A' [[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: A'][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: A'][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: A'][[java.lang.IllegalArgumentException: Pattern ends with an incomplete string literal: A']
+empty: []
+ofPattern ddd: java.lang.IllegalArgumentException: Too many pattern letters: d
+ofPattern HHH: java.lang.IllegalArgumentException: Too many pattern letters: H
+ofPattern mmm: java.lang.IllegalArgumentException: Too many pattern letters: m
+ofPattern sss: java.lang.IllegalArgumentException: Too many pattern letters: s
+ofPattern SSSSSSSSSS: java.lang.IllegalArgumentException: Minimum width must be from 0 to 9 inclusive but was 10
+ofPattern aa: java.lang.IllegalArgumentException: Too many pattern letters: a
+ofPattern aaa: java.lang.IllegalArgumentException: Too many pattern letters: a
+ofPattern g: java.lang.IllegalArgumentException: Unknown pattern letter: g
+ofPattern i: java.lang.IllegalArgumentException: Unknown pattern letter: i
+ofPattern j: java.lang.IllegalArgumentException: Unknown pattern letter: j
+ofPattern {: java.lang.IllegalArgumentException: Pattern includes reserved character: '{'
+ofPattern }: java.lang.IllegalArgumentException: Pattern includes reserved character: '}'
+ofPattern #: java.lang.IllegalArgumentException: Pattern includes reserved character: '#'
+ofPattern yyyy-MM-dd{: java.lang.IllegalArgumentException: Pattern includes reserved character: '{'
+ofPattern yyyy#: java.lang.IllegalArgumentException: Pattern includes reserved character: '#'
+ofPattern ]: java.lang.IllegalArgumentException: Pattern invalid as it contains ] without previous [
+ofPattern yyyy]: java.lang.IllegalArgumentException: Pattern invalid as it contains ] without previous [
+ofPattern y]y: java.lang.IllegalArgumentException: Pattern invalid as it contains ] without previous [
+ofPattern null: java.lang.NullPointerException: pattern
+format null: java.lang.NullPointerException: temporal
+format cannot give yyyy: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: YearOfEra
+format cannot give uuuu: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: Year
+format cannot give MM: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: MonthOfYear
+format cannot give dd: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: DayOfMonth
+format cannot give HH: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: HourOfDay
+format cannot give mm: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: MinuteOfHour
+format cannot give ss: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: SecondOfMinute
+format cannot give SSS: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: NanoOfSecond
+format cannot give, later letter: java.time.temporal.UnsupportedTemporalTypeException: Unsupported field: HourOfDay
+format isSupported is not consulted: 2020
+format supported: 2020
+format value 5: 0005-05-05 05:05:05.000
+format getLong throws: java.time.DateTimeException: custom
+format wide value: java.time.DateTimeException: Field MonthOfYear cannot be printed as the value 123 exceeds the maximum print width of 2
+format negative value: java.time.DateTimeException: Field HourOfDay cannot be printed as the value -5 cannot be negative according to the SignStyle
+format wide d: java.time.DateTimeException: Field DayOfMonth cannot be printed as the value 1234 exceeds the maximum print width of 2
+format wide S: 999
+format negative S: java.time.DateTimeException: Invalid value for NanoOfSecond (valid values 0 - 999999999): -1
+format S truncates: 9 98 987
+format S zero: 000000005
+format Month 12: 12 12
+format midnight: 0 00 0 0
+format same twice: 2020-01-05 03:04 0005-12-25 15:00 2020-01-05 03:04
+format toString non-null: true
