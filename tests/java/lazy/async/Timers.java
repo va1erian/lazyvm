@@ -18,16 +18,26 @@ public class Timers {
         return Loop.delay(ms, TimeUnit.MILLISECONDS).toCompletableFuture();
     }
 
+    /** Each deadline counts from its own call, so a round whose calls stalled says nothing. */
+    static List<String> inTimeOrder() throws Exception {
+        for (;;) {
+            List<String> order = new ArrayList<>();
+            long[] span = new long[1];
+            CountDownLatch fired = new CountDownLatch(3);
+            Loop.executor().execute(() -> {
+                long start = System.nanoTime();
+                delay(1500).thenRun(() -> { order.add("1500"); fired.countDown(); });
+                delay(500).thenRun(() -> { order.add("500"); fired.countDown(); });
+                delay(1000).thenRun(() -> { order.add("1000"); fired.countDown(); });
+                span[0] = System.nanoTime() - start;
+            });
+            fired.await();
+            if (span[0] < 400_000_000L) return order;
+        }
+    }
+
     public static void main(String[] args) throws Exception {
-        List<String> order = new ArrayList<>();
-        CountDownLatch fired = new CountDownLatch(3);
-        Loop.executor().execute(() -> {
-            delay(1500).thenRun(() -> { order.add("1500"); fired.countDown(); });
-            delay(500).thenRun(() -> { order.add("500"); fired.countDown(); });
-            delay(1000).thenRun(() -> { order.add("1000"); fired.countDown(); });
-        });
-        fired.await();
-        System.out.println("order " + order);
+        System.out.println("order " + inTimeOrder());
 
         CountDownLatch timed = new CountDownLatch(1);
         Loop.executor().execute(() -> {

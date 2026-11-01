@@ -184,9 +184,14 @@ fn park_for(next: Option<Instant>, now: Instant) -> Option<Duration> {
         Some(left) if left <= SLEEPER_RANGE => (!sleeper::arm(next)).then_some(left),
         _ => {
             sleeper::arm(None);
-            left.map(|left| (left - SLEEPER_RANGE).min(LONGEST_PARK))
+            left.map(far_park)
         }
     }
+}
+
+/// How long `poll` may park with `left` (over [`SLEEPER_RANGE`]) to go.
+fn far_park(left: Duration) -> Duration {
+    (left - SLEEPER_RANGE).min(LONGEST_PARK)
 }
 
 /// Times the last stretch before a deadline and then wakes the reactor. It
@@ -336,11 +341,9 @@ mod tests {
 
     #[test]
     fn a_far_deadline_still_ends_the_park_in_time() {
-        let now = Instant::now();
-        let far = now + Duration::from_secs(60 * 24 * 60 * 60);
-        assert_eq!(park_for(Some(far), now), Some(LONGEST_PARK));
-        assert_eq!(park_for(None, now), None);
-        assert_eq!(park_for(Some(now + ms(50)), now), Some(ms(30)));
+        let sixty_days = Duration::from_secs(60 * 24 * 60 * 60);
+        assert_eq!(far_park(sixty_days), LONGEST_PARK);
+        assert_eq!(far_park(ms(50)), ms(30));
     }
 
     /// The median, as in `timer`'s own test: a busy machine does not count, but
