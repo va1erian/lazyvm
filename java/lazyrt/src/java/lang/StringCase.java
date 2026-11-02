@@ -26,7 +26,51 @@ final class StringCase {
     static native int mask(int which);
 
     static String convert(String s, boolean upper, Locale locale) {
+        // CaseLocale.of also rejects a null locale, so it runs before the fast path.
         int mode = CaseLocale.of(locale);
+        if (mode == CaseLocale.ROOT) {
+            String quick = asciiOnly(s, upper);
+            if (quick != null) {
+                return quick;
+            }
+        }
+        return convertAny(s, upper, mode);
+    }
+
+    /**
+     * The mapping of a string made only of ASCII characters, or null if it has any other. Such
+     * text maps one character to one under every locale but the three with rules of their own, and
+     * the string comes back itself when nothing changed, as the general path would return it.
+     */
+    private static String asciiOnly(String s, boolean upper) {
+        int length = s.length();
+        char from = upper ? 'a' : 'A';
+        char to = upper ? 'z' : 'Z';
+        int first = -1;
+        for (int i = 0; i < length; i++) {
+            char c = s.charAt(i);
+            if (c >= 0x80) {
+                return null;
+            }
+            if (first < 0 && c >= from && c <= to) {
+                first = i;
+            }
+        }
+        if (first < 0) {
+            return s;
+        }
+        char[] out = new char[length];
+        s.getChars(0, length, out, 0);
+        for (int i = first; i < length; i++) {
+            char c = out[i];
+            if (c >= from && c <= to) {
+                out[i] = (char) (c ^ 0x20);
+            }
+        }
+        return new String(out, true);
+    }
+
+    private static String convertAny(String s, boolean upper, int mode) {
         int length = s.length();
         boolean sigmas = !upper && s.indexOf(SIGMA) >= 0;
         int accepting = sigmas ? mask(0) : 0;

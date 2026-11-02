@@ -81,6 +81,13 @@ impl Value {
         }
     }
 
+    /// Whether both are the same kind of value; a field or static store must keep its
+    /// field's kind (a verifier would ensure it).
+    #[inline]
+    pub fn same_kind(self, other: Value) -> bool {
+        std::mem::discriminant(&self) == std::mem::discriminant(&other)
+    }
+
     pub fn boolean(self) -> Result<bool, VmError> {
         Ok(self.int()? != 0)
     }

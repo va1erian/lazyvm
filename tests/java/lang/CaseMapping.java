@@ -18,6 +18,15 @@ public class CaseMapping {
             + " lower [" + cps(low) + "]" + (low == s ? " same" : ""));
     }
 
+    static void showTagged(String label, String s) {
+        for (String tag : new String[] {"tr", "az", "lt"}) {
+            java.util.Locale l = new java.util.Locale(tag);
+            String up = s.toUpperCase(l), low = s.toLowerCase(l);
+            System.out.println(label + " " + tag + ": upper [" + cps(up) + "]" + (up == s ? " same" : "")
+                + " lower [" + cps(low) + "]" + (low == s ? " same" : ""));
+        }
+    }
+
     static long mix(long h, String s) {
         for (int i = 0; i < s.length(); i++) {
             h = (h ^ s.charAt(i)) * 0x100000001b3L;
@@ -53,6 +62,20 @@ public class CaseMapping {
         show("sigma8", "\ud801\udc28\u0345\u03a3 A\ud801\udc28\u03a3 A\u03a3\ud801\udc28 A\u00aa\u03a3");
         System.out.println("fresh " + ("ABC\u0130".toUpperCase() == "ABC\u0130") + " "
             + ("ABC".toUpperCase() == "ABC") + " " + ("abc\u0130".toLowerCase() == "abc\u0130"));
+
+        // ASCII-only strings under the three locales that have their own rules.
+        StringBuilder ascii = new StringBuilder();
+        for (char c = 0; c < 128; c++) {
+            ascii.append(c);
+        }
+        showTagged("ascii all", ascii.toString());
+        showTagged("ascii i", "Title iIiI Insist INFINITY index");
+        showTagged("ascii none", "STONE pickaxe 123 ~!");
+        showTagged("ascii single", "I");
+        showTagged("ascii single lower", "i");
+        showTagged("ascii empty", "");
+        showTagged("ascii same upper", "ABC DEF");
+        showTagged("ascii same lower", "abc def");
 
         // Every BMP code point in ten contexts; of the supplementary planes only those that can
         // hold assigned characters (0-3 and 14-16), in the four contexts that matter for them.

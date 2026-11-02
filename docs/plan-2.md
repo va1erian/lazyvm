@@ -52,7 +52,7 @@ never a panic.
       views, enough for IntelliJ's debugger.
       Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
       Needs: S7-01 (its socket layer carries the JDWP connection).
-- [ ] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
+- [x] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
       inline caches only if a benchmark proves a 20% win. The suite is our
       own code, shaped like what games run: a sprite blit loop, a noise and
       flood-fill kernel like world generation, calls and field access, and
