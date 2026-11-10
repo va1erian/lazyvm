@@ -1,0 +1,48 @@
+constant OFF: OFF 2147483647 OFF sun.util.logging.resources.logging 2147483647
+constant SEVERE: SEVERE 1000 SEVERE sun.util.logging.resources.logging 1000
+constant WARNING: WARNING 900 WARNING sun.util.logging.resources.logging 900
+constant INFO: INFO 800 INFO sun.util.logging.resources.logging 800
+constant CONFIG: CONFIG 700 CONFIG sun.util.logging.resources.logging 700
+constant FINE: FINE 500 FINE sun.util.logging.resources.logging 500
+constant FINER: FINER 400 FINER sun.util.logging.resources.logging 400
+constant FINEST: FINEST 300 FINEST sun.util.logging.resources.logging 300
+constant ALL: ALL -2147483648 ALL sun.util.logging.resources.logging -2147483648
+distinct: true
+equals: true false false false
+toString is the name: true
+by name: true
+every name: true
+by number: true
+by number min: true
+by number max: true
+null: NullPointerException: null
+unknown: IllegalArgumentException: Bad level "bogus"
+empty: IllegalArgumentException: Bad level ""
+lower case: IllegalArgumentException: Bad level "info"
+leading space: IllegalArgumentException: Bad level " INFO"
+trailing space: IllegalArgumentException: Bad level "INFO "
+hex: IllegalArgumentException: Bad level "0x10"
+too big: IllegalArgumentException: Bad level "2147483648"
+float: IllegalArgumentException: Bad level "1.5"
+new number: 801 801 801 java.util.logging.Level
+cached: true
+negative: -5 -5
+plus: +5 5 true true
+zero padded: true
+bundle of numeric: null
+fields: ALPHA 850 ALPHA ALPHA null 850
+parse custom name: true
+parse custom number: true
+same name, first wins: true false
+second by number: true
+same number: true true
+bundle name: no.such.bundle Gamma Level Gamma Level
+null name: NullPointerException: null
+mixed case: MiXeD true
+name not found lower: IllegalArgumentException: Bad level "mixed"
+empty name: 0
+negative value: -7
+equal by value: true true true
+custom vs info: true true
+not equal: false
+hash is value: 860

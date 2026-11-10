@@ -1,0 +1,10 @@
+property before: null
+early: FIRST INFO/ln/Cls meth/one
+early after change: FIRST INFO/ln/Cls meth/two
+late after change: FIRST INFO/ln/Cls meth/three
+newest: FIRST INFO/ln/Cls meth/four
+
+property after: %5$s
+--- stderr ---
+FIRST INFO/late.root/util.LoggingFormatLate main/goes to stderr
+FIRST WARNING/late.root/util.LoggingFormatLate main/also to stderr

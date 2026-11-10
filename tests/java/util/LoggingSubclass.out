@@ -1,0 +1,15 @@
+log(LogRecord) override saw: [INFO:i, WARNING:w, INFO:p, INFO:arr, INFO:t, FINE:lp, FINER:ENTRY, FINER:ENTRY {0}, FINER:RETURN, FINER:THROW, FINE:supplier, CONFIG:supplier 2, CONFIG:supplier 3, FINEST:supplier 4]
+level test happens before log(LogRecord): 14
+getParent override walk: [INFO:x]
+getHandlers override walk: [INFO:x]
+getUseParentHandlers override walk: []
+getFilter override is not asked: [INFO:x]
+getLevel override is not asked: [INFO:x]
+isLoggable override is asked: []
+record carries the name given at construction: [sub.gn]
+names at start: [, global]
+manager finds global: true
+global parent: true
+getGlobal keeps an explicit parent: sub.gparent
+addLogger named global: false
+reset closes the global logger's handlers: 1

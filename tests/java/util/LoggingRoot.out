@@ -1,0 +1,26 @@
+property: [%4$s]-%3$s-%2$s-%5$s%6$s%n
+own handler: own handler only
+own handler: both
+end: 0
+--- stderr ---
+[INFO]-root.test-util.LoggingRoot main-plain
+[WARNING]-root.test-util.LoggingRoot main-warn
+[SEVERE]-root.test-util.LoggingRoot main-severe
+[INFO]-root.test-util.LoggingRoot main-params a and 2
+[INFO]-root.test-util.LoggingRoot main-one param 1,234,567
+[INFO]-root.test-util.LoggingRoot main-thrown
+util.LoggingRoot$Quiet: boom
+	at q.Z.z(Z.java:5)
+
+[INFO]-root.test-Given.Class givenMethod-explicit source
+[INFO]-root.test-Only.Class-explicit class
+[INFO]-root.test-util.LoggingRoot instance-from an instance method
+[INFO]--R r-on the root logger itself
+[INFO]-null-util.LoggingRoot main-anonymous: name is null
+[INFO]-global-util.LoggingRoot main-global
+[FINE]-root.test-util.LoggingRoot main-handler ALL: shown
+[FINER]-root.test-C m-ENTRY
+[FINEST]-root.test-util.LoggingRoot main-finest shown
+[SEVERE]-root.test-util.LoggingRoot main-handler SEVERE: shown
+[INFO]-root.test-util.LoggingRoot main-both
+[WARNING]-root.other-util.LoggingRoot main-root WARNING shows WARNING

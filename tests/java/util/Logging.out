@@ -1,0 +1,92 @@
+root name: []
+root level: INFO
+root parent: null
+root same: true
+root useParent: true
+root filter: null
+root handlers: 1
+root handler class: java.util.logging.ConsoleHandler
+root handler level: INFO
+root handler formatter: java.util.logging.SimpleFormatter
+global: [global] global
+global same: true
+global parent: []
+global level: null
+plain logger: [plain] [] null 0
+same instance: true
+t.a.b.c parent: []
+after t.a: [t.a] []
+after t.a.b: [t.a.b] [t.a] []
+after t: [t] []
+q reparent: [q] []
+setParent: [other]
+new child of re-parented: [q.r]
+skip levels: []
+anonymous: null [] null 0
+anonymous distinct: true
+anonymous setParent: [t.a]
+getLogger name: Mixed.Case
+case sensitive: true
+inherit default: null true false
+ta FINE: null true false
+tab WARNING: false true true
+tab null: null true
+ta null: false true
+root SEVERE: false true
+root ALL: true
+anonymous inherits root: true false
+no parent, no level: null true false
+OFF: false false false
+ALL: true true true
+CONFIG: true false true
+750: false true true
+isLoggable null: NullPointerException: null
+getLevel: true
+same manager: true
+getLogger: true
+getLogger unknown: null
+getLogger null: NullPointerException: null
+names has: true true true
+names has anonymous: false
+custom before: null null
+addLogger: true
+custom after: true []
+getLogger finds custom: true
+addLogger twice: false
+addLogger same name: false
+addLogger kept first: true
+child of custom: [custom.name]
+reset closes handlers: 2
+reset root: 0 INFO
+reset child: null 0 false
+reset keeps registry: true
+after reset add: 1
+order: 3 true true true
+copy: true
+remove one: 2 true true
+remove absent: 2
+remove null: 2
+empty: 0
+useParent: true
+useParent off: false
+filter: null
+filter set: true
+filter cleared: null
+getLogger null: NullPointerException: null
+setParent null: NullPointerException: null
+addHandler null: NullPointerException: null
+setLevel null: ok
+log null level: NullPointerException: null
+log null record: NullPointerException: null
+logp null level: NullPointerException: null
+addLogger null: NullPointerException: null
+handler formatter: java.util.logging.SimpleFormatter true
+bundle name: null
+getLogger bundle null: bn2
+getLogger bundle missing: MissingResourceException: Can't find no.such.Bundle bundle
+anonymous bundle missing: MissingResourceException: Can't find no.such.Bundle bundle
+ctor bundle missing: MissingResourceException: Can't find no.such.Bundle bundle
+missing class and key: no.such.Bundle / 
+not registered after failure: null
+same name later: bn3
+done: 0

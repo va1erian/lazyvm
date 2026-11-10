@@ -1,0 +1,91 @@
+level CONFIG name=rec src=util.LoggingRecords#levelMethods msg=c params=null thrown=null
+level FINE name=rec src=util.LoggingRecords#levelMethods msg=f params=null thrown=null
+level FINER name=rec src=util.LoggingRecords#levelMethods msg=fr params=null thrown=null
+level FINEST name=rec src=util.LoggingRecords#levelMethods msg=ft params=null thrown=null
+level SEVERE name=rec src=util.LoggingRecords#levelMethods msg=s params=null thrown=null
+level WARNING name=rec src=util.LoggingRecords#levelMethods msg=w params=null thrown=null
+level INFO name=rec src=util.LoggingRecords#levelMethods msg=i params=null thrown=null
+log OFF name=rec src=util.LoggingRecords#levelMethods msg=off message params=null thrown=null
+log 123 name=rec src=util.LoggingRecords#levelMethods msg=custom 123 params=null thrown=null
+filtered SEVERE name=rec src=util.LoggingRecords#levelMethods msg=shown params=null thrown=null
+filtered OFF name=rec src=util.LoggingRecords#levelMethods msg=off message passes params=null thrown=null
+params array identity: true
+log FINE name=rec src=util.LoggingRecords#logMethods msg=one {0} params=[x] thrown=null
+log FINE name=rec src=util.LoggingRecords#logMethods msg=null param params=[null] thrown=null
+log FINE name=rec src=util.LoggingRecords#logMethods msg=arr params=[1, 2] thrown=null
+log FINE name=rec src=util.LoggingRecords#logMethods msg=null array params=null thrown=null
+log FINE name=rec src=util.LoggingRecords#logMethods msg=empty array params=[] thrown=null
+log FINE name=rec src=util.LoggingRecords#logMethods msg=thrown params=null thrown=java.lang.IllegalStateException: bad
+log FINE name=rec src=util.LoggingRecords#logMethods msg=null thrown params=null thrown=null
+log FINE name=rec src=util.LoggingRecords#logMethods msg=null params=null thrown=null
+logp CONFIG name=rec src=C#m msg=msg params=null thrown=null
+logp CONFIG name=rec src=null#m msg=null class params=null thrown=null
+logp CONFIG name=rec src=C#null msg=null method params=null thrown=null
+logp CONFIG name=rec src=C#m msg=msg {0} params=[p] thrown=null
+logp CONFIG name=rec src=C#m msg=msg {0} params=[p, q] thrown=null
+logp CONFIG name=rec src=C#m msg=msg params=null thrown=java.lang.Error: e
+trace FINER name=rec src=C#m msg=ENTRY params=null thrown=null
+trace FINER name=rec src=C#m msg=ENTRY {0} params=[arg] thrown=null
+trace FINER name=rec src=C#m msg=ENTRY {0} {1} params=[a, b] thrown=null
+trace FINER name=rec src=C#m msg=ENTRY {0} {1} {2} params=[a, b, c] thrown=null
+trace FINER name=rec src=C#m msg=ENTRY {0} params=[null] thrown=null
+trace FINER name=rec src=C#m msg=ENTRY params=null thrown=null
+trace FINER name=rec src=C#m msg=ENTRY params=[] thrown=null
+trace FINER name=rec src=C#m msg=RETURN params=null thrown=null
+trace FINER name=rec src=C#m msg=RETURN {0} params=[res] thrown=null
+trace FINER name=rec src=C#m msg=RETURN {0} params=[null] thrown=null
+trace FINER name=rec src=C#m msg=THROW params=null thrown=java.lang.Exception: x
+trace FINER name=rec src=C#m msg=THROW params=null thrown=null
+trace hidden at FINE: 0
+trace shown at FINER: 1
+supplier INFO name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=null
+supplier INFO name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=java.lang.Exception: tt
+supplier INFO name=rec src=C#m msg=supplied params=null thrown=null
+supplier INFO name=rec src=C#m msg=supplied params=null thrown=java.lang.Exception: tt2
+supplier INFO name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=null
+supplier SEVERE name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=null
+supplier WARNING name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=null
+supplier CONFIG name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=null
+supplier FINE name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=null
+supplier FINER name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=null
+supplier FINEST name=rec src=util.LoggingRecords#suppliers msg=supplied params=null thrown=null
+supplier INFO name=rec src=util.LoggingRecords#suppliers msg=null params=null thrown=null
+calls: 11
+not called when hidden: 11
+null supplier: NullPointerException: null
+defaults: null null null null hi INFO
+millis is now: true
+thread id: true
+no source before publish: null null
+null level: NullPointerException: null
+null message: null
+setLevel null: NullPointerException: null
+setters: FINE 77 5 123 ln rb mm 1 java.lang.Exception: z K#km
+setters null: null null null null null null
+negative millis: -5
+other thread id: true
+direct same record: true
+direct WARNING name=null src=util.LoggingRecords#logRecordDirect msg=direct params=null thrown=null
+direct pre WARNING name=someone.else src=Pre#null msg=direct named params=null thrown=null
+direct levels SEVERE name=null src=util.LoggingRecords#logRecordDirect msg=at level params=null thrown=null
+direct levels OFF name=null src=util.LoggingRecords#logRecordDirect msg=off record params=null thrown=null
+infer INFO name=rec src=util.LoggingRecords#inference msg=plain params=null thrown=null
+infer INFO name=rec src=util.LoggingRecords$Wrap#say msg=wrapped params=null thrown=null
+infer INFO name=rec src=util.LoggingRecords$Ctor#<init> msg=in ctor params=null thrown=null
+infer INFO name=rec src=util.LoggingRecords$Ctor#stat msg=in static params=null thrown=null
+infer INFO name=rec src=util.LoggingRecords$Ctor#<init> msg=in ctor params=null thrown=null
+infer INFO name=rec src=util.LoggingRecords$Ctor#inst msg=in instance params=null thrown=null
+infer subclass INFO name=rec.my src=util.LoggingRecords$MyLogger#info msg=hi! params=null thrown=null
+infer subclass INFO name=rec.my src=util.LoggingRecords$MyLogger#info msg=direct! params=null thrown=null
+infer thread INFO name=rec src=util.LoggingRecords$Worker#run msg=in thread params=null thrown=null
+infer explicit INFO name=rec src=Given#null msg=explicit class only params=null thrown=null
+infer explicit INFO name=rec src=null#null msg=explicit nothing params=null thrown=null
+late source: null null
+infer by hand INFO name=null src=null#null msg=published by hand params=null thrown=null
+method first: inference util.LoggingRecords
+infer twice INFO name=rec.twice src=util.LoggingRecords#inference msg=twice params=null thrown=null
+infer twice INFO name=rec.twice src=util.LoggingRecords#inference msg=twice params=null thrown=null
+sequence steps: 1 2 1
+logged record number: true
+millis order: true
+seq INFO name=rec src=util.LoggingRecords#sequence msg=consumes one params=null thrown=null
