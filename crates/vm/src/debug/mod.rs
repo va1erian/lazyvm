@@ -28,6 +28,7 @@ mod tests;
 mod values;
 mod wire;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 pub use agent::Config;
@@ -49,6 +50,9 @@ pub struct Debug {
     writer: Option<Arc<platform::tcp::Conn>>,
     ids: Ids,
     requests: Requests,
+    /// Threads that were stopped where holding them is not safe (class
+    /// preparation) and wait for their next instruction to hold.
+    deferred: HashSet<usize>,
     suspend: Suspend,
     /// A command asked to end the session (`VirtualMachine.Dispose`).
     pub(crate) disconnect: bool,
@@ -67,7 +71,9 @@ impl Debug {
 impl Vm {
     /// Whether the interpreter must check every instruction.
     pub(crate) fn refresh_slow_interp(&mut self) {
-        self.slow_interp = self.options.trace_interp || self.debug.requests.needs_hooks();
+        self.slow_interp = self.options.trace_interp
+            || self.debug.requests.needs_hooks()
+            || !self.debug.deferred.is_empty();
     }
 
     /// Starts the agent for `-agentlib:jdwp`: binds or connects, prints the
@@ -169,11 +175,23 @@ impl Vm {
         self.debug.writer = None;
         self.debug.requests.clear();
         self.debug.suspend.clear();
+        self.debug.deferred.clear();
         self.debug.ids.clear();
         self.refresh_slow_interp();
         for i in held {
             self.wake_thread(i);
         }
+    }
+
+    /// Called as a thread ends: what the debugger set for it ends too.
+    pub(crate) fn debug_thread_ended(&mut self, thread: usize) {
+        if !self.debug.enabled {
+            return;
+        }
+        self.debug.requests.drop_thread(thread);
+        self.debug.suspend.forget_thread(thread);
+        self.debug.deferred.remove(&thread);
+        self.refresh_slow_interp();
     }
 
     /// Wakes the threads that were held before `before` and are not now.

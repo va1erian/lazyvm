@@ -63,6 +63,11 @@ impl Suspend {
         }
     }
 
+    /// The thread is gone; its own count goes with it.
+    pub fn forget_thread(&mut self, thread: usize) {
+        self.per_thread.remove(&thread);
+    }
+
     pub fn clear(&mut self) {
         *self = Suspend::default();
     }

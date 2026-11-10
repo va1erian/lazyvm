@@ -29,7 +29,9 @@ impl Vm {
     pub(super) fn cmd_thread(&mut self, cmd: u8, r: &mut Reader, w: &mut Writer) -> Res<()> {
         let id = r.id()?;
         let obj = self.debug.ids.get(id).map_err(|_| err::INVALID_THREAD)?;
-        let index = self.threads.find(obj).ok_or(err::THREAD_NOT_ALIVE)?;
+        let Some(index) = self.threads.find(obj) else {
+            return self.dead_thread(cmd, obj, w);
+        };
         match cmd {
             1 => w.string(&self.text_field(obj, "name")?),
             2 => self.debug.suspend.suspend_thread(index),
@@ -58,6 +60,23 @@ impl Vm {
             }
             12 => w.i32(i32::try_from(self.debug.suspend.count(index)).unwrap_or(i32::MAX)),
             _ => return Err(err::NOT_IMPLEMENTED),
+        }
+        Ok(())
+    }
+
+    /// A thread that has not started or has ended still has a name, and is a
+    /// zombie to `Status`; the rest of the commands say it is not alive.
+    fn dead_thread(&self, cmd: u8, obj: Ref, w: &mut Writer) -> Res<()> {
+        if self.object_tag(obj) != b't' {
+            return Err(err::INVALID_THREAD);
+        }
+        match cmd {
+            1 => w.string(&self.text_field(obj, "name")?),
+            4 => {
+                w.i32(0);
+                w.i32(0);
+            }
+            _ => return Err(err::THREAD_NOT_ALIVE),
         }
         Ok(())
     }

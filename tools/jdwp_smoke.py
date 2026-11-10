@@ -17,7 +17,6 @@ reports.
 from __future__ import annotations
 
 import argparse
-import os
 import random
 import socket
 import struct
@@ -33,12 +32,12 @@ import jdwplib as j  # noqa: E402
 import lazyrt  # noqa: E402
 from common import BUILD, DIST, LAZYRT_CLASSES, ROOT, cargo_build_launcher, die, find_tool  # noqa: E402
 from jdwplib import Connection, JdwpError, i32, string, u64  # noqa: E402
+from jdwpsession import DEPTH_INTO, DEPTH_OUT, DEPTH_OVER, STEP_MIN, Session, expect  # noqa: E402
 
 SRC = ROOT / "tests" / "jdwp" / "JdwpTarget.java"
 OUT = BUILD / "jdwp"
 SIG = "LJdwpTarget;"
 LINE_BY_MARK = {}
-STEP_LINE, DEPTH_INTO, DEPTH_OVER, DEPTH_OUT = 1, 0, 1, 2
 
 # Where each step lands, as (method, marker): the same on the oracle and on LazyVM.
 EXPECTED_STEPS = [
@@ -96,116 +95,6 @@ class Target:
             self.proc.kill()
 
 
-class Session:
-    """Helpers over a connection, in the debugger's words."""
-
-    def __init__(self, conn: Connection) -> None:
-        self.c = conn
-
-    def class_id(self, signature: str) -> int:
-        r = self.c.command(j.VM, 2, string(signature))
-        if r.i32() != 1:
-            die(f"{signature} is not loaded exactly once")
-        r.u8()
-        return r.id()
-
-    def methods(self, cls: int) -> dict[str, tuple[int, str]]:
-        r = self.c.command(j.REFTYPE, 15, u64(cls))
-        out = {}
-        for _ in range(r.i32()):
-            mid, name, sig, _gen, _mods = r.id(), r.string(), r.string(), r.string(), r.i32()
-            out[name] = (mid, sig)
-        return out
-
-    def fields(self, cls: int) -> dict[str, int]:
-        r = self.c.command(j.REFTYPE, 4, u64(cls))
-        out = {}
-        for _ in range(r.i32()):
-            fid, name, _sig, _mods = r.id(), r.string(), r.string(), r.i32()
-            out[name] = fid
-        return out
-
-    def line_table(self, cls: int, method: int) -> list[tuple[int, int]]:
-        r = self.c.command(j.METHOD, 1, u64(cls) + u64(method))
-        r.i64(), r.i64()
-        return [(r.i64(), r.i32()) for _ in range(r.i32())]
-
-    def variables(self, cls: int, method: int) -> dict[str, int]:
-        r = self.c.command(j.METHOD, 2, u64(cls) + u64(method))
-        r.i32()
-        out = {}
-        for _ in range(r.i32()):
-            r.i64()
-            name, _sig = r.string(), r.string()
-            r.i32()
-            out[name] = r.i32()
-        return out
-
-    def code_index(self, cls: int, method: int, line: int) -> int:
-        return min(i for i, n in self.line_table(cls, method) if n == line)
-
-    def line_of(self, loc: tuple[int, int, int]) -> int:
-        cls, method, index = loc
-        table = [(i, n) for i, n in self.line_table(cls, method) if i <= index]
-        return max(table)[1]
-
-    def method_name(self, loc: tuple[int, int, int]) -> str:
-        return next(n for n, (m, _s) in self.methods(loc[0]).items() if m == loc[1])
-
-    def request(self, kind: int, policy: int, *mods: bytes) -> int:
-        return self.c.command(j.EVENTREQ, 1, bytes([kind, policy]) + i32(len(mods)) + b"".join(mods)).i32()
-
-    def clear(self, kind: int, request: int) -> None:
-        self.c.command(j.EVENTREQ, 2, bytes([kind]) + i32(request))
-
-    def resume(self) -> None:
-        self.c.command(j.VM, 9)
-
-    def stop(self, kind: int) -> dict:
-        """The next event of `kind`, which must stop the VM. Events that arrive
-        together (a step ending on a breakpoint) come in one composite."""
-        while True:
-            _policy, events = self.c.next_event()
-            events = [e for e in events if e["kind"] != j.VM_START]
-            if not events:
-                continue
-            for ev in events:
-                if ev["kind"] == kind:
-                    return ev
-            die(f"expected event kind {kind}, got {events}")
-
-    def breakpoint(self, cls: int, method: int, line: int) -> int:
-        loc = bytes([1]) + u64(cls) + u64(method) + struct.pack(">q", self.code_index(cls, method, line))
-        return self.request(j.BREAKPOINT, 2, bytes([7]) + loc)
-
-    def step(self, thread: int, depth: int) -> dict:
-        how = bytes([10]) + u64(thread) + i32(STEP_LINE) + i32(depth)
-        rid = self.request(j.SINGLE_STEP, 2, how)
-        self.resume()
-        ev = self.stop(j.SINGLE_STEP)
-        self.clear(j.SINGLE_STEP, rid)
-        return ev
-
-    def thread_named(self, name: str) -> int:
-        r = self.c.command(j.VM, 4)
-        for _ in range(r.i32()):
-            t = r.id()
-            if self.c.command(j.THREAD, 1, u64(t)).string() == name:
-                return t
-        die(f"no thread named {name}")
-        raise AssertionError
-
-    def static_int(self, cls: int, field: int) -> int:
-        r = self.c.command(j.REFTYPE, 6, u64(cls) + i32(1) + u64(field))
-        r.i32()
-        return r.value()
-
-
-def expect(cond: bool, what: str) -> None:
-    if not cond:
-        die(f"jdwp_smoke: {what}")
-
-
 def check_locals_and_fields(s: Session, thread: int, cls: int) -> None:
     c = s.c
     r = c.command(j.THREAD, 7, u64(thread))
@@ -244,6 +133,15 @@ def check_locals_and_fields(s: Session, thread: int, cls: int) -> None:
     expect(r.id() == cls, "ReferenceType of this is JdwpTarget")
 
 
+def walk_tiny(s: Session, thread: int, cls: int, first: dict) -> None:
+    """Lines of one instruction, where a step that skipped an instruction would skip a line."""
+    seen = [first["loc"], s.step(thread, DEPTH_OVER)["loc"], s.step(thread, DEPTH_OVER)["loc"]]
+    seen.append(s.step(thread, DEPTH_OVER, STEP_MIN)["loc"])
+    got = [(s.method_name(loc), s.line_of(loc)) for loc in seen]
+    want = [("tiny", LINE_BY_MARK[m]) for m in ("tiny", "tiny2", "tiny3", "tinyret")]
+    expect(got == want, f"steps through one-instruction lines {got}, expected {want}")
+
+
 def walk_steps(s: Session, thread: int, cls: int, first: dict) -> None:
     seen = [first["loc"]]
     for depth in (DEPTH_INTO, DEPTH_OVER, DEPTH_OUT, DEPTH_OVER, DEPTH_OVER):
@@ -273,17 +171,24 @@ def debug_run(conn: Connection) -> None:
     r = conn.command(j.VM, 7)
     expect([r.i32() for _ in range(5)] == [8] * 5, "all id sizes are 8")
     conn.command(j.VM, 17)
+    _policy, events = conn.next_event(10)
+    expect(events[0]["kind"] == j.VM_START, f"the VM did not greet the debugger with VMStart: {events}")
     s.request(j.VM_DEATH, 0)
-    cp = bytes([5]) + string("JdwpTarget")
-    s.request(j.CLASS_PREPARE, 2, cp)
+    s.request(j.CLASS_PREPARE, 2, bytes([5]) + string("JdwpTarget"))
+    s.request(j.CLASS_PREPARE, 1, bytes([5]) + string("JdwpTarget$Once"))
     s.resume()
     ev = s.stop(j.CLASS_PREPARE)
     expect(ev["signature"] == SIG, f"class prepare for {ev['signature']}")
     cls = s.class_id(SIG)
     expect(cls == ev["type"], "the prepared type is the class found by signature")
     methods = s.methods(cls)
+    tiny_bp = s.breakpoint(cls, methods["tiny"][0], LINE_BY_MARK["tiny"])
     s.breakpoint(cls, methods["work"][0], LINE_BY_MARK["call"])
     s.breakpoint(cls, methods["main"][0], LINE_BY_MARK["print"])
+    s.resume()
+    tiny_first = s.stop(j.BREAKPOINT)
+    walk_tiny(s, tiny_first["thread"], cls, tiny_first)
+    s.clear(j.BREAKPOINT, tiny_bp)
     s.resume()
     first = s.stop(j.BREAKPOINT)
     thread = first["thread"]
@@ -303,6 +208,9 @@ def attach_and_run(cmd_for, oracle: bool) -> None:
     port = free_port()
     target = Target(cmd_for(f"transport=dt_socket,server=y,suspend=y,address={port}"))
     try:
+        if not oracle:
+            # A port probe that never shakes hands must not cost the real debugger its VMStart.
+            connect(port, target).sock.close()
         conn = connect(port, target)
         conn.handshake()
         debug_run(conn)
@@ -313,7 +221,7 @@ def attach_and_run(cmd_for, oracle: bool) -> None:
     finally:
         target.kill()
     expect(code == 0, f"exit status {code}")
-    expect("result=15" in target.text(), f"program output {target.text()!r}")
+    expect("result=15 once=1" in target.text(), f"program output {target.text()!r}")
     if not oracle:
         expect(f"Listening for transport dt_socket at address: {port}" in target.text(), "listening line")
 
@@ -370,7 +278,7 @@ def on_lazyos(lazyos: Path) -> None:
         raise outcome["error"]
     expect(not thread.is_alive(), "the debugger side did not finish")
     expect(text("1.exit").strip() == "0", f"exit status {text('1.exit')!r}: {text('1.stderr')}")
-    expect("result=15" in text("1.stdout"), f"program output {text('1.stdout')!r}")
+    expect("result=15 once=1" in text("1.stdout"), f"program output {text('1.stdout')!r}")
     print("jdwp_smoke: ok inside LazyOS")
 
 
@@ -395,19 +303,64 @@ def vm_connects_out(cmd_for) -> None:
     expect("result=15" in target.text(), "program ran after a server=n resume")
 
 
+def valid_ids(conn: Connection) -> list[int]:
+    """Ids the VM really knows, so random bodies get past the first check and into the rest."""
+    s = Session(conn)
+    ids = [s.class_id("Ljava/lang/Object;"), s.class_id("Ljava/lang/String;")]
+    ids += [(ids[0] << 16) | k for k in range(3)]  # member ids of Object
+    r = conn.command(j.VM, 4)
+    ids += [r.id() for _ in range(r.i32())]
+    r = conn.command(j.VM, 5)
+    ids += [r.id() for _ in range(r.i32())]
+    ids.append(conn.command(j.VM, 11, string("text")).id())
+    return ids
+
+
 def garbage(conn: Connection) -> None:
-    """Random bodies into every command: each gets a reply, success or an error code."""
+    """Random bodies into every command, built from real ids, small numbers and noise: each gets
+    a reply, success or an error code."""
     rng = random.Random(20240611)
+    ids = valid_ids(conn)
+
+    def token() -> bytes:
+        pick = rng.randrange(5)
+        if pick == 0:
+            return u64(rng.choice(ids))
+        if pick == 1:
+            return i32(rng.choice((0, 1, 2, 3, -1, 0x7FFFFFFF)))
+        if pick == 2:
+            return bytes([rng.randrange(256)])
+        if pick == 3:
+            return string(rng.choice(("JdwpTarget", "*", "java.*", "")))
+        return u64(rng.getrandbits(64))
+
     for set_ in (j.VM, j.REFTYPE, 3, j.METHOD, j.OBJREF, j.STRREF, j.THREAD, 12, j.ARRAYREF, j.EVENTREQ, j.FRAME, 17):
         for cmd in range(1, 23):
             if (set_, cmd) in ((j.VM, 6), (j.VM, 10)):  # Dispose and Exit end the session
                 continue
-            for _ in range(6):
-                body = bytes(rng.choice((0, 0xFF, rng.randrange(256))) for _ in range(rng.randrange(0, 48)))
+            for _ in range(12):
+                body = b"".join(token() for _ in range(rng.randrange(0, 6)))
                 try:
                     conn.command(set_, cmd, body, timeout=10)
                 except JdwpError:
                     pass  # an error reply is the right answer
+
+
+def bad_handshake(cmd_for) -> None:
+    """A debugger that does not answer the handshake: with `server=n` the VM has no one to wait for."""
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        target = Target(cmd_for(f"transport=dt_socket,server=n,suspend=y,address=127.0.0.1:{listener.getsockname()[1]}"))
+        try:
+            listener.settimeout(30)
+            peer = listener.accept()[0]
+            peer.sendall(b"not the handshake")
+            code = target.finish()
+            peer.close()
+        finally:
+            target.kill()
+    expect(code == 2, f"exit status {code} after a failed handshake, expected 2")
 
 
 def hostile(cmd_for) -> None:
@@ -447,7 +400,7 @@ def hostile(cmd_for) -> None:
     finally:
         target.kill()
     expect(code == 0, f"exit status {code} after the debugger left")
-    expect("result=15" in target.text(), "the program did not finish after a bad packet")
+    expect("result=15 once=1" in target.text(), "the program did not finish after a bad packet")
 
 
 def main() -> None:
@@ -476,6 +429,7 @@ def main() -> None:
             return [str(exe), f"-Xbootclasspath:{DIST / 'lazyrt.jar'}", f"-agentlib:jdwp={agent}", "-cp", str(classes), "JdwpTarget"]
     attach_and_run(cmd_for, args.oracle)
     vm_connects_out(cmd_for)
+    bad_handshake(cmd_for)
     if not args.oracle:
         hostile(cmd_for)
     print("jdwp_smoke: ok")

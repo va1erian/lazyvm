@@ -28,6 +28,7 @@ pub mod err {
     pub const INTERNAL: u16 = 113;
     pub const INVALID_INDEX: u16 = 503;
     pub const INVALID_LENGTH: u16 = 504;
+    pub const INVALID_COUNT: u16 = 512;
     pub const INVALID_ARRAY: u16 = 508;
     pub const INVALID_STRING: u16 = 506;
 }

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 
 use super::wire::{Reader, Res, err};
-use crate::class::ClassId;
+use crate::class::{ClassId, MethodRef};
 
 pub const SINGLE_STEP: u8 = 1;
 pub const BREAKPOINT: u8 = 2;
@@ -30,8 +30,11 @@ pub struct StepState {
     pub line: i32,
     pub min: bool,
     pub depth: i32,
-    /// The instruction the thread stopped at has not run yet: it is not a step.
-    pub armed: bool,
+    /// Where the thread was when the step was asked for.
+    pub method: MethodRef,
+    pub pc: usize,
+    /// Whether the first instruction seen since has been looked at.
+    pub started: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -120,6 +123,20 @@ impl Requests {
 
     pub fn len(&self) -> usize {
         self.list.len()
+    }
+
+    /// What the stored requests take, roughly, for a cap on a client's
+    /// patterns and modifiers.
+    pub fn bytes(&self) -> usize {
+        self.list.iter().map(request_bytes).sum()
+    }
+
+    /// A thread died: its steps go with it, and a new thread that gets its
+    /// index must not inherit them.
+    pub fn drop_thread(&mut self, thread: usize) {
+        self.list
+            .retain(|r| !r.step.is_some_and(|s| s.thread == thread));
+        self.reindex();
     }
 
     pub fn has_step(&self) -> bool {
@@ -240,6 +257,19 @@ impl Requests {
     }
 }
 
+/// The memory a request takes, counting what a client chooses the size of.
+pub fn request_bytes(r: &Request) -> usize {
+    let mods: usize = r
+        .mods
+        .iter()
+        .map(|m| match m {
+            Modifier::ClassMatch(s) | Modifier::ClassExclude(s) => 48 + s.len(),
+            _ => 48,
+        })
+        .sum();
+    96 + mods
+}
+
 /// Counts one occurrence down; true when the request fires.
 fn count_reached(mods: &mut [Modifier]) -> bool {
     let mut fire = true;
@@ -282,7 +312,10 @@ pub fn pattern_matches(pattern: &str, name: &str) -> bool {
 /// Reads one request modifier from a `Set` command.
 pub fn read_modifier(r: &mut Reader) -> Res<Modifier> {
     Ok(match r.u8()? {
-        1 => Modifier::Count(r.i32()?),
+        1 => match r.i32()? {
+            n if n > 0 => Modifier::Count(n),
+            _ => return Err(err::INVALID_COUNT),
+        },
         3 => Modifier::ThreadOnly(r.id()?),
         4 => Modifier::ClassOnly(super::ids::class_of_type(r.id()?)?),
         5 => Modifier::ClassMatch(r.string()?),
@@ -401,6 +434,14 @@ mod tests {
             read_modifier(&mut Reader::new(&[8])),
             Err(err::NOT_IMPLEMENTED)
         );
+        for n in [0i32, -1, i32::MIN] {
+            let mut data = vec![1];
+            data.extend_from_slice(&n.to_be_bytes());
+            assert_eq!(
+                read_modifier(&mut Reader::new(&data)),
+                Err(err::INVALID_COUNT)
+            );
+        }
         assert_eq!(
             read_modifier(&mut Reader::new(&[5, 0xff, 0xff, 0xff, 0xff])),
             Err(err::INVALID_LENGTH)

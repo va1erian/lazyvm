@@ -105,15 +105,22 @@ impl Vm {
     }
 
     /// Sends the events and stops what `policy` says: the thread that hit them
-    /// (1) or every thread (2). The calling thread then waits to be resumed.
-    pub(super) fn post_events(&mut self, policy: u8, thread: usize, events: &[Event]) {
+    /// (1) or every thread (2). The calling thread then waits to be resumed,
+    /// at once, or with `defer` at its next instruction, for callers that
+    /// must not give up the VM where they are (linking a class).
+    pub(super) fn post_events(&mut self, policy: u8, thread: usize, events: &[Event], defer: bool) {
         match policy {
             SUSPEND_ALL => self.debug.suspend.suspend_all(),
             SUSPEND_THREAD => self.debug.suspend.suspend_thread(thread),
             _ => {}
         }
         self.send_events(policy, events);
-        self.hold_if_suspended();
+        if !defer {
+            self.hold_if_suspended();
+        } else if policy != 0 {
+            self.debug.deferred.insert(thread);
+            self.refresh_slow_interp();
+        }
     }
 
     /// The greeting of a connection that arrives before the program starts.

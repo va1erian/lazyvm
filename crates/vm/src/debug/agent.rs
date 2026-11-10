@@ -154,16 +154,22 @@ fn run(gil: &Arc<Gil>, me: usize, config: &Config, source: Source) {
             },
             (None, None) => break,
         };
-        serve(gil, me, config, stream, first);
-        first = false;
+        let attached = serve(gil, me, config, stream, first);
+        // A probe that never shook hands is not the debugger the greeting is for.
+        first = first && !attached;
     }
     with_vm(gil, me, |vm| vm.remove_helper_thread(me));
 }
 
 /// One debugger session: handshake, then commands until the connection ends.
-fn serve(gil: &Arc<Gil>, me: usize, config: &Config, conn: Arc<Conn>, first: bool) {
+fn serve(gil: &Arc<Gil>, me: usize, config: &Config, conn: Arc<Conn>, first: bool) -> bool {
     if handshake(&conn).is_err() {
-        return;
+        if !config.server {
+            // The one debugger there will be is not one; nothing would resume the VM.
+            eprintln!("ERROR: transport error 202: handshake failed");
+            std::process::exit(2);
+        }
+        return false;
     }
     with_vm(gil, me, |vm| {
         vm.attach_debugger(Arc::clone(&conn));
@@ -187,6 +193,7 @@ fn serve(gil: &Arc<Gil>, me: usize, config: &Config, conn: Arc<Conn>, first: boo
     }
     conn.shutdown();
     with_vm(gil, me, Vm::detach_debugger);
+    true
 }
 
 /// A debugger that just hung up is not worth a word; one that sent nonsense is.

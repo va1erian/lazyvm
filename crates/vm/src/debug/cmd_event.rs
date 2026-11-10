@@ -2,6 +2,7 @@
 
 use super::requests::{
     BREAKPOINT, Modifier, Request, SINGLE_STEP, STEP_MIN, StepState, kind_supported, read_modifier,
+    request_bytes,
 };
 use super::wire::{Reader, Res, Writer, err};
 use crate::Vm;
@@ -9,6 +10,8 @@ use crate::Vm;
 const MAX_MODIFIERS: usize = 64;
 /// Requests held at once: a client that keeps asking for more is not debugging.
 const MAX_REQUESTS: usize = 10_000;
+/// And the bytes their patterns and modifiers take, all together.
+const MAX_REQUEST_BYTES: usize = 4 << 20;
 
 impl Vm {
     pub(super) fn cmd_event_request(&mut self, cmd: u8, r: &mut Reader, w: &mut Writer) -> Res<()> {
@@ -41,24 +44,24 @@ impl Vm {
         }
         let mods = (0..n).map(|_| read_modifier(r)).collect::<Res<Vec<_>>>()?;
         kind_supported(kind)?;
-        if self.debug.requests.len() >= MAX_REQUESTS {
-            return Err(err::OUT_OF_MEMORY);
-        }
-        let step = match kind {
-            BREAKPOINT => {
-                self.check_breakpoint_location(&mods)?;
-                None
-            }
-            SINGLE_STEP => Some(self.step_state(&mods)?),
-            _ => None,
-        };
-        Ok(self.debug.requests.add(Request {
+        let mut request = Request {
             id: 0,
             kind,
             policy,
             mods,
-            step,
-        }))
+            step: None,
+        };
+        let held = self.debug.requests.bytes();
+        let too_much = held + request_bytes(&request) > MAX_REQUEST_BYTES;
+        if self.debug.requests.len() >= MAX_REQUESTS || too_much {
+            return Err(err::OUT_OF_MEMORY);
+        }
+        match kind {
+            BREAKPOINT => self.check_breakpoint_location(&request.mods)?,
+            SINGLE_STEP => request.step = Some(self.step_state(&request.mods)?),
+            _ => {}
+        }
+        Ok(self.debug.requests.add(request))
     }
 
     fn check_breakpoint_location(&self, mods: &[Modifier]) -> Res<()> {
@@ -117,7 +120,9 @@ impl Vm {
             line,
             min: size == STEP_MIN,
             depth,
-            armed: false,
+            method: top.method,
+            pc: top.pc,
+            started: false,
         })
     }
 }

@@ -23,6 +23,10 @@ impl Vm {
         if !self.debug.enabled || self.current == self.debug.agent {
             return;
         }
+        if !self.debug.deferred.is_empty() && self.debug.deferred.remove(&self.current) {
+            self.refresh_slow_interp();
+            self.hold_if_suspended();
+        }
         let Some(f) = self.frames.last() else { return };
         let (method, pc) = (f.method, f.pc as u64);
         let key = location_key(method.class, method.index, pc);
@@ -39,7 +43,7 @@ impl Vm {
         }
         policy = louder(policy, self.step_events(loc, &mut events));
         if !events.is_empty() {
-            self.post_events(policy, me, &events);
+            self.post_events(policy, me, &events, false);
         }
     }
 
@@ -121,19 +125,26 @@ impl Vm {
     /// to run. Returning to the caller always finishes it.
     fn step_reached(&mut self, st: &mut StepState, request: i32) -> bool {
         let depth = self.frames.len();
-        if !st.armed {
-            // The first instruction after the thread resumes is the one it
-            // stopped before: it has not moved yet.
-            st.armed = true;
-            if depth == st.frames {
-                return false;
-            }
-        }
         let Some(f) = self.frames.last() else {
             return false;
         };
+        if !st.started {
+            // A thread stopped by something other than a hook is about to
+            // run the instruction it was asked to step from, which is not a
+            // step. One stopped in a hook has run it already.
+            st.started = true;
+            if depth == st.frames && f.method == st.method && f.pc == st.pc {
+                return false;
+            }
+        }
         if depth < st.frames {
-            return true;
+            if self.step_filter_accepts(request) {
+                return true;
+            }
+            // Back in a class the filters exclude: keep going from here.
+            st.frames = depth;
+            st.line = -1;
+            return false;
         }
         if depth > st.frames {
             let enters = st.depth == DEPTH_INTO && f.pc == 0 && !f.code.line_numbers.is_empty();
@@ -196,7 +207,9 @@ impl Vm {
             .map(|&(r, _)| Event::prepare(r, thread, class))
             .collect();
         if !events.is_empty() {
-            self.post_events(policy, me, &events);
+            // Linking must not give up the VM (init.rs relies on it): the
+            // thread stops at its next instruction instead.
+            self.post_events(policy, me, &events, true);
         }
     }
 }

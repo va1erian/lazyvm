@@ -91,3 +91,35 @@ fn objects_the_debugger_never_saw_are_invalid() {
         assert!(answer.is_err(), "set {set} command {cmd}");
     }
 }
+
+#[test]
+fn stored_requests_are_capped_in_bytes_not_only_in_number() {
+    let mut vm = bare_vm();
+    let pattern = vec![b'a'; 100_000];
+    let mut body = vec![8, 0, 0, 0, 0, 1, 5];
+    body.extend_from_slice(&(pattern.len() as i32).to_be_bytes());
+    body.extend_from_slice(&pattern);
+    let mut refused = None;
+    for n in 0..200 {
+        let mut out = Writer::default();
+        if let Err(code) = vm.dispatch(15, 1, &mut Reader::new(&body), &mut out) {
+            refused = Some((n, code));
+            break;
+        }
+    }
+    let (n, code) = refused.expect("the cap must stop a client that keeps asking");
+    assert_eq!(code, err::OUT_OF_MEMORY);
+    assert!(n < 60, "{n} requests of 100 kB were kept");
+}
+
+#[test]
+fn a_count_of_zero_or_less_is_refused() {
+    let mut vm = bare_vm();
+    for count in [0i32, -5] {
+        let mut body = vec![8, 0, 0, 0, 0, 1, 1];
+        body.extend_from_slice(&count.to_be_bytes());
+        let mut out = Writer::default();
+        let answer = vm.dispatch(15, 1, &mut Reader::new(&body), &mut out);
+        assert_eq!(answer, Err(err::INVALID_COUNT));
+    }
+}

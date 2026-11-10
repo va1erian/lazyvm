@@ -67,6 +67,7 @@ impl Vm {
     /// Removes the running thread from the table and wakes threads waiting
     /// for the live thread count to change.
     fn end_thread(&mut self, me: usize) {
+        self.debug_thread_ended(me);
         if let Some(slot) = self.threads.entries.get_mut(me) {
             *slot = None;
         }
