@@ -132,6 +132,17 @@ impl Vm {
         }
     }
 
+    /// Holds the running thread if a debugger queued a stop for it (a class
+    /// prepared while it was linking). True if it did.
+    pub(crate) fn debug_hold_deferred(&mut self) -> bool {
+        if self.debug.deferred.is_empty() || !self.debug.deferred.remove(&self.current) {
+            return false;
+        }
+        self.refresh_slow_interp();
+        self.hold_if_suspended();
+        true
+    }
+
     /// A thread that is suspended waits here, outside the VM, until its count
     /// is zero. Free when no debugger is attached.
     #[inline]

@@ -64,18 +64,28 @@ impl Vm {
         Ok(())
     }
 
-    /// A thread that has not started or has ended still has a name, and is a
-    /// zombie to `Status`; the rest of the commands say it is not alive.
-    fn dead_thread(&self, cmd: u8, obj: Ref, w: &mut Writer) -> Res<()> {
+    /// A thread that has not started or has ended: it has a name and a status
+    /// (-1 not started, 0 ended), the group only while it is new, no frames
+    /// (observed on the oracle), and suspending it counts for nothing.
+    fn dead_thread(&mut self, cmd: u8, obj: Ref, w: &mut Writer) -> Res<()> {
         if self.object_tag(obj) != b't' {
             return Err(err::INVALID_THREAD);
         }
+        let new = matches!(self.field_by_name(obj, "status", "I"), Ok(Value::Int(0)));
         match cmd {
             1 => w.string(&self.text_field(obj, "name")?),
             4 => {
-                w.i32(0);
+                w.i32(if new { -1 } else { 0 });
                 w.i32(0);
             }
+            5 => {
+                let group = self.get_ref_field(obj, "group", GROUP)?;
+                w.id(self.debug.ids.of_opt(group.filter(|_| new))?);
+            }
+            12 => w.i32(0),
+            2 | 3 => {}
+            7 => return Err(err::THREAD_NOT_SUSPENDED),
+            6 => return Err(err::INVALID_THREAD),
             _ => return Err(err::THREAD_NOT_ALIVE),
         }
         Ok(())

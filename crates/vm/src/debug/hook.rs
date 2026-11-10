@@ -23,10 +23,7 @@ impl Vm {
         if !self.debug.enabled || self.current == self.debug.agent {
             return;
         }
-        if !self.debug.deferred.is_empty() && self.debug.deferred.remove(&self.current) {
-            self.refresh_slow_interp();
-            self.hold_if_suspended();
-        }
+        self.debug_hold_deferred();
         let Some(f) = self.frames.last() else { return };
         let (method, pc) = (f.method, f.pc as u64);
         let key = location_key(method.class, method.index, pc);
@@ -106,15 +103,34 @@ impl Vm {
         let mut policy = 0;
         for (request, mut state) in steps {
             let fired = self.step_reached(&mut state, request);
+            if fired {
+                // The request stays until the debugger clears it, and a thread
+                // that runs on steps again from here (what the oracle does).
+                state = self.step_from_here(state);
+            }
             self.debug.requests.set_step(request, state);
             if fired {
-                self.debug.requests.finish_step(request);
                 let thread = self.thread_id(me);
                 out.push(Event::step(request, thread, loc));
                 policy = louder(policy, self.request_policy(request));
             }
         }
         policy
+    }
+
+    /// `st` begun again at the instruction about to run, which a hook has seen.
+    fn step_from_here(&self, st: StepState) -> StepState {
+        let Some(f) = self.frames.last() else {
+            return st;
+        };
+        StepState {
+            frames: self.frames.len(),
+            line: f.code.line_at(f.pc).map_or(-1, i32::from),
+            method: f.method,
+            pc: f.pc,
+            started: true,
+            ..st
+        }
     }
 
     fn request_policy(&self, request: i32) -> u8 {

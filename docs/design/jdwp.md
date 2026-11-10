@@ -52,8 +52,17 @@ meanwhile takes effect.
 
 A step ends when the thread returns to a caller, enters a method with line
 numbers (into), or reaches the first instruction of another line in the same
-frame (over, into). Class filters of the step request (the IDE's step filters)
-apply.
+frame (over, into). The class filters of the request (an IDE's step filters)
+apply, also on a return: a thread that comes back into excluded code runs on.
+Like the oracle, a step request stays after its event and steps again from
+there until the debugger clears it; a request dies with its thread.
+
+A class prepared while a thread links it posts its event at once, but the
+thread is only held before it marks the class as being initialized
+(`Vm::initialize`), or at its next instruction for links that come from
+elsewhere. Holding inside linking or inside `<clinit>` would let another thread
+initialize the class meanwhile, or leave it blocked on a class the debugger
+shows in a `<clinit>` frame.
 
 ## Ids and the collector
 

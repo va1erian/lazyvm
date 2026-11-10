@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import javac  # noqa: E402
+import jdwp_threads  # noqa: E402
 import jdwplib as j  # noqa: E402
 import lazyrt  # noqa: E402
 from common import BUILD, DIST, LAZYRT_CLASSES, ROOT, cargo_build_launcher, die, find_tool  # noqa: E402
@@ -282,6 +283,23 @@ def on_lazyos(lazyos: Path) -> None:
     print("jdwp_smoke: ok inside LazyOS")
 
 
+def threads_walk(cmd_for) -> None:
+    """`JdwpThreads`: idle threads, step filters, a step request left on a dead thread."""
+    port = free_port()
+    target = Target(cmd_for(f"transport=dt_socket,server=y,suspend=y,address={port}", "JdwpThreads"))
+    try:
+        conn = connect(port, target)
+        conn.handshake()
+        jdwp_threads.run(conn)
+        code = target.finish()
+    except SystemExit:
+        print("the VM printed:\n" + target.text(), file=sys.stderr)
+        raise
+    finally:
+        target.kill()
+    expect(code == 0 and "threads done 3" in target.text(), f"JdwpThreads: status {code}, output {target.text()!r}")
+
+
 def vm_connects_out(cmd_for) -> None:
     """`server=n`: the VM dials the debugger, as an IDE's Debug button arranges."""
     with socket.socket() as listener:
@@ -408,26 +426,31 @@ def main() -> None:
     ap.add_argument("--exe", help="the lazyvm binary (default: build target/release)")
     ap.add_argument("--oracle", action="store_true", help="run the walk on the Java 8 oracle instead")
     ap.add_argument("--no-build", action="store_true")
+    ap.add_argument("--only-threads", action="store_true", help="just the JdwpThreads walk")
     ap.add_argument("--lazyos", type=Path, help="run the walk inside LazyOS (QEMU) from this checkout instead")
     args = ap.parse_args()
     LINE_BY_MARK.update(marks())
     classes = OUT / "classes"
     if not args.no_build:
         lazyrt.build()
-    javac.compile([SRC], classes, bootclasspath=LAZYRT_CLASSES)
+    javac.compile([SRC, jdwp_threads.SRC], classes, bootclasspath=LAZYRT_CLASSES)
     if args.lazyos:
         return on_lazyos(args.lazyos)
     if args.oracle:
         java = find_tool("LAZYVM_ORACLE_JAVA", "java")
 
-        def cmd_for(agent: str) -> list[str]:
-            return [java, "-Xmx512m", f"-agentlib:jdwp={agent}", "-cp", str(classes), "JdwpTarget"]
+        def cmd_for(agent: str, main: str = "JdwpTarget") -> list[str]:
+            return [java, "-Xmx512m", f"-agentlib:jdwp={agent}", "-cp", str(classes), main]
     else:
         exe = Path(args.exe) if args.exe else cargo_build_launcher()
 
-        def cmd_for(agent: str) -> list[str]:
-            return [str(exe), f"-Xbootclasspath:{DIST / 'lazyrt.jar'}", f"-agentlib:jdwp={agent}", "-cp", str(classes), "JdwpTarget"]
+        def cmd_for(agent: str, main: str = "JdwpTarget") -> list[str]:
+            boot = f"-Xbootclasspath:{DIST / 'lazyrt.jar'}"
+            return [str(exe), boot, f"-agentlib:jdwp={agent}", "-cp", str(classes), main]
+    if args.only_threads:
+        return threads_walk(cmd_for)
     attach_and_run(cmd_for, args.oracle)
+    threads_walk(cmd_for)
     vm_connects_out(cmd_for)
     bad_handshake(cmd_for)
     if not args.oracle:

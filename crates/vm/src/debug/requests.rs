@@ -240,15 +240,6 @@ impl Requests {
         out
     }
 
-    /// A step that fired is over: the request stays until the debugger clears
-    /// it, but nothing is watched for it any more.
-    pub fn finish_step(&mut self, id: i32) {
-        if let Some(r) = self.list.iter_mut().find(|r| r.id == id) {
-            r.step = None;
-        }
-        self.reindex();
-    }
-
     pub fn modifiers_of(&self, id: i32) -> &[Modifier] {
         self.list
             .iter()

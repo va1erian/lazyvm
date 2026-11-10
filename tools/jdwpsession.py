@@ -92,6 +92,13 @@ class Session:
             if any(e["kind"] == j.CLASS_PREPARE and e["signature"].endswith("$Once;") for e in events):
                 # Stopped while the class is being linked: hold the world a while, as a debugger may.
                 time.sleep(0.3)
+                once = next(e for e in events if e.get("signature", "").endswith("$Once;"))
+                r = self.c.command(j.THREAD, 6, u64(once["thread"]) + i32(0) + i32(1))
+                r.i32()
+                r.id()
+                top = self.method_name(r.location())
+                if top == "<clinit>":
+                    die("jdwp_smoke: the thread stopped for a class's preparation sits inside its <clinit>")
                 self.resume()
                 continue
             for ev in events:
