@@ -1,0 +1,88 @@
+map then filter: java.lang.IllegalStateException: stream has already been operated upon or closed
+map then count: java.lang.IllegalStateException: stream has already been operated upon or closed
+count then count: java.lang.IllegalStateException: stream has already been operated upon or closed
+count then iterator: java.lang.IllegalStateException: stream has already been operated upon or closed
+count then spliterator: java.lang.IllegalStateException: stream has already been operated upon or closed
+count then parallel: ok
+count then sequential: ok
+count then unordered: java.lang.IllegalStateException: stream has already been operated upon or closed
+count then onClose: ok
+count then close: ok
+count then isParallel: false
+closed then map: java.lang.IllegalStateException: stream has already been operated upon or closed
+closed then forEach: java.lang.IllegalStateException: stream has already been operated upon or closed
+closed then close: ok
+iterator then collect: java.lang.IllegalStateException: stream has already been operated upon or closed
+spliterator then count: java.lang.IllegalStateException: stream has already been operated upon or closed
+source after peek: java.lang.IllegalStateException: stream has already been operated upon or closed
+fresh pipeline still fine: 1
+IntStream reuse: java.lang.IllegalStateException: stream has already been operated upon or closed
+LongStream reuse: java.lang.IllegalStateException: stream has already been operated upon or closed
+DoubleStream reuse: java.lang.IllegalStateException: stream has already been operated upon or closed
+IntStream boxed then map: java.lang.IllegalStateException: stream has already been operated upon or closed
+IntStream boxed then iterator: java.lang.IllegalStateException: stream has already been operated upon or closed
+used, map(null): java.lang.NullPointerException
+used, filter(null): java.lang.NullPointerException
+used, forEach(null): java.lang.IllegalStateException: stream has already been operated upon or closed
+used, collect(null): java.lang.NullPointerException
+used, sorted(null): java.lang.IllegalStateException: stream has already been operated upon or closed
+used, flatMap(null): java.lang.NullPointerException
+used, limit(-1): java.lang.IllegalArgumentException: -1
+used, skip(-1): java.lang.IllegalArgumentException: -1
+used, onClose(null): java.lang.NullPointerException
+used, reduce(null): java.lang.NullPointerException
+used, toArray(null): java.lang.IllegalStateException: stream has already been operated upon or closed
+used, max(null): java.lang.NullPointerException
+used, anyMatch(null): java.lang.NullPointerException
+used, concat: java.lang.IllegalStateException: stream has already been operated upon or closed
+concat null first: java.lang.NullPointerException
+concat null second: java.lang.NullPointerException
+fresh, map(null): java.lang.NullPointerException
+fresh after map(null) NPE: ok
+fresh, limit(-1): java.lang.IllegalArgumentException: -1
+fresh after limit(-1) IAE: ok
+fresh, forEach(null): java.lang.NullPointerException
+fresh after forEach(null): java.lang.IllegalStateException: stream has already been operated upon or closed
+fresh, reduce(null): java.lang.NullPointerException
+fresh after reduce(null): ok
+fresh, collect(null): java.lang.NullPointerException
+fresh after collect(null): ok
+fresh, skip(-2): java.lang.IllegalArgumentException: -2
+fresh, limit(Long.MIN_VALUE): java.lang.IllegalArgumentException: -9223372036854775808
+fresh, sorted(null) ok: java.lang.NullPointerException
+fresh, onClose(null): java.lang.NullPointerException
+fresh, toArray(null): java.lang.NullPointerException
+empty iterator hasNext: false
+empty iterator next: java.util.NoSuchElementException
+IntStream.map(null): java.lang.NullPointerException
+IntStream.mapToObj(null): java.lang.NullPointerException
+IntStream.forEach(null): java.lang.NullPointerException
+IntStream.limit(-1): java.lang.IllegalArgumentException: -1
+IntStream.skip(-5): java.lang.IllegalArgumentException: -5
+IntStream.range(5,1).count: 0
+IntStream.reduce(null): java.lang.NullPointerException
+IntStream.reduce(0,null): java.lang.NullPointerException
+IntStream.collect null: java.lang.NullPointerException
+IntStream.concat null: java.lang.NullPointerException
+IntStream.iterate null: java.lang.NullPointerException
+IntStream.generate null: java.lang.NullPointerException
+LongStream.generate null: java.lang.NullPointerException
+DoubleStream.iterate null: java.lang.NullPointerException
+Stream.iterate null: java.lang.NullPointerException
+Stream.generate null: java.lang.NullPointerException
+Stream.of null array: java.lang.NullPointerException
+Stream.of one null: 1
+IntStream.of null array: java.lang.NullPointerException
+LongStream.of null array: java.lang.NullPointerException
+DoubleStream.of null array: java.lang.NullPointerException
+Arrays.stream null: java.lang.NullPointerException
+Arrays.stream int null: java.lang.NullPointerException
+Arrays.stream range: java.lang.ArrayIndexOutOfBoundsException: origin(2) > fence(1)
+Arrays.stream range hi: java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 4
+Arrays.stream range lo: java.lang.ArrayIndexOutOfBoundsException: Array index out of range: -1
+Arrays.stream long range: java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 5
+Arrays.stream double range: java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 5
+Arrays.stream ok empty: 0
+StreamSupport.stream null: java.lang.NullPointerException
+StreamSupport.stream supplier null: java.lang.NullPointerException
+boxed count: 0

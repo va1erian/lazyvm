@@ -1,0 +1,105 @@
+range: [3, 4, 5, 6]
+range empty: []
+range reversed: []
+range negative: [-2, -1, 0, 1]
+rangeClosed: [3, 4, 5, 6, 7]
+rangeClosed one: [5]
+rangeClosed reversed: []
+rangeClosed to MAX: [2147483645, 2147483646, 2147483647]
+range to MAX: [2147483645, 2147483646]
+rangeClosed from MIN: [-2147483648, -2147483647, -2147483646]
+rangeClosed MIN MIN: [-2147483648]
+rangeClosed MAX MAX: [2147483647]
+range MIN MIN: []
+range MIN..MIN+2: [-2147483648, -2147483647]
+range full size: 4294967295
+rangeClosed full size: 4294967296
+range full limit: [-2147483648, -2147483647, -2147483646]
+rangeClosed full limit: [-2147483648, -2147483647, -2147483646]
+rangeClosed full skip: [2147483645, 2147483646, 2147483647]
+rangeClosed full skip past: []
+rangeClosed full iterator end: false
+rangeClosed anyMatch at MAX: true
+range sized skip limit: [990, 991, 992]
+range count: 1000000
+rangeClosed sum: 5050
+sum: 6
+sum empty: 0
+sum wraps: -2147483648
+average: OptionalDouble[2.3333333333333335]
+average empty: OptionalDouble.empty
+average large exact: OptionalDouble[2.147483647E9]
+average of one: OptionalDouble[-7.0]
+min: OptionalInt[-1]
+max: OptionalInt[3]
+min empty: OptionalInt.empty
+max empty: OptionalInt.empty
+count: 2
+summaryStatistics: IntSummaryStatistics{count=3, sum=12, min=-2, average=4.000000, max=10}
+summaryStatistics empty: IntSummaryStatistics{count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
+reduce op: OptionalInt[24]
+reduce op empty: OptionalInt.empty
+reduce identity: 1
+reduce identity empty: 10
+collect: 12
+collect ArrayList: [1, 2]
+anyMatch: true
+allMatch: false
+noneMatch: true
+anyMatch empty: false
+allMatch empty: true
+noneMatch empty: true
+findFirst: OptionalInt[9]
+findAny: OptionalInt[9]
+findFirst empty: OptionalInt.empty
+forEach: 123
+forEachOrdered: 123
+toArray empty: 0
+toArray filter: [0, 3, 6, 9]
+map: [1, 4, 9]
+map overflow: [-2147483648]
+mapToObj: [A, B]
+mapToLong: 2147483648
+mapToDouble: 0.75
+asLongStream: [-1, 2]
+asDoubleStream: [-1.0, 2.0]
+boxed: [1, 2]
+boxed identity: true
+flatMap: [0, 0, 1]
+filter: [1, 3, 5, 7, 9]
+distinct: [3, 1, 2]
+sorted: [-2147483648, -1, 2, 3, 2147483647]
+sorted empty: []
+peek: 12
+limit: [1, 2, 4, 8, 16, 32]
+skip: [4, 5]
+limit 0: []
+skip past: []
+sequential: false
+parallel: true
+parallel sum: 2001000
+unordered: [2, 1]
+empty: []
+of one: [5]
+of none: []
+of many: [5, 6, 7]
+of array is not copied: [9, 2]
+iterate: [10, 7, 4, 1]
+generate: [2, 4, 6]
+concat: [1, 2, 3]
+concat empty: []
+builder: true [1, 2, 3]
+builder empty: []
+builder twice: java.lang.IllegalStateException
+builder add after: java.lang.IllegalStateException
+builder as IntConsumer: [4, 5]
+iterator: 5 6 false
+iterator exhausted: java.util.NoSuchElementException
+iterator next exhausted: java.util.NoSuchElementException
+iterator forEachRemaining IntConsumer: 123
+iterator forEachRemaining Consumer: 123
+iterator forEachRemaining null: java.lang.NullPointerException
+iterator forEachRemaining Consumer null: java.lang.NullPointerException
+iterator remove: java.lang.UnsupportedOperationException: remove
+spliterator: 5,6,
+spliterator boxed tryAdvance: 56

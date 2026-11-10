@@ -21,6 +21,7 @@ public class TreeSet<E> extends AbstractSet<E> implements NavigableSet<E>, Clone
     }
 
     public Iterator<E> iterator() { return backing.navigableKeySet().iterator(); }
+    public Spliterator<E> spliterator() { return backing.navigableKeySet().spliterator(); }
     public Iterator<E> descendingIterator() { return backing.descendingKeySet().iterator(); }
     public NavigableSet<E> descendingSet() { return new TreeSet<E>(backing.descendingMap()); }
     public int size() { return backing.size(); }

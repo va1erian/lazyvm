@@ -1,0 +1,81 @@
+late binding ArrayList: [1, 2, 3]
+late binding LinkedList: [1, 2, 3]
+late binding HashSet: [1, 2, 3]
+late binding TreeSet: [1, 2, 3]
+late binding ArrayDeque: [1, 2, 3]
+late binding PriorityQueue: [1, 2, 3]
+late binding Vector: [1, 2, 3]
+late binding map keySet: [1, 2]
+late binding map values: [1, 2]
+late binding Arrays.asList: [9, 2]
+late binding Arrays.stream: [9, 2]
+late binding Arrays.stream objects: [z, y]
+late binding Stream.of array: [x, z]
+late binding subList: [20, 3]
+late binding subList structural: java.util.ConcurrentModificationException
+late binding emptied: 0
+bound after first element: CME
+late binding stream of collection: [1, 2, 3]
+each stream() is independent: 4
+stream of empty: 0
+parallelStream: true
+parallelStream late: [1, 2, 3]
+parallelStream HashSet: [10, 12, 14]
+stream element order ArrayList: [3, 1, 2]
+stream element order PriorityQueue: [1, 2, 3]
+stream element order TreeSet: [1, 2, 3]
+stream element order descending: [3, 2, 1]
+stream element order LinkedHashSet: [3, 1, 2]
+stream element order ArrayDeque: [0, 1, 2]
+stream of Vector: [3, 1, 2]
+stream of Stack: [1, 2]
+stream of unmodifiable: [2, 3]
+stream of singleton: [5]
+stream of nCopies: xxx
+stream of emptyList: 0
+stream of EnumSet: [NEW, WAITING]
+stream of EnumMap values: [1, 2]
+stream of copyOnWrite: [1, 2, 3]
+stream of copyOnWrite modify during: 123 6
+stream of ConcurrentHashMap modify during: true
+stream of ConcurrentLinkedQueue modify during: 1234
+stream of LinkedBlockingQueue: [2, 4, 6]
+grow ArrayList: 4 CME 5 | 4 CME 3
+grow LinkedList: 4 CME 5 | 2 CME 3
+grow Vector: 4 CME 5 | 4 CME 3
+grow ArrayDeque: 4 done 5 | 4 done 3
+grow HashSet: 5 CME 5 | 3 CME 3
+grow LinkedHashSet: 1 CME 5 | 1 CME 3
+grow TreeSet: 5 CME 5 | 3 CME 3
+grow PriorityQueue: 4 CME 5 | 3 CME 3
+grow CopyOnWriteArrayList: 4 done 5 | 4 done 3
+grow ConcurrentLinkedQueue: 5 done 5 | 3 done 3
+grow after the last element: CME 3
+modify in map then collect: CME
+modify in anyMatch: CME
+modify in findFirst: CME
+modify in limit: CME
+modify in sorted: Optional[1]
+modify in count: CME
+modify via iterator of stream: CME
+HashMap modify while streaming values: CME
+Arrays.stream: abc
+Arrays.stream range: bc
+Arrays.stream range empty: 0
+Arrays.stream int: 15
+Arrays.stream int range: 11
+Arrays.stream long: OptionalLong[6]
+Arrays.stream long range: 13
+Arrays.stream double: OptionalDouble[5.0]
+Arrays.stream double range: 9.0
+Arrays.stream subtype: 1
+Arrays.stream with nulls: [a, null]
+Arrays.stream 2d: 3
+Arrays.stream 2d flat: 6
+Arrays.stream sorted copy: [3, 1, 2][1, 2, 3]
+array to list round trip: [1, 2]
+Stream.of array element type: Object[]
+string array joined: a-b
+boxed array of ints: 2
+Arrays.setAll-like: 5
+Arrays.stream byte-free char: x,y,z

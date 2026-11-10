@@ -1,0 +1,105 @@
+naive ten tenths: 0.9999999999999999
+sum ten tenths: 1.0
+sum thousand tenths: 100.0
+naive thousand tenths: 99.9999999999986
+sum cancelling: 0.0
+naive cancelling: 0.0
+sum small after big: 1.0000000000000004E16
+naive small after big: 1.0E16
+sum empty: 0.0
+sum -0.0: 0.0
+sum -0.0 -0.0: 0.0
+sum NaN: NaN
+sum +inf: Infinity
+sum -inf: -Infinity
+sum +inf -inf: NaN
+sum inf inf: Infinity
+sum inf then finite: Infinity
+sum overflow: Infinity
+sum overflow then back: Infinity
+sum NaN inf: NaN
+average: OptionalDouble[2.3333333333333335]
+average tenths: OptionalDouble[0.1]
+average empty: OptionalDouble.empty
+average NaN: OptionalDouble[NaN]
+average inf: OptionalDouble[Infinity]
+average inf -inf: OptionalDouble[NaN]
+min: OptionalDouble[-1.5]
+max: OptionalDouble[3.0]
+min empty: OptionalDouble.empty
+max empty: OptionalDouble.empty
+min NaN: OptionalDouble[NaN]
+max NaN: OptionalDouble[NaN]
+max NaN last: OptionalDouble[NaN]
+min signed zero: OptionalDouble[-0.0]
+max signed zero: OptionalDouble[0.0]
+min signed zero reversed: OptionalDouble[-0.0]
+max signed zero reversed: OptionalDouble[0.0]
+min inf: OptionalDouble[-Infinity]
+count: 2
+stats: DoubleSummaryStatistics{count=3, sum=8.000000, min=1.500000, average=2.666667, max=4.000000}
+stats empty: DoubleSummaryStatistics{count=0, sum=0.000000, min=Infinity, average=0.000000, max=-Infinity}
+stats NaN: DoubleSummaryStatistics{count=2, sum=NaN, min=NaN, average=NaN, max=NaN}
+stats inf: DoubleSummaryStatistics{count=2, sum=Infinity, min=1.000000, average=Infinity, max=Infinity}
+stats -inf: DoubleSummaryStatistics{count=2, sum=-Infinity, min=-Infinity, average=-Infinity, max=1.000000}
+stats inf -inf: DoubleSummaryStatistics{count=2, sum=NaN, min=-Infinity, average=NaN, max=Infinity}
+stats tenths: DoubleSummaryStatistics{count=10, sum=1.000000, min=0.100000, average=0.100000, max=0.100000}
+stats tenths sum: 1.0
+stats signed zero: DoubleSummaryStatistics{count=2, sum=0.000000, min=-0.000000, average=0.000000, max=0.000000}
+stats small: DoubleSummaryStatistics{count=1, sum=0.000001, min=0.000001, average=0.000001, max=0.000001}
+stats large: DoubleSummaryStatistics{count=2, sum=1100000000000000000000.000000, min=100000000000000000000.000000, average=550000000000000000000.000000, max=1000000000000000000000.000000}
+stats rounding: DoubleSummaryStatistics{count=2, sum=3.000001, min=1.000001, average=1.500001, max=2.000001}
+reduce op: OptionalDouble[24.0]
+reduce op empty: OptionalDouble.empty
+reduce identity: 91.0
+collect: 1.02.0
+anyMatch: true
+allMatch: false
+noneMatch: true
+anyMatch NaN: false
+anyMatch empty: false
+allMatch empty: true
+findFirst: OptionalDouble[9.0]
+findAny: OptionalDouble[9.0]
+findFirst empty: OptionalDouble.empty
+findFirst NaN: OptionalDouble[NaN]
+forEach: 1.02.5
+forEachOrdered: 1.02.5
+map: [0.5, 1.0, 1.5]
+mapToObj: [0.5, 2.0]
+mapToInt truncates: [1, -1, 0, 2147483647, -2147483648, 2147483647]
+mapToLong truncates: [1, -1, 0, 9223372036854775807, -9223372036854775808]
+boxed: [1.0, 2.0]
+flatMap: [1.0, 10.0, 2.0, 20.0]
+filter: [1.0, 3.0]
+distinct: [3.0, 1.0, NaN, 0.0, -0.0]
+distinct boxed: 1
+sorted: [-Infinity, -1.0, -0.0, 0.0, 2.0, 3.0, Infinity, NaN]
+sorted NaN only: [NaN, NaN]
+sorted boxed: [-1.0, -0.0, 0.0, 3.0, NaN]
+peek: 1.02.0
+limit: [1.0, 0.5, 0.25, 0.125, 0.0625]
+skip: [3.0, 4.0]
+parallel: true
+sequential: false
+unordered: [2.0, 1.0]
+empty: []
+of one: [5.0]
+of none: []
+of many: [5.0, 6.0, 7.0]
+generate: [0.5, 1.0, 1.5]
+concat: [1.0, 2.0, 3.0]
+builder: true [1.0, 2.0, 3.0]
+builder empty: []
+builder twice: java.lang.IllegalStateException
+builder add after: java.lang.IllegalStateException
+builder as DoubleConsumer: [4.0, 5.0]
+array stream: [2.0, 3.0]
+iterator: 5.0 6.0 false
+iterator exhausted: java.util.NoSuchElementException
+iterator forEachRemaining DoubleConsumer: 1.02.03.0
+iterator forEachRemaining Consumer: 1.02.03.0
+iterator forEachRemaining null: java.lang.NullPointerException
+iterator remove: java.lang.UnsupportedOperationException: remove
+spliterator: 5.0,6.0,
+spliterator boxed: 5.06.0

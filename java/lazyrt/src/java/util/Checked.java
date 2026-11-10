@@ -28,6 +28,8 @@ final class Checked {
             this.elementClass = Objects.requireNonNull(elementClass, "type");
         }
 
+        public Spliterator<E> spliterator() { return c.spliterator(); }
+
         @SuppressWarnings("unchecked")
         E check(Object o) {
             if (o != null && !elementClass.isInstance(o)) {

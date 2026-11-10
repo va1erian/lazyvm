@@ -254,4 +254,18 @@ public class PriorityQueue<E> extends AbstractQueue<E> implements java.io.Serial
             }
         }
     }
+
+    @Override
+    public final Spliterator<E> spliterator() {
+        return new ArrayWalk<E>(Spliterator.SIZED | Spliterator.SUBSIZED | Spliterator.NONNULL, true) {
+            @Override
+            Object[] array() { return heap; }
+
+            @Override
+            int count() { return size; }
+
+            @Override
+            int stamp() { return modCount; }
+        };
+    }
 }

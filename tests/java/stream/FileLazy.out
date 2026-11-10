@@ -1,0 +1,40 @@
+list flags: DISTINCT exact=-1
+walk flags: - exact=-1
+walk depth flags: - exact=-1
+find flags: - exact=-1
+lines flags: ORDERED|NONNULL exact=-1
+lines flags charset: ORDERED|NONNULL exact=-1
+lines flags ISO: ORDERED|NONNULL exact=-1
+list is not sized: false
+walk after map flags: - exact=-1
+list filter flags: DISTINCT exact=-1
+list sees deletion after call: [lazy1/a, lazy1/c]
+list sees creation after call: [lazy2/a, lazy2/z]
+list sees deletion of all after call: []
+walk sees changes after call: [lazy5, lazy5/a, lazy5/y]
+walk sees new subdirectory: [lazy6, lazy6/a, lazy6/sub, lazy6/sub/q]
+find sees changes after call: [lazy7/a, lazy7/y]
+lines sees content after call: [new1, new2]
+list laziness with iterator: [lazy10/a]
+list iterator after close: false
+list iterator after hasNext and close: true true true
+list iterator drained after close: 1
+list spliterator after close: false
+list spliterator forEachRemaining after close: 0
+walk iterator after close: !java.lang.IllegalStateException
+walk iterator after hasNext and close: !java.lang.IllegalStateException
+walk spliterator after close: !java.lang.IllegalStateException
+find iterator after close: !java.lang.IllegalStateException
+lines iterator after close: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+lines iterator after hasNext and close: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+lines iterator drained after close: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+lines spliterator after close: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+lines spliterator after tryAdvance and close: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+lines after close: !java.lang.IllegalStateException: stream has already been operated upon or closed
+lines mapped after source close: !java.lang.IllegalStateException: source already consumed or closed
+lines close during forEach: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+lines close inside iterator loop: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+lines close then use iterator forEachRemaining: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+lines onClose runs once: h
+lines onClose throws, file still closed: stream has already been operated upon or closed
+list close twice then iterate: !java.lang.IllegalStateException: stream has already been operated upon or closed

@@ -82,4 +82,8 @@ public class ConcurrentLinkedQueue<E> extends AbstractQueue<E> implements java.u
     public Iterator<E> iterator() {
         return core.iterator(false);
     }
+
+    public java.util.Spliterator<E> spliterator() {
+        return core.cursor(Long.MAX_VALUE);
+    }
 }

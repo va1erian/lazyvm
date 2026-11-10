@@ -483,4 +483,10 @@ public class CopyOnWriteArrayList<E> implements List<E>, RandomAccess, Cloneable
             throw new UnsupportedOperationException();
         }
     }
+
+    @SuppressWarnings("unchecked")
+    public java.util.Spliterator<E> spliterator() {
+        return (java.util.Spliterator<E>) java.util.Spliterators.spliterator(snapshot(),
+                java.util.Spliterator.ORDERED | java.util.Spliterator.IMMUTABLE);
+    }
 }

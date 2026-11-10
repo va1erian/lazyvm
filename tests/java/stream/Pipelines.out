@@ -1,0 +1,104 @@
+by dept: {eng=[ann, cy, flo], hr=[di, gus], ops=[bob, ed]}
+count by dept: {eng=3, hr=2, ops=2}
+avg pay by dept: {eng=116.5, hr=62.875, ops=82.875}
+sum pay by dept: {eng=349.5, hr=125.75, ops=165.75}
+oldest by dept: {eng=Optional[flo], hr=Optional[di], ops=Optional[ed]}
+names by dept: {eng=ann/cy/flo, hr=di/gus, ops=bob/ed}
+stats by dept: {eng=IntSummaryStatistics{count=3, sum=94, min=28, average=31.333333, max=35}, hr=IntSummaryStatistics{count=2, sum=62, min=23, average=31.000000, max=39}, ops=IntSummaryStatistics{count=2, sum=96, min=45, average=48.000000, max=51}}
+dept then decade: {eng={20=[cy], 30=[ann, flo]}, hr={20=[gus], 30=[di]}, ops={40=[bob], 50=[ed]}}
+partition by age: {false=[ann, cy, gus], true=[bob, di, ed, flo]}
+partition then count: {false=4, true=3}
+partition by dept then avg: {false=39.5, true=31.333333333333332}
+top paid per dept: {eng=flo, hr=di, ops=ed}
+dept names sorted by size: [eng, hr, ops]
+sorted by two keys: [flo, ann, cy, di, gus, ed, bob]
+sorted by pay desc limit: flo,ann,cy
+total pay: 641.0
+pay stats: DoubleSummaryStatistics{count=7, sum=641.000000, min=55.750000, average=91.571429, max=130.000000}
+average age: 36.0
+youngest: gus
+any over 50: true
+all paid: true
+name lengths: [3, 3, 2, 2, 2, 3, 3]
+name index map: {ann=0, bob=1, cy=2, di=3, ed=4, flo=5, gus=6}
+words: [the, quick, brown, fox, jumps, over, the, lazy, dog, the, end]
+word counts: {brown=1, dog=1, end=1, fox=1, jumps=1, lazy=1, over=1, quick=1, the=3}
+distinct sorted words: brown dog end fox jumps lazy over quick the
+longest word: quick
+longest word ties first: quick
+words by length: {3=[dog, end, fox, the], 4=[lazy, over], 5=[brown, jumps, quick]}
+capitalized: The Quick Brown Fox Jumps Over The Lazy Dog The End
+letters: e=5,o=4
+reverse words: end the dog lazy the over jumps fox brown quick the
+char frequency top: e5,o4,h3
+csv: abcdef
+palindromes: [level, noon]
+anagram groups: [[cat, act], [google, gogole], [listen, silent, enlist]]
+squares: [1, 4, 9, 16, 25, 36]
+sum of squares: 338350
+factorial long: 2432902008176640000
+factorial overflow: -4249290049419214848
+primes: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+fibonacci: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
+fibonacci big: 2880067194370816120
+powers of two: 1,2,4,8,16,32,64,128,256,512
+collatz: [27, 82, 41, 124, 62, 31, 94, 47, 142, 71, 214, 107]
+collatz until one: Optional[1]
+multiplication table: 1 2 3 4; 2 4 6 8; 3 6 9 12
+transpose: [[1, 4], [2, 5], [3, 6]]
+pairs: [1-1, 1-2, 1-3, 2-2, 2-3, 3-3]
+pythagorean: [3,4,5, 5,12,13, 6,8,10, 8,15,17, 9,12,15, 12,16,20]
+cartesian: [a1, a2, b1, b2]
+nested flatMap depth 3: [10, -10, 100, -100, 20, -20, 200, -200]
+flatMap of lists: [1, 4, 9]
+flatMap optional: [1, 3]
+boxing round trip int: [3, 2, 1]
+boxing round trip long: 6
+boxing round trip double: 4.0
+boxing mixed: [0.0, 1.0, 2.0, 3.0]
+int to double average: 2.414213562373095
+map to object and back: 10
+empty int stats: IntSummaryStatistics{count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
+empty pipeline: []
+empty reductions: Optional.empty 0 Optional.empty OptionalInt.empty OptionalDouble.empty
+single element pipeline: 6
+generate with state: [0, 1, 2, 3, 4]
+iterate while-like: 128
+iterate with limit and sum: 5050
+zip: [x1, y2, z3]
+sliding windows: [6, 9, 12]
+running total: [1, 3, 6, 10, 15]
+chunks: [[0, 1, 2], [3, 4, 5], [6]]
+histogram: {0=3, 1=3, 2=1}
+median: 3.0
+reduce to string: cba
+reduce to map: {1=1, 2=2}
+collect to array list and shuffle-free sort: [1, 3, 5, 9]
+toArray sorted strings: [apple, fig, pear]
+sorted stability by key: [a, d, f, bb, cc, ee]
+sorted stability large: [80, 84, 88, 92, 96, 1, 5, 9, 13, 17]
+sorted reverse stability: [bb, cc, ee, a, d, f]
+max by with ties keeps first or last: bb
+limit then sorted: [3, 5, 9]
+sorted then limit: [1, 3, 5]
+distinct preserves first: [b, a, c]
+distinct custom equals: 2
+iterator for loop: 246
+Iterable from stream: 123
+stream of map entries: a1,b2
+map values transform: {a=10, b=20}
+optional chain: BB
+optional empty chain: none
+optional int chain: 8
+optional int none: -1
+optional double: 3.5
+optional long: 77
+big pipeline: 111112777761111
+big boxed pipeline: 6667
+big sort: Optional[2502]
+big distinct: 137
+big group: {0=1429, 1=1429, 2=1429, 3=1429, 4=1428, 5=1428, 6=1428}
+big flatMap: 600
+big concat: 49995000
+big iterate limit: 200010000
+big string join: 6890

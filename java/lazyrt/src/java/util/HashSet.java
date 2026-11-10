@@ -20,6 +20,7 @@ public class HashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, jav
     /** For LinkedHashSet: a set over the given (linked) map. */
     HashSet(HashMap<E, Object> backing) { this.backing = backing; }
     public Iterator<E> iterator() { return backing.keySet().iterator(); }
+    public Spliterator<E> spliterator() { return backing.keySet().spliterator(); }
     public int size() { return backing.size(); }
     public boolean isEmpty() { return backing.isEmpty(); }
     public boolean contains(Object o) { return backing.containsKey(o); }
