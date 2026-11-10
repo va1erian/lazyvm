@@ -23,7 +23,7 @@ pub struct Frame {
     pub pc: usize,
     /// Where to continue after a call made by this frame returns.
     pub next_pc: usize,
-    pub locals: Box<[Value]>,
+    pub locals: Vec<Value>,
     pub stack: Vec<Value>,
     /// Monitors entered by `monitorenter` and not yet exited, oldest
     /// first. Released when the frame is popped (JVMS 2.11.10).
@@ -34,15 +34,20 @@ pub struct Frame {
 
 impl Frame {
     /// A frame for `method` with `args` (one value each, `this` first) laid
-    /// out in local slots, wide values taking two.
+    /// out in local slots, wide values taking two. `locals` and `stack` are
+    /// spare buffers to reuse (any contents), so a call allocates nothing in
+    /// the common case.
     pub fn new(
         method: MethodRef,
         code: Arc<Code>,
         arg_slots: u16,
         args: &[Value],
+        mut locals: Vec<Value>,
+        mut stack: Vec<Value>,
     ) -> VmResult<Frame> {
         let size = usize::from(code.max_locals.max(arg_slots));
-        let mut locals = vec![Value::Top; size].into_boxed_slice();
+        locals.clear();
+        locals.resize(size, Value::Top);
         let mut i = 0;
         for &arg in args {
             let wide = arg.is_wide();
@@ -53,7 +58,8 @@ impl Frame {
             locals[i] = arg;
             i += need;
         }
-        let stack = Vec::with_capacity(usize::from(code.max_stack));
+        stack.clear();
+        stack.reserve(usize::from(code.max_stack));
         Ok(Frame {
             method,
             class: method.class,
@@ -200,12 +206,19 @@ impl Frame {
 
     /// Jumps by a signed offset from the current instruction.
     pub fn jump(&mut self, offset: i32) -> VmResult<()> {
-        let target = self.pc as i64 + i64::from(offset);
-        if target < 0 || target as usize >= self.code.bytecode.len() {
-            return Err(VmError::verify("branch target outside the code"));
-        }
-        self.pc = target as usize;
+        self.pc = self
+            .target(offset)
+            .ok_or_else(|| VmError::verify("branch target outside the code"))?;
         Ok(())
+    }
+
+    /// The address `offset` from the current instruction, if it is inside the code.
+    #[inline]
+    pub fn target(&self, offset: i32) -> Option<usize> {
+        let target = self.pc as i64 + i64::from(offset);
+        usize::try_from(target)
+            .ok()
+            .filter(|&t| t < self.code.bytecode.len())
     }
 
     /// The source line of the current instruction, -1 if unknown.

@@ -32,6 +32,16 @@ public class StringCaseLocale {
     public static void main(String[] args) {
         show("empty", "");
         show("ascii mixed", "Hello, World iIjJ 123");
+        StringBuilder ascii = new StringBuilder();
+        for (char c = 0; c < 128; c++) {
+            ascii.append(c);
+        }
+        show("ascii all", ascii.toString());
+        show("ascii i words", "Title iIiI Insist INFINITY index");
+        show("ascii no i", "STONE pickaxe 123 ~!");
+        show("ascii I", "I");
+        show("ascii i", "i");
+        show("ascii j", "jJ");
         show("already upper", "TITLE");
         show("already lower", "title");
         show("turkish i", "I i \u0130 \u0131 \u0130stanbul \u0131\u0131");
