@@ -1,0 +1,49 @@
+after count: 
+after close: a b c
+second close: 
+close last: base mapped last
+close middle: base mapped
+linked source closes: ok
+close linked source: x
+close after source closed: 
+late handler: late
+caught e
+after throw: 
+try-with-resources: 2 twr
+twr body threw: java.lang.RuntimeException: body
+twr after throw: twr
+first wins: java.lang.RuntimeException: e1 +java.lang.IllegalStateException: e2 +java.lang.IllegalArgumentException: e3
+all ran: a b c d
+second close quiet
+not rerun: 
+same twice: java.lang.RuntimeException: same
+same ran: a b
+pre-suppressed: java.lang.RuntimeException: withSup +java.lang.Exception: pre +java.lang.IllegalArgumentException: e3b
+sup ran: a b
+error first: java.lang.StackOverflowError: so +java.lang.IllegalStateException: e2
+err ran: a b
+error second: java.lang.IllegalStateException: e2 +java.lang.AssertionError: late
+err2 ran: a b
+concat close: c1 c2 outer
+concat throws: java.lang.RuntimeException: e1 +java.lang.IllegalStateException: e2
+concat ran: c1 c2
+concat count: 
+flatMap run: v1 in1 v2 in2
+flatMap close: outer
+flatMap inner close throws: java.lang.RuntimeException: c1
+flatMap inner ran: v1 in1
+IntStream: int
+LongStream: long
+DoubleStream: double
+boxed: i b
+mapToInt: s m
+list.stream: list
+parallel/sequential: par
+unordered: un
+chain: so
+StreamSupport: ss
+empty: em
+builder: bu
+generate: gen
+nested close: inner outer
+self close: self

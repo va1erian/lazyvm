@@ -164,4 +164,10 @@ public class ConcurrentSkipListSet<E> extends AbstractSet<E> implements Navigabl
     public NavigableSet<E> descendingSet() {
         return new ConcurrentSkipListSet<>(map.descendingMap());
     }
+
+    public java.util.Spliterator<E> spliterator() {
+        return new lazy.internal.WeakSplit<E>(this, Integer.MAX_VALUE, java.util.Spliterator.ORDERED
+                | java.util.Spliterator.DISTINCT | java.util.Spliterator.SORTED | java.util.Spliterator.NONNULL
+                | java.util.Spliterator.CONCURRENT, comparator());
+    }
 }

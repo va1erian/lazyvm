@@ -127,4 +127,9 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E> implements BlockingQ
     public Iterator<E> iterator() {
         return core.iterator(false);
     }
+
+    public java.util.Spliterator<E> spliterator() {
+        return new lazy.internal.WeakSplit<E>(this, size(), java.util.Spliterator.ORDERED
+                | java.util.Spliterator.NONNULL | java.util.Spliterator.CONCURRENT, null);
+    }
 }

@@ -1,0 +1,76 @@
+int new: IntSummaryStatistics{count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
+int new parts: 0 0 2147483647 0.0 -2147483648
+int accept: IntSummaryStatistics{count=3, sum=10, min=-3, average=3.333333, max=8} 3.3333333333333335
+int types: LongLongIntegerDouble
+int sum is long: 4294967294 2.147483647E9
+int combine: IntSummaryStatistics{count=4, sum=9, min=-4, average=2.250000, max=9} | IntSummaryStatistics{count=2, sum=-1, min=-4, average=-0.500000, max=3}
+int combine empty: IntSummaryStatistics{count=1, sum=1, min=1, average=1.000000, max=1}
+int combine into empty: IntSummaryStatistics{count=1, sum=7, min=7, average=7.000000, max=7}
+int combine self: IntSummaryStatistics{count=4, sum=14, min=2, average=3.500000, max=5}
+int combine null: java.lang.NullPointerException
+int as IntConsumer: IntSummaryStatistics{count=3, sum=6, min=1, average=2.000000, max=3}
+int andThen: 2 45
+int toString negative average: IntSummaryStatistics{count=2, sum=-3, min=-2, average=-1.500000, max=-1}
+int toString rounding: IntSummaryStatistics{count=3, sum=4, min=1, average=1.333333, max=2}
+int toString repeating: IntSummaryStatistics{count=7, sum=13, min=1, average=1.857143, max=2}
+int toString class name: true
+int hashCode inherited: true false
+int subclass toString: MyStats{count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
+int anonymous subclass toString: {count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
+int subclass accept: 6
+int stream collect: IntSummaryStatistics{count=3, sum=6, min=1, average=2.000000, max=3}
+int boxed summarizing: 3
+long new: LongSummaryStatistics{count=0, sum=0, min=9223372036854775807, average=0.000000, max=-9223372036854775808}
+long accept long: LongSummaryStatistics{count=3, sum=1099511627778, min=-3, average=366503875926.000000, max=1099511627776}
+long accept int: LongSummaryStatistics{count=2, sum=6, min=-1, average=3.000000, max=7}
+long types: LongLongLongDouble
+long sum wraps: -9223372036854775808 true
+long combine: LongSummaryStatistics{count=3, sum=20, min=-20, average=6.666667, max=30}
+long combine null: java.lang.NullPointerException
+long as LongConsumer: LongSummaryStatistics{count=3, sum=6, min=1, average=2.000000, max=3}
+long as IntConsumer: LongSummaryStatistics{count=3, sum=6, min=1, average=2.000000, max=3}
+long stream collect: LongSummaryStatistics{count=3, sum=6, min=1, average=2.000000, max=3}
+double new: DoubleSummaryStatistics{count=0, sum=0.000000, min=Infinity, average=0.000000, max=-Infinity}
+double new parts: 0 0.0 Infinity 0.0 -Infinity
+double accept: 3 3.0 -2.5 1.0 4.0
+double types: LongDoubleDoubleDouble
+double compensated: 1.0 0.1
+double compensated many: 100.0
+double 1e16 plus ones: 5 1.0000000000000004E16 1.0 2.0000000000000008E15 1.0E16
+double NaN: 3 NaN NaN NaN NaN
+double NaN first: 3 NaN NaN NaN NaN
+double inf: 3 Infinity 1.0 Infinity Infinity
+double -inf: 2 -Infinity -Infinity -Infinity 5.0
+double inf -inf: 2 NaN -Infinity NaN Infinity
+double inf inf: 2 Infinity Infinity Infinity Infinity
+double inf then big: 3 Infinity 1.0E308 Infinity Infinity
+double overflow: 2 Infinity 1.7976931348623157E308 Infinity 1.7976931348623157E308
+double signed zero: 2 0.0 -0.0 0.0 0.0
+double signed zero reversed: 2 0.0 -0.0 0.0 0.0
+double only negative zero: 1 0.0 -0.0 0.0 -0.0
+double min value: 2 4.9E-324 0.0 0.0 4.9E-324
+double combine: 10 1.0 0.1 0.1 0.1 | 5 0.5 0.1 0.1 0.1
+double combine small: 5 1.0000000000000004E16 1.0 2.0000000000000008E15 1.0E16
+double combine compensation carries: 7 2.8000000000000007 0.1 0.4000000000000001 0.7
+double combine into empty: 2 7.0 3.0 3.5 4.0
+double combine empty: 2 7.0 3.0 3.5 4.0
+double combine NaN: 3 NaN NaN NaN NaN
+double combine inf: 3 Infinity 3.0 Infinity Infinity
+double combine inf -inf: 2 NaN -Infinity NaN Infinity
+double combine self: 4 4.0 0.5 1.0 1.5
+double combine null: java.lang.NullPointerException
+double as DoubleConsumer: DoubleSummaryStatistics{count=3, sum=6.000000, min=1.000000, average=2.000000, max=3.000000}
+double as Consumer via andThen: 2
+double toString exact: DoubleSummaryStatistics{count=1, sum=1.000001, min=1.000001, average=1.000001, max=1.000001}
+double toString rounding up: DoubleSummaryStatistics{count=1, sum=0.000001, min=0.000001, average=0.000001, max=0.000001}
+double toString big: DoubleSummaryStatistics{count=2, sum=1000000123456789.100000, min=123456789.123457, average=500000061728394.560000, max=1000000000000000.000000}
+double toString negative: DoubleSummaryStatistics{count=2, sum=-3.750000, min=-2.500000, average=-1.875000, max=-1.250000}
+double toString NaN: DoubleSummaryStatistics{count=1, sum=NaN, min=NaN, average=NaN, max=NaN}
+double toString tiny: DoubleSummaryStatistics{count=1, sum=0.000000, min=0.000000, average=0.000000, max=0.000000}
+double stream collect: DoubleSummaryStatistics{count=3, sum=6.000000, min=1.000000, average=2.000000, max=3.000000}
+double getMax after only NaN: NaN
+double getMin after -0.0 then 0.0: -0.0
+double getAverage empty: 0.0
+double getSum after inf cancels: NaN
+double sum of many equal: 110.00000000000001
+naive sum of many equal: 109.99999999999982

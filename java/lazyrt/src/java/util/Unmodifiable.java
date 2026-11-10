@@ -20,7 +20,7 @@ final class Unmodifiable {
     }
 
     static <E> List<E> list(List<? extends E> list) {
-        return list instanceof RandomAccess ? new URandomList<E>(list) : new UList<E>(list);
+        return list instanceof RandomAccess ? new Collections.UnmodifiableRandomAccessList<E>(list) : new UList<E>(list);
     }
 
     static <E> Iterator<E> readOnly(Iterator<? extends E> it) {
@@ -42,6 +42,8 @@ final class Unmodifiable {
         public int size() { return c.size(); }
         public boolean isEmpty() { return c.isEmpty(); }
         public boolean contains(Object o) { return c.contains(o); }
+        @SuppressWarnings("unchecked")
+        public Spliterator<E> spliterator() { return (Spliterator<E>) c.spliterator(); }
         public Object[] toArray() { return c.toArray(); }
         public <T> T[] toArray(T[] a) { return c.toArray(a); }
         public String toString() { return c.toString(); }
@@ -142,12 +144,6 @@ final class Unmodifiable {
                 // Spec 10.X7: the list iterator hands its forEachRemaining on.
                 public void forEachRemaining(java.util.function.Consumer<? super E> action) { it.forEachRemaining(action); }
             };
-        }
-    }
-
-    static final class URandomList<E> extends UList<E> implements RandomAccess {
-        URandomList(List<? extends E> l) {
-            super(l);
         }
     }
 
@@ -300,6 +296,12 @@ final class Unmodifiable {
             super(s);
         }
 
+        /** The map's own spliterator (so its characteristics show), with every entry made read-only. */
+        @SuppressWarnings("unchecked")
+        public Spliterator<Map.Entry<K, V>> spliterator() {
+            return new Guarded<K, V>((Spliterator<Map.Entry<K, V>>) c.spliterator());
+        }
+
         @SuppressWarnings("unchecked")
         public Iterator<Map.Entry<K, V>> iterator() {
             Iterator<Map.Entry<K, V>> it = (Iterator<Map.Entry<K, V>>) c.iterator();
@@ -330,5 +332,33 @@ final class Unmodifiable {
             Object[] items = toArray();
             return Support.toArray(items, items.length, a);
         }
+    }
+
+    /** A spliterator of entries that hands out read-only copies. */
+    static final class Guarded<K, V> implements Spliterator<Map.Entry<K, V>> {
+        private final Spliterator<Map.Entry<K, V>> inner;
+
+        Guarded(Spliterator<Map.Entry<K, V>> inner) { this.inner = inner; }
+
+        public boolean tryAdvance(Consumer<? super Map.Entry<K, V>> action) {
+            Objects.requireNonNull(action);
+            return inner.tryAdvance(e -> action.accept(new UEntry<K, V>(e)));
+        }
+
+        public void forEachRemaining(Consumer<? super Map.Entry<K, V>> action) {
+            Objects.requireNonNull(action);
+            inner.forEachRemaining(e -> action.accept(new UEntry<K, V>(e)));
+        }
+
+        public Spliterator<Map.Entry<K, V>> trySplit() {
+            Spliterator<Map.Entry<K, V>> part = inner.trySplit();
+            return part == null ? null : new Guarded<K, V>(part);
+        }
+
+        public long estimateSize() { return inner.estimateSize(); }
+
+        public int characteristics() { return inner.characteristics(); }
+
+        public Comparator<? super Map.Entry<K, V>> getComparator() { return inner.getComparator(); }
     }
 }

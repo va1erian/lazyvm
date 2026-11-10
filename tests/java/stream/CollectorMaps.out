@@ -1,0 +1,51 @@
+toMap: java.util.HashMap {32=fig, 40=date, 57=apple, 42=pear, 47=kiwi}
+toMap identity: java.util.ArrayList [apple=5, date=4, fig=3, kiwi=4, pear=4]
+toMap empty: java.util.HashMap {}
+toMap duplicate: java.lang.IllegalStateException: Duplicate key pear
+toMap duplicate message names the earlier value: java.lang.IllegalStateException: Duplicate key 1
+toMap distinct key objects: [a, b]
+toMap duplicate same string: java.lang.IllegalStateException: Duplicate key a
+toMap duplicate message uses value toString: java.lang.IllegalStateException: Duplicate key K(p)
+toMap duplicate stops there: after 2
+toMap null key: {null=b, a=a}
+toMap null key sole: {null=b}
+toMap null value: java.lang.NullPointerException
+toMap null value sole: java.lang.NullPointerException
+toMap null value duplicate: java.lang.NullPointerException
+toMap 3: {3=fig, 4=pear+kiwi+date, 5=apple}
+toMap 3 merge order: {1=((ab)c)}
+toMap 3 merge null removes: {a=a}
+toMap 3 merge null then again: {a=a}
+toMap 3 merge not called for new keys: {a=a, b=b}
+toMap 3 merge throws: java.lang.IllegalArgumentException: mine
+toMap 3 type: java.util.HashMap
+toMap 4 TreeMap: java.util.TreeMap {apple=5, date=4, fig=3, kiwi=4, pear=4}
+toMap 4 LinkedHashMap: java.util.LinkedHashMap {pear=4, fig=3, apple=5, kiwi=4, date=4}
+toMap 4 merge: java.util.TreeMap {3=fig, 4=datekiwipear, 5=apple}
+toMap 4 TreeMap null key: java.lang.NullPointerException
+toMap 4 HashMap null key: {null=a}
+toMap 4 HashMap null value: java.lang.NullPointerException
+toMap 4 HashMap null value merge: java.lang.NullPointerException
+toMap 4 factory result reused: true {a=1, seed=0}
+toMap 4 unmodifiable factory: java.lang.UnsupportedOperationException
+toMap 4 unmodifiable factory empty stream: {}
+toMap Hashtable: {a=1}
+toMap EnumMap: {NEW=0, BLOCKED=2}
+toMap grouped counting: {a=2, bb=1}
+toConcurrentMap: java.util.TreeMap {apple=5, date=4, fig=3, kiwi=4, pear=4}
+toConcurrentMap type: true
+toConcurrentMap class: java.util.concurrent.ConcurrentHashMap
+toConcurrentMap duplicate: java.lang.IllegalStateException: Duplicate key pear
+toConcurrentMap null value: java.lang.NullPointerException
+toConcurrentMap null key: java.lang.NullPointerException
+toConcurrentMap 3: {3=fig, 4=pear+kiwi+date, 5=apple}
+toConcurrentMap 4: java.util.concurrent.ConcurrentSkipListMap {3=fig, 4=pear+kiwi+date, 5=apple}
+toConcurrentMap parallel: {apple=5, date=4, fig=3, kiwi=4, pear=4}
+toMap parallel: {0=0, 1=1, 2=4, 3=9, 4=16, 5=25, 6=36, 7=49, 8=64, 9=81}
+word count: {a=2, b=3, c=1}
+entries sorted by value: b3,a2,c1
+invert: {3=[fig], 4=[date, kiwi, pear], 5=[apple]}
+map stream: [k=1]
+map values stream sum: 20
+keySet stream sorted: [apple, date, fig, kiwi, pear]
+entry comparingByKey: k=1

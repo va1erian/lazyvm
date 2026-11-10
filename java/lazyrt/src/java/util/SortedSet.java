@@ -12,4 +12,10 @@ public interface SortedSet<E> extends Set<E> {
     E first();
 
     E last();
+
+    @Override
+    default Spliterator<E> spliterator() {
+        return new Late<E>(this, Spliterator.ORDERED | Spliterator.DISTINCT | Spliterator.SORTED
+                | Spliterator.SIZED | Spliterator.SUBSIZED, comparator());
+    }
 }

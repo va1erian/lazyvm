@@ -8,6 +8,11 @@ import java.util.function.IntToDoubleFunction;
 import java.util.function.IntToLongFunction;
 import java.util.function.IntUnaryOperator;
 import java.util.function.LongBinaryOperator;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * The per-type overloads are one-line entry points: the work is in KeySort (primitive sort and
@@ -429,6 +434,28 @@ public class Arrays {
         }
     }
 
+    // ---- spliterators and streams over arrays: the array is read when the stream runs ----
+
+    private static final int SEQ = Spliterator.ORDERED | Spliterator.IMMUTABLE;
+
+    public static <T> Spliterator<T> spliterator(T[] a) { return ArraySplits.refs(a, 0, a.length, SEQ); }
+    public static <T> Spliterator<T> spliterator(T[] a, int from, int to) { return ArraySplits.refs(a, from, to, SEQ); }
+    public static Spliterator.OfInt spliterator(int[] a) { return ArraySplits.ints(a, 0, a.length, SEQ); }
+    public static Spliterator.OfInt spliterator(int[] a, int from, int to) { return ArraySplits.ints(a, from, to, SEQ); }
+    public static Spliterator.OfLong spliterator(long[] a) { return ArraySplits.longs(a, 0, a.length, SEQ); }
+    public static Spliterator.OfLong spliterator(long[] a, int from, int to) { return ArraySplits.longs(a, from, to, SEQ); }
+    public static Spliterator.OfDouble spliterator(double[] a) { return ArraySplits.doubles(a, 0, a.length, SEQ); }
+    public static Spliterator.OfDouble spliterator(double[] a, int from, int to) { return ArraySplits.doubles(a, from, to, SEQ); }
+
+    public static <T> Stream<T> stream(T[] a) { return StreamSupport.stream(spliterator(a), false); }
+    public static <T> Stream<T> stream(T[] a, int from, int to) { return StreamSupport.stream(spliterator(a, from, to), false); }
+    public static IntStream stream(int[] a) { return StreamSupport.intStream(spliterator(a), false); }
+    public static IntStream stream(int[] a, int from, int to) { return StreamSupport.intStream(spliterator(a, from, to), false); }
+    public static LongStream stream(long[] a) { return StreamSupport.longStream(spliterator(a), false); }
+    public static LongStream stream(long[] a, int from, int to) { return StreamSupport.longStream(spliterator(a, from, to), false); }
+    public static DoubleStream stream(double[] a) { return StreamSupport.doubleStream(spliterator(a), false); }
+    public static DoubleStream stream(double[] a, int from, int to) { return StreamSupport.doubleStream(spliterator(a, from, to), false); }
+
     @SafeVarargs
     public static <T> List<T> asList(T... a) {
         return new ArrayList<>(a);
@@ -438,26 +465,16 @@ public class Arrays {
     private static class ArrayList<E> extends AbstractList<E> implements RandomAccess, java.io.Serializable {
         private final E[] a;
 
-        ArrayList(E[] array) {
-            a = Objects.requireNonNull(array);
-        }
+        ArrayList(E[] array) { a = Objects.requireNonNull(array); }
 
-        public int size() {
-            return a.length;
-        }
+        public int size() { return a.length; }
 
         // Spec 10.X3: a copy with the backing array's runtime type.
-        public Object[] toArray() {
-            return a.clone();
-        }
+        public Object[] toArray() { return a.clone(); }
 
-        public <T> T[] toArray(T[] out) {
-            return Support.toArray(a, a.length, out);
-        }
+        public <T> T[] toArray(T[] out) { return Support.toArray(a, a.length, out); }
 
-        public E get(int index) {
-            return a[index];
-        }
+        public E get(int index) { return a[index]; }
 
         public E set(int index, E element) {
             E old = a[index];
@@ -465,17 +482,14 @@ public class Arrays {
             return old;
         }
 
-        public int indexOf(Object o) {
-            return Support.indexOf(a, 0, a.length, o);
-        }
+        public int indexOf(Object o) { return Support.indexOf(a, 0, a.length, o); }
 
-        public boolean contains(Object o) {
-            return indexOf(o) >= 0;
-        }
+        public boolean contains(Object o) { return indexOf(o) >= 0; }
 
         // Spec 7.S2: sorts the backing array itself.
-        public void sort(Comparator<? super E> c) {
-            Arrays.sort(a, c);
-        }
+        public void sort(Comparator<? super E> c) { Arrays.sort(a, c); }
+
+        @Override
+        public Spliterator<E> spliterator() { return ArraySplits.refs(a, 0, a.length, Spliterator.ORDERED); }
     }
 }

@@ -1,0 +1,63 @@
+codePoints iterator steps: created [] true[L L c0] true[] 97[] 98[L L c1] true[L L c2] 99[] false[L]
+codePoints iterator pair steps: 61[L L c0] 1f600[L L c1 c2] 62[L L c3] end[L]
+codePoints iterator next without hasNext: 97[L L c0] 98[L L c1] NSEE[L]
+codePoints iterator boxed next: 97 98 false [L L c0 L L c1 L]
+codePoints iterator forEachRemaining: 97[L L c0] 1f600 62 [L L c1 c2 L L c3 L]
+chars iterator steps: true[L L L c0] 97[] 98[L L c1] 99[L L c2] false[L]
+codePoints iterator shrinks to 1: 97 [L L c0 (change) L]
+codePoints iterator shrinks to empty: 97 [L L c0 (change) L]
+codePoints iterator shrinks inside pair: !java.lang.StringIndexOutOfBoundsException: String index out of range: 2
+codePoints iterator shrinks before pair: 61 d83d [L L c0 (change) L L c1 L]
+codePoints iterator shrinks then grows: 97 98 99 100 101 102 [L L c0 (change) L L c1 L L c2 L L c3 L L c4 L L c5 L]
+codePoints iterator grows: 97 98 99 100 [L L c0 (change) L L c1 L L c2 L L c3 L]
+chars iterator shrinks: 97 [L L L c0 (change) L]
+chars iterator grows: 97 98 99 100 [L L L c0 (change) L L c1 L L c2 L L c3 L]
+chars forEach shrinks: 97 [L L c0 (change) L]
+chars forEach shrinks to empty: 97 [L L c0 (change) L]
+chars forEach grows: 97 98 99 100 [L L c0 (change) L c1 L c2 L c3 L]
+chars spliterator tryAdvance shrinks: 97 [L L L c0 (change) L]
+chars spliterator forEachRemaining shrinks: 97 [L L L c0 (change) L]
+codePoints forEach shrinks: !java.lang.StringIndexOutOfBoundsException: String index out of range: 1
+codePoints forEach shrinks inside pair: !java.lang.StringIndexOutOfBoundsException: String index out of range: 2
+codePoints forEach grows: 97 98 [L c0 (change) c1]
+codePoints spliterator tryAdvance shrinks: 97 [L L c0 (change) L]
+codePoints sum shrinks: !java.lang.StringIndexOutOfBoundsException: String index out of range: 1
+codePoints count shrinks: !java.lang.StringIndexOutOfBoundsException: String index out of range: 1
+codePoints limit shrinks: 1 [L L c0 (change) L]
+chars limit shrinks: 1 [L L L c0 (change) L]
+chars findFirst shrinks: OptionalInt[97] [L L L c0 (change)]
+chars anyMatch shrinks: false [L L L c0 (change) L]
+codePoints count trace: 3 [L c0 c1 c2]
+codePoints pair count trace: 3 [L c0 c1 c2 c3]
+codePoints limit trace: 128609 [L L c0 L L c1 c2]
+codePoints findFirst trace: OptionalInt[97] [L L c0]
+codePoints map iterator trace: [L L c0]
+codePoints spliterator trace: created [] 9223372036854775807[] 16[] step[L L c0] step[L L c1 c2] step[L L c3] end[L]
+chars spliterator trace: created [] 2[L] step[L L c0] step[L L c1] end[L]
+chars spliterator split trace: 4 0 [L L L c0 L L c1 L L c2 L L c3]
+chars asDoubleStream trace: 195.0 [L L c0 L c1 L]
+chars boxed sorted trace: [97, 98] [L L c0 L c1 L]
+chars empty iterator trace: false [L L]
+codePoints empty iterator trace: false [L]
+codePoints trailing high surrogate: 61 d83d
+codePoints trailing high surrogate iterator: 61 d83d [L L c0 L L c1 L]
+StringBuilder codePoints iterator shrinks: 97 
+StringBuilder chars iterator shrinks: 97 
+StringBuilder codePoints iterator grows: 97 98 99 100 
+CharBuffer codePoints iterator position: 97 100 2
+CharBuffer chars iterator limit: 97 98 99 100 0
+chars spliterator binds at first use: 4 4 16464
+chars spliterator binds at characteristics: 16464 2
+chars spliterator binds at estimate: 2 2 abcd
+chars spliterator binds at tryAdvance: 2 bcd
+chars spliterator bound before spliterator(): 4
+chars iterator binds at hasNext: 4
+codePoints spliterator binds at first use: abcd 16
+BitSet spliterator binds at first use: 2 2 16469
+BitSet spliterator binds at characteristics: 16469 1 1 5 
+BitSet spliterator binds at tryAdvance: 2 2 5 
+BitSet spliterator after clear: 0 false
+BitSet iterator binds at hasNext: 1 5 
+BitSet stream created then set: [7]
+BitSet spliterator split: 8 0
+BitSet spliterator empty: 0 16469 false

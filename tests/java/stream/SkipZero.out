@@ -1,0 +1,59 @@
+Stream same: true
+IntStream same: true
+LongStream same: true
+DoubleStream same: true
+skip 1 not same: false
+limit max not same: false
+collection same: true
+mapped same: true
+sorted same: true
+range same: true
+parallel same: true
+skip 0 twice same: true
+Stream still usable: 3
+IntStream still usable: 6
+LongStream still usable: 6
+DoubleStream still usable: 6.0
+skip 0 then count: 3 | p1 p2 p3
+skip 0 then int count: 3 | p1 p2 p3
+skip 0 then long count: 3 | p1 p2 p3
+skip 0 then double count: 3 | p1.0 p2.0 p3.0
+skip 0 then count and again: !java.lang.IllegalStateException: stream has already been operated upon or closed
+skip 0 count then original: !java.lang.IllegalStateException: stream has already been operated upon or closed
+skip 0 then map then original: !java.lang.IllegalStateException: stream has already been operated upon or closed
+consumed skip 0: true
+consumed skip 0 then count: !java.lang.IllegalStateException: stream has already been operated upon or closed
+consumed int skip 0: true
+consumed long skip 0: true
+consumed double skip 0: true
+linked skip 0: true
+linked skip 0 then count: !java.lang.IllegalStateException: stream has already been operated upon or closed
+linked int skip 0: true
+linked long skip 0: true
+linked double skip 0: true
+closed skip 0: true
+iterated skip 0: true
+skip 1 on consumed: !java.lang.IllegalStateException: stream has already been operated upon or closed
+skip -1 on consumed: !java.lang.IllegalArgumentException: -1
+skip -1 fresh: !java.lang.IllegalArgumentException: -1
+skip 0 handler: true | closed
+skip 0 handlers on result: - | closed
+list flags: ORDERED|SIZED|SUBSIZED est=3
+list flags skip 1: ORDERED est=3
+list flags limit: ORDERED est=3
+array flags: ORDERED|SIZED|IMMUTABLE|SUBSIZED est=3
+set flags: DISTINCT|SIZED est=3
+TreeSet flags: ORDERED|DISTINCT|SORTED|SIZED est=3
+range flags: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=4
+long range flags: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=4
+sorted flags: ORDERED|SORTED|SIZED|SUBSIZED est=3
+filter flags: ORDERED est=3
+double array flags: ORDERED|SIZED|IMMUTABLE|SUBSIZED est=2
+same spliterator source: true
+empty skip 0: SIZED|SUBSIZED est=0
+count after skip 0 sized: 3 | p1 p2 p3
+iterator after skip 0: 1 2 false
+limit 0 skip 0: 0
+skip huge then skip 0: 0
+sequential same: true
+onClose same: true

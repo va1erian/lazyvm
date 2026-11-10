@@ -1,0 +1,6 @@
+LocalDateTime Serializable: true
+LocalDateTime TemporalAccessor: true
+Month Serializable: true
+Object: false
+generic bound: LocalDateTime LocalDateTime
+array: 1

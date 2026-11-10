@@ -1,21 +1,14 @@
 package java.util;
 
-import lazy.internal.Calendars;
-
 /**
- * An instant, in milliseconds since 1970-01-01T00:00:00Z. LazyVM has no time-zone data yet, so
- * toString always shows UTC (docs/design/util-text.md, P11). Only the non-deprecated members
- * exist; the calendar-field ones wait for java.text and time zones, and the java.time
- * conversions for java.time. Serialization comes with java.io object streams; until then the
+ * An instant, in milliseconds since 1970-01-01T00:00:00Z. LazyVM has no time-zone data, so
+ * toString shows UTC or the fixed GMT offset user.timezone names (docs/design/time.md, Z1). Only
+ * the non-deprecated members exist; the calendar-field ones wait for java.text, and the java.time
+ * conversions are not provided. Serialization comes with java.io object streams; until then the
  * class only declares that it is Serializable.
  */
 public class Date implements java.io.Serializable, Cloneable, Comparable<Date> {
     private static final long serialVersionUID = 7523967970034938905L;
-    private static final long DAY = 86400000L;
-    /** The first instant of the Gregorian calendar, 1582-10-15T00:00Z; earlier ones are Julian. */
-    private static final long GREGORIAN_START = -12219292800000L;
-    private static final String DAYS = "SunMonTueWedThuFriSat";
-    private static final String MONTHS = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
     private long millis;
 
@@ -66,26 +59,8 @@ public class Date implements java.io.Serializable, Cloneable, Comparable<Date> {
         }
     }
 
-    /** "EEE MMM dd HH:mm:ss zzz yyyy", with the year of its era (1 BC is 1). */
+    /** "EEE MMM dd HH:mm:ss zzz yyyy" in the default zone, with the year of its era (1 BC is 1). */
     public String toString() {
-        long t = millis;
-        long days = Math.floorDiv(t, DAY);
-        int ms = (int) Math.floorMod(t, DAY);
-        long[] ymd = t < GREGORIAN_START ? Calendars.julian(days) : Calendars.gregorian(days);
-        int dow = (int) Math.floorMod(days + 4, 7L); // 1970-01-01 was a Thursday
-        StringBuilder b = new StringBuilder(28);
-        b.append(DAYS, 3 * dow, 3 * dow + 3).append(' ');
-        int m = (int) ymd[1] - 1;
-        b.append(MONTHS, 3 * m, 3 * m + 3).append(' ');
-        two(b, (int) ymd[2]).append(' ');
-        two(b, ms / 3600000).append(':');
-        two(b, ms / 60000 % 60).append(':');
-        two(b, ms / 1000 % 60).append(" UTC ");
-        long year = ymd[0];
-        return b.append(year > 0 ? year : 1 - year).toString();
-    }
-
-    private static StringBuilder two(StringBuilder b, int v) {
-        return b.append((char) ('0' + v / 10)).append((char) ('0' + v % 10));
+        return TimeFormat.dateString(millis);
     }
 }

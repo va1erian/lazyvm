@@ -280,6 +280,11 @@ public class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
 
     // Spec 8.C3: TreeMap's values().remove asks each stored value's equals, unlike other maps.
     private final class Values extends ValueView {
+        @Override
+        public Spliterator<V> spliterator() {
+            return new Late<V>(this, Spliterator.ORDERED | Spliterator.SIZED, null);
+        }
+
         public boolean remove(Object o) {
             for (Iterator<V> it = iterator(); it.hasNext();) {
                 if (Support.eq(it.next(), o)) {

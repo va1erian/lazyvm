@@ -311,4 +311,79 @@ public class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E>, Cl
             }
         }
     }
+
+    @Override
+    public Spliterator<E> spliterator() { return new Split(-1, -1); }
+
+    /**
+     * Reads the slots from the front to the back as they were at the first look; later additions are not
+     * delivered, an empty slot inside the range is a concurrent change.
+     */
+    private final class Split implements Spliterator<E> {
+        private int pos;
+        private int fence;
+
+        Split(int pos, int fence) {
+            this.pos = pos;
+            this.fence = fence;
+        }
+
+        private void bind() {
+            if (fence < 0) {
+                pos = front;
+                fence = back;
+            }
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean tryAdvance(Consumer<? super E> action) {
+            Objects.requireNonNull(action);
+            bind();
+            if (pos == fence) {
+                return false;
+            }
+            E e = (E) slots[pos];
+            pos = (pos + 1) & mask();
+            if (e == null) {
+                throw new ConcurrentModificationException();
+            }
+            action.accept(e);
+            return true;
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super E> action) {
+            Objects.requireNonNull(action);
+            while (tryAdvance(action)) {
+                continue;
+            }
+        }
+
+        @Override
+        public Spliterator<E> trySplit() {
+            bind();
+            int n = estimate();
+            if (n < 2) {
+                return null;
+            }
+            int mid = (pos + n / 2) & mask();
+            Split prefix = new Split(pos, mid);
+            pos = mid;
+            return prefix;
+        }
+
+        private int estimate() { return (fence - pos) & mask(); }
+
+        @Override
+        public long estimateSize() {
+            bind();
+            return estimate();
+        }
+
+        @Override
+        public int characteristics() {
+            return Spliterator.ORDERED | Spliterator.NONNULL | Spliterator.SIZED | Spliterator.SUBSIZED;
+        }
+    }
 }
