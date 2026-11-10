@@ -1,18 +1,18 @@
-# Doze: `async` and `await`
+# Siesta: `async` and `await`
 
 Status: proposal, part of S16 in [`plan-2.md`](plan-2.md). The language is
-[`doze.md`](doze.md); its use as an embedded script language, where the same
-two keywords suspend a script task, is [`doze-script.md`](doze-script.md).
+[`siesta.md`](siesta.md); its use as an embedded script language, where the same
+two keywords suspend a script task, is [`siesta-script.md`](siesta-script.md).
 
 ## 1. Goal
 
 LazyOS APIs are asynchronous: `lazy.net`, `lazy.async`, and from S10
 `lazy.msg`, all return `CompletionStage` ([`async.md`](async.md)). Chained
 with `thenCompose`, a five-step flow is five nested lambdas, and a loop or a
-`try` around it has to be rebuilt by hand. Doze lets the same flow read
+`try` around it has to be rebuilt by hand. Siesta lets the same flow read
 top to bottom, as if it blocked, while it never blocks a thread:
 
-```doze
+```siesta
 import lazy.net.*
 import java.io.IOException
 import java.nio.charset.StandardCharsets
@@ -94,7 +94,7 @@ The `on: IOException do:` handler sees the `IOException` itself, not a `Completi
   starts the body and waits for it, rethrowing its failure unwrapped, so a
   script's exit status and stack trace are those of a plain program.
 
-```doze
+```siesta
 // A window that stays responsive while it fetches.
 var status := Ui label: "idle"
 var go := Ui button: "Go"
@@ -111,7 +111,7 @@ Ui run: ((Ui window: "Fetch" width: 320 height: 120) content: (Ui column add: st
 The checker first linearises every expression that contains `await` into
 temporaries (A-normal form), so the operand stack is empty at every await,
 and both back ends (the JVM one here, a script host's in
-[`doze-script.md`](doze-script.md)) only see `x := await e` and `await e` as
+[`siesta-script.md`](siesta-script.md)) only see `x := await e` and `await e` as
 statements.
 
 Each `async` method or block then becomes two pieces:
@@ -149,7 +149,7 @@ Each `async` method or block then becomes two pieces:
   another public completion method of its own (the S6-05 rule that
   `CompletableFuture`'s public methods do not call each other virtually).
 - **Stack maps.** Every resume label's frame is the scope at its await plus
-  the target temporary, which the generator already knows (doze.md
+  the target temporary, which the generator already knows (siesta.md
   section 7).
 
 Cost per await on an interpreter: one `whenComplete` node and, off the home
@@ -165,14 +165,14 @@ the loop's thread, `Ui.executor()` on the UI thread while `Ui.run` runs,
 API (shared rule 2), lives with `Loop` (`java/lazyrt/src/lazy/async/`) and
 gets its own `lazy.*` test.
 
-Doze programs that `await` therefore need `lazy.async` at run time. That is
-the one exception to "no runtime library" (doze.md section 2), and it is
-part of `lazyrt`, not a Doze library.
+Siesta programs that `await` therefore need `lazy.async` at run time. That is
+the one exception to "no runtime library" (siesta.md section 2), and it is
+part of `lazyrt`, not a Siesta library.
 
 ## 5. Testing
 
 `await` programs depend on `lazy.async`, so, like every `lazy.*` test (D9),
-they run on LazyVM against hand-written goldens: `tests/doze/async/`.
+they run on LazyVM against hand-written goldens: `tests/siesta/async/`.
 Programs that use only `CompletableFuture` still run on the oracle too.
 The suite covers: a loop over already-completed stages a million times (no
 `StackOverflowError`); an await inside `on:do:` in a loop with a failure on

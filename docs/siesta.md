@@ -1,14 +1,14 @@
-# Doze: a small language for LazyOS
+# Siesta: a small language for LazyOS
 
-Doze is a proposed source language with Smalltalk's message syntax and
+Siesta is a proposed source language with Smalltalk's message syntax and
 Java's types. It compiles to version 52 class files that run on LazyVM and
-on any Java 8 VM, and it calls the Java API directly. Its compiler, `dozec`,
+on any Java 8 VM, and it calls the Java API directly. Its compiler, `siestac`,
 is a Rust program, so a LazyOS machine builds programs for LazyVM in
 milliseconds without a Java compiler. It is also the language of LazyRAD
 (section 11); `async` and `await` make LazyOS's asynchronous APIs read like
-blocking code ([`doze-async.md`](doze-async.md)); and the same front end
+blocking code ([`siesta-async.md`](siesta-async.md)); and the same front end
 serves game hosts such as miniscent as an embedded script language
-([`doze-script.md`](doze-script.md)). It is a proposal: nothing here is
+([`siesta-script.md`](siesta-script.md)). It is a proposal: nothing here is
 decided until the owner confirms it in [`decisions.md`](decisions.md), and
 the stage it implies is S16 in [`plan-2.md`](plan-2.md).
 
@@ -16,10 +16,10 @@ the stage it implies is S16 in [`plan-2.md`](plan-2.md).
 
 [`compiler.md`](compiler.md) weighs three ways to compile on LazyOS: a stock
 JDK (A), javac 8 on LazyVM (B), and our own Java compiler (C, turned down as
-months of work and a second javac). Doze is not C: it is a much smaller
+months of work and a second javac). Siesta is not C: it is a much smaller
 language, chosen so that its compiler is small.
 
-| | A: JDK on LazyOS | B: javac 8 on LazyVM | Doze |
+| | A: JDK on LazyOS | B: javac 8 on LazyVM | Siesta |
 |---|---|---|---|
 | What runs the compiler | HotSpot | LazyVM, interpreted | native Rust |
 | Size on LazyOS | hundreds of MiB | `tools.jar` plus `javax.*` additions to `lazyrt` | one static binary under 2,000,000 bytes, stripped and uncompressed |
@@ -46,8 +46,8 @@ They are not exclusive: A or B stay the way to build existing Java code.
   emits; the class path is read lazily. Target: a 1,000-line program in
   under 200 ms on LazyOS under QEMU, measured, not assumed (S16-10).
 - **No runtime library.** Programs need only the Java SE 8 API `lazyrt`
-  provides (and `lazy.async` once they `await`, doze-async.md section 4).
-  A Doze jar runs on the oracle JVM unchanged, which is how it is tested.
+  provides (and `lazy.async` once they `await`, siesta-async.md section 4).
+  A Siesta jar runs on the oracle JVM unchanged, which is how it is tested.
 - **Plain class files.** Version 52 with `StackMapTable`, passing LazyVM's
   verifier and the oracle's `-Xverify:all`; `invokedynamic` only through
   `LambdaMetafactory.metafactory` (D1).
@@ -59,12 +59,12 @@ block that outlives its method.
 
 ## 3. A taste
 
-```doze
+```siesta
 import java.util.*
 import java.util.stream.Collectors
 
 // A file's top-level statements form its main method; `args` is in scope.
-var words := {"lazy", "os", "doze", "vm", "lazy"}
+var words := {"lazy", "os", "siesta", "vm", "lazy"}
 Map<String, Integer> counts := LinkedHashMap new
 words do: [:w | counts merge: w with: 1 using: [:a :b | a + b]]
 println: "counts: ${counts}"
@@ -103,7 +103,7 @@ class Square implements Shape {
 }
 ```
 
-`dozec run demo.dz` compiles the four classes and runs them with `lazyvm`.
+`siestac run demo.sie` compiles the four classes and runs them with `lazyvm`.
 
 ## 4. Syntax
 
@@ -213,11 +213,11 @@ the first keyword is the method name and the others are labels of the
 programmer's choice (a Java class file carries no parameter names). The
 method is chosen by name, argument count and types, never by the labels,
 so naming them after the Javadoc's parameters (`str substring: 1 to: 3`,
-`map put: k value: v`) is a convention, not a check. A Doze method's full
-selector is its identity (`moveTo:in:`), and for Doze methods the labels
-are checked. Doze's `moveTo: String pose in: double s` is the JVM method
+`map put: k value: v`) is a convention, not a check. A Siesta method's full
+selector is its identity (`moveTo:in:`), and for Siesta methods the labels
+are checked. Siesta's `moveTo: String pose in: double s` is the JVM method
 `moveTo(String, double)`, so Java calls it as `moveTo("open", 1.5)`; two
-Doze methods of one class with the same first keyword and argument count
+Siesta methods of one class with the same first keyword and argument count
 are an error.
 
 A unary message to an object reads a public field when there is no method
@@ -236,7 +236,7 @@ are never assigned from outside: use its setter.
   its own.
 - **Generics are used, not declared.** A member of `List<String>` is read
   from its `Signature` attribute (JVMS 4.7.9.1) with the receiver's type
-  arguments substituted, and `dozec` inserts the `checkcast` erasure needs.
+  arguments substituted, and `siestac` inserts the `checkcast` erasure needs.
   `? extends T` and `? super T` read as `T`; `?` and raw types as the bound.
 - **Method type parameters** (`Collections emptyList`, `stream map:`) are
   inferred by one-way unification: arguments left to right (a block's
@@ -281,9 +281,9 @@ are never assigned from outside: use its setter.
 
 ## 7. Lowering
 
-| Doze | Class file |
+| Siesta | Class file |
 |---|---|
-| top level of `foo.dz` | static fields and methods and `main(String[])` of class `Foo`, or of the class `Foo` the file declares |
+| top level of `foo.sie` | static fields and methods and `main(String[])` of class `Foo`, or of the class `Foo` the file declares |
 | block not inlined | a private synthetic `lambda$<method>$<n>` (static unless it uses `self`) and `invokedynamic` to `LambdaMetafactory.metafactory` |
 | outer variable assigned after a block captured it | lives in a one-element array shared with the block |
 | `ifTrue:` family, `and:`, `or:`, `whileTrue:`, `to:do:`, `timesRepeat:` | jumps; `to:do:` an `int` or `long` loop with the limit evaluated once |
@@ -310,20 +310,20 @@ with the expected type when there is one, else the join of the branches (nearest
 to `Object`, which the type checker accepts, JVMS 4.10.1.2). Constructor
 arguments containing a branch are evaluated into locals before `new`.
 `SourceFile`, `LineNumberTable` and `LocalVariableTable` are always
-written, so stack traces and JDWP (S11) point at `.dz` lines.
+written, so stack traces and JDWP (S11) point at `.sie` lines.
 
 ## 8. The compiler
 
-Three crates: `doze-syntax` (lexer, parser, AST, diagnostics) and
-`doze-check` (types, producing typed IR), with no dependencies, which game
-hosts embed too ([`doze-script.md`](doze-script.md)); and `dozec`, the JVM
+Three crates: `siesta-syntax` (lexer, parser, AST, diagnostics) and
+`siesta-check` (types, producing typed IR), with no dependencies, which game
+hosts embed too ([`siesta-script.md`](siesta-script.md)); and `siestac`, the JVM
 back end and binary, which adds `crates/classfile`. That crate already
 parses class files and reads jars (with `miniz_oxide`), and its writer is
 extended with `StackMapTable`, `BootstrapMethods`, `LineNumberTable` and a
 stored-jar writer rather than adding a second one (shared rule 4).
 Malformed source, class files and jars are diagnostics, never panics.
-LazyRAD links `doze-syntax` to edit view files (section 11), so there is
-one Doze parser.
+LazyRAD links `siesta-syntax` to edit view files (section 11), so there is
+one Siesta parser.
 
 | Crate: module | Job | Estimated lines |
 |---|---|---|
@@ -331,15 +331,15 @@ one Doze parser.
 | check: `types`, `universe` | subtyping, erasure, boxing, member lookup, functional interfaces, the `Universe` trait | 1,000 |
 | check: `infer`, `overload`, `builtin` | sections 4.4, 5 and 6 | 1,100 |
 | check: `check/`, `anf` | names, types, smart casts, captures, `async` linearisation, typed IR | 2,300 |
-| dozec: `classpath`, `sig` | jars and directories, `Signature` parsing, the class-file universe | 900 |
-| dozec: `gen/` | bytecode, max stack and locals, stack maps, lambdas, `async` frames | 2,500 |
-| dozec: `emit`, `main` | class and jar output, the command line | 400 |
+| siestac: `classpath`, `sig` | jars and directories, `Signature` parsing, the class-file universe | 900 |
+| siestac: `gen/` | bytecode, max stack and locals, stack maps, lambdas, `async` frames | 2,500 |
+| siestac: `emit`, `main` | class and jar output, the command line | 400 |
 
 About 10,500 lines, every file under 500.
 
-**The 2 MB budget.** The stripped static musl `dozec` stays under
-2,000,000 bytes, uncompressed. `python tools/size.py --dozec` checks it like
-the VM's own budget; `dozec` is a separate program, so it does not count
+**The 2 MB budget.** The stripped static musl `siestac` stays under
+2,000,000 bytes, uncompressed. `python tools/size.py --siestac` checks it like
+the VM's own budget; `siestac` is a separate program, so it does not count
 against D14. The levers: no dependency beyond `classfile` (whose only one,
 `miniz_oxide`, the VM already carries); no `regex`, `serde` or `toml`; a
 release profile for this binary with `opt-level = "s"`, LTO and one codegen
@@ -347,38 +347,38 @@ unit. If a build goes over, the costliest feature is cut or simplified; the
 budget is not raised.
 
 ```bash
-dozec [-cp path] [-d out | -o app.jar] [--main Class] files...
-dozec run [-cp path] file.dz [args...]   # compile to a temporary directory, then exec lazyvm
-dozec check files...                     # diagnostics only
+siestac [-cp path] [-d out | -o app.jar] [--main Class] files...
+siestac run [-cp path] file.sie [args...]   # compile to a temporary directory, then exec lazyvm
+siestac check files...                     # diagnostics only
 ```
 
 `-o` writes a jar with a `Main-Class` manifest that `lazyvm -jar` runs. The
 class path defaults to the `lazyrt.jar` next to `lazyvm`. All files of one
-call are compiled together, in any order. On LazyOS, `dozec` is a static
+call are compiled together, in any order. On LazyOS, `siestac` is a static
 musl program staged into the image next to `lazyvm` by the LazyOS repo.
 
 ## 9. Testing and evidence
 
-Doze sources cannot be blessed on the oracle, but their class files run
+Siesta sources cannot be blessed on the oracle, but their class files run
 there, which gives three independent checks:
 
-- **Goldens.** `tests/doze/<area>/<Name>.dz` with a hand-written, reviewed
+- **Goldens.** `tests/siesta/<area>/<Name>.sie` with a hand-written, reviewed
   `<Name>.out`, like `lazy.*` goldens (D9).
 - **Mirrors.** Where Java can say the same thing, `<Name>.java` sits
   beside it; its `.out` is blessed on the oracle (`tools/golden.py
-  --bless`) and the Doze program must print the same. This ties Doze's
+  --bless`) and the Siesta program must print the same. This ties Siesta's
   arithmetic, strings and API use to Java's without hand-editing a
   `java.*` golden.
-- **Two VMs.** `tools/doze_test.py` compiles each test once and runs it on
+- **Two VMs.** `tools/siesta_test.py` compiles each test once and runs it on
   the oracle with `-Xverify:all` and on LazyVM; both must match the `.out`.
-  The oracle's verifier checks every stack map `dozec` writes.
+  The oracle's verifier checks every stack map `siestac` writes.
 
-Also: `tests/doze/bad/*.dz` with the expected message in a `.err`; a
+Also: `tests/siesta/bad/*.sie` with the expected message in a `.err`; a
 `cargo fuzz` target over the lexer, parser and checker, which must never
-panic; and `tools/lazyos_test.py --doze`, which runs `dozec` inside LazyOS
+panic; and `tools/lazyos_test.py --siesta`, which runs `siestac` inside LazyOS
 on the same tests.
 
-**Clean room.** `dozec` is written from the JVMS (chapters 4 and 6) and
+**Clean room.** `siestac` is written from the JVMS (chapters 4 and 6) and
 the JLS sections cited above. `javap` of class files we compiled ourselves,
 javac's output for a Java program we wrote included, is allowed (shared
 rule 1) and is how a lowering is compared. Smalltalk syntax is taken from
@@ -396,20 +396,20 @@ Smalltalk implementation or of other JVM-language compilers.
   parameter names; a wrong label is only misleading, never a wrong call.
 - **No generic declarations.** A library that needs `Box<T>` is written in
   Java for now; open question 3.
-- **Neither Java nor Smalltalk.** Code moves to Doze by rewriting; interop
+- **Neither Java nor Smalltalk.** Code moves to Siesta by rewriting; interop
   is at the class-file level, both ways.
 
 ## 11. LazyRAD
 
 LazyRAD (LazyOS `docs/lazyrad/`) today pairs a TOML form (`.lfm`) with a
 Rhai script whose functions are found by name (`hello_button_click`). With
-Doze, LazyRAD changes to fit the language: a form is ordinary Doze code,
+Siesta, LazyRAD changes to fit the language: a form is ordinary Siesta code,
 the compiler knows nothing about LazyRAD, and there is no naming
 convention, reflection or form loader at run time. A form is two files; the
 designer owns the first and rewrites it on every change.
 
-```doze
-// main_form.view.dz: written by the LazyRAD designer, not by hand
+```siesta
+// main_form.view.sie: written by the LazyRAD designer, not by hand
 import lazy.ui.*
 
 class MainFormView {
@@ -428,8 +428,8 @@ class MainFormView {
 }
 ```
 
-```doze
-// main_form.dz: yours
+```siesta
+// main_form.sie: yours
 class MainForm extends MainFormView {
     private var clicks := 0
 
@@ -451,13 +451,13 @@ Ui run: MainForm new window
   double-click on a control in the designer adds `helloButton onClick: []`
   to the constructor and puts the cursor in the block.
 - **Controls are typed fields**, so completion, renames and errors come
-  from the compiler (`dozec check`), not from run-time lookups.
+  from the compiler (`siestac check`), not from run-time lookups.
 - **The view file has a fixed shape**: one field per control initialised
   by a `Ui` factory, and one cascade of `place:` messages. The designer
-  reads it back with `doze-syntax`'s parser and refuses to open a view
+  reads it back with `siesta-syntax`'s parser and refuses to open a view
   that was edited outside that shape.
-- **Running and packaging.** F5 is `dozec run`; Make LazyOS App packages
-  the jar `dozec -o` writes, depending on `lazyvm`. The debugger is JDWP
+- **Running and packaging.** F5 is `siestac run`; Make LazyOS App packages
+  the jar `siestac -o` writes, depending on `lazyvm`. The debugger is JDWP
   (S11) once LazyVM has it.
 - **What `lazy.ui` needs.** A positioned layout (`Ui fixed` with
   `place(widget, left, top, width, height, anchor)` and LazyRAD's twelve
@@ -467,18 +467,18 @@ Ui run: MainForm new window
   `Ui every:`). That is S9 work, not compiler work.
 - **What LazyRAD's Rhai library becomes.** `msg_box`, `file_read_text`,
   `random` and the rest are the Java API and `lazy.*`. Where something is
-  missing it is added to `lazy.*`, not to a Doze runtime.
+  missing it is added to `lazy.*`, not to a Siesta runtime.
 
 ## 12. Open questions for the owner
 
-1. Confirm the language and the name ("Doze", files `.dz`, compiler
-   `dozec`), and the S16 stage.
-2. Should `dozec` run in-process from `lazyvm` (`lazyvm hello.dz`)? That
+1. Confirm the language and the name ("Siesta", files `.sie`, compiler
+   `siestac`), and the S16 stage.
+2. Should `siestac` run in-process from `lazyvm` (`lazyvm hello.sie`)? That
    would make the VM larger and count against D14; the proposal keeps them
-   apart and has `dozec run` exec `lazyvm`.
+   apart and has `siestac run` exec `lazyvm`.
 3. Generic declarations: worth adding after S16 if real programs need them,
    or keep "used, not declared" for good?
-4. LazyRAD: confirm that new LazyRAD projects use Doze (section 11), what
+4. LazyRAD: confirm that new LazyRAD projects use Siesta (section 11), what
    happens to existing Rhai projects (kept on `lrplay`, or converted), and
    that `Ui fixed` and the LazyRAD widgets join `lazy.ui`'s scope as S9
    items.

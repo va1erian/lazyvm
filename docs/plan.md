@@ -50,7 +50,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S13 | Explore: Swing and media | not started |
 | S14 | Proposed: javac 8 on LazyVM | not started |
 | S15 | Full network stack: `java.net`, channels, TLS, HTTP | not started |
-| S16 | Proposed: the Doze language, `dozec`, `async`/`await`, scripting hosts and LazyRAD forms | not started |
+| S16 | Proposed: the Siesta language, `siestac`, `async`/`await`, scripting hosts and LazyRAD forms | not started |
 
 ## S0. Workspace and harness
 
