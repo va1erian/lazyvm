@@ -1,9 +1,10 @@
 //! The agent thread: the connection, the handshake and the command loop.
 
-use std::io::{Read, Write};
+use std::io::Read;
 use std::sync::Arc;
+use std::time::Duration;
 
-use platform::tcp::{self, Listener, Stream};
+use platform::tcp::{self, Conn, Listener};
 
 use super::requests::SUSPEND_ALL;
 use super::wire::{self, Command, HANDSHAKE, PacketError};
@@ -26,6 +27,8 @@ pub struct Config {
     pub suspend: bool,
     pub host: String,
     pub port: u16,
+    /// `timeout=`: with `server=n`, how long to keep trying to reach the debugger.
+    pub timeout: Duration,
 }
 
 impl Config {
@@ -35,6 +38,7 @@ impl Config {
         let mut server = false;
         let mut suspend = true;
         let mut address = None;
+        let mut timeout = Duration::ZERO;
         for item in text.split(',').filter(|i| !i.is_empty()) {
             let (key, value) = item.split_once('=').unwrap_or((item, ""));
             match key {
@@ -42,6 +46,12 @@ impl Config {
                 "server" => server = yes_no(key, value)?,
                 "suspend" => suspend = yes_no(key, value)?,
                 "address" => address = Some(value),
+                "timeout" => {
+                    let ms = value
+                        .parse()
+                        .map_err(|_| format!("bad timeout {value:?}"))?;
+                    timeout = Duration::from_millis(ms);
+                }
                 _ => {}
             }
         }
@@ -60,6 +70,7 @@ impl Config {
             suspend,
             host,
             port,
+            timeout,
         })
     }
 }
@@ -88,7 +99,7 @@ fn split_address(address: &str) -> Result<(String, u16), String> {
 /// Where the first debugger connection comes from.
 pub(super) enum Source {
     Listen(Listener),
-    Connected(Stream),
+    Connected(Arc<Conn>),
 }
 
 /// Binds (`server=y`, printing the line an IDE waits for) or connects
@@ -103,7 +114,7 @@ pub(super) fn open(config: &Config) -> Result<Source, String> {
         let _ = platform::flush(platform::Stream::Out);
         Ok(Source::Listen(listener))
     } else {
-        let stream = tcp::connect(&config.host, config.port)
+        let stream = tcp::connect(&config.host, config.port, config.timeout)
             .map_err(|e| format!("cannot connect to {}:{}: {e}", config.host, config.port))?;
         Ok(Source::Connected(stream))
     }
@@ -150,15 +161,12 @@ fn run(gil: &Arc<Gil>, me: usize, config: &Config, source: Source) {
 }
 
 /// One debugger session: handshake, then commands until the connection ends.
-fn serve(gil: &Arc<Gil>, me: usize, config: &Config, mut stream: Stream, first: bool) {
-    if handshake(&mut stream).is_err() {
+fn serve(gil: &Arc<Gil>, me: usize, config: &Config, conn: Arc<Conn>, first: bool) {
+    if handshake(&conn).is_err() {
         return;
     }
-    let Ok(writer) = stream.try_clone() else {
-        return;
-    };
     with_vm(gil, me, |vm| {
-        vm.attach_debugger(writer);
+        vm.attach_debugger(Arc::clone(&conn));
         // With suspend=y the VM stands still until the debugger resumes it,
         // and says so in the event it greets the debugger with.
         if first && config.suspend {
@@ -166,7 +174,7 @@ fn serve(gil: &Arc<Gil>, me: usize, config: &Config, mut stream: Stream, first: 
         }
     });
     loop {
-        let cmd = match wire::read_command(&mut stream) {
+        let cmd = match wire::read_command(&mut &*conn) {
             Ok(c) => c,
             Err(e) => {
                 report_bad_packet(&e);
@@ -177,7 +185,7 @@ fn serve(gil: &Arc<Gil>, me: usize, config: &Config, mut stream: Stream, first: 
             break;
         }
     }
-    let _ = stream.shutdown(std::net::Shutdown::Both);
+    conn.shutdown();
     with_vm(gil, me, Vm::detach_debugger);
 }
 
@@ -202,13 +210,14 @@ fn report_bad_packet(e: &PacketError) {
     }
 }
 
-fn handshake(stream: &mut Stream) -> std::io::Result<()> {
+fn handshake(conn: &Conn) -> std::io::Result<()> {
     let mut got = [0u8; HANDSHAKE.len()];
-    stream.read_exact(&mut got)?;
+    let mut from = conn;
+    from.read_exact(&mut got)?;
     if got != *HANDSHAKE {
         return Err(std::io::ErrorKind::InvalidData.into());
     }
-    stream.write_all(HANDSHAKE)
+    conn.write_all(HANDSHAKE)
 }
 
 impl Vm {
@@ -252,7 +261,8 @@ mod tests {
                 server: false,
                 suspend: true,
                 host: "127.0.0.1".into(),
-                port: 5005
+                port: 5005,
+                timeout: Duration::ZERO,
             }
         );
         let c = Config::parse("transport=dt_socket,server=y,suspend=n,address=*:0")
@@ -267,6 +277,7 @@ mod tests {
             (c.host.as_str(), c.port, c.suspend),
             ("127.0.0.1", 6000, true)
         );
+        assert_eq!(c.timeout, Duration::from_millis(5));
     }
 
     #[test]
@@ -279,6 +290,7 @@ mod tests {
             "transport=dt_socket,address=70000",
             "transport=dt_socket,address=1,suspend=maybe",
             "transport=dt_socket,address=:",
+            "transport=dt_socket,address=1,timeout=soon",
         ] {
             assert!(Config::parse(bad).is_err(), "{bad:?}");
         }

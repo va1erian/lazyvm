@@ -48,6 +48,8 @@ jobs:
         run: python tools/launcher_test.py
       - name: tight loop on malformed bytecode
         run: python tools/fastloop_test.py
+      - name: JDWP smoke (a scripted debugger: breakpoint, steps, locals)
+        run: python tools/jdwp_smoke.py
       - name: SDK layout
         run: python tools/sdk.py
       - name: musl build
@@ -81,6 +83,8 @@ jobs:
         run: cargo build --release --locked -p launcher --target x86_64-unknown-linux-musl
       - name: differential suite (musl binary)
         run: python tools/test.py --exe target/x86_64-unknown-linux-musl/release/lazyvm --build-java-only
+      - name: JDWP smoke (musl binary)
+        run: python tools/jdwp_smoke.py --exe target/x86_64-unknown-linux-musl/release/lazyvm --no-build
       - name: size budget (LazyOS binary)
         run: python tools/size.py --exe target/x86_64-unknown-linux-musl/release/lazyvm
       - name: lazyvm-ui build (LazyOS, headless until S9-04)

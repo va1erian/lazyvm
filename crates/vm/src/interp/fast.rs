@@ -42,9 +42,8 @@ impl Vm {
             if !run(f, heap, classes) {
                 return;
             }
-            self.safepoint();
-            // A debugger may have set a breakpoint while this thread was out.
-            if self.slow_interp || self.heap.wants_gc() {
+            // After the thread was out, a debugger may have set a breakpoint.
+            if self.safepoint() || self.heap.wants_gc() {
                 return;
             }
         }

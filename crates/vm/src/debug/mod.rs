@@ -23,11 +23,12 @@ mod hook;
 mod ids;
 mod requests;
 mod suspend;
+#[cfg(test)]
+mod tests;
 mod values;
 mod wire;
 
-use std::io::Write;
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::Arc;
 
 pub use agent::Config;
 use ids::Ids;
@@ -45,7 +46,7 @@ pub struct Debug {
     pub(crate) agent: usize,
     /// The connection's writing side, shared by the agent (replies) and the
     /// threads that stop (events).
-    writer: Option<Arc<Mutex<platform::tcp::Stream>>>,
+    writer: Option<Arc<platform::tcp::Conn>>,
     ids: Ids,
     requests: Requests,
     suspend: Suspend,
@@ -120,10 +121,8 @@ impl Vm {
             .first_of(requests::VM_DEATH)
             .unwrap_or(0);
         self.send_events(0, &[events::Event::death(request)]);
-        if let Some(w) = self.debug.writer.take()
-            && let Ok(stream) = w.lock()
-        {
-            let _ = stream.shutdown(std::net::Shutdown::Write);
+        if let Some(w) = self.debug.writer.take() {
+            w.finish_sending();
         }
     }
 
@@ -147,9 +146,8 @@ impl Vm {
     /// agent notices on its read, and the session ends there.
     pub(super) fn write_packet(&mut self, packet: &[u8]) {
         let Some(w) = &self.debug.writer else { return };
-        let mut stream = w.lock().unwrap_or_else(PoisonError::into_inner);
-        if stream.write_all(packet).is_err() {
-            let _ = stream.shutdown(std::net::Shutdown::Both);
+        if w.write_all(packet).is_err() {
+            w.shutdown();
         }
     }
 
@@ -158,9 +156,9 @@ impl Vm {
         self.debug.next_packet
     }
 
-    /// The debugger connected: replies and events go to `stream`.
-    pub(super) fn attach_debugger(&mut self, stream: platform::tcp::Stream) {
-        self.debug.writer = Some(Arc::new(Mutex::new(stream)));
+    /// The debugger connected: replies and events go to `conn`.
+    pub(super) fn attach_debugger(&mut self, conn: Arc<platform::tcp::Conn>) {
+        self.debug.writer = Some(conn);
         self.debug.disconnect = false;
     }
 

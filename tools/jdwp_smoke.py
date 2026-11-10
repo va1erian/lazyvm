@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import random
 import socket
 import struct
 import subprocess
@@ -267,7 +268,7 @@ def threads_stand_still(s: Session, cls: int) -> None:
     s.c.command(j.THREAD, 2, u64(ticker))  # and stop it again
 
 
-def debug_run(conn: Connection, target: Target) -> None:
+def debug_run(conn: Connection) -> None:
     s = Session(conn)
     r = conn.command(j.VM, 7)
     expect([r.i32() for _ in range(5)] == [8] * 5, "all id sizes are 8")
@@ -304,7 +305,7 @@ def attach_and_run(cmd_for, oracle: bool) -> None:
     try:
         conn = connect(port, target)
         conn.handshake()
-        debug_run(conn, target)
+        debug_run(conn)
         code = target.finish()
     except SystemExit:
         print("the VM printed:\n" + target.text(), file=sys.stderr)
@@ -330,6 +331,49 @@ def connect(port: int, target: Target) -> Connection:
     raise AssertionError
 
 
+def on_lazyos(lazyos: Path) -> None:
+    """The walk against a LazyVM inside LazyOS: QEMU's user network lets the guest reach this
+    machine at 10.0.2.2, so the VM connects out (`server=n`) to a listener here, and this
+    script is the debugger. The guest has no loopback, so it cannot be the other way round."""
+    import lazyos_test  # noqa: PLC0415 (only this run needs a LazyOS checkout)
+
+    jar = lazyrt.write_jar(OUT / "classes", OUT / "target.jar")
+    lazyos_test.stage(lazyos_test.build_musl(), jar)
+    outcome: dict[str, BaseException] = {}
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        port = listener.getsockname()[1]
+
+        def debugger() -> None:
+            try:
+                listener.settimeout(900)
+                conn = Connection(listener.accept()[0])
+                conn.handshake()
+                debug_run(conn)
+            except BaseException as e:  # noqa: BLE001 (the main thread reports it)
+                outcome["error"] = e
+
+        thread = threading.Thread(target=debugger, daemon=True)
+        thread.start()
+        agent = f"-agentlib:jdwp=transport=dt_socket,server=n,suspend=y,address=10.0.2.2:{port},timeout=60000"
+        line = lazyos_test.command_line("JdwpTarget", [], [agent])
+        out = lazyos_test.run_commands(lazyos, [line], 900, False, net=True)
+        thread.join(30)
+
+    def text(name: str) -> str:
+        path = out / name
+        return path.read_bytes().decode("utf-8", "replace") if path.is_file() else ""
+
+    if "error" in outcome:
+        print(f"inside LazyOS the VM printed:\n{text('1.stdout')}{text('1.stderr')}", file=sys.stderr)
+        raise outcome["error"]
+    expect(not thread.is_alive(), "the debugger side did not finish")
+    expect(text("1.exit").strip() == "0", f"exit status {text('1.exit')!r}: {text('1.stderr')}")
+    expect("result=15" in text("1.stdout"), f"program output {text('1.stdout')!r}")
+    print("jdwp_smoke: ok inside LazyOS")
+
+
 def vm_connects_out(cmd_for) -> None:
     """`server=n`: the VM dials the debugger, as an IDE's Debug button arranges."""
     with socket.socket() as listener:
@@ -349,6 +393,21 @@ def vm_connects_out(cmd_for) -> None:
         finally:
             target.kill()
     expect("result=15" in target.text(), "program ran after a server=n resume")
+
+
+def garbage(conn: Connection) -> None:
+    """Random bodies into every command: each gets a reply, success or an error code."""
+    rng = random.Random(20240611)
+    for set_ in (j.VM, j.REFTYPE, 3, j.METHOD, j.OBJREF, j.STRREF, j.THREAD, 12, j.ARRAYREF, j.EVENTREQ, j.FRAME, 17):
+        for cmd in range(1, 23):
+            if (set_, cmd) in ((j.VM, 6), (j.VM, 10)):  # Dispose and Exit end the session
+                continue
+            for _ in range(6):
+                body = bytes(rng.choice((0, 0xFF, rng.randrange(256))) for _ in range(rng.randrange(0, 48)))
+                try:
+                    conn.command(set_, cmd, body, timeout=10)
+                except JdwpError:
+                    pass  # an error reply is the right answer
 
 
 def hostile(cmd_for) -> None:
@@ -380,6 +439,8 @@ def hostile(cmd_for) -> None:
             else:
                 die(f"jdwp_smoke: {what} was accepted")
         conn.command(j.VM, 1)  # still answering
+        garbage(conn)
+        conn.command(j.VM, 1)
         # A length that cannot be right: the agent drops the connection and lets the VM run.
         conn.sock.sendall(struct.pack(">IIBBB", 0xFFFFFFF0, 9, 0, 1, 1))
         code = target.finish()
@@ -394,12 +455,15 @@ def main() -> None:
     ap.add_argument("--exe", help="the lazyvm binary (default: build target/release)")
     ap.add_argument("--oracle", action="store_true", help="run the walk on the Java 8 oracle instead")
     ap.add_argument("--no-build", action="store_true")
+    ap.add_argument("--lazyos", type=Path, help="run the walk inside LazyOS (QEMU) from this checkout instead")
     args = ap.parse_args()
     LINE_BY_MARK.update(marks())
     classes = OUT / "classes"
     if not args.no_build:
         lazyrt.build()
     javac.compile([SRC], classes, bootclasspath=LAZYRT_CLASSES)
+    if args.lazyos:
+        return on_lazyos(args.lazyos)
     if args.oracle:
         java = find_tool("LAZYVM_ORACLE_JAVA", "java")
 

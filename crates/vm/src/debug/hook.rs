@@ -18,6 +18,7 @@ impl Vm {
     /// is attached. A breakpoint at this instruction, or a step that has
     /// reached its end, is reported, and the thread stops here if the debugger
     /// said so, before the instruction runs.
+    #[inline(never)]
     pub(crate) fn debug_before_instruction(&mut self) {
         if !self.debug.enabled || self.current == self.debug.agent {
             return;
