@@ -1,0 +1,6 @@
+class: LocalDateTime
+non-null: true true true
+month in range: true true
+fields in range: true true true true true
+round trip: true
+round trip 2: true

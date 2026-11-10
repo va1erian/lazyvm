@@ -1,0 +1,3 @@
+first %tH: 05
+after setProperty %tH: 05
+after setProperty %tZ: GMT+05:00

@@ -8,8 +8,8 @@ import java.io.PrintStream;
 
 /**
  * printf-style formatting. Numbers use the locale's decimal and grouping characters
- * (LocaleSymbols) and ASCII digits; date/time conversions (%t) are not
- * supported yet (S11) and BigInteger/BigDecimal do not exist.
+ * (LocaleSymbols) and ASCII digits; date/time conversions (%t) are in TimeFormat, and
+ * BigInteger/BigDecimal do not exist.
  */
 public final class Formatter implements Closeable, Flushable {
     private Appendable a;
@@ -171,10 +171,7 @@ public final class Formatter implements Closeable, Flushable {
 
     private void print(FormatSpec s, Object arg, Locale l) {
         if (s.dateTime) {
-            if (arg != null) {
-                throw new IllegalFormatConversionException(s.lower(), arg.getClass());
-            }
-            emitText(s, "null");
+            emitText(s, arg == null ? "null" : TimeFormat.render(s.conv, arg));
             return;
         }
         switch (s.conv) {

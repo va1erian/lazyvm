@@ -1,0 +1,74 @@
+toString minute: 2020-01-02T03:04
+toString midnight: 2020-01-02T00:00
+toString seconds: 2020-01-02T03:04:05
+toString seconds zero nano: 2020-01-02T03:04
+toString nano 1: 2020-01-02T03:04:05.000000001
+toString nano 1000: 2020-01-02T03:04:05.000001
+toString nano 1000000: 2020-01-02T03:04:05.001
+toString nano 120000000: 2020-01-02T03:04:05.120
+toString nano 123456000: 2020-01-02T03:04:05.123456
+toString nano 123456789: 2020-01-02T03:04:05.123456789
+toString nano 999999999: 2020-01-02T03:04:05.999999999
+toString nano no seconds: 2020-01-02T03:04:00.000000007
+toString years: 0005-01-02T00:00 0000-01-02T00:00 -0005-01-02T00:00 9999-12-31T23:59:59 +10000-01-01T00:00 -10000-01-01T00:00 +999999999-12-31T23:59:59.999999999 -999999999-01-01T00:00
+of Month: 2020-02-29T01:02 2020-02-29T01:02:03 2020-02-29T01:02:03.000000004
+of int: 2020-02-29T01:02 2020-02-29T01:02:03 2020-02-29T01:02:03.000000004
+of Month null: java.lang.NullPointerException: month
+of year hi: java.time.DateTimeException: Invalid value for Year (valid values -999999999 - 999999999): 1000000000
+of year lo: java.time.DateTimeException: Invalid value for Year (valid values -999999999 - 999999999): -1000000000
+of month 13: java.time.DateTimeException: Invalid value for MonthOfYear (valid values 1 - 12): 13
+of month 0: java.time.DateTimeException: Invalid value for MonthOfYear (valid values 1 - 12): 0
+of day 32: java.time.DateTimeException: Invalid value for DayOfMonth (valid values 1 - 28/31): 32
+of day 0: java.time.DateTimeException: Invalid value for DayOfMonth (valid values 1 - 28/31): 0
+of Feb 29 2021: java.time.DateTimeException: Invalid date 'February 29' as '2021' is not a leap year
+of Feb 29 1900: java.time.DateTimeException: Invalid date 'February 29' as '1900' is not a leap year
+of Feb 29 2000: 2000-02-29T00:00
+of Feb 29 -4: -0004-02-29T00:00
+of Feb 29 0: 0000-02-29T00:00
+of Feb 29 -1: java.time.DateTimeException: Invalid date 'February 29' as '-1' is not a leap year
+of Feb 30: java.time.DateTimeException: Invalid date 'FEBRUARY 30'
+of Apr 31: java.time.DateTimeException: Invalid date 'APRIL 31'
+of Sep 31: java.time.DateTimeException: Invalid date 'SEPTEMBER 31'
+of Month Apr 31: java.time.DateTimeException: Invalid date 'APRIL 31'
+of Month Feb 30: java.time.DateTimeException: Invalid date 'FEBRUARY 30'
+of hour 24: java.time.DateTimeException: Invalid value for HourOfDay (valid values 0 - 23): 24
+of hour -1: java.time.DateTimeException: Invalid value for HourOfDay (valid values 0 - 23): -1
+of minute 60: java.time.DateTimeException: Invalid value for MinuteOfHour (valid values 0 - 59): 60
+of second 60: java.time.DateTimeException: Invalid value for SecondOfMinute (valid values 0 - 59): 60
+of nano -1: java.time.DateTimeException: Invalid value for NanoOfSecond (valid values 0 - 999999999): -1
+of nano 1e9: java.time.DateTimeException: Invalid value for NanoOfSecond (valid values 0 - 999999999): 1000000000
+of order month first: java.time.DateTimeException: Invalid value for MonthOfYear (valid values 1 - 12): 13
+of order year first: java.time.DateTimeException: Invalid value for Year (valid values -999999999 - 999999999): 1000000000
+of order day before hour: java.time.DateTimeException: Invalid value for DayOfMonth (valid values 1 - 28/31): 99
+of order hour before minute: java.time.DateTimeException: Invalid value for HourOfDay (valid values 0 - 23): 99
+of order minute before second: java.time.DateTimeException: Invalid value for MinuteOfHour (valid values 0 - 59): 99
+of order second before nano: java.time.DateTimeException: Invalid value for SecondOfMinute (valid values 0 - 59): 99
+of calendar before hour: java.time.DateTimeException: Invalid date 'February 29' as '2021' is not a leap year
+getters: 2020 DECEMBER 12 25 15 4 5 123456789
+getters negative year: -5
+fields afternoon: NanoOfSecond=123456789 MilliOfSecond=123 SecondOfMinute=5 MinuteOfHour=4 HourOfDay=15 ClockHourOfAmPm=3 AmPmOfDay=1 DayOfWeek=5 DayOfMonth=25 DayOfYear=360 MonthOfYear=12 YearOfEra=2020 Year=2020
+fields midnight: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=0 ClockHourOfAmPm=12 AmPmOfDay=0 DayOfWeek=5 DayOfMonth=1 DayOfYear=1 MonthOfYear=1 YearOfEra=2021 Year=2021
+fields noon: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=12 ClockHourOfAmPm=12 AmPmOfDay=1 DayOfWeek=7 DayOfMonth=4 DayOfYear=185 MonthOfYear=7 YearOfEra=2021 Year=2021
+fields leap day: NanoOfSecond=999999999 MilliOfSecond=999 SecondOfMinute=59 MinuteOfHour=59 HourOfDay=23 ClockHourOfAmPm=11 AmPmOfDay=1 DayOfWeek=6 DayOfMonth=29 DayOfYear=60 MonthOfYear=2 YearOfEra=2020 Year=2020
+fields year end: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=1 ClockHourOfAmPm=1 AmPmOfDay=0 DayOfWeek=5 DayOfMonth=31 DayOfYear=365 MonthOfYear=12 YearOfEra=2021 Year=2021
+fields year 5: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=0 ClockHourOfAmPm=12 AmPmOfDay=0 DayOfWeek=2 DayOfMonth=1 DayOfYear=60 MonthOfYear=3 YearOfEra=5 Year=5
+fields year 0: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=0 ClockHourOfAmPm=12 AmPmOfDay=0 DayOfWeek=3 DayOfMonth=1 DayOfYear=61 MonthOfYear=3 YearOfEra=1 Year=0
+fields year -5: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=0 ClockHourOfAmPm=12 AmPmOfDay=0 DayOfWeek=3 DayOfMonth=1 DayOfYear=60 MonthOfYear=3 YearOfEra=6 Year=-5
+fields thursday: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=0 ClockHourOfAmPm=12 AmPmOfDay=0 DayOfWeek=4 DayOfMonth=1 DayOfYear=1 MonthOfYear=1 YearOfEra=1970 Year=1970
+fields sunday: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=0 ClockHourOfAmPm=12 AmPmOfDay=0 DayOfWeek=7 DayOfMonth=5 DayOfYear=5 MonthOfYear=1 YearOfEra=2020 Year=2020
+fields 1900 march: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=0 ClockHourOfAmPm=12 AmPmOfDay=0 DayOfWeek=4 DayOfMonth=1 DayOfYear=60 MonthOfYear=3 YearOfEra=1900 Year=1900
+fields 2000 march: NanoOfSecond=0 MilliOfSecond=0 SecondOfMinute=0 MinuteOfHour=0 HourOfDay=0 ClockHourOfAmPm=12 AmPmOfDay=0 DayOfWeek=3 DayOfMonth=1 DayOfYear=61 MonthOfYear=3 YearOfEra=2000 Year=2000
+getLong null: java.lang.NullPointerException
+isSupported null: false
+equals: true false false false true
+hashCode equal values: same
+hashCode equal values, negative year: same
+Month values: [JANUARY, FEBRUARY, MARCH, APRIL, MAY, JUNE, JULY, AUGUST, SEPTEMBER, OCTOBER, NOVEMBER, DECEMBER]
+Month getValue: 1 5 12
+Month of: JANUARY JUNE DECEMBER
+Month of 0: java.time.DateTimeException: Invalid value for MonthOfYear: 0
+Month of 13: java.time.DateTimeException: Invalid value for MonthOfYear: 13
+Month of -1: java.time.DateTimeException: Invalid value for MonthOfYear: -1
+Month of max: java.time.DateTimeException: Invalid value for MonthOfYear: 2147483647
+Month valueOf: DECEMBER 11 DECEMBER 11
+Month valueOf bad: java.lang.IllegalArgumentException: No enum constant java.time.Month.December

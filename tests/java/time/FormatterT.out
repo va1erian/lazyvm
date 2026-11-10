@@ -1,0 +1,148 @@
+tH |03|03|03|15|null||IllegalFormatConversionException:H != java.lang.String||IllegalFormatConversionException:H != java.lang.Integer
+tI |03|03|03|03|null||IllegalFormatConversionException:I != java.lang.String||IllegalFormatConversionException:I != java.lang.Integer
+tk |3|3|3|15|null||IllegalFormatConversionException:k != java.lang.String||IllegalFormatConversionException:k != java.lang.Integer
+tl |3|3|3|3|null||IllegalFormatConversionException:l != java.lang.String||IllegalFormatConversionException:l != java.lang.Integer
+tM |04|04|04|04|null||IllegalFormatConversionException:M != java.lang.String||IllegalFormatConversionException:M != java.lang.Integer
+tS |05|05|05|05|null||IllegalFormatConversionException:S != java.lang.String||IllegalFormatConversionException:S != java.lang.Integer
+tL |123|123|123|123|null||IllegalFormatConversionException:L != java.lang.String||IllegalFormatConversionException:L != java.lang.Integer
+tN |123000000|123000000|123000000|123000000|null||IllegalFormatConversionException:N != java.lang.String||IllegalFormatConversionException:N != java.lang.Integer
+tp |am|am|am|pm|null||IllegalFormatConversionException:p != java.lang.String||IllegalFormatConversionException:p != java.lang.Integer
+tz |+0000|+0000|+0000||IllegalFormatConversionException:z != java.time.LocalDateTime|null||IllegalFormatConversionException:z != java.lang.String||IllegalFormatConversionException:z != java.lang.Integer
+tZ |UTC|UTC|UTC||IllegalFormatConversionException:Z != java.time.LocalDateTime|null||IllegalFormatConversionException:Z != java.lang.String||IllegalFormatConversionException:Z != java.lang.Integer
+ts |1577934245|1577934245|1577934245||IllegalFormatConversionException:s != java.time.LocalDateTime|null||IllegalFormatConversionException:s != java.lang.String||IllegalFormatConversionException:s != java.lang.Integer
+tQ |1577934245123|1577934245123|1577934245123||IllegalFormatConversionException:Q != java.time.LocalDateTime|null||IllegalFormatConversionException:Q != java.lang.String||IllegalFormatConversionException:Q != java.lang.Integer
+tB |January|January|January|January|null||IllegalFormatConversionException:B != java.lang.String||IllegalFormatConversionException:B != java.lang.Integer
+tb |Jan|Jan|Jan|Jan|null||IllegalFormatConversionException:b != java.lang.String||IllegalFormatConversionException:b != java.lang.Integer
+th |Jan|Jan|Jan|Jan|null||IllegalFormatConversionException:h != java.lang.String||IllegalFormatConversionException:h != java.lang.Integer
+tA |Thursday|Thursday|Thursday|Thursday|null||IllegalFormatConversionException:A != java.lang.String||IllegalFormatConversionException:A != java.lang.Integer
+ta |Thu|Thu|Thu|Thu|null||IllegalFormatConversionException:a != java.lang.String||IllegalFormatConversionException:a != java.lang.Integer
+tC |20|20|20|20|null||IllegalFormatConversionException:C != java.lang.String||IllegalFormatConversionException:C != java.lang.Integer
+tY |2020|2020|2020|2020|null||IllegalFormatConversionException:Y != java.lang.String||IllegalFormatConversionException:Y != java.lang.Integer
+ty |20|20|20|20|null||IllegalFormatConversionException:y != java.lang.String||IllegalFormatConversionException:y != java.lang.Integer
+tm |01|01|01|01|null||IllegalFormatConversionException:m != java.lang.String||IllegalFormatConversionException:m != java.lang.Integer
+td |02|02|02|02|null||IllegalFormatConversionException:d != java.lang.String||IllegalFormatConversionException:d != java.lang.Integer
+te |2|2|2|2|null||IllegalFormatConversionException:e != java.lang.String||IllegalFormatConversionException:e != java.lang.Integer
+tj |002|002|002|002|null||IllegalFormatConversionException:j != java.lang.String||IllegalFormatConversionException:j != java.lang.Integer
+tR |03:04|03:04|03:04|15:04|null||IllegalFormatConversionException:R != java.lang.String||IllegalFormatConversionException:R != java.lang.Integer
+tT |03:04:05|03:04:05|03:04:05|15:04:05|null||IllegalFormatConversionException:T != java.lang.String||IllegalFormatConversionException:T != java.lang.Integer
+tr |03:04:05 AM|03:04:05 AM|03:04:05 AM|03:04:05 PM|null||IllegalFormatConversionException:r != java.lang.String||IllegalFormatConversionException:r != java.lang.Integer
+tD |01/02/20|01/02/20|01/02/20|01/02/20|null||IllegalFormatConversionException:D != java.lang.String||IllegalFormatConversionException:D != java.lang.Integer
+tF |2020-01-02|2020-01-02|2020-01-02|2020-01-02|null||IllegalFormatConversionException:F != java.lang.String||IllegalFormatConversionException:F != java.lang.Integer
+tc |Thu Jan 02 03:04:05 UTC 2020|Thu Jan 02 03:04:05 UTC 2020|Thu Jan 02 03:04:05 UTC 2020||IllegalFormatConversionException:Z != java.time.LocalDateTime|null||IllegalFormatConversionException:c != java.lang.String||IllegalFormatConversionException:c != java.lang.Integer
+[%1$tb %1$td, %1$tY %1$tl:%1$tM:%1$tS %1$Tp] Jan 02, 2020 3:04:05 AM
+[%1$tb %1$td, %1$tY %1$tl:%1$tM:%1$tS %1$Tp] Jan 01, 1970 12:00:00 AM
+[%1$tb %1$td, %1$tY %1$tl:%1$tM:%1$tS %1$Tp] Dec 25, 2020 12:05:09 AM
+[%1$tb %1$td, %1$tY %1$tl:%1$tM:%1$tS %1$Tp] Dec 05, 2020 12:05:09 PM
+[%tY-%<tm-%<td %<tH:%<tM:%<tS.%<tL] 2020-01-02 03:04:05.123
+[%Tp %TP] UnknownFormatConversionException:Conversion = 'tP'
+[%TB|%Tb|%Th|%TA|%Ta|%TZ|%Tc|%TD|%TF|%Tr|%TR|%TT|%TH|%TY|%Tj|%Te|%Tz] JANUARY|JAN|JAN|THURSDAY|THU|UTC|THU JAN 02 03:04:05 UTC 2020|01/02/20|2020-01-02|03:04:05 AM|03:04|03:04:05|03|2020|002|2|+0000
+[%-12tB|] January     |
+[%12tB|]      January|
+[%012tY|] FormatFlagsConversionMismatchException:Conversion = Y, Flags = 0
+[%3tY|] 2020|
+[%1tB|] January|
+[%12TB|]      JANUARY|
+[%-12Tc|] THU JAN 02 03:04:05 UTC 2020|
+[%30tc|]   Thu Jan 02 03:04:05 UTC 2020|
+[%5te|]     2|
+[%.2tH] IllegalFormatPrecisionException:2
+[%#tH] FormatFlagsConversionMismatchException:Conversion = H, Flags = #
+[%+tH] FormatFlagsConversionMismatchException:Conversion = H, Flags = +
+[% tH] FormatFlagsConversionMismatchException:Conversion = H, Flags =  
+[%,tH] FormatFlagsConversionMismatchException:Conversion = H, Flags = ,
+[%(tH] FormatFlagsConversionMismatchException:Conversion = H, Flags = (
+[%0tH] FormatFlagsConversionMismatchException:Conversion = H, Flags = 0
+[%-tH] MissingFormatWidthException:%-tH
+[%-tH|] MissingFormatWidthException:%-tH
+[%<tH] MissingFormatArgumentException:Format specifier '%<tH'
+[%t] UnknownFormatConversionException:Conversion = 't'
+[%t] UnknownFormatConversionException:Conversion = 't'
+[%tq] UnknownFormatConversionException:Conversion = 'tq'
+[%tx] UnknownFormatConversionException:Conversion = 'tx'
+[%t%] UnknownFormatConversionException:Conversion = 't%'
+[%tH%] UnknownFormatConversionException:Conversion = '%'
+[%T] UnknownFormatConversionException:Conversion = 'T'
+[%Tq] UnknownFormatConversionException:Conversion = 'tq'
+[%t1] UnknownFormatConversionException:Conversion = 't'
+[%t H] UnknownFormatConversionException:Conversion = 't'
+[%-t] UnknownFormatConversionException:Conversion = 't'
+[%tH %<tM] 03 04
+[%tH %tM] MissingFormatArgumentException:Format specifier '%tM'
+[%2$tH %1$tM] 00 04
+[%tH %tH] 03 00
+[%0$tH] 03
+[%tH|%tH] null|null
+[%10tH|]       null|
+[%-10tH|] null      |
+[%TH|] NULL|
+[%tc] null
+[%tY %<tm %<td %<tH %<tj %<ts %<tQ] 1970 01 01 00 001 0 0
+[%tY %<tm %<td %<tH %<tj %<ts %<tQ] 1969 12 31 23 365 0 -1
+[%tY %<tm %<td %<tH %<tM %<tS %<tL %<tN %<tj %<ts %<tQ] 292269055 12 02 16 47 04 192 192000000 336 -9223372036854775 -9223372036854775808
+[%tY %<tm %<td %<tH %<tM %<tS %<tL %<tN %<tj %<ts %<tQ] 292278994 08 17 07 12 55 807 807000000 229 9223372036854775 9223372036854775807
+[%tY %<tm %<td %<tA %<ta %<tj %<tC %<ty] 0001 01 03 Saturday Sat 003 00 01
+[%tY %<tm %<td %<tA %<ta %<tj %<tC %<ty] 0001 01 02 Friday Fri 002 00 01
+[%tY %<tm %<td %<tA %<ta %<tj %<tC %<ty] 0002 01 03 Friday Fri 003 00 02
+[%tY %<tm %<td %<tC %<ty] 10000 03 19 100 00
+[%tY %<tm %<td %<tC %<ty] 10000 01 01 100 00
+[%tF %<tT %<tD %<tr %<tR] 10000-01-01 00:00:00 01/01/00 12:00:00 AM 00:00
+[%tc] IllegalFormatConversionException:Z != java.time.LocalDateTime
+[%tH] IllegalFormatConversionException:H != java.lang.Boolean
+[%tH] 00
+[%tH] IllegalFormatConversionException:H != java.lang.Short
+[%tH] IllegalFormatConversionException:H != java.lang.Double
+[%tH] IllegalFormatConversionException:H != java.lang.Character
+[%tH] IllegalFormatConversionException:H != java.lang.StringBuilder
+[%tH] IllegalFormatConversionException:H != java.util.concurrent.atomic.AtomicLong
+[%tH] IllegalFormatConversionException:H != time.FormatterT$Acc
+[%tH] IllegalFormatConversionException:H != time.FormatterT$Acc
+[%tY] IllegalFormatConversionException:Y != time.FormatterT$Acc
+[%tH] 05
+[%tH:%<tM] 07:07
+[%tB] IllegalFormatConversionException:B != time.FormatterT$Acc
+[%tA] IllegalFormatConversionException:A != time.FormatterT$Acc
+[%tp] IllegalFormatConversionException:p != time.FormatterT$Acc
+range tH -1=-1! 0=00 1=01 12=12 13=13 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tI -1=-1! 0=0! 1=01 12=12 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tk -1=-1! 0=0 1=1 12=12 13=13 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tl -1=-1! 0=0! 1=1 12=12 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tM -1=-1! 0=00 1=01 12=12 13=13 24=24 32=32 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tS -1=-1! 0=00 1=01 12=12 13=13 24=24 32=32 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tL -1=-1! 0=000 1=001 12=012 13=013 24=024 32=032 60=060 367=367 1000=1000! 2000000000=2000000000! 
+range tN -1=-1! 0=000000000 1=001000000 12=012000000 13=013000000 24=024000000 32=032000000 60=060000000 367=367000000 1000=1000! 2000000000=2000000000! 
+range tp -1=-1! 0=am 1=pm 12=12! 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tB -1=-1! 0=0! 1=January 12=December 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tb -1=-1! 0=0! 1=Jan 12=Dec 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range th -1=-1! 0=0! 1=Jan 12=Dec 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tA -1=-1! 0=0! 1=Monday 12=12! 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range ta -1=-1! 0=0! 1=Mon 12=12! 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tC -1=-1! 0=0! 1=00 12=00 13=00 24=00 32=00 60=00 367=03 1000=10 2000000000=2000000000! 
+range tY -1=-1! 0=0! 1=0001 12=0012 13=0013 24=0024 32=0032 60=0060 367=0367 1000=1000 2000000000=2000000000! 
+range ty -1=-1! 0=0! 1=01 12=12 13=13 24=24 32=32 60=60 367=67 1000=00 2000000000=2000000000! 
+range tm -1=-1! 0=0! 1=01 12=12 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range td -1=-1! 0=0! 1=01 12=12 13=13 24=24 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range te -1=-1! 0=0! 1=1 12=12 13=13 24=24 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
+range tj -1=-1! 0=0! 1=001 12=012 13=013 24=024 32=032 60=060 367=367! 1000=1000! 2000000000=2000000000! 
+[%tY] 1000000000
+[%tY] IllegalFormatConversionException:Y != time.FormatterT$Acc
+[%tC] 10000000
+[%ty] IllegalFormatConversionException:y != time.FormatterT$Acc
+[%tr] IllegalFormatConversionException:I != time.FormatterT$Acc
+[%tr] 01:01:01 PM
+[%tr] IllegalFormatConversionException:p != time.FormatterT$Acc
+[%Tp] IllegalFormatConversionException:p != time.FormatterT$Acc
+[%tR] IllegalFormatConversionException:H != time.FormatterT$Acc
+[%tT] IllegalFormatConversionException:H != time.FormatterT$Acc
+[%tD] IllegalFormatConversionException:m != time.FormatterT$Acc
+[%tZ %<tz] IllegalFormatConversionException:Z != java.time.LocalDateTime
+[%tH %tM] 03 04
+[%tZ %<tz] UTC +0000
+[%s %S %10s|] Thu Jan 01 00:00:00 UTC 1970 THU JAN 01 00:00:00 UTC 1970 Thu Jan 01 00:00:00 UTC 1970|
+2020-01-02 03:04:05 | January 29
+Thursday January
+Thursday January am
+Jan 01, 1970 12:00:00 AM
+Thu Jan 02 03:04:05 UTC 2020
+03:04:05.123
+2020 2020 2020
+January Thursday
