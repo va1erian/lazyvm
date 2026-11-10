@@ -1,0 +1,17 @@
+one byte order mark: [-2, -1, 0, 49, 0, 50]
+surrogate pair split between records: [-16, -97, -104, -128]
+setEncoding flushes the stream once: 1 bytes=R;
+no stale bytes after a failed close: [null/java.io.IOException: w/3] new=new;T old closed=0
+a failed flush drops its bytes: [null/java.io.IOException: w/2] got=b;
+a failing head is tried again: [null/java.lang.RuntimeException: head/1] bytes=H;2;T; heads=2
+null head and tail: [null/java.lang.NullPointerException/1, null/java.lang.NullPointerException/3] bytes=
+a failing tail: [null/java.lang.RuntimeException: tail/3] bytes= closes=0 flushes=0
+format returns null: [null/java.lang.NullPointerException/1] bytes=0
+a throwing error manager does not escape publish: Handler.reportError caught:
+a stream write throwing unchecked: [null/java.io.UncheckedIOException: java.io.IOException: write/2]
+a stream flush throwing unchecked: [null/java.lang.IllegalStateException: flush/2] bytes=b
+close flushes first; a failed flush leaves the stream open: [null/java.lang.IllegalStateException: flush/3] closes=0
+close flushes then closes: 1 1 bytes=z
+the constructor goes through the overridable setters: [setEncoding null, setOutputStream]
+bytes reach the stream before any flush: true
+nothing is lost: 100000

@@ -1,0 +1,73 @@
+defaults: ALL null null null java.util.logging.ErrorManager
+StreamHandler defaults: INFO java.util.logging.SimpleFormatter null null java.util.logging.ErrorManager
+StreamHandler(out, f) defaults: INFO true null null
+ConsoleHandler defaults: INFO java.util.logging.SimpleFormatter null null java.util.logging.ErrorManager
+ConsoleHandler is a StreamHandler: true
+StreamHandler(out) null out: NullPointerException: null
+StreamHandler(out) null formatter: NullPointerException: null
+setFormatter null: NullPointerException: null
+setLevel null: NullPointerException: null
+setErrorManager null: NullPointerException: null
+setters: true FINE true
+filter: true
+isLoggable: true false false
+isLoggable null: NullPointerException: null
+level OFF: false false
+level ALL: true true
+level 555: false true
+setEncoding: UTF-8
+setEncoding null: null
+setEncoding latin1: ISO-8859-1
+setEncoding bogus: bogus
+encoding kept after failure: ISO-8859-1
+utf-8 bytes: [91, 72, 69, 65, 68, 93, 60, -61, -87, -30, -126, -84, 62]
+latin1 bytes (unmappable becomes ?): [91, 72, 69, 65, 68, 93, 60, -23, 63, 62]
+encoding change keeps earlier bytes, no second head: [91, 72, 69, 65, 68, 93, 60, -23, 63, 62, 60, -61, -87, 62]
+default encoding is the platform's: [91, 72, 69, 65, 68, 93, 60, -61, -87, 62]
+isLoggable: true false
+buffered after publish: []
+after flush: [[HEAD]<a><b>] closed=false
+after close: [[HEAD]<a><b>[TAIL]] closed=true
+publish after close: [[HEAD]<a><b>[TAIL]] false
+close twice: [[HEAD]<a><b>[TAIL]]
+close without records: [[HEAD][TAIL]] closed=true
+flush without records: [] closed=false
+no stream: false
+no stream survives: ok
+SimpleFormatter has no head or tail: [Nov 14, 2023 10:13:20 PM null
+INFO: default format
+]
+loggable with stream: true
+old stream finished and closed: [[HEAD]<p5>[TAIL]] closed=true
+new stream untouched: [] closed=false
+new stream gets head again: [[HEAD]<p6>]
+null stream: NullPointerException: null
+closed: true
+filter: [[HEAD]<keep>]
+level ALL: [[HEAD]<keep><all>]
+writes at once to the System.err of its creation: [[HEAD]<to captured>]
+level INFO: [[HEAD]<to captured><second>]
+close adds no tail, closes nothing: [[HEAD]<to captured><second>] closed=false
+publish after close: [[HEAD]<to captured><second><after close>]
+default format on the console handler:
+Nov 14, 2023 10:13:20 PM null
+INFO: hello
+Nov 14, 2023 10:13:20 PM null
+WARNING: warn
+reported null java.lang.IllegalStateException: fmt 5
+publish survives a failing formatter: ok
+reported null java.io.IOException: disk 2
+reported null java.io.IOException: disk 3
+reportError rep re 2
+codes: 0 1 2 3 4 5
+--- stderr ---
+real System.err still works
+[HEAD]<to the real stderr><all levels>
+end of stderr
+java.util.logging.ErrorManager: 3: m1
+util.LoggingStream$Quiet: e1
+java.util.logging.ErrorManager: 7
+java.util.logging.ErrorManager: 0: only a message
+java.util.logging.ErrorManager: 1
+util.LoggingStream$Quiet: only an exception
+end of error reports

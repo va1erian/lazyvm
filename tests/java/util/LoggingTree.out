@@ -1,0 +1,20 @@
+only the root is registered: []
+c registered: [c] []
+c.a.b.c registered: [c.a.b.c] [c]
+c.a.b.c.d.e registered: [c.a.b.c.d.e] [c.a.b.c]
+a name that only shares letters: [c]
+explicit root, nearer registered: [e1.a.b]
+explicit unrelated, nearer registered: [e2.a.b]
+explicit far ancestor, nearer registered: [e3.a.b]
+explicit anonymous, ancestor registered: [e5.a]
+an even nearer ancestor keeps its child: [e6.a.b] [e6]
+explicit parent, no ancestor registered: [e7other]
+many loggers, ancestor last: [s] [s.n7]
+many levels: 1500
+names: true
+parse by sign and zeros: INFO INFO INFO
+parse zero: -0 -0
+name first for numeric names: true named 77
+value lookup: true
+parse unicode digits: 12
+OFF and ALL by value: true true

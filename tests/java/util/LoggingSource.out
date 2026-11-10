@@ -1,0 +1,10 @@
+direct -> util.LoggingSource#main
+static -> util.LoggingSource#viaStatic
+method reference -> util.LoggingSource#main
+lambda -> util.LoggingSource#lambda$main$0
+reflection -> util.LoggingSource#log
+reflection on Logger -> util.LoggingSource#main
+inside: util.LoggingSource#latched
+after, same record: util.LoggingSource#latched
+method: null#m
+class: C#null
