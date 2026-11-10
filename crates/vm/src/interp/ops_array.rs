@@ -8,7 +8,7 @@ use crate::{Vm, VmError, VmResult};
 
 /// The array variant each opcode works on, in opcode order:
 /// int, long, float, double, reference, byte/boolean, char, short.
-fn matches(op_kind: u8, a: &Array) -> bool {
+pub(super) fn kind_matches(op_kind: u8, a: &Array) -> bool {
     matches!(
         (op_kind, a),
         (0, Array::Int(_))
@@ -57,7 +57,7 @@ impl Vm {
         let index = f.pop_int()?;
         let array = f.pop_nonnull()?;
         let a = heap.array(array)?;
-        if !matches(kind, a) {
+        if !kind_matches(kind, a) {
             return Err(VmError::verify("array load of the wrong type"));
         }
         let i = check_index(index, a.len())?;
@@ -76,7 +76,7 @@ impl Vm {
         };
         // JVMS 6.5 aastore: the bounds check comes before the store check.
         let a = self.heap.array(array)?;
-        if !matches(kind, a) {
+        if !kind_matches(kind, a) {
             return Err(VmError::verify("array store of the wrong type"));
         }
         let i = check_index(index, a.len())?;

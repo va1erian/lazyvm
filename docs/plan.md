@@ -43,7 +43,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S6 | Threads, concurrency, `CompletionStage`, the event loop | done |
 | S7 | `lazy.net` async TCP | done |
 | S8 | Verifier and hardening | done |
-| S11 | Streams, `java.time`, logging, JDWP | not started |
+| S11 | Streams, `java.time`, logging, JDWP | in progress (S11-05 done) |
 | S9 | `lazy.ui` on xui | in progress (S9-00, S9-00b, S9-01 and the S9-02 spike done) |
 | S10 | Messenger and LazyOS integration | not started |
 | S12 | Explore: AWT on xui | not started |
