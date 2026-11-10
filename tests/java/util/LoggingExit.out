@@ -1,0 +1,4 @@
+named publish hello
+anonymous publish hello
+end of main
+named close

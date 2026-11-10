@@ -1,0 +1,7 @@
+events: [a handlers=0 level=FINE, b throws, c, d joined, thread done]
+handlers gone: 0 0 0 0
+levels: null INFO
+anonymous untouched: 1
+made in close: true
+made on the thread: true
+second reset closes nothing more: 0

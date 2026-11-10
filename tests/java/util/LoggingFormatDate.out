@@ -1,0 +1,14 @@
+Tue Nov 14 22:13:20 UTC 2023|2023-11-14|22:13:20.123|UTC|CONFIG|null|null|msg param|
+--
+Tue Nov 14 22:13:20 UTC 2023|2023-11-14|22:13:20.123|UTC|CONFIG|log.name|log.name|msg param|
+--
+Tue Nov 14 22:13:20 UTC 2023|2023-11-14|22:13:20.123|UTC|CONFIG|a.B|log.name|msg param|
+--
+Tue Nov 14 22:13:20 UTC 2023|2023-11-14|22:13:20.123|UTC|CONFIG|a.B go|log.name|msg param|
+--
+Thu Jan 01 23:59:59 UTC 1970|1970-01-01|23:59:59.999|UTC|CONFIG|a.B go|log.name|null|
+--
+Thu Jan 01 23:59:59 UTC 1970|1970-01-01|23:59:59.999|UTC|CONFIG|a.B go|log.name|null|
+java.lang.Exception: t
+
+--

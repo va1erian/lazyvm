@@ -1,0 +1,3 @@
+end of main
+thread sees exit.thread.made true
+closed after the thread

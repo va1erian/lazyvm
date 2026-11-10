@@ -46,7 +46,7 @@ never a panic.
       `DateTimeFormatter.ofPattern` with the letters `y u M d H m s S a A`; [`decisions.md`](decisions.md) D6,
       `docs/design/time.md`) and the `%t` conversions of `Formatter`.
       Check: `tests/java/time/*` (`now()` only in a test whose output does not depend on the clock).
-- [ ] S11-03 `java.util.logging` minimal.
+- [x] S11-03 `java.util.logging` minimal.
       Check: `tests/java/util/Logging`.
 - [ ] S11-04 JDWP over a socket (`-agentlib:jdwp=transport=dt_socket,…`):
       breakpoints, stepping, stack frames, locals, and evaluate-free variable

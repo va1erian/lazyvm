@@ -1,0 +1,170 @@
+raw ends with line separator: true
+raw line count: 2
+full:
+Nov 14, 2023 10:13:20 PM a.B go
+INFO: hello
+--
+severe:
+Nov 14, 2023 10:13:20 PM null
+SEVERE: bad
+--
+custom level:
+Nov 14, 2023 10:13:20 PM null
+Mixed Case: custom
+--
+OFF:
+Nov 14, 2023 10:13:20 PM null
+OFF: off
+--
+FINEST:
+Nov 14, 2023 10:13:20 PM null
+FINEST: finest
+--
+multi-line message:
+Nov 14, 2023 10:13:20 PM null
+INFO: one
+two
+--
+percent in message:
+Nov 14, 2023 10:13:20 PM null
+INFO: 100% sure %s %d
+--
+no names:
+Nov 14, 2023 10:13:20 PM null
+INFO: m
+--
+logger name only:
+Nov 14, 2023 10:13:20 PM my.log
+INFO: m
+--
+class, no method:
+Nov 14, 2023 10:13:20 PM a.B
+INFO: m
+--
+class and method:
+Nov 14, 2023 10:13:20 PM a.B go
+INFO: m
+--
+method, no class:
+Nov 14, 2023 10:13:20 PM my.log
+INFO: m
+--
+empty logger name:
+Nov 14, 2023 10:13:20 PM 
+INFO: m
+--
+empty class:
+Nov 14, 2023 10:13:20 PM 
+INFO: m
+--
+empty class and method:
+Nov 14, 2023 10:13:20 PM  
+INFO: m
+--
+0 -> Jan 01, 1970 12:00:00 AM t
+-1 -> Dec 31, 1969 11:59:59 PM t
+43200000 -> Jan 01, 1970 12:00:00 PM t
+43199000 -> Jan 01, 1970 11:59:59 AM t
+43199999 -> Jan 01, 1970 11:59:59 AM t
+86399999 -> Jan 01, 1970 11:59:59 PM t
+1699960400123 -> Nov 14, 2023 11:13:20 AM t
+1699938800123 -> Nov 14, 2023 5:13:20 AM t
+1699967600123 -> Nov 14, 2023 1:13:20 PM t
+1699924400123 -> Nov 14, 2023 1:13:20 AM t
+951782400000 -> Feb 29, 2000 12:00:00 AM t
+1709208000000 -> Feb 29, 2024 12:00:00 PM t
+253402300799999 -> Dec 31, 9999 11:59:59 PM t
+-62135769600000 -> Jan 01, 0001 12:00:00 AM t
+thrown:
+Nov 14, 2023 10:13:20 PM x
+SEVERE: oops
+java.lang.Exception: plain
+	at p.Q.r(Q.java:1)
+
+--
+thrown chain:
+Nov 14, 2023 10:13:20 PM x
+SEVERE: oops
+java.lang.Exception: top
+	at A.m(A.java:3)
+	at B.n(Unknown Source)
+	at C.native(Native Method)
+	Suppressed: java.lang.Error: sup
+Caused by: java.lang.RuntimeException: cause
+	at D.o(D.java:9)
+
+--
+thrown no trace:
+Nov 14, 2023 10:13:20 PM x
+SEVERE: oops
+java.lang.IllegalStateException
+
+--
+thrown cleared:
+Nov 14, 2023 10:13:20 PM x
+SEVERE: oops
+--
+null message: null
+null message stays null: true
+null message with params stays null: true
+empty message: []
+no params: a {0} b
+{0}: a X b
+{1} missing: a {1} b
+{1}: a Y b
+order: YXY
+{2}: C
+{3}: D
+{4} alone is not substituted: {4}
+{4} with {0}: A E
+{5} alone: {5}
+{10} with {1}: b k
+space in braces: { 0}
+null param: v=null
+empty params: x {0}
+param no marker: it's {x}
+same twice: ababab
+adjacent: ab
+braces text: } {0} } {
+dollar and backslash: $X \ X
+object toString: v=OBJ
+boolean char string: true c s
+string that looks numeric: 1234567
+unicode: éü€
+array length: v=3
+format uses formatMessage: <m 1>
+int: 0|12|1,234|1,234,567
+negative int: -1|-1,234,567
+long: -9,876,543,210|9,223,372,036,854,775,807
+int extremes: -2,147,483,648|2,147,483,647
+short byte: 4,000 -5
+double: 1.5|2|0.123|1,234.568
+double more: -0.5|10,000,000,000|0.001|100.25
+float: 3.25|0.5
+negative zero: -0
+small rounds to zero: 0|0
+rounds up: 1|1,000|2
+whole double: 1,000,000|123,456,789
+exact ties round half even: 0.062|0.188|0.562|0.438|1,234.562
+large: 1,000,000,000,000,000|123,456,789,012
+char is not a number: A
+apostrophe starts quote: its {0}
+no marker: no quote processing: it's
+no marker with params: it's no marker
+doubled: it's X
+quoted brace: {0} X
+quote closes: ab{0}cd Y
+unterminated quote: X rest {1}
+quote only: {0}
+two quotes: X ' Y
+quoted quote: a'b X
+unclosed: {0
+unclosed later: x {0} {
+not a number: {0} {abc}
+negative index: {-1} {0}
+empty braces: {} {0}
+nested braces: {{0}}
+head and tail default: [][]
+simple head and tail: [][]
+head overridden: head []
+format: x

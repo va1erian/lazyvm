@@ -1,0 +1,36 @@
+pattern [{0} {+1}]: X Y
+pattern [{0} {١}]: X Y
+pattern [{0} {0000000000001}]: X Y
+pattern [{0} {00}]: X X
+pattern [{0} {-0}]: X X
+pattern [{0} { 1}]: {0} { 1}
+pattern [{0} {1 }]: {0} {1 }
+pattern [{0} {'1'}]: {0} {'1'}
+pattern [{0} {+}]: {0} {+}
+pattern [{0} {-1}]: {0} {-1}
+pattern [{0} {1x}]: {0} {1x}
+pattern [{0} {9999}]: X {9999}
+pattern [{0} {10000}]: {0} {10000}
+pattern [{0} {10001}]: {0} {10001}
+pattern [{0} {99999999999}]: {0} {99999999999}
+pattern [{0} {2147483647}]: {0} {2147483647}
+pattern [{0} {2147483648}]: {0} {2147483648}
+pattern [{0} {}]: {0} {}
+pattern [{0} }]: X }
+pattern [} {0}]: } X
+pattern [{0}{]: {0}{
+pattern [{0}'']: X'
+pattern [''{0}'']: 'X'
+pattern ['''{0}''']: '{0}'
+one parameter [{0} {+1}]: X {1}
+one parameter [{0} {01}]: X {1}
+one parameter [{0} {١٢}]: X {12}
+one parameter [{0} {10}]: X {10}
+one parameter [{0} {0009}]: X {9}
+big doubles: 9,000,000,000,000,000,000 9,100,000,000,000,000,000 9,200,000,000,000,000,000 4,000,000,000,000,000
+grouped longs: 1,234,567,890,123 -1,000
+toString throws: a {0} b
+toString throws, not reached: a X b
+toString returns null: a null b
+level shown by its own name: custom: m
+getLogger(null, bundle): java.lang.NullPointerException null
