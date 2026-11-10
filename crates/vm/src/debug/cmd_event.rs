@@ -7,6 +7,8 @@ use super::wire::{Reader, Res, Writer, err};
 use crate::Vm;
 
 const MAX_MODIFIERS: usize = 64;
+/// Requests held at once: a client that keeps asking for more is not debugging.
+const MAX_REQUESTS: usize = 10_000;
 
 impl Vm {
     pub(super) fn cmd_event_request(&mut self, cmd: u8, r: &mut Reader, w: &mut Writer) -> Res<()> {
@@ -39,6 +41,9 @@ impl Vm {
         }
         let mods = (0..n).map(|_| read_modifier(r)).collect::<Res<Vec<_>>>()?;
         kind_supported(kind)?;
+        if self.debug.requests.len() >= MAX_REQUESTS {
+            return Err(err::OUT_OF_MEMORY);
+        }
         let step = match kind {
             BREAKPOINT => {
                 self.check_breakpoint_location(&mods)?;

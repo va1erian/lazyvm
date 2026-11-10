@@ -118,6 +118,10 @@ impl Requests {
         !self.at.is_empty() || self.steps > 0
     }
 
+    pub fn len(&self) -> usize {
+        self.list.len()
+    }
+
     pub fn has_step(&self) -> bool {
         self.steps > 0
     }

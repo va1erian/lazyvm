@@ -52,6 +52,9 @@ never a panic.
       views, enough for IntelliJ's debugger.
       Check: `tools/jdwp_smoke.py` (a scripted JDWP client); owner check from IntelliJ recorded in the PR.
       Needs: S7-01 (its socket layer carries the JDWP connection).
+      State: agent and `tools/jdwp_smoke.py` pass on Windows (`docs/design/jdwp.md`). Open: the
+      LazyOS run (`--lazyos`, the VM dials the host at 10.0.2.2; needs a LazyOS `run.py` with `--net`)
+      and the owner's IntelliJ check.
 - [x] S11-05 Performance pass: a benchmark suite (`bench/`) and quickening or
       inline caches only if a benchmark proves a 20% win. The suite is our
       own code, shaped like what games run: a sprite blit loop, a noise and

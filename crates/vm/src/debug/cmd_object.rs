@@ -44,7 +44,7 @@ impl Vm {
                 .and_then(|c| c.fields.get(index))
                 .filter(|f| !f.is_static())
                 .ok_or(err::INVALID_FIELDID)?;
-            let (slot, kind) = (field.slot, field.descriptor.as_bytes()[0]);
+            let (slot, kind) = (field.slot, field.descriptor.bytes().next().unwrap_or(b'L'));
             if !self.is_subclass(class, owner) {
                 return Err(err::INVALID_FIELDID);
             }

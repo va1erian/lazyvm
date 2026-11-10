@@ -153,7 +153,7 @@ impl Vm {
     pub(super) fn cmd_method(&mut self, cmd: u8, r: &mut Reader, w: &mut Writer) -> Res<()> {
         let m = self.method_arg(r)?;
         match cmd {
-            1 => self.line_table(m, w),
+            1 => self.line_table(m, w)?,
             2 | 5 => self.variable_table(m, w, cmd == 5)?,
             4 => w.bool(false),
             _ => return Err(err::NOT_IMPLEMENTED),
@@ -161,13 +161,16 @@ impl Vm {
         Ok(())
     }
 
-    fn line_table(&self, m: MethodRef, w: &mut Writer) {
+    fn line_table(&self, m: MethodRef, w: &mut Writer) -> Res<()> {
         let Some(code) = self.method(m).code.clone() else {
             w.i64(-1);
             w.i64(-1);
             w.i32(0);
-            return;
+            return Ok(());
         };
+        if code.line_numbers.is_empty() {
+            return Err(err::ABSENT_INFORMATION);
+        }
         w.i64(0);
         w.i64(code.bytecode.len() as i64 - 1);
         w.len(code.line_numbers.len());
@@ -175,6 +178,7 @@ impl Vm {
             w.i64(i64::from(pc));
             w.i32(i32::from(line));
         }
+        Ok(())
     }
 
     fn variable_table(&self, m: MethodRef, w: &mut Writer, generic: bool) -> Res<()> {
