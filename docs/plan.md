@@ -5,7 +5,7 @@ written in Rust, a small class library covering the essentials of Java SE 8,
 and a `lazy.*` API for xui, Messenger and async I/O. Apps are written and built
 in IntelliJ on Windows, run there on LazyVM, and run unchanged on LazyOS.
 
-Stages S8-S15 are in [`plan-2.md`](plan-2.md); S11 runs right after S8. Read [`decisions.md`](decisions.md) first: it fixes the target level, the
+Stages S8-S16 are in [`plan-2.md`](plan-2.md); S11 runs right after S8. Read [`decisions.md`](decisions.md) first: it fixes the target level, the
 license position, the toolchain and the scope this plan assumes. Every change
 follows [`../AGENTS.md`](../AGENTS.md).
 
@@ -50,6 +50,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S13 | Explore: Swing and media | not started |
 | S14 | Proposed: javac 8 on LazyVM | not started |
 | S15 | Full network stack: `java.net`, channels, TLS, HTTP | not started |
+| S16 | Proposed: the Doze language, `dozec`, `async`/`await`, scripting hosts and LazyRAD forms | not started |
 
 ## S0. Workspace and harness
 
@@ -479,4 +480,4 @@ live host and prints the status line and body size on both platforms (manual
 live run, recorded in the PR).
 
 
-S8-S15 and the LazyOS-side items continue in [`plan-2.md`](plan-2.md).
+S8-S16 and the LazyOS-side items continue in [`plan-2.md`](plan-2.md).

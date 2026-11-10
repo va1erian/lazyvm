@@ -1,4 +1,4 @@
-# LazyVM plan, part 2: S8-S15 and LazyOS items
+# LazyVM plan, part 2: S8-S16 and LazyOS items
 
 Continues [`plan.md`](plan.md), which has the work-item format, the status
 table and S0-S7. The same rules apply ([`../AGENTS.md`](../AGENTS.md)).
@@ -453,6 +453,122 @@ S7, which ships only the `lazy.net` async TCP API.
 
 Gate: `samples/fetch` downloads a page over HTTPS with `lazy.net.Http` and
 prints its status and size on both platforms (manual live run, recorded in the PR).
+
+## S16. Proposed: the Doze language
+
+Goal: a LazyOS machine compiles programs for LazyVM with `dozec`, a native
+compiler for Doze, a small language with Smalltalk's message syntax over
+Java's types, LazyRAD builds its forms in it, `async`/`await` make
+LazyOS's asynchronous APIs read like blocking code, and game hosts such as
+miniscent embed its front end as their script language. Proposed in
+[`doze.md`](doze.md), [`doze-async.md`](doze-async.md) and
+[`doze-script.md`](doze-script.md); the owner has not confirmed it. Every item's tests run
+through `tools/doze_test.py` (doze.md section 9): the classes run on the
+oracle with `-Xverify:all` and on LazyVM, both matching the `.out`, and
+mirrored `.java` tests are blessed on the oracle.
+
+- [ ] S16-01 Lexer, parser, AST and diagnostics (doze.md sections 4 and 8),
+      in `doze-syntax`, with no dependencies.
+      Files: `crates/doze-syntax/`,
+      `fuzz/fuzz_targets/doze.rs`, `tests/doze/bad/`.
+      Check: `cargo test -p doze-syntax` parses every `tests/doze/**/*.dz`; each
+      `tests/doze/bad` file gives its `.err` diagnostic; the fuzz target runs
+      10 minutes without a panic.
+      Needs: the owner's confirmation of S16.
+- [ ] S16-02 The `Universe` trait and types in `doze-check`; the class
+      path, `Signature` parsing and the class-file universe in `dozec`.
+      Files: `crates/doze-check/src/{types,universe}.rs`,
+      `crates/dozec/src/{classpath,sig}.rs`.
+      Check: a unit test loads every class of `dist/lazyrt.jar`, parses every
+      `Signature` attribute and finds the functional interfaces of
+      `java.util.function` and `lazy.async` with their single methods.
+      Needs: S16-01.
+- [ ] S16-03 Scripts and messages: top-level statements, locals,
+      primitives, strings and interpolation, unary, binary and keyword
+      messages to the Java API (labels, class-side messages, constructors,
+      fields) with overloads, boxing and varargs, the inlined `ifTrue:`,
+      `and:`, `whileTrue:`, `to:do:`, `timesRepeat:` and `do:`, stack maps, `classfile::writer`
+      extensions, `dozec`, `dozec run`, and the size gate.
+      Files: `crates/doze-check/src/{infer,overload,check}*`,
+      `crates/dozec/src/{gen,emit,main}*`,
+      `crates/classfile/src/writer.rs`, `tools/doze_test.py`,
+      `tools/size.py`, `tests/doze/core/`.
+      Check: `tools/doze_test.py --filter core` passes on Windows;
+      `python tools/size.py --dozec` passes for the stripped musl build
+      (under 2,000,000 bytes, uncompressed).
+      Needs: S16-02.
+- [ ] S16-04 Classes and interfaces: fields, constructors, default and
+      static interface methods, extending Java classes, bridge methods,
+      `enum`, annotations.
+      Files: `crates/doze-check/src/check/`, `crates/dozec/src/gen/`,
+      `tests/doze/classes/`.
+      Check: `tools/doze_test.py --filter classes` passes on Windows,
+      including a `Comparable<Point>` sorted by `Collections.sort` and a
+      mirror of `tests/java/s4/Showcase`'s enums.
+      Needs: S16-03.
+- [ ] S16-05 Blocks: lambdas through `LambdaMetafactory`, captures (mutated
+      ones in a shared array), method type inference.
+      Files: `crates/doze-check/src/{infer,check}*`, `crates/dozec/src/gen/`,
+      `tests/doze/blocks/`.
+      Check: `tools/doze_test.py --filter blocks` passes on Windows, with a
+      stream pipeline ending in `collect: Collectors toList` that needs no `as:`,
+      and a `lazy.async` program.
+      Needs: S16-04.
+- [ ] S16-06 `is:`/`as:` with smart casts, the `ifNil:` family, cascades,
+      collection literals, `on:do:`, `ensure:` and `signal`.
+      Files: `crates/doze-check/src/check/`, `crates/dozec/src/gen/`,
+      `tests/doze/flow/`.
+      Check: `tools/doze_test.py --filter flow` passes on Windows; an
+      `ensure:` test covers `^` from an inlined block, a `whileTrue:` exit
+      and a `signal` out of each branch.
+      Needs: S16-05.
+- [ ] S16-07 `async` and `await` (doze-async.md): linearisation in
+      `doze-check`, frame classes and resumption in `dozec`, and
+      `lazy.async.Loop.home()` with `lazy.ui`'s registration.
+      Files: `crates/doze-check/src/anf.rs`, `crates/dozec/src/gen/`,
+      `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/`,
+      `tests/doze/async/`, `tests/lazy/async/`.
+      Check: `tools/doze_test.py --filter async` passes on Windows with the
+      cases of doze-async.md section 5 (a million completed awaits without
+      `StackOverflowError`, await in `try` in a loop, cancellation removing
+      the timer, a UI handler resuming on the UI thread, fire-and-forget
+      failures, top-level `await`); `Loop.home()` has its own `lazy.*` test.
+      Needs: S16-06; S9's `Ui.executor()` for the UI case.
+- [ ] S16-08 The script profile and interface files (doze-script.md):
+      `Profile::Script`, a `.dzi` universe with `@Name` checks, and the
+      conformance suite.
+      Files: `crates/doze-check/src/{profile,dzi}.rs`, `tests/doze/script/`.
+      Check: `tools/doze_test.py --filter script` runs every conformance
+      program through `dozec` on LazyVM against its `.out`; each
+      `tests/doze/script/bad` file is refused with its message; a unit test
+      checks a stub `.dzi` (name literals, unknown members, wrong handle
+      kind); a stub host binary embedding `doze-syntax` and `doze-check`,
+      built with `opt-level = "s"` and LTO, has its size measured and
+      recorded in doze-script.md section 8.
+      Needs: S16-07. Adopting it in miniscent is a miniscent work item.
+- [ ] S16-09 LazyRAD forms (doze.md section 11): the view-file shape, a
+      `doze-syntax` API that reads and rewrites a view file for the
+      designer, and form tests on `lazy.ui`.
+      Files: `crates/doze-syntax/src/view.rs`, `tests/doze/forms/`.
+      Check: `cargo test -p doze-syntax` round-trips every `tests/doze/forms`
+      view file byte for byte and refuses the hand-edited ones in
+      `tests/doze/forms/bad`; `tools/doze_test.py --filter forms` runs each
+      form headless with a click script and matches its screenshots and
+      `.out`.
+      Needs: S16-06; `Ui.fixed()` and the LazyRAD widgets in `lazy.ui`
+      (S9 items the owner has to accept first). The LazyRAD IDE side is a
+      LazyRAD and LazyOS plan item.
+- [ ] S16-10 `dozec` on LazyOS: the static musl build, staged into the image
+      by the LazyOS repo (a `LOS-` item), and measured.
+      Files: `tools/lazyos_test.py`, `tools/doze_test.py`.
+      Check: `tools/lazyos_test.py --doze` compiles every `tests/doze` test
+      with `dozec` inside LazyOS and runs it there against its `.out`; a
+      1,000-line test program compiles in under 200 ms there.
+      Needs: S16-07 (S16-09 for the form tests).
+
+Gate: `samples/doze/hello_form`, the LazyRAD hello form of doze.md section
+11, is compiled by `dozec` and run by `lazyvm` inside LazyOS with no other
+toolchain, and matches its screenshot on Windows and LazyOS.
 
 ## LazyOS-side work items
 
