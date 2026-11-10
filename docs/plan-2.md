@@ -39,7 +39,7 @@ final one. Checks the verifier has proven may be dropped only where
 verification cannot be turned off; malformed code is still an error,
 never a panic.
 
-- [ ] S11-01 `java.util.stream`: all stream types and collectors, sequential
+- [x] S11-01 `java.util.stream`: all stream types and collectors, sequential
       only (`parallel()` is accepted and ignored).
       Check: `tests/java/stream/*`.
 - [x] S11-02 minimal `java.time` for Minicraft (`LocalDateTime`, `Month`,

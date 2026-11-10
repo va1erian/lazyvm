@@ -28,6 +28,8 @@ final class Synchronized {
             this.mutex = mutex == null ? this : mutex;
         }
 
+        public Spliterator<E> spliterator() { return c.spliterator(); }
+
         public int size() { synchronized (mutex) { return c.size(); } }
         public boolean isEmpty() { synchronized (mutex) { return c.isEmpty(); } }
         public boolean contains(Object o) { synchronized (mutex) { return c.contains(o); } }

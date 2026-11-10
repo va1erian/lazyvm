@@ -1,0 +1,147 @@
+filter: [pear, kiwi, date, plum]
+map: [4, 3, 5, 4, 4, 4]
+map null results: [null, null]
+mapToInt: 24
+mapToLong: 206158430208
+mapToDouble: 12.0
+distinct: [a, b, c]
+distinct uses equals: 1
+distinct unordered keeps one: 2
+sorted: [apple, date, fig, kiwi, pear, plum]
+sorted cmp: [fig, plum, pear, kiwi, date, apple]
+sorted stable: [f0, b1, d1, a2, c2, e2]
+sorted stable large: [n180, n183, n186, n189, n192, n195, n198, n1]
+sorted not comparable: java.lang.ClassCastException: java.lang.Object cannot be cast to java.lang.Comparable
+sorted not comparable one: 1
+sorted not comparable two: java.lang.ClassCastException: stream.ObjectStreams$Pt cannot be cast to java.lang.Comparable
+sorted null: java.lang.NullPointerException
+sorted mixed: java.lang.ClassCastException: java.lang.String cannot be cast to java.lang.Integer
+sorted nullsFirst: [null, a, b]
+sorted empty: []
+sorted single no compare: 1
+peek: [1, 2]
+limit: [pear, fig]
+limit past end: 6
+limit max: 6
+limit 0: 0
+skip: [date, plum]
+skip 0: 6
+skip past end: 0
+skip max: 0
+skip limit max: 4
+skip skip: [kiwi, date, plum]
+limit limit: [pear, fig]
+skip limit window: [10, 11, 12, 13, 14]
+limit skip window: [10, 11, 12, 13, 14]
+skip max limit: 0
+skip unsized: [5, 6, 7]
+forEach: pearfigapplekiwidateplum
+forEachOrdered: pearfigapplekiwidateplum
+toArray: Object[][pear, fig, apple, kiwi, date, plum]
+toArray typed: String[][pear, fig, apple, kiwi, date, plum]
+toArray filter: String[][pear, kiwi, date, plum]
+toArray empty: String[][]
+toArray CharSequence: CharSequence[][pear, fig, apple, kiwi, date, plum]
+toArray bad type: java.lang.ArrayStoreException: java.lang.String
+toArray bad type filter: java.lang.ArrayStoreException
+toArray bad type empty: Integer[][]
+toArray size asked: 6
+toArray size asked filter: 6
+toArray size asked skip: 5
+toArray size asked limit: 2
+toArray size asked sorted: 6
+toArray size asked empty: 0
+toArray size asked unsized: 3
+toArray generator too small: java.lang.IllegalStateException: Begin size 6 is not equal to fixed size 5
+toArray generator too small unsized: java.lang.IndexOutOfBoundsException: does not fit
+toArray generator too large: java.lang.IllegalStateException: Begin size 6 is not equal to fixed size 7
+toArray generator too large unsized: String[][pear, fig, apple, kiwi, date, plum, null]
+toArray generator null: java.lang.NullPointerException
+toArray generator null unsized: java.lang.NullPointerException
+toArray nulls: Object[][a, null]
+reduce: Optional[pearfigapplekiwidateplum]
+reduce empty: Optional.empty
+reduce single: Optional[a]
+reduce null result: java.lang.NullPointerException
+reduce null result single: java.lang.NullPointerException
+reduce identity: pfakdp
+reduce identity empty: id
+reduce identity null: null
+reduce 3: 24
+reduce 3 sequential ignores combiner: 24
+reduce 3 null combiner: java.lang.NullPointerException
+collect 3: pearfigapplekiwidateplum
+collect 3 null combiner: java.lang.NullPointerException
+collect 3 null acc: java.lang.NullPointerException
+collect 3 null supplier: java.lang.NullPointerException
+min: Optional[apple]
+max: Optional[apple]
+min empty: Optional.empty
+max null element: Optional[a]
+max null result: java.lang.NullPointerException
+count: 6
+count empty: 0
+anyMatch: true
+allMatch: true
+noneMatch: true
+findFirst: Optional[pear]
+findFirst filter: Optional[apple]
+findFirst none: Optional.empty
+findFirst null: java.lang.NullPointerException
+findAny null: java.lang.NullPointerException
+findAny: Optional[pear]
+iterator: pear,fig,apple,kiwi,date,plum,
+iterator remove: java.lang.UnsupportedOperationException: remove
+iterator exhausted: java.util.NoSuchElementException
+iterator forEachRemaining: figapplekiwidateplum
+iterator next without hasNext: figfalse
+iterator infinite: 4
+isParallel: false
+parallel: true
+parallel sequential: false
+parallel in the middle: true
+sequential in the middle: false
+parallel late: true
+parallelStream: true
+parallelStream result: [4, 3, 5, 4, 4, 4]
+parallel reduce: 500500
+parallel forEachOrdered: 012345678910111213141516171819
+parallel sorted: [1, 2, 3]
+parallel collect: {0=[0, 2, 4, 6, 8], 1=[1, 3, 5, 7, 9]}
+parallel toArray: Object[][0, 1, 2, 3, 4]
+unordered: 6
+unordered then sorted: Optional[apple]
+unordered distinct: [1, 3]
+empty: 0
+of one: [x]
+of none: 0
+of array spread: 3
+of array: 2
+of int array is one: 1
+of two arrays: 2
+of cast Object: 1
+of null spread: [a, null, b]
+iterate: [1, 3, 9, 27, 81]
+iterate null seed: [null, n]
+iterate fn null result: [1, null, null]
+iterate string: [a, ab, abb]
+generate: [1, 2, 3, 4]
+generate unordered: zzz
+concat: [1, 2, 3]
+concat empty: 0
+concat covariant: [a, 1]
+concat nested: [1, 2, 3, 4]
+concat same stream: java.lang.IllegalStateException: stream has already been operated upon or closed
+concat deep: 44850
+concat sorted unsized: [1, 2, 3]
+concat limit infinite: [1, 2, 3, 4]
+builder: true [x, y, z]
+builder empty: 0
+builder null element: [null, a]
+builder build twice: java.lang.IllegalStateException
+builder add after build: java.lang.IllegalStateException
+builder accept after build: java.lang.IllegalStateException
+builder is a Consumer: 3
+builder many: 499500
+builder one: Optional[7]
+builder stream is single use: java.lang.IllegalStateException: stream has already been operated upon or closed

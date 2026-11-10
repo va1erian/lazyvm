@@ -114,4 +114,8 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E> implements Blocking
     public Iterator<E> iterator() {
         return core.iterator(false);
     }
+
+    public java.util.Spliterator<E> spliterator() {
+        return core.cursor(core.size());
+    }
 }

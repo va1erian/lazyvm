@@ -1,0 +1,230 @@
+ArrayList add before estimate: 4 SIZED|SUBSIZED
+ArrayList add after estimate: 3 3
+ArrayList add after characteristics: 4
+ArrayList add after exact size: 3 3
+ArrayList add before tryAdvance: 1,2,3,4,
+ArrayList add between tryAdvance: !java.util.ConcurrentModificationException
+ArrayList add after estimate then tryAdvance: !java.util.ConcurrentModificationException
+ArrayList add after estimate then forEachRemaining: CME
+ArrayList add inside forEachRemaining: 1,CME
+ArrayList remove inside forEachRemaining: 1,CME
+ArrayList stream iterator forEachRemaining add: 1,CME
+ArrayList spliterator forEachRemaining add: 1,2,3,CME
+ArrayList spliterator tryAdvance add: 1,CME
+ArrayList spliterator add before first use: 1,2,3,9,done
+ArrayList spliterator add after estimate: 3 1,2,3,CME
+ArrayList spliterator add after characteristics: 1,2,3,9,done
+ArrayList spliterator add after exact size: 3 1,2,3,CME
+ArrayList stream add after peek of first: 1,2,3,CME
+ArrayList stream add in last peek: 1,2,3,CME
+ArrayList stream remove in peek: !java.lang.NullPointerException
+LinkedList add before estimate: 4 SIZED|SUBSIZED
+LinkedList add after estimate: 3 3
+LinkedList add after characteristics: 4
+LinkedList add after exact size: 3 3
+LinkedList add before tryAdvance: 1,2,3,4,
+LinkedList add between tryAdvance: !java.util.ConcurrentModificationException
+LinkedList add after estimate then tryAdvance: !java.util.ConcurrentModificationException
+LinkedList add after estimate then forEachRemaining: CME
+LinkedList add inside forEachRemaining: 1,CME
+LinkedList remove inside forEachRemaining: 1,CME
+LinkedList stream iterator forEachRemaining add: 1,CME
+LinkedList spliterator forEachRemaining add: 1,2,3,CME
+LinkedList spliterator tryAdvance add: 1,CME
+LinkedList spliterator add before first use: 1,2,3,9,done
+LinkedList spliterator add after estimate: 3 1,2,3,CME
+LinkedList spliterator add after characteristics: 1,2,3,9,done
+LinkedList spliterator add after exact size: 3 1,2,3,CME
+LinkedList stream add after peek of first: 1,2,3,CME
+LinkedList stream add in last peek: 1,2,3,CME
+LinkedList stream remove in peek: !java.lang.NullPointerException
+Vector add before estimate: 4 SIZED|SUBSIZED
+Vector add after estimate: 3 3
+Vector add after characteristics: 4
+Vector add after exact size: 3 3
+Vector add before tryAdvance: 1,2,3,4,
+Vector add between tryAdvance: !java.util.ConcurrentModificationException
+Vector add after estimate then tryAdvance: !java.util.ConcurrentModificationException
+Vector add after estimate then forEachRemaining: CME
+Vector add inside forEachRemaining: 1,CME
+Vector remove inside forEachRemaining: 1,CME
+Vector stream iterator forEachRemaining add: 1,CME
+Vector spliterator forEachRemaining add: 1,2,3,CME
+Vector spliterator tryAdvance add: 1,CME
+Vector spliterator add before first use: 1,2,3,9,done
+Vector spliterator add after estimate: 3 1,2,3,CME
+Vector spliterator add after characteristics: 1,2,3,9,done
+Vector spliterator add after exact size: 3 1,2,3,CME
+Vector stream add after peek of first: 1,2,3,CME
+Vector stream add in last peek: 1,2,3,CME
+Vector stream remove in peek: !java.lang.NullPointerException
+HashSet add before estimate: 4 SIZED|SUBSIZED
+HashSet add after estimate: 3 3
+HashSet add after characteristics: 4
+HashSet add after exact size: 3 3
+HashSet add before tryAdvance: 1,2,3,4,
+HashSet add between tryAdvance: !java.util.ConcurrentModificationException
+HashSet add after estimate then tryAdvance: !java.util.ConcurrentModificationException
+HashSet add after estimate then forEachRemaining: CME
+HashSet add inside forEachRemaining: 1,CME
+HashSet remove inside forEachRemaining: 1,CME
+HashSet stream iterator forEachRemaining add: 1,CME
+HashSet spliterator forEachRemaining add: 1,2,3,9,CME
+HashSet spliterator tryAdvance add: 1,CME
+HashSet spliterator add before first use: 1,2,3,9,done
+HashSet spliterator add after estimate: 3 1,2,3,9,CME
+HashSet spliterator add after characteristics: 1,2,3,9,done
+HashSet spliterator add after exact size: 3 1,2,3,9,CME
+HashSet stream add after peek of first: 1,2,3,9,CME
+HashSet stream add in last peek: 1,2,3,9,CME
+HashSet stream remove in peek: 1,3,CME
+LinkedHashSet add before estimate: 4 SIZED|SUBSIZED
+LinkedHashSet add after estimate: 3 3
+LinkedHashSet add after characteristics: 4
+LinkedHashSet add after exact size: 3 3
+LinkedHashSet add before tryAdvance: 1,2,3,4,
+LinkedHashSet add between tryAdvance: !java.util.ConcurrentModificationException
+LinkedHashSet add after estimate then tryAdvance: !java.util.ConcurrentModificationException
+LinkedHashSet add after estimate then forEachRemaining: CME
+LinkedHashSet add inside forEachRemaining: 1,CME
+LinkedHashSet remove inside forEachRemaining: 1,CME
+LinkedHashSet stream iterator forEachRemaining add: 1,CME
+LinkedHashSet spliterator forEachRemaining add: 1,CME
+LinkedHashSet spliterator tryAdvance add: 1,CME
+LinkedHashSet spliterator add before first use: 1,2,3,9,done
+LinkedHashSet spliterator add after estimate: 3 CME
+LinkedHashSet spliterator add after characteristics: 1,2,3,9,done
+LinkedHashSet spliterator add after exact size: 3 CME
+LinkedHashSet stream add after peek of first: 1,CME
+LinkedHashSet stream add in last peek: 1,2,3,done
+LinkedHashSet stream remove in peek: 1,CME
+TreeSet add before estimate: 4 SIZED|SUBSIZED
+TreeSet add after estimate: 3 3
+TreeSet add after characteristics: 4
+TreeSet add after exact size: 3 3
+TreeSet add before tryAdvance: 1,2,3,4,
+TreeSet add between tryAdvance: !java.util.ConcurrentModificationException
+TreeSet add after estimate then tryAdvance: !java.util.ConcurrentModificationException
+TreeSet add after estimate then forEachRemaining: CME
+TreeSet add inside forEachRemaining: 1,CME
+TreeSet remove inside forEachRemaining: 1,CME
+TreeSet stream iterator forEachRemaining add: 1,CME
+TreeSet spliterator forEachRemaining add: 1,2,3,9,CME
+TreeSet spliterator tryAdvance add: 1,CME
+TreeSet spliterator add before first use: 1,2,3,9,done
+TreeSet spliterator add after estimate: 3 1,2,3,9,CME
+TreeSet spliterator add after characteristics: 1,2,3,9,done
+TreeSet spliterator add after exact size: 3 1,2,3,9,CME
+TreeSet stream add after peek of first: 1,2,3,9,CME
+TreeSet stream add in last peek: 1,2,3,9,CME
+TreeSet stream remove in peek: 1,3,CME
+ArrayDeque add before estimate: 4 SIZED|SUBSIZED
+ArrayDeque add after estimate: 3 3
+ArrayDeque add after characteristics: 4
+ArrayDeque add after exact size: 3 3
+ArrayDeque add before tryAdvance: 1,2,3,4,
+ArrayDeque add between tryAdvance: !java.util.ConcurrentModificationException
+ArrayDeque add after estimate then tryAdvance: !java.util.ConcurrentModificationException
+ArrayDeque add after estimate then forEachRemaining: 1,2,3,
+ArrayDeque add inside forEachRemaining: 1,2,3,done
+ArrayDeque remove inside forEachRemaining: 1,2,CME
+ArrayDeque stream iterator forEachRemaining add: 1,2,3,done
+ArrayDeque spliterator forEachRemaining add: 1,2,3,done
+ArrayDeque spliterator tryAdvance add: 1,2,3,done
+ArrayDeque spliterator add before first use: 1,2,3,9,done
+ArrayDeque spliterator add after estimate: 3 1,2,3,done
+ArrayDeque spliterator add after characteristics: 1,2,3,9,done
+ArrayDeque spliterator add after exact size: 3 1,2,3,done
+ArrayDeque stream add after peek of first: 1,2,3,done
+ArrayDeque stream add in last peek: 1,2,3,done
+ArrayDeque stream remove in peek: 1,1,3,done
+PriorityQueue add before estimate: 4 SIZED|SUBSIZED
+PriorityQueue add after estimate: 3 3
+PriorityQueue add after characteristics: 4
+PriorityQueue add after exact size: 3 3
+PriorityQueue add before tryAdvance: 1,2,3,4,
+PriorityQueue add between tryAdvance: !java.util.ConcurrentModificationException
+PriorityQueue add after estimate then tryAdvance: !java.util.ConcurrentModificationException
+PriorityQueue add after estimate then forEachRemaining: CME
+PriorityQueue add inside forEachRemaining: 1,CME
+PriorityQueue remove inside forEachRemaining: 1,CME
+PriorityQueue stream iterator forEachRemaining add: 1,CME
+PriorityQueue spliterator forEachRemaining add: 1,2,3,CME
+PriorityQueue spliterator tryAdvance add: 1,CME
+PriorityQueue spliterator add before first use: 1,2,3,9,done
+PriorityQueue spliterator add after estimate: 3 1,2,3,CME
+PriorityQueue spliterator add after characteristics: 1,2,3,9,done
+PriorityQueue spliterator add after exact size: 3 1,2,3,CME
+PriorityQueue stream add after peek of first: 1,2,3,CME
+PriorityQueue stream add in last peek: 1,2,3,CME
+PriorityQueue stream remove in peek: 1,3,CME
+CopyOnWriteArrayList add before estimate: 4 SIZED|SUBSIZED
+CopyOnWriteArrayList add after estimate: 3 3
+CopyOnWriteArrayList add after characteristics: 4
+CopyOnWriteArrayList add after exact size: 3 3
+CopyOnWriteArrayList add before tryAdvance: 1,2,3,4,
+CopyOnWriteArrayList add between tryAdvance: 1,2,3,
+CopyOnWriteArrayList add after estimate then tryAdvance: 1,2,3,
+CopyOnWriteArrayList add after estimate then forEachRemaining: 1,2,3,
+CopyOnWriteArrayList add inside forEachRemaining: 1,2,3,done
+CopyOnWriteArrayList remove inside forEachRemaining: 1,2,3,done
+CopyOnWriteArrayList stream iterator forEachRemaining add: 1,2,3,done
+CopyOnWriteArrayList spliterator forEachRemaining add: 1,2,3,done
+CopyOnWriteArrayList spliterator tryAdvance add: 1,2,3,done
+CopyOnWriteArrayList spliterator add before first use: 1,2,3,done
+CopyOnWriteArrayList spliterator add after estimate: 3 1,2,3,done
+CopyOnWriteArrayList spliterator add after characteristics: 1,2,3,done
+CopyOnWriteArrayList spliterator add after exact size: 3 1,2,3,done
+CopyOnWriteArrayList stream add after peek of first: 1,2,3,done
+CopyOnWriteArrayList stream add in last peek: 1,2,3,done
+CopyOnWriteArrayList stream remove in peek: 1,2,3,done
+ConcurrentLinkedQueue add before estimate: 4 SIZED|SUBSIZED
+ConcurrentLinkedQueue add after estimate: 3 3
+ConcurrentLinkedQueue add after characteristics: 4
+ConcurrentLinkedQueue add after exact size: 3 3
+ConcurrentLinkedQueue add before tryAdvance: 1,2,3,4,
+ConcurrentLinkedQueue add between tryAdvance: 1,2,3,4,
+ConcurrentLinkedQueue add after estimate then tryAdvance: 1,2,3,4,
+ConcurrentLinkedQueue add after estimate then forEachRemaining: 1,2,3,4,
+ConcurrentLinkedQueue add inside forEachRemaining: 1,2,3,9,done
+ConcurrentLinkedQueue remove inside forEachRemaining: 1,2,done
+ConcurrentLinkedQueue stream iterator forEachRemaining add: 1,2,3,9,done
+ConcurrentLinkedQueue spliterator forEachRemaining add: 1,2,3,9,done
+ConcurrentLinkedQueue spliterator tryAdvance add: 1,2,3,9,done
+ConcurrentLinkedQueue spliterator add before first use: 1,2,3,9,done
+ConcurrentLinkedQueue spliterator add after estimate: 9223372036854775807 1,2,3,9,done
+ConcurrentLinkedQueue spliterator add after characteristics: 1,2,3,9,done
+ConcurrentLinkedQueue spliterator add after exact size: -1 1,2,3,9,done
+ConcurrentLinkedQueue stream add after peek of first: 1,2,3,9,done
+ConcurrentLinkedQueue stream add in last peek: 1,2,3,done
+ConcurrentLinkedQueue stream remove in peek: 1,3,done
+LinkedBlockingQueue add before estimate: 4 SIZED|SUBSIZED
+LinkedBlockingQueue add after estimate: 3 3
+LinkedBlockingQueue add after characteristics: 4
+LinkedBlockingQueue add after exact size: 3 3
+LinkedBlockingQueue add before tryAdvance: 1,2,3,4,
+LinkedBlockingQueue add between tryAdvance: 1,2,3,4,
+LinkedBlockingQueue add after estimate then tryAdvance: 1,2,3,4,
+LinkedBlockingQueue add after estimate then forEachRemaining: 1,2,3,4,
+LinkedBlockingQueue add inside forEachRemaining: 1,2,3,9,done
+LinkedBlockingQueue remove inside forEachRemaining: 1,2,done
+LinkedBlockingQueue stream iterator forEachRemaining add: 1,2,3,9,done
+LinkedBlockingQueue spliterator forEachRemaining add: 1,2,3,9,done
+LinkedBlockingQueue spliterator tryAdvance add: 1,2,3,9,done
+LinkedBlockingQueue spliterator add before first use: 1,2,3,9,done
+LinkedBlockingQueue spliterator add after estimate: 3 1,2,3,9,done
+LinkedBlockingQueue spliterator add after characteristics: 1,2,3,9,done
+LinkedBlockingQueue spliterator add after exact size: -1 1,2,3,9,done
+LinkedBlockingQueue stream add after peek of first: 1,2,3,9,done
+LinkedBlockingQueue stream add in last peek: 1,2,3,done
+LinkedBlockingQueue stream remove in peek: 1,3,done
+Collection spliterator flags: ORDERED|SIZED|SUBSIZED
+Collection spliterator flags SORTED: ORDERED|SORTED|SIZED|SUBSIZED
+Collection spliterator empty then add: 2 1,2,
+Collection spliterator null: !java.lang.NullPointerException
+Collection spliterator split after add: 1,2,3,4,5,|
+Collection spliterator iterator() call count: 0 11 11 11
+Collection spliterator order estimate then iterator: iterator size 
+Collection spliterator order characteristics: | iterator size | 
+Collection default spliterator order: | iterator size | 
+Collection stream order: | iterator size | iterator size 

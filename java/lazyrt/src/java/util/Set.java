@@ -30,4 +30,9 @@ public interface Set<E> extends Collection<E> {
     boolean equals(Object o);
 
     int hashCode();
+
+    @Override
+    default Spliterator<E> spliterator() {
+        return Spliterators.spliterator(this, Spliterator.DISTINCT);
+    }
 }

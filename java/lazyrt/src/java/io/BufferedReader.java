@@ -233,4 +233,8 @@ public class BufferedReader extends Reader {
             }
         }
     }
+
+    public java.util.stream.Stream<String> lines() {
+        return lazy.internal.Lines.stream(this);
+    }
 }

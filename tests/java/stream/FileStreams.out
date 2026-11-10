@@ -1,0 +1,116 @@
+lines: [a, b, c, d, , e]
+lines trailing newline: [x, y]
+lines empty: 0
+lines only newline: 1
+lines crlf: [p, q]
+lines utf8: [café, €]
+lines latin1: [café, z]
+lines ascii: !java.io.UncheckedIOException: java.nio.charset.MalformedInputException: Input length = 1 <- java.nio.charset.MalformedInputException: Input length = 1
+lines utf8 on latin1 bytes: !java.io.UncheckedIOException: java.nio.charset.MalformedInputException: Input length = 1 <- java.nio.charset.MalformedInputException: Input length = 1
+lines utf8 error is lazy: !java.io.UncheckedIOException: java.nio.charset.MalformedInputException: Input length = 1 <- java.nio.charset.MalformedInputException: Input length = 1
+lines utf8 error late: !java.io.UncheckedIOException: java.nio.charset.MalformedInputException: Input length = 1 <- java.nio.charset.MalformedInputException: Input length = 1
+lines utf8 error after limit: !java.io.UncheckedIOException: java.nio.charset.MalformedInputException: Input length = 1 <- java.nio.charset.MalformedInputException: Input length = 1
+lines utf8 error after skip: !java.io.UncheckedIOException: java.nio.charset.MalformedInputException: Input length = 1 <- java.nio.charset.MalformedInputException: Input length = 1
+lines missing: !java.nio.file.NoSuchFileException: <tmp>/missing.txt
+lines null path: !java.lang.NullPointerException
+lines null charset: !java.lang.NullPointerException
+lines map: [1, 1, 1, 1, 0, 1]
+lines count: 6
+lines sorted: [e, d, c, b, a, ]
+lines is single use: !java.lang.IllegalStateException: stream has already been operated upon or closed
+lines close then delete: false
+lines exhausted then delete: false
+lines onClose: counted closed
+lines close twice: ok
+lines close without use: !java.lang.IllegalStateException: stream has already been operated upon or closed
+lines iterator: abtrue
+lines parallel: [A, B, C, D, , E]
+lines characteristics: 0
+lines ordered: true
+lines collect joining: x+y
+lines word count: 5
+list: [tree/a.txt, tree/b.java, tree/emptydir, tree/sub]
+list is shallow: 4
+list empty dir: []
+list missing: !java.nio.file.NoSuchFileException: <tmp>/nope
+list on file: !java.nio.file.NotDirectoryException: <tmp>/abc.txt
+list null: !java.lang.NullPointerException
+list resolves against dir: true
+list close twice: ok
+list onClose: closed
+list count: 4
+list filter dirs: [tree/emptydir, tree/sub]
+list is single use: !java.lang.IllegalStateException: stream has already been operated upon or closed
+list iterator: 4
+walk: [tree, tree/a.txt, tree/b.java, tree/emptydir, tree/sub, tree/sub/c.txt, tree/sub/deep, tree/sub/deep/d.txt]
+walk depth 0: [tree]
+walk depth 1: [tree, tree/a.txt, tree/b.java, tree/emptydir, tree/sub]
+walk depth 2: [tree, tree/a.txt, tree/b.java, tree/emptydir, tree/sub, tree/sub/c.txt, tree/sub/deep]
+walk depth MAX: 8
+walk depth negative: !java.lang.IllegalArgumentException: 'maxDepth' is negative
+walk file: [abc.txt]
+walk file depth 0: [abc.txt]
+walk missing: !java.nio.file.NoSuchFileException: <tmp>/nope
+walk null: !java.lang.NullPointerException
+walk null option: !java.lang.NullPointerException
+walk follow links option: [tree, tree/a.txt, tree/b.java, tree/emptydir, tree/sub]
+walk parent before child: ok true
+walk is lazy ordered start: tree
+walk files only: [tree/a.txt, tree/b.java, tree/sub/c.txt, tree/sub/deep/d.txt]
+walk sizes: 10
+walk names: [a.txt, c.txt, d.txt]
+walk onClose: closed
+walk close then delete: false
+walk consumed then delete: false
+walk limit: 2
+walk skip: 7
+walk iterator: 8
+walk depth first: true true true true
+walk deleted while open: 3
+find: [tree/a.txt, tree/sub/c.txt, tree/sub/deep/d.txt]
+find depth 1: [tree/a.txt]
+find depth 2: [tree/a.txt, tree/sub/c.txt]
+find depth 0: [tree]
+find depth 0 start: [tree]
+find depth negative: !java.lang.IllegalArgumentException: 'maxDepth' is negative
+find missing: !java.nio.file.NoSuchFileException: <tmp>/nope
+find null path: !java.lang.NullPointerException
+find null matcher: !java.lang.NullPointerException
+find null option: !java.lang.NullPointerException
+find directories: [tree, tree/emptydir, tree/sub, tree/sub/deep]
+find by size: [tree/sub/c.txt, tree/sub/deep/d.txt]
+find none: 0
+find attributes: [tree/b.java]
+find predicate sees full paths: 4
+find onClose: closed
+find file start: [abc.txt]
+find predicate throws: !java.lang.IllegalStateException: pred
+br lines: [a, b, c, d, , e]
+br lines trailing: [x, y]
+br lines empty: 0
+br lines only newline: 1
+br lines blank lines: 3
+br lines crlf pair: [a, , b]
+br lines is lazy: made read
+br lines findFirst then readLine: ab
+br lines limit then readLine: [a, b]c
+br lines after readLine: [b, c]
+br lines twice: [a][b]
+br lines again after exhaustion: 0
+br lines iterator: abfalse
+br lines stream close keeps reader: b
+br lines onClose: closed
+br lines closed reader at creation: made
+br lines closed reader: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+br lines closed midway: !java.io.UncheckedIOException: java.io.IOException: Stream closed <- java.io.IOException: Stream closed
+br lines read error: !java.io.UncheckedIOException: java.io.IOException: boom <- java.io.IOException: boom
+br lines read error message: boom
+br lines ordered: true
+br lines sized: false
+br lines unknown size: 9223372036854775807
+br lines map filter: 6
+br lines parallel: 10
+br lines with mark: a
+br lines on file reader: 6
+br lines on file reader first: Optional[a]
+br lines on InputStreamReader: h/i

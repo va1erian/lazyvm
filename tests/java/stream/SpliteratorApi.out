@@ -1,0 +1,144 @@
+tryAdvance: 1,2,3, 0
+tryAdvance null: java.lang.NullPointerException
+tryAdvance null on empty: java.lang.NullPointerException
+forEachRemaining null: java.lang.NullPointerException
+forEachRemaining twice: 1 2|
+size shrinks: 3 3
+array tryAdvance: a.b.
+int array: 5 6
+array range check: java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 5
+array range check order: java.lang.ArrayIndexOutOfBoundsException: origin(3) > fence(2)
+array range check negative: java.lang.ArrayIndexOutOfBoundsException: Array index out of range: -1
+array null: java.lang.NullPointerException
+array range null: java.lang.NullPointerException
+Spliterators array range: java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 9
+Spliterators array range ok: DISTINCT|SIZED|SUBSIZED est=2 exact=2
+Spliterators array null: java.lang.NullPointerException
+Spliterators array chars: SIZED|SUBSIZED est=3 exact=3
+Spliterators array chars strip: SORTED|SIZED|CONCURRENT|SUBSIZED est=3 exact=3
+Spliterators int array: SIZED|NONNULL|SUBSIZED est=3 exact=3
+Spliterators long array range: SIZED|SUBSIZED est=1 exact=1
+Spliterators double array: SIZED|SUBSIZED est=3 exact=3
+trySplit array: 1 2 | 3 4 5
+trySplit array info: ORDERED|SIZED|SUBSIZED est=2 exact=2 | ORDERED|SIZED|SUBSIZED est=3 exact=3
+trySplit array single: null
+trySplit array empty: null
+trySplit array twice: 0 1 2 3 | 4 5 | 6 7
+trySplit ArrayList: 0 1 2 | 3 4 5 6
+trySplit ArrayList after advance: 1 2 3 | 4 5 6
+trySplit ArrayList info: ORDERED|SIZED|SUBSIZED est=3 exact=3 | ORDERED|SIZED|SUBSIZED est=4 exact=4
+trySplit ArrayList tiny: null
+trySplit ArrayList pair: 0 | 1
+trySplit int range: 0 1 2 3 4 | 5 6 7 8 9
+trySplit int range info: ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=5 exact=5 | ORDERED|DISTINCT|SORTED|SIZED|NONNULL|IMMUTABLE|SUBSIZED est=5 exact=5
+trySplit int range odd: 0 1 2 | 3 4 5 6
+trySplit int range one: null
+trySplit rangeClosed: 0 1 2 3 4 | 5 6 7 8 9
+trySplit long range: 0 1 2 3 4 | 5 6 7 8 9
+trySplit stream of: 1 2 | 3 4
+trySplit after wrap: true
+trySplit unknown size: SIZED|SUBSIZED est=1024 exact=1024 | - est=9223372036854775807 exact=-1
+trySplit unknown size drain: SIZED|SUBSIZED est=1024 exact=1024 | SIZED|SUBSIZED est=1976 exact=1976 | - est=9223372036854775807 exact=-1
+trySplit unknown size small: 0 1 2 3 4 5 6 7 8 9 | 
+trySplit unknown size empty: null
+trySplit unknown size order: 0 1 2 3 4 | 
+trySplit sized iterator: SIZED|SUBSIZED est=1024 exact=1024 | SIZED|SUBSIZED est=1976 exact=1976
+trySplit HashSet: true
+trySplit collection default: SIZED|SUBSIZED est=5 exact=5 | SIZED|SUBSIZED est=0 exact=0 | 0 1 2 3 4 | 
+iterator sized: SIZED|SUBSIZED est=4 exact=4
+iterator sized chars: ORDERED|DISTINCT|SIZED|SUBSIZED est=4 exact=4
+iterator sized chars sorted: SORTED|SIZED|SUBSIZED est=4 exact=4
+iterator sized mismatched: 0 1 2 3 10
+iterator sized null: java.lang.NullPointerException
+iterator unknown: - est=9223372036854775807 exact=-1
+iterator unknown sized flag: ORDERED est=9223372036854775807 exact=-1
+iterator unknown null: java.lang.NullPointerException
+iterator advance: 0,1,2,
+iterator advance null: java.lang.NullPointerException
+collection: SIZED|SUBSIZED est=4 exact=4
+collection chars: ORDERED|SORTED|SIZED|SUBSIZED est=4 exact=4
+collection null: java.lang.NullPointerException
+collection late binding: SIZED|SUBSIZED est=3 exact=3 0 1 99
+collection late binding after first use: java.util.ConcurrentModificationException
+collection modification detected: CME
+collection modification tryAdvance: CME
+collection set: DISTINCT|SIZED|SUBSIZED est=4 exact=4
+empty: SIZED|SUBSIZED est=0 exact=0
+empty advance: false
+empty advance null: java.lang.NullPointerException
+empty forEachRemaining null: java.lang.NullPointerException
+empty split: null
+empty int: SIZED|SUBSIZED est=0 exact=0
+empty long: SIZED|SUBSIZED est=0 exact=0
+empty double: SIZED|SUBSIZED est=0 exact=0
+empty int advance null: java.lang.NullPointerException
+empty stream: 0
+empty is shared: true
+OfInt from iterator: SIZED|SUBSIZED est=3 exact=3
+OfInt from iterator unknown: - est=9223372036854775807 exact=-1
+OfLong from iterator: 0 1 2
+OfDouble from iterator: 1.0 2.0
+OfInt from iterator null: java.lang.NullPointerException
+OfInt array: 7 8
+iterator of spliterator: 012
+iterator of spliterator next on empty: java.util.NoSuchElementException
+iterator of spliterator hasNext twice: true true 0 1 false
+iterator of spliterator remove: java.lang.UnsupportedOperationException: remove
+iterator of spliterator forEachRemaining: 12
+iterator of spliterator null: java.lang.NullPointerException
+iterator of int spliterator: 0 1 2 false
+iterator of int spliterator null: java.lang.NullPointerException
+iterator of long spliterator: 0 1
+iterator of double spliterator: 1.5 false
+AbstractSpliterator: ORDERED est=3 exact=-1 0 1 2
+AbstractSpliterator sized adds subsized: SIZED|SUBSIZED est=3 exact=3
+AbstractSpliterator unsized: - est=9223372036854775807 exact=-1
+AbstractSpliterator sized no subsized for sized only: SIZED|NONNULL|SUBSIZED
+AbstractSpliterator split: ORDERED|SIZED|SUBSIZED est=5 exact=5 | 0 1 2 3 4 | 
+AbstractSpliterator split sized: ORDERED|SIZED|SUBSIZED est=5 exact=5 | ORDERED|SIZED|SUBSIZED est=0 exact=0 | 0 1 2 3 4 | 
+AbstractSpliterator forEachRemaining: 0 1 2
+AbstractIntSpliterator: ORDERED|SIZED|SUBSIZED est=3 exact=3 0 1 2
+AbstractLongSpliterator: - est=3 exact=-1 0 1 2
+AbstractDoubleSpliterator: - est=3 exact=-1 0.0 1.0 2.0
+AbstractIntSpliterator boxed advance: 01
+AbstractSpliterator stream: [0, 1, 2, 3]
+Spliterator default getExactSizeIfKnown: -1
+Spliterator default getExactSizeIfKnown sized: 7
+Spliterator default forEachRemaining: 0 1 2
+Spliterator default getComparator: java.lang.IllegalStateException
+Spliterator default hasCharacteristics: true
+PrimitiveIterator.OfInt custom: 012
+PrimitiveIterator.OfInt custom remove: java.lang.UnsupportedOperationException: remove
+PrimitiveIterator.OfInt custom forEachRemaining Consumer: 01
+PrimitiveIterator.OfLong custom: 5 6 false
+PrimitiveIterator.OfDouble custom: 0.51.5
+StreamSupport.stream: [0, 1, 2]
+StreamSupport.stream parallel: true
+StreamSupport.stream sequential: false
+StreamSupport.stream consumed spliterator: [1, 2]
+StreamSupport.stream spliterator reuse: 0
+StreamSupport.stream supplier: [0, 1, 2]
+StreamSupport.stream supplier late: 0 1
+StreamSupport.stream supplier map: 0
+StreamSupport.stream supplier iterator: 0 1
+StreamSupport.stream supplier characteristics: ORDERED|SIZED|SUBSIZED
+StreamSupport.stream supplier characteristics mask: ORDERED|SIZED|SUBSIZED
+StreamSupport.stream supplier null result: java.lang.NullPointerException
+StreamSupport.stream supplier called once: 1
+StreamSupport.intStream: [0, 1, 2]
+StreamSupport.intStream supplier: [0, 1, 2]
+StreamSupport.longStream: [0, 1, 2]
+StreamSupport.longStream supplier: [0, 1, 2]
+StreamSupport.doubleStream: [1.0, 2.0]
+StreamSupport.doubleStream supplier: [1.0, 2.0]
+StreamSupport.intStream null: java.lang.NullPointerException
+StreamSupport.longStream null: java.lang.NullPointerException
+StreamSupport.doubleStream null: java.lang.NullPointerException
+StreamSupport.intStream supplier null: true
+StreamSupport iterator round trip: [0, 1, 4, 9]
+StreamSupport.stream late binding: [0, 1, 5]
+Iterable to stream: [0, 1, 2]
+Iterable default spliterator late: 1 1
+Iterable default forEach: 012
+Iterable default forEach null: java.lang.NullPointerException
+Iterable default spliterator split: - est=9223372036854775807 exact=-1 0 1 2 3 4|

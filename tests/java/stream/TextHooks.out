@@ -1,0 +1,138 @@
+chars: [97, 98, 99]
+chars empty: []
+chars surrogates: [97, 55357, 56832, 98]
+codePoints: [97, 98, 99]
+codePoints surrogates: [97, 128512, 98]
+codePoints lone surrogates: [120, 55357, 121, 56832, 122]
+codePoints empty: []
+codePoints reversed pair: [56832, 55357]
+codePoints count: 3
+chars count: 4
+codePoints to string: a|😀|b
+chars to chars: h,e,l,l,o
+chars filter letters: 2
+chars sum: 294
+chars max: OptionalInt[99]
+chars distinct sorted: imps
+chars grouping: {i=4, m=1, p=2, s=4}
+chars boxed to char: [a, b]
+chars is single use: java.lang.IllegalStateException: stream has already been operated upon or closed
+chars parallel: 15
+StringBuilder chars: [120, 121, 122]
+StringBuilder codePoints: [97, 128512, 98]
+StringBuffer chars: [120, 121]
+CharBuffer chars: [97, 98, 99, 100]
+CharBuffer chars position: [98, 99]
+CharBuffer codePoints: [97, 128512, 98]
+CharBuffer chars does not move: 0
+CharBuffer chars empty: []
+CharBuffer allocate chars: [0, 0, 0]
+CharBuffer late binding: [97, 98, 99, 100]
+CharBuffer position late: [99, 100]
+CharBuffer subsequence chars: [98, 99]
+CharBuffer slice chars: [98, 99, 100]
+CharSequence late binding: [97, 98, 99, 100]
+CharSequence late binding codePoints: [97, 98, 99, 100]
+CharSequence late binding shrink: [97]
+CharSequence modified while streaming: done 1
+custom CharSequence calls: [] LLc0Lc1L
+custom CharSequence codePoints calls: [] Lc0c1
+custom CharSequence surrogate calls: Lc0c1c2c3
+custom CharSequence count calls: LLc0Lc1Lc2L
+custom CharSequence limit calls: LLLc0LLc1
+custom CharSequence iterator calls: LLLc0
+custom CharSequence empty: LL
+custom CharSequence is not a String: [104, 105]
+chars on null: java.lang.NullPointerException
+chars sized: 3
+codePoints sized: -1
+String chars boxed: [97, 98]
+String join stream: a,b
+String lines-free split stream: 3
+BitSet stream: [0, 2, 3, 5]
+BitSet stream empty: []
+BitSet stream high: [0, 63, 64, 1000]
+BitSet stream count: 100
+BitSet stream sum: 15
+BitSet stream max: OptionalInt[77]
+BitSet stream late: [1, 2]
+BitSet stream late clear: []
+BitSet stream modified during clear: 123 done
+BitSet stream boxed: [2, 4]
+BitSet stream to BitSet: {1, 3, 5}
+BitSet stream iterator: 7 9 false
+BitSet stream skip limit: [3, 4, 5]
+BitSet stream sizes: 10
+BitSet stream parallel: 4950
+ints(): [-1170105035, 234785527, -1360544799, 205897768, 1325939940]
+nextInt same: [-1170105035, 234785527, -1360544799, 205897768, 1325939940]
+ints(n): [-1170105035, 234785527, -1360544799, 205897768, 1325939940]
+ints(n) consumes generator: 205897768
+ints(n) lazily: -1170105035 [234785527, -1360544799, 205897768]
+ints(0): []
+ints(-1): java.lang.IllegalArgumentException: size must be non-negative
+ints(origin, bound): [10, 13, 18, 14, 10, 15, 15, 18]
+ints(origin, bound) infinite: [30, 63, 48, 84, 70, 25]
+ints(n, origin, bound): [1, -1, 0, -1, -5, -1]
+ints(n, 0, 1): [0, 0, 0, 0]
+ints(n, same bound): java.lang.IllegalArgumentException: bound must be greater than origin
+ints(n, reversed): java.lang.IllegalArgumentException: bound must be greater than origin
+ints(origin, reversed): java.lang.IllegalArgumentException: bound must be greater than origin
+ints(n < 0, valid range): java.lang.IllegalArgumentException: size must be non-negative
+ints wide range: [-1155099828, -1879439976, 304908421, -836442134, 288278256]
+ints wide range 2: [-1155099828, -1879439976, 304908421, -836442134, 288278256]
+ints power of two range: [11, 8, 1, 12, 1, 9]
+ints non power of two range: [4, 0, 0, 1, 8, 2]
+ints offset range: [111, 108, 101, 112, 101, 109]
+nextInt(bound) same as ints(0,bound): [8, 8, 1, 5, 3] [8, 8, 1, 5, 3]
+longs(): [-5025562857975149833, -5843495416241995736, 5694868678511409995]
+longs(n): [-5025562857975149833, -5843495416241995736, 5694868678511409995]
+longs(n) is nextLong: -5025562857975149833 -5843495416241995736
+longs(-1): java.lang.IllegalArgumentException: size must be non-negative
+longs(n, origin, bound): [188, 143, 173, 184, 141]
+longs(n, origin, bound) big: [-2753461012, 2613073943, -1131825327, 3962154584]
+longs(n, origin, bound) tiny: [5, 5, 5, 5]
+longs(n, origin, bound) power of two: [48330111448, 106584752175, 196940201635, 356455451824, 627685331003]
+longs(n, origin, bound) full range: [-4977640823216473640, -4308495580483403729, -4241012963973202269]
+longs(origin, bound): [1988, 1943, 1673]
+longs(n, reversed): java.lang.IllegalArgumentException: bound must be greater than origin
+doubles(): [0.7275636800328681, 0.6832234717598454, 0.30871945533265976]
+doubles(n): [0.7275636800328681, 0.6832234717598454, 0.30871945533265976]
+doubles(n) is nextDouble: 0.7275636800328681 0.6832234717598454
+doubles(-1): java.lang.IllegalArgumentException: size must be non-negative
+doubles(n, origin, bound): [17.30519863614471, 10.882584096762258, 14.889045498516358]
+doubles(n, origin, bound) unit: [0.730519863614471, 0.08825840967622589, 0.4889045498516358]
+doubles(n, origin, bound) negative: [0.46103972722894193, -0.8234831806475482, -0.022190900296728433]
+doubles(origin, bound): [1.230519863614471, 0.5882584096762259]
+doubles(n, same): java.lang.IllegalArgumentException: bound must be greater than origin
+doubles(n, reversed): java.lang.IllegalArgumentException: bound must be greater than origin
+doubles(n, NaN): java.lang.IllegalArgumentException: bound must be greater than origin
+doubles(n, NaN bound): java.lang.IllegalArgumentException: bound must be greater than origin
+doubles(n, infinite bound): 3
+doubles(n, huge range): [1.7976931348623155E308, 1.7976931348623155E308]
+doubles in range: true
+ints in range: true
+ints range covers: 7
+ints sequence continues: [-1155869325, 431529176][1761283695, 1749940626]
+ints equal to nextInt after mixed use: -1155869325 [431529176, 1761283695] 1749940626
+ints unseeded size: 7
+ints unseeded range: true
+ints boxed sorted: [13, 47, 54, 85, 88]
+ints sum: 476
+ints parallel same elements: 476
+ints distinct limit: [0, 1, 2, 3, 4]
+doubles average: true
+doubles summary: 500 true true
+ints subclass: [7, 7, 7]
+ints subclass nextInt unaffected: [7, 7, 7]
+ints subclass nextInt(bound): [7, 7, 7]
+longs subclass nextLong: [9, 9]
+longs subclass nextLong range: [4, 4]
+longs subclass nextLong range wide: [-9, -9]
+doubles subclass nextDouble range: [12.5, 12.5]
+doubles subclass nextDouble: [0.5, 0.5]
+ThreadLocalRandom ints: 5
+ThreadLocalRandom doubles: 5
+ThreadLocalRandom longs: 5
+ThreadLocalRandom ints bad: java.lang.IllegalArgumentException: bound must be greater than origin
+ThreadLocalRandom ints negative: java.lang.IllegalArgumentException: size must be non-negative

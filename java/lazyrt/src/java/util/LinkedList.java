@@ -41,11 +41,15 @@ public class LinkedList<E> extends AbstractSequentialList<E>
     }
 
     private E cut(Link<E> n) {
+        E e = n.element;
         n.back.ahead = n.ahead;
         n.ahead.back = n.back;
+        n.element = null;
+        n.ahead = null;
+        n.back = null;
         size--;
         modCount++;
-        return n.element;
+        return e;
     }
 
     /** The node at an index already checked to be in [0, size), walked from the nearer end. */
@@ -111,6 +115,14 @@ public class LinkedList<E> extends AbstractSequentialList<E>
     }
 
     public void clear() {
+        // Every link is cut loose, so a walk that is still holding one finds nothing in it.
+        for (Link<E> p = ring.ahead; p != null && p != ring;) {
+            Link<E> following = p.ahead;
+            p.element = null;
+            p.back = null;
+            p.ahead = null;
+            p = following;
+        }
         ring = newRing();
         size = 0;
         modCount++;
@@ -344,5 +356,87 @@ public class LinkedList<E> extends AbstractSequentialList<E>
                 throw new ConcurrentModificationException();
             }
         }
+    }
+
+    @Override
+    public Spliterator<E> spliterator() { return new Sweep(); }
+
+    /**
+     * Visits the links as they are when the first element is asked for, as many as the list then held. If the chain
+     * runs out before that many were seen the list was changed, and that is reported at once; any other change is
+     * reported when the visit is over.
+     */
+    private final class Sweep extends Spliterators.AbstractSpliterator<E> {
+        private Link<E> upcoming;
+        private long budget = -1;
+        private int modsAtStart;
+
+        Sweep() { super(0, 0); }
+
+        /** Takes the size and the first link at the first look; true while elements are left to visit. */
+        private boolean pending() {
+            if (budget < 0) {
+                budget = size;
+                remaining = budget;
+                upcoming = ring.ahead;
+                modsAtStart = modCount;
+            }
+            return budget > 0;
+        }
+
+        private E take() {
+            Link<E> link = upcoming;
+            if (link == null || link == ring) {
+                budget = 0;
+                throw new ConcurrentModificationException();
+            }
+            upcoming = link.ahead;
+            budget--;
+            return link.element;
+        }
+
+        private void verify() {
+            if (modCount != modsAtStart) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        @Override
+        public boolean tryAdvance(java.util.function.Consumer<? super E> action) {
+            Objects.requireNonNull(action);
+            if (!pending()) {
+                return false;
+            }
+            action.accept(take());
+            verify();
+            return true;
+        }
+
+        @Override
+        public void forEachRemaining(java.util.function.Consumer<? super E> action) {
+            Objects.requireNonNull(action);
+            if (!pending()) {
+                return;
+            }
+            while (budget > 0) {
+                action.accept(take());
+            }
+            verify();
+        }
+
+        @Override
+        public Spliterator<E> trySplit() {
+            pending();
+            return super.trySplit();
+        }
+
+        @Override
+        public long estimateSize() {
+            pending();
+            return budget;
+        }
+
+        @Override
+        public int characteristics() { return Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED; }
     }
 }

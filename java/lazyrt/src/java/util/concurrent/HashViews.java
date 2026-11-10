@@ -279,4 +279,12 @@ abstract class HashViews<K, V, E> extends AbstractCollection<E> {
             return elementHashes();
         }
     }
+
+    public final java.util.Spliterator<E> spliterator() {
+        int ch = java.util.Spliterator.NONNULL | java.util.Spliterator.CONCURRENT;
+        if (!(this instanceof Values)) {
+            ch |= java.util.Spliterator.DISTINCT;
+        }
+        return new lazy.internal.WeakSplit<E>(this, map.size(), ch, null);
+    }
 }

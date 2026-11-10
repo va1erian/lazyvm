@@ -53,6 +53,92 @@ final class HashViews {
         }
     }
 
+    /**
+     * The spliterator of a plain HashMap view: it reads cells as they are, so an element added ahead
+     * of it is met and one removed ahead of it is not; a change is reported when the walk is over.
+     */
+    static final class Split<K, V, T> extends Spliterators.AbstractSpliterator<T> {
+        private final HashMap<K, V> map;
+        private final Function<HashMap.Cell<K, V>, T> pick;
+        private final int ch;
+        private HashMap.Cell<K, V> at;
+        private boolean bound;
+        private int expected;
+
+        Split(HashMap<K, V> map, Function<HashMap.Cell<K, V>, T> pick, int ch) {
+            super(0, 0);
+            this.map = map;
+            this.pick = pick;
+            this.ch = ch;
+        }
+
+        private void bind() {
+            if (!bound) {
+                bound = true;
+                expected = map.modCount;
+                remaining = map.size;
+                at = map.size > 0 ? map.firstNode() : null;
+            }
+        }
+
+        private void checkEnd() {
+            if (map.modCount != expected) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        @Override
+        public boolean tryAdvance(Consumer<? super T> action) {
+            Objects.requireNonNull(action);
+            bind();
+            HashMap.Cell<K, V> c = at;
+            if (c == null) {
+                return false;
+            }
+            action.accept(pick.apply(c));
+            at = map.nextNode(c);
+            checkEnd();
+            return true;
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super T> action) {
+            Objects.requireNonNull(action);
+            bind();
+            HashMap.Cell<K, V> c = at;
+            at = null;
+            while (c != null) {
+                action.accept(pick.apply(c));
+                c = map.nextNode(c);
+            }
+            checkEnd();
+        }
+
+        @Override
+        public Spliterator<T> trySplit() {
+            bind();
+            return super.trySplit();
+        }
+
+        @Override
+        public long estimateSize() {
+            bind();
+            return remaining;
+        }
+
+        @Override
+        public int characteristics() { return ch; }
+    }
+
+    /** A LinkedHashMap's views walk through their iterators; a plain HashMap's through Split. */
+    private static <K, V, T> Spliterator<T> viewSplit(HashMap<K, V> map, Collection<T> view,
+            Function<HashMap.Cell<K, V>, T> pick, int ch) {
+        if (map instanceof LinkedHashMap) {
+            return new Late<T>(view, ch | Spliterator.ORDERED | Spliterator.SUBSIZED, null);
+        }
+        return new Split<K, V, T>(map, pick, ch);
+    }
+
     static final class Keys<K, V> extends AbstractSet<K> {
         private final HashMap<K, V> map;
 
@@ -60,6 +146,7 @@ final class HashViews {
         public int size() { return map.size; }
         public void clear() { map.clear(); }
         public Iterator<K> iterator() { return new Walk<K, V, K>(map, e -> e.key); }
+        public Spliterator<K> spliterator() { return viewSplit(map, this, e -> e.key, Spliterator.DISTINCT | Spliterator.SIZED); }
         public boolean contains(Object o) { return map.containsKey(o); }
         public boolean remove(Object o) { return map.removeMapping(o, null, false) != null; }
 
@@ -76,6 +163,7 @@ final class HashViews {
         public int size() { return map.size; }
         public void clear() { map.clear(); }
         public Iterator<V> iterator() { return new Walk<K, V, V>(map, e -> e.value); }
+        public Spliterator<V> spliterator() { return viewSplit(map, this, e -> e.value, Spliterator.SIZED); }
         public boolean contains(Object o) { return map.containsValue(o); }
 
         public void forEach(Consumer<? super V> action) {
@@ -91,6 +179,7 @@ final class HashViews {
         public int size() { return map.size; }
         public void clear() { map.clear(); }
         public Iterator<Map.Entry<K, V>> iterator() { return new Walk<K, V, Map.Entry<K, V>>(map, e -> e); }
+        public Spliterator<Map.Entry<K, V>> spliterator() { return viewSplit(map, this, e -> e, Spliterator.DISTINCT | Spliterator.SIZED); }
 
         public boolean contains(Object o) {
             if (!(o instanceof Map.Entry)) {

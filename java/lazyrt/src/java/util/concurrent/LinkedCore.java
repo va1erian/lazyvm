@@ -361,6 +361,83 @@ final class LinkedCore<E> {
         unlink(n);
     }
 
+    /** The node after {@code n}; if {@code n} has left, see the class comment. */
+    private Node<E> after(Node<E> n, boolean back) {
+        if (n.item != null) {
+            return back ? n.prev : n.next;
+        }
+        Node<E> p = back ? tail : head;
+        if ((back ? n.next : n.prev) == null) {
+            return p;
+        }
+        while (p != null && (back ? p.place >= n.place : p.place <= n.place)) {
+            p = back ? p.prev : p.next;
+        }
+        return p;
+    }
+
+    /** A spliterator that reads each node when it gets there, so a node that left meanwhile is passed over. */
+    java.util.Spliterator<E> cursor(long estimate) {
+        return new Cursor(estimate);
+    }
+
+    private final class Cursor extends java.util.Spliterators.AbstractSpliterator<E> {
+        private Node<E> last;
+        private boolean started;
+        private boolean done;
+
+        Cursor(long estimate) {
+            super(estimate, java.util.Spliterator.ORDERED | java.util.Spliterator.NONNULL
+                    | java.util.Spliterator.CONCURRENT);
+        }
+
+        @Override
+        public boolean tryAdvance(java.util.function.Consumer<? super E> action) {
+            java.util.Objects.requireNonNull(action);
+            E item = null;
+            synchronized (LinkedCore.this) {
+                if (!done) {
+                    Node<E> n = live(started ? after(last, false) : head);
+                    started = true;
+                    last = n;
+                    done = n == null;
+                    item = n == null ? null : n.item;
+                }
+            }
+            if (done) {
+                return false;
+            }
+            action.accept(item);
+            return true;
+        }
+
+        /** The node after the one in hand is read before the action runs: what the action adds is not seen. */
+        @Override
+        public void forEachRemaining(java.util.function.Consumer<? super E> action) {
+            java.util.Objects.requireNonNull(action);
+            Node<E> n;
+            synchronized (LinkedCore.this) {
+                if (done) return;
+                n = live(started ? after(last, false) : head);
+                started = done = true;
+            }
+            while (n != null) {
+                E item = n.item;
+                Node<E> following;
+                synchronized (LinkedCore.this) { following = live(after(n, false)); }
+                if (item != null) action.accept(item);
+                n = following;
+            }
+        }
+
+        private Node<E> live(Node<E> n) {
+            while (n != null && n.item == null) {
+                n = after(n, false);
+            }
+            return n;
+        }
+    }
+
     Iterator<E> iterator(boolean descending) {
         return new Walk(descending);
     }
@@ -391,25 +468,10 @@ final class LinkedCore<E> {
                 }
                 E e = nextItem;
                 last = next;
-                next = after(next);
+                next = after(next, back);
                 nextItem = next == null ? null : next.item;
                 return e;
             }
-        }
-
-        /** The node after {@code n}; if {@code n} has left, see the class comment. */
-        private Node<E> after(Node<E> n) {
-            if (n.item != null) {
-                return back ? n.prev : n.next;
-            }
-            Node<E> p = back ? tail : head;
-            if ((back ? n.next : n.prev) == null) {
-                return p;
-            }
-            while (p != null && (back ? p.place >= n.place : p.place <= n.place)) {
-                p = back ? p.prev : p.next;
-            }
-            return p;
         }
 
         public void remove() {

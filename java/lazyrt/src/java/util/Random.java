@@ -1,5 +1,10 @@
 package java.util;
 
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
+import lazy.internal.RandomStreams;
+
 /** The 48-bit linear congruential generator the Javadoc specifies, constants included. */
 public class Random implements java.io.Serializable {
     private static final long TIMES = 0x5DEECE66DL;
@@ -89,5 +94,41 @@ public class Random implements java.io.Serializable {
         nextNextGaussian = v2 * multiplier;
         haveNextNextGaussian = true;
         return v1 * multiplier;
+    }
+
+    public IntStream ints(long streamSize) { return RandomStreams.ints(this, streamSize); }
+
+    public IntStream ints() { return RandomStreams.ints(this, Long.MAX_VALUE); }
+
+    public IntStream ints(long streamSize, int randomNumberOrigin, int randomNumberBound) {
+        return RandomStreams.ints(this, streamSize, randomNumberOrigin, randomNumberBound);
+    }
+
+    public IntStream ints(int randomNumberOrigin, int randomNumberBound) {
+        return RandomStreams.ints(this, Long.MAX_VALUE, randomNumberOrigin, randomNumberBound);
+    }
+
+    public LongStream longs(long streamSize) { return RandomStreams.longs(this, streamSize); }
+
+    public LongStream longs() { return RandomStreams.longs(this, Long.MAX_VALUE); }
+
+    public LongStream longs(long streamSize, long randomNumberOrigin, long randomNumberBound) {
+        return RandomStreams.longs(this, streamSize, randomNumberOrigin, randomNumberBound);
+    }
+
+    public LongStream longs(long randomNumberOrigin, long randomNumberBound) {
+        return RandomStreams.longs(this, Long.MAX_VALUE, randomNumberOrigin, randomNumberBound);
+    }
+
+    public DoubleStream doubles(long streamSize) { return RandomStreams.doubles(this, streamSize); }
+
+    public DoubleStream doubles() { return RandomStreams.doubles(this, Long.MAX_VALUE); }
+
+    public DoubleStream doubles(long streamSize, double randomNumberOrigin, double randomNumberBound) {
+        return RandomStreams.doubles(this, streamSize, randomNumberOrigin, randomNumberBound);
+    }
+
+    public DoubleStream doubles(double randomNumberOrigin, double randomNumberBound) {
+        return RandomStreams.doubles(this, Long.MAX_VALUE, randomNumberOrigin, randomNumberBound);
     }
 }

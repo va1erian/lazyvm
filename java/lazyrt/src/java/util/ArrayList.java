@@ -263,4 +263,33 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
     }
 
     int remainingStyle() { return 1; }
+
+    @Override
+    public Spliterator<E> spliterator() {
+        return new ArrayWalk<E>(Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED, false) {
+            @Override
+            Object[] array() { return items; }
+
+            @Override
+            int count() { return size; }
+
+            @Override
+            int stamp() { return modCount; }
+        };
+    }
+
+    /** The spliterator of a subList window: the range is fixed now, the elements are read when it runs. */
+    Spliterator<E> window(int from, int to, int expectedStamp) {
+        return new ArrayWalk<E>(Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED, from, to,
+                expectedStamp) {
+            @Override
+            Object[] array() { return items; }
+
+            @Override
+            int count() { return size; }
+
+            @Override
+            int stamp() { return modCount; }
+        };
+    }
 }

@@ -1,5 +1,8 @@
 package java.util;
 
+import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
+
 /** A growable vector of bits in 64-bit words (docs/design/util-data.md section 6, BS1-BS9). */
 public class BitSet implements Cloneable, java.io.Serializable {
     private long[] words;
@@ -331,5 +334,31 @@ public class BitSet implements Cloneable, java.io.Serializable {
             sb.append(i);
         }
         return sb.append('}').toString();
+    }
+
+    /** The set bits in increasing order; the set is read when the stream runs, not when it is made. */
+    public IntStream stream() {
+        int flags = Spliterator.ORDERED | Spliterator.DISTINCT | Spliterator.SORTED;
+        return StreamSupport.intStream(
+                () -> Spliterators.spliterator(new Walk(), cardinality(), flags), flags | Spliterator.SIZED
+                        | Spliterator.SUBSIZED, false);
+    }
+
+    /** Looks one set bit ahead, so a bit cleared from inside the action is still delivered once. */
+    private final class Walk implements PrimitiveIterator.OfInt {
+        private int next = nextSetBit(0);
+
+        @Override
+        public boolean hasNext() { return next != -1; }
+
+        @Override
+        public int nextInt() {
+            if (next == -1) {
+                throw new NoSuchElementException();
+            }
+            int bit = next;
+            next = bit == Integer.MAX_VALUE ? -1 : nextSetBit(bit + 1);
+            return bit;
+        }
     }
 }

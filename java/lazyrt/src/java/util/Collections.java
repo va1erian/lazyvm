@@ -449,4 +449,9 @@ public class Collections {
             Class<V> valueType) {
         return new Checked.CNavigableMap<K, V>(m, keyType, valueType);
     }
+
+    /** The class name of an unmodifiable view of a RandomAccess list is observable (Class.getName). */
+    static final class UnmodifiableRandomAccessList<E> extends Unmodifiable.UList<E> implements RandomAccess {
+        UnmodifiableRandomAccessList(List<? extends E> l) { super(l); }
+    }
 }

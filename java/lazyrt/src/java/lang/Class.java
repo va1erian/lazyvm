@@ -128,13 +128,17 @@ public final class Class<T> implements java.io.Serializable, java.lang.reflect.G
             return getComponentType().getSimpleName() + "[]";
         }
         String name = getName();
+        Class<?> outer = getDeclaringClass();
+        if (outer != null) {
+            return name.substring(outer.getName().length() + 1);
+        }
         String s = name.substring(name.lastIndexOf('.') + 1);
-        int dollar = s.lastIndexOf('$');
-        if (dollar < 0 || dollar == s.length() - 1) {
+        if (!isAnonymousClass() && !isLocalClass()) {
+            // A top-level class may have a '$' in its name; only nesting makes one a separator.
             return s;
         }
         // Anonymous classes are Outer$1; local ones are Outer$1Name.
-        int i = dollar + 1;
+        int i = s.lastIndexOf('$') + 1;
         while (i < s.length() && s.charAt(i) >= '0' && s.charAt(i) <= '9') {
             i++;
         }

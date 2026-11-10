@@ -42,6 +42,10 @@ final class TreeRange<K, V> extends AbstractMap<K, V> implements NavigableMap<K,
         this.reversed = reversed;
     }
 
+    boolean isReversed() { return reversed; }
+
+    boolean isBounded() { return low != null || high != null; }
+
     // ---- the ends, in the map's own order ----
 
     private boolean under(Object key) {

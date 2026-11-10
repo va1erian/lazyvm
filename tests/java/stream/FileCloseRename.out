@@ -1,0 +1,53 @@
+control open file: open
+control closed file: closed
+lines fresh: open
+lines closed: closed
+lines findFirst, not closed: open
+lines findFirst, closed: closed
+lines exhausted, not closed: open
+lines exhausted, closed: closed
+lines count, not closed: open
+lines closed twice: closed
+lines in try: open
+lines after try: closed
+lines after exception, not closed: open
+lines after exception, closed: closed
+lines iterator, not closed: open
+lines iterator exhausted, not closed: open
+lines iterator closed: closed
+lines spliterator, not closed: open
+lines spliterator closed: closed
+handler ran
+lines onClose closed: closed
+handler threw
+lines onClose threw, closed: closed
+lines mapped fresh: open
+lines mapped closed: closed
+flatMap count: closed
+flatMap findFirst: closed
+flatMap limit: closed
+flatMap anyMatch: closed
+flatMap peek throws: closed
+flatMap inner throws: closed
+flatMap iterator after first: closed
+flatMap spliterator after first: closed
+nested flatMap: closed
+nested flatMap findFirst: closed
+nested flatMap limit: closed
+flatMap sorted limit: closed
+map to stream, never run, not closed: open
+flatMap of an existing stream: closed
+used inner: ISE
+flatMap closes a used inner stream: closed
+flatMap over the file itself, not closed: open
+lines onClose registered: open
+lines onClose registered, closed: closed
+lines parallel, not closed: open
+lines parallel, closed: closed
+lines unordered: open
+lines unordered, closed: closed
+two streams, one closed: open
+two streams, both closed: closed
+reader lines exhausted: open
+reader lines closed: open
+reader closed: closed

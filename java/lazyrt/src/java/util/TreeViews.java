@@ -1,5 +1,6 @@
 package java.util;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -22,6 +23,11 @@ final class TreeViews {
         private MapNode<K, V> next;
         private MapNode<K, V> last;
         private int expected;
+        /** A spliterator's walk does not check for a change at each step; it asks once at the end. */
+        private boolean lenient;
+        /** A lenient walk finds the node after the last one only when asked, so it sees additions made meanwhile. */
+        private boolean stale;
+        private Object lastKey;
 
         Walk(TreeMap<K, V> m, MapNode<K, V> start, MapNode<K, V> fenceNode, boolean ascending) {
             this.m = m;
@@ -31,18 +37,45 @@ final class TreeViews {
             this.expected = m.modCount;
         }
 
-        public boolean hasNext() { return next != null && next.key != fence; }
+        private void refresh() {
+            if (stale) {
+                stale = false;
+                // After a change the node may be gone or reused for another entry, so the next one is found by key;
+                // without one the links are followed, which compares nothing.
+                next = m.modCount != expected ? m.near(lastKey, ascending, false)
+                        : ascending ? RedBlack.following(last) : RedBlack.preceding(last);
+            }
+        }
+
+        public boolean hasNext() {
+            refresh();
+            return next != null && next.key != fence;
+        }
+
+        void beLenient() { lenient = true; }
+
+        void checkEnd() {
+            if (m.modCount != expected) {
+                throw new ConcurrentModificationException();
+            }
+        }
 
         public Map.Entry<K, V> next() {
+            refresh();
             MapNode<K, V> e = next;
             if (e == null || e.key == fence) {
                 throw new NoSuchElementException();
             }
-            if (m.modCount != expected) {
+            if (m.modCount != expected && !lenient) {
                 throw new ConcurrentModificationException();
             }
-            next = ascending ? RedBlack.following(e) : RedBlack.preceding(e);
             last = e;
+            if (lenient) {
+                lastKey = e.key;
+                stale = true;
+            } else {
+                next = ascending ? RedBlack.following(e) : RedBlack.preceding(e);
+            }
             return e;
         }
 
@@ -64,6 +97,103 @@ final class TreeViews {
         }
     }
 
+    /** The characteristics of the keys or entries of a map: sorted and sized unless it is reversed or a range. */
+    static int flagsOf(NavigableMap<?, ?> m) {
+        int ch = Spliterator.ORDERED | Spliterator.DISTINCT;
+        if (!(m instanceof TreeRange)) {
+            return ch | Spliterator.SORTED | Spliterator.SIZED;
+        }
+        TreeRange<?, ?> r = (TreeRange<?, ?>) m;
+        if (!r.isReversed()) {
+            ch |= Spliterator.SORTED;
+        }
+        return r.isBounded() ? ch : ch | Spliterator.SIZED;
+    }
+
+    /** Walks keys or entries of a tree; a change made during the walk is reported when it is over. */
+    static final class Split<K, V, T> extends Spliterators.AbstractSpliterator<T> {
+        private final Supplier<Iterator<Map.Entry<K, V>>> walk;
+        private final Function<Map.Entry<K, V>, T> pick;
+        private final NavigableMap<K, V> m;
+        private final int ch;
+        private final Comparator<? super T> cmp;
+        private Iterator<Map.Entry<K, V>> it;
+
+        Split(Supplier<Iterator<Map.Entry<K, V>>> walk, Function<Map.Entry<K, V>, T> pick, NavigableMap<K, V> m,
+                Comparator<? super T> cmp) {
+            super(Long.MAX_VALUE, 0);
+            this.walk = walk;
+            this.pick = pick;
+            this.m = m;
+            this.ch = flagsOf(m);
+            this.cmp = cmp;
+        }
+
+        private Iterator<Map.Entry<K, V>> bind() {
+            if (it == null) {
+                it = walk.get();
+                if (it instanceof Walk) {
+                    ((Walk<K, V>) it).beLenient();
+                }
+                if ((ch & SIZED) != 0) {
+                    remaining = m.size();
+                }
+            }
+            return it;
+        }
+
+        private void checkEnd() {
+            if (it instanceof Walk) {
+                ((Walk<K, V>) it).checkEnd();
+            }
+        }
+
+        @Override
+        public boolean tryAdvance(Consumer<? super T> action) {
+            Objects.requireNonNull(action);
+            Iterator<Map.Entry<K, V>> i = bind();
+            if (!i.hasNext()) {
+                return false;
+            }
+            action.accept(pick.apply(i.next()));
+            checkEnd();
+            return true;
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super T> action) {
+            Objects.requireNonNull(action);
+            Iterator<Map.Entry<K, V>> i = bind();
+            while (i.hasNext()) {
+                action.accept(pick.apply(i.next()));
+            }
+            checkEnd();
+        }
+
+        @Override
+        public Spliterator<T> trySplit() {
+            bind();
+            return super.trySplit();
+        }
+
+        @Override
+        public long estimateSize() {
+            bind();
+            return remaining;
+        }
+
+        @Override
+        public int characteristics() { return ch; }
+
+        @Override
+        public Comparator<? super T> getComparator() {
+            if ((ch & SORTED) != 0) {
+                return cmp;
+            }
+            throw new IllegalStateException();
+        }
+    }
+
     /** The entries of a TreeMap or of one of its range views. */
     static final class Entries<K, V> extends AbstractSet<Map.Entry<K, V>> {
         private final NavigableMap<K, V> m;
@@ -81,6 +211,15 @@ final class TreeViews {
         }
 
         public Iterator<Map.Entry<K, V>> iterator() { return walk.get(); }
+
+        @Override
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        public Spliterator<Map.Entry<K, V>> spliterator() {
+            Comparator<? super K> kc = m.comparator();
+            Comparator<Map.Entry<K, V>> byKey = kc == null ? (Comparator) Map.Entry.comparingByKey()
+                    : Map.Entry.comparingByKey(kc);
+            return new Split<K, V, Map.Entry<K, V>>(walk, e -> e, m, byKey);
+        }
         public int size() { return m.size(); }
         public boolean isEmpty() { return m.isEmpty(); }
         // A view clears entry by entry through its walk; only the whole map clears at once.
@@ -130,6 +269,14 @@ final class TreeViews {
         }
 
         public Iterator<E> iterator() { return keysOf(m.entrySet().iterator()); }
+
+        @Override
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        public Spliterator<E> spliterator() {
+            NavigableMap<E, Object> map = (NavigableMap) m;
+            return new Split<E, Object, E>(() -> (Iterator) map.entrySet().iterator(), e -> e.getKey(), map,
+                    m.comparator());
+        }
         public Iterator<E> descendingIterator() { return keysOf(m.descendingMap().entrySet().iterator()); }
         public int size() { return m.size(); }
         public boolean isEmpty() { return m.isEmpty(); }
