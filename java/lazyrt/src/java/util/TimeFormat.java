@@ -16,8 +16,6 @@ final class TimeFormat {
 
         /** The epoch milliseconds, for the conversions that need an instant. */
         long instant(char conversion);
-
-        IllegalFormatConversionException fail(char conversion);
     }
 
     static final int MILLI = 0;
@@ -230,7 +228,7 @@ final class TimeFormat {
             long[] ymd = gregorian ? Calendars.gregorian(days) : Calendars.julian(days);
             long year = ymd[0];
             int month = (int) ymd[1];
-            boolean leap = year % 4 == 0 && (!gregorian || year % 100 != 0 || year % 400 == 0);
+            boolean leap = gregorian ? TimeChecks.isLeap(year) : year % 4 == 0; // the Julian rule
             int yearDay = TimeChecks.daysBefore(month, leap) + (int) ymd[2];
             // The ten days the change dropped from 1582 are not counted.
             fields[YEARDAY] = gregorian && year == 1582 ? yearDay - 10 : yearDay;
@@ -246,10 +244,6 @@ final class TimeFormat {
 
         public long instant(char conversion) {
             return millis;
-        }
-
-        public IllegalFormatConversionException fail(char conversion) {
-            return new IllegalFormatConversionException(conversion, Long.class);
         }
     }
 }

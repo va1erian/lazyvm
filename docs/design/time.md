@@ -167,12 +167,12 @@ comes out unchanged.
 Pinned by: FormatPatterns ("format cannot give …", "format getLong throws", "format isSupported is not consulted").
 
 **F4.** A two-letter number wider than two digits fails with `DateTimeException: Field MonthOfYear cannot be printed as the value 123 exceeds the maximum print width of 2`;
-a negative value in an unsigned letter: `Field HourOfDay cannot be printed as the value -5 cannot be negative according to the SignStyle`; `S` of an
+the width is checked before the sign, so a negative value with more than two digits (`-123`, `-12345`) is the same width error; a negative value of one or two digits in an unsigned letter: `Field HourOfDay cannot be printed as the value -5 cannot be negative according to the SignStyle`; `S` of an
 out-of-range nano: `Invalid value for NanoOfSecond (valid values 0 - 999999999): -1`.
 Pinned by: FormatPatterns ("format wide …", "format negative …").
 
 **F5.** `format` leaves no state behind: the same formatter formats any number of values. `toString()` of a formatter is not pinned (non-null).
-`LocalDateTime.format(f)` is `f.format(this)`.
+`LocalDateTime.format(f)` is `f.format(this)`; `format(null)` is `NullPointerException: formatter` (pinned by "LocalDateTime format null").
 Pinned by: FormatPatterns ("game", "format same twice").
 
 ## 6. now(), Serializable
@@ -195,7 +195,7 @@ Anything else (`String`, `Integer`, `Short`, `Boolean`, `Double`, `Character`, `
 `IllegalFormatConversionException: H != java.lang.String` (suffix, ` != `, class name). A `TemporalAccessor` that cannot give a field is the same exception
 with that accessor's class and the first suffix that failed, which for a composite suffix is the part: `%tc` of a `LocalDateTime` is `Z != java.time.LocalDateTime`
 (it has no zone), as are `%tz`, `%tZ`, `%ts`, `%tQ`. A `getLong` that throws `DateTimeException`, and an accessor whose `isSupported` is false, give the same exception, and so does a value outside the range of its field
-(hour 0-23 for `H k`, 1-12 for `I l`, minute and second 0-59, milli 0-999 for `L N`, `p` 0-1, month 1-12, weekday 1-7, day 1-31, day of year 1-366, year-of-era 1-1000000000);
+(hour 0-23 for `H k`, 1-12 for `I l`, minute and second 0-59, milli 0-999 for `L N`, `p` 0-1, month 1-12, weekday 1-7, day 1-31, day of year 1-366, year-of-era 1-1000000000, pinned at the boundary by the `%tY`, `%tC` and `%ty` rows of 1000000000 and 1000000001);
 a `%tr` over an out-of-range hour names `I`, over an out-of-range am/pm `p`.
 Composite suffixes: `%tc` = `%ta %tb %td %tT %tZ %tY`; `%tD` = `%tm/%td/%ty`; `%tF` = `%tY-%tm-%td`; `%tr` = `%tI:%tM:%tS %Tp`; `%tR` = `%tH:%tM`; `%tT` = `%tH:%tM:%tS`.
 Pinned by: FormatterT (the `t?` rows, the `Acc` rows, the `range t?` rows).

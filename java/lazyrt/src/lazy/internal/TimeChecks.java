@@ -21,6 +21,11 @@ public final class TimeChecks {
         }
     }
 
+    /** The Gregorian leap-year rule, for every year including 0 and the negative ones. */
+    public static boolean isLeap(long year) {
+        return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    }
+
     /** Days of the year before day 1 of `month` (1 to 12). */
     public static int daysBefore(int month, boolean leap) {
         return DAYS_BEFORE[month - 1] + (leap && month > 2 ? 1 : 0);

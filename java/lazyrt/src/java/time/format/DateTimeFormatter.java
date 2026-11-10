@@ -173,13 +173,14 @@ public final class DateTimeFormatter {
             b.append(v);
             return;
         }
+        // The width is checked before the sign, as the reference behaviour does.
+        if (Long.toString(v).length() - (v < 0 ? 1 : 0) > width) {
+            throw new DateTimeException("Field " + field + " cannot be printed as the value " + v
+                    + " exceeds the maximum print width of " + width);
+        }
         if (v < 0) {
             throw new DateTimeException("Field " + field + " cannot be printed as the value " + v
                     + " cannot be negative according to the SignStyle");
-        }
-        if (Long.toString(v).length() > width) {
-            throw new DateTimeException("Field " + field + " cannot be printed as the value " + v
-                    + " exceeds the maximum print width of " + width);
         }
         TimeChecks.pad(b, v, width);
     }

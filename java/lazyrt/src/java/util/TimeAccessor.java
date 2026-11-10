@@ -46,7 +46,7 @@ final class TimeAccessor implements TimeFormat.Source {
         throw fail(conversion);
     }
 
-    public IllegalFormatConversionException fail(char conversion) {
+    private IllegalFormatConversionException fail(char conversion) {
         return new IllegalFormatConversionException(conversion, temporal.getClass());
     }
 }

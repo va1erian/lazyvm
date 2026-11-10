@@ -107,13 +107,9 @@ public final class LocalDateTime implements TemporalAccessor, java.io.Serializab
         }
     }
 
-    private static boolean isLeap(int year) {
-        return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
-    }
-
     private static int monthLength(int year, int month) {
         if (month == 2) {
-            return isLeap(year) ? 29 : 28;
+            return TimeChecks.isLeap(year) ? 29 : 28;
         }
         return month == 4 || month == 6 || month == 9 || month == 11 ? 30 : 31;
     }
@@ -128,7 +124,7 @@ public final class LocalDateTime implements TemporalAccessor, java.io.Serializab
     }
 
     private int dayOfYear() {
-        return TimeChecks.daysBefore(month, isLeap(year)) + day;
+        return TimeChecks.daysBefore(month, TimeChecks.isLeap(year)) + day;
     }
 
     public int getYear() {
@@ -164,7 +160,7 @@ public final class LocalDateTime implements TemporalAccessor, java.io.Serializab
     }
 
     public String format(DateTimeFormatter formatter) {
-        return formatter.format(this);
+        return Objects.requireNonNull(formatter, "formatter").format(this);
     }
 
     public boolean isSupported(TemporalField field) {

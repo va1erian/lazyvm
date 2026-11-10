@@ -101,6 +101,12 @@ public class FormatPatterns {
         p("format getLong throws", () -> DateTimeFormatter.ofPattern("HH").format(new Acc(true, 5, true)));
         p("format wide value", () -> DateTimeFormatter.ofPattern("MM").format(new Acc(true, 123, false)));
         p("format negative value", () -> DateTimeFormatter.ofPattern("HH").format(new Acc(true, -5, false)));
+        for (String letters : new String[] {"MM", "dd", "HH", "mm", "ss"}) {
+            for (long v : new long[] {-5, -12, -123, -12345}) {
+                p("format negative " + letters + " " + v, () -> DateTimeFormatter.ofPattern(letters).format(new Acc(true, v, false)));
+            }
+        }
+        p("LocalDateTime format null", () -> A.format(null));
         p("format wide d", () -> DateTimeFormatter.ofPattern("dd").format(new Acc(true, 1234, false)));
         p("format wide S", () -> DateTimeFormatter.ofPattern("SSS").format(new Acc(true, 999999999, false)));
         p("format negative S", () -> DateTimeFormatter.ofPattern("SSS").format(new Acc(true, -1, false)));

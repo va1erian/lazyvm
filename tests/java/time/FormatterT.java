@@ -75,6 +75,7 @@ public class FormatterT {
             }
             System.out.println("range t" + sfx + " " + sb);
         }
+        f("%tY", new Acc(true, 1000000000, false)); f("%tY", new Acc(true, 1000000001, false)); f("%tC", new Acc(true, 1000000000, false)); f("%ty", new Acc(true, 1000000001, false));
         f("%tr", new Acc(true, 0, false)); f("%tr", new Acc(true, 1, false)); f("%tr", new Acc(true, 2, false)); f("%Tp", new Acc(true, 2, false));
         f("%tR", new Acc(true, 24, false)); f("%tT", new Acc(true, 60, false)); f("%tD", new Acc(true, 0, false));
         f("%tZ %<tz", LocalDateTime.of(2020, 1, 2, 3, 4));

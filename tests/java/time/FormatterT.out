@@ -123,6 +123,10 @@ range tm -1=-1! 0=0! 1=01 12=12 13=13! 24=24! 32=32! 60=60! 367=367! 1000=1000! 
 range td -1=-1! 0=0! 1=01 12=12 13=13 24=24 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
 range te -1=-1! 0=0! 1=1 12=12 13=13 24=24 32=32! 60=60! 367=367! 1000=1000! 2000000000=2000000000! 
 range tj -1=-1! 0=0! 1=001 12=012 13=013 24=024 32=032 60=060 367=367! 1000=1000! 2000000000=2000000000! 
+[%tY] 1000000000
+[%tY] IllegalFormatConversionException:Y != time.FormatterT$Acc
+[%tC] 10000000
+[%ty] IllegalFormatConversionException:y != time.FormatterT$Acc
 [%tr] IllegalFormatConversionException:I != time.FormatterT$Acc
 [%tr] 01:01:01 PM
 [%tr] IllegalFormatConversionException:p != time.FormatterT$Acc

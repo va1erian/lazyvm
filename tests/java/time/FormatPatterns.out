@@ -216,6 +216,27 @@ format value 5: 0005-05-05 05:05:05.000
 format getLong throws: java.time.DateTimeException: custom
 format wide value: java.time.DateTimeException: Field MonthOfYear cannot be printed as the value 123 exceeds the maximum print width of 2
 format negative value: java.time.DateTimeException: Field HourOfDay cannot be printed as the value -5 cannot be negative according to the SignStyle
+format negative MM -5: java.time.DateTimeException: Field MonthOfYear cannot be printed as the value -5 cannot be negative according to the SignStyle
+format negative MM -12: java.time.DateTimeException: Field MonthOfYear cannot be printed as the value -12 cannot be negative according to the SignStyle
+format negative MM -123: java.time.DateTimeException: Field MonthOfYear cannot be printed as the value -123 exceeds the maximum print width of 2
+format negative MM -12345: java.time.DateTimeException: Field MonthOfYear cannot be printed as the value -12345 exceeds the maximum print width of 2
+format negative dd -5: java.time.DateTimeException: Field DayOfMonth cannot be printed as the value -5 cannot be negative according to the SignStyle
+format negative dd -12: java.time.DateTimeException: Field DayOfMonth cannot be printed as the value -12 cannot be negative according to the SignStyle
+format negative dd -123: java.time.DateTimeException: Field DayOfMonth cannot be printed as the value -123 exceeds the maximum print width of 2
+format negative dd -12345: java.time.DateTimeException: Field DayOfMonth cannot be printed as the value -12345 exceeds the maximum print width of 2
+format negative HH -5: java.time.DateTimeException: Field HourOfDay cannot be printed as the value -5 cannot be negative according to the SignStyle
+format negative HH -12: java.time.DateTimeException: Field HourOfDay cannot be printed as the value -12 cannot be negative according to the SignStyle
+format negative HH -123: java.time.DateTimeException: Field HourOfDay cannot be printed as the value -123 exceeds the maximum print width of 2
+format negative HH -12345: java.time.DateTimeException: Field HourOfDay cannot be printed as the value -12345 exceeds the maximum print width of 2
+format negative mm -5: java.time.DateTimeException: Field MinuteOfHour cannot be printed as the value -5 cannot be negative according to the SignStyle
+format negative mm -12: java.time.DateTimeException: Field MinuteOfHour cannot be printed as the value -12 cannot be negative according to the SignStyle
+format negative mm -123: java.time.DateTimeException: Field MinuteOfHour cannot be printed as the value -123 exceeds the maximum print width of 2
+format negative mm -12345: java.time.DateTimeException: Field MinuteOfHour cannot be printed as the value -12345 exceeds the maximum print width of 2
+format negative ss -5: java.time.DateTimeException: Field SecondOfMinute cannot be printed as the value -5 cannot be negative according to the SignStyle
+format negative ss -12: java.time.DateTimeException: Field SecondOfMinute cannot be printed as the value -12 cannot be negative according to the SignStyle
+format negative ss -123: java.time.DateTimeException: Field SecondOfMinute cannot be printed as the value -123 exceeds the maximum print width of 2
+format negative ss -12345: java.time.DateTimeException: Field SecondOfMinute cannot be printed as the value -12345 exceeds the maximum print width of 2
+LocalDateTime format null: java.lang.NullPointerException: formatter
 format wide d: java.time.DateTimeException: Field DayOfMonth cannot be printed as the value 1234 exceeds the maximum print width of 2
 format wide S: 999
 format negative S: java.time.DateTimeException: Invalid value for NanoOfSecond (valid values 0 - 999999999): -1
