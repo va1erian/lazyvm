@@ -16,7 +16,7 @@ pub mod writer;
 use std::fmt;
 use std::sync::Arc;
 
-pub use attr::{BootstrapMethod, Code, Handler, RawAttribute};
+pub use attr::{BootstrapMethod, Code, Handler, LocalVar, RawAttribute, keep_local_variables};
 pub use cpool::{
     Constant, ConstantPool, MemberRef, decode_mutf8, decode_mutf8_utf16, encode_mutf8,
 };

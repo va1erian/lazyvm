@@ -8,6 +8,7 @@ pub mod files;
 pub mod net;
 pub mod reactor;
 mod resolver;
+pub mod tcp;
 pub mod timer;
 pub mod wtf;
 

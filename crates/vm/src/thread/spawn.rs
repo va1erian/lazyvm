@@ -119,6 +119,7 @@ impl Vm {
     /// hooks have run, or `Runtime.halt`. Holding the VM, no other thread is
     /// running bytecode.
     pub fn exit_process(&mut self, code: i32) -> ! {
+        self.debugger_vm_death();
         let _ = platform::flush(platform::Stream::Out);
         let _ = platform::flush(platform::Stream::Err);
         // The status the launcher gives for an exit on the main thread.
@@ -142,6 +143,7 @@ fn run_thread(gil: Arc<Gil>, me: usize) {
     let mut vm = gil.acquire(me, Line::Woken);
     vm.current = me;
     vm.resume_state(me);
+    vm.hold_if_suspended();
     match vm.run_java_thread() {
         Ok(()) => {}
         Err(VmError::Exit(code)) => vm.exit_process(code),

@@ -422,6 +422,14 @@ impl Vm {
     /// VM, and the caller must not rely on any `Ref` it has not rooted: a
     /// collection may run while this thread is outside.
     pub fn blocking<T>(&mut self, f: impl FnOnce() -> T) -> T {
+        let out = self.blocking_unchecked(f);
+        self.hold_if_suspended();
+        out
+    }
+
+    /// `blocking`, without the debugger's check on the way back: for the wait
+    /// a suspended thread makes itself.
+    pub(super) fn blocking_unchecked<T>(&mut self, f: impl FnOnce() -> T) -> T {
         self.hand_over(|gil, vm, me| {
             gil.release(vm);
             let out = f();
@@ -437,6 +445,7 @@ impl Vm {
             std::thread::yield_now();
             (gil.acquire(me, Line::Preempted), ())
         });
+        self.hold_if_suspended();
     }
 
     /// Moves the running thread's state and the VM out, for `exchange` to
@@ -469,6 +478,7 @@ impl Vm {
     fn poll_slice(&mut self) {
         if self.gil.time_to_look(&mut self.polls_to_look) && self.gil.slice_is_over() {
             self.hand_over(|gil, vm, me| (gil.preempt(vm, me), ()));
+            self.hold_if_suspended();
         }
     }
 }

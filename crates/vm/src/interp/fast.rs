@@ -43,7 +43,8 @@ impl Vm {
                 return;
             }
             self.safepoint();
-            if self.heap.wants_gc() {
+            // A debugger may have set a breakpoint while this thread was out.
+            if self.slow_interp || self.heap.wants_gc() {
                 return;
             }
         }

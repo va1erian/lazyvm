@@ -48,6 +48,7 @@ impl Vm {
             f.roots(&mut roots);
         }
         self.threads.roots(&mut roots);
+        self.debug.roots(&mut roots);
         self.monitor_roots(&mut roots);
         for c in &self.classes {
             refs(&c.statics, &mut roots);
