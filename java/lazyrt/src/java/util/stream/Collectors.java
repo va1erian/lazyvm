@@ -97,11 +97,11 @@ public final class Collectors {
 
     // ---- counting and reducing ----
 
-    public static <T> Collector<T, ?, Long> counting() {
-        return new Parts<T, long[], Long>(() -> new long[1], (a, t) -> a[0]++, (a, b) -> {
-            a[0] += b[0];
+        public static <T> Collector<T, ?, Long> counting() {
+        return new Parts<T, Cells.Tally, Long>(() -> new Cells.Tally(), (c, t) -> c.count++, (a, b) -> {
+            a.count += b.count;
             return a;
-        }, a -> a[0], Parts.traits());
+        }, c -> c.count, Parts.traits());
     }
 
     public static <T> Collector<T, ?, Optional<T>> minBy(Comparator<? super T> comparator) {
@@ -118,22 +118,22 @@ public final class Collectors {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> Collector<T, ?, T> reducing(T identity, BinaryOperator<T> op) {
-        return new Parts<T, Object[], T>(() -> new Object[] {identity}, (a, t) -> a[0] = op.apply((T) a[0], t),
-                (a, b) -> {
-                    a[0] = op.apply((T) a[0], (T) b[0]);
+        public static <T> Collector<T, ?, T> reducing(T identity, BinaryOperator<T> op) {
+        return new Parts<T, Cells.Box<T>, T>(() -> new Cells.Box<T>(identity),
+                (b, t) -> b.value = op.apply(b.value, t), (a, b) -> {
+                    a.value = op.apply(a.value, b.value);
                     return a;
-                }, a -> (T) a[0], Parts.traits());
+                }, b -> b.value, Parts.traits());
     }
 
     @SuppressWarnings("unchecked")
-    public static <T, U> Collector<T, ?, U> reducing(U identity, Function<? super T, ? extends U> mapper,
+        public static <T, U> Collector<T, ?, U> reducing(U identity, Function<? super T, ? extends U> mapper,
             BinaryOperator<U> op) {
-        return new Parts<T, Object[], U>(() -> new Object[] {identity},
-                (a, t) -> a[0] = op.apply((U) a[0], mapper.apply(t)), (a, b) -> {
-                    a[0] = op.apply((U) a[0], (U) b[0]);
+        return new Parts<T, Cells.Box<U>, U>(() -> new Cells.Box<U>(identity),
+                (b, t) -> b.value = op.apply(b.value, mapper.apply(t)), (a, b) -> {
+                    a.value = op.apply(a.value, b.value);
                     return a;
-                }, a -> (U) a[0], Parts.traits());
+                }, b -> b.value, Parts.traits());
     }
 
     /** The running result of reducing(op): nothing until the first element arrives. */
@@ -150,18 +150,20 @@ public final class Collectors {
 
     // ---- sums, averages, statistics ----
 
-    public static <T> Collector<T, ?, Integer> summingInt(ToIntFunction<? super T> mapper) {
-        return new Parts<T, int[], Integer>(() -> new int[1], (a, t) -> a[0] += mapper.applyAsInt(t), (a, b) -> {
-            a[0] += b[0];
-            return a;
-        }, a -> a[0], Parts.traits());
+        public static <T> Collector<T, ?, Integer> summingInt(ToIntFunction<? super T> mapper) {
+        return new Parts<T, Cells.Tally, Integer>(() -> new Cells.Tally(), (c, t) -> c.narrow += mapper.applyAsInt(t),
+                (a, b) -> {
+                    a.narrow += b.narrow;
+                    return a;
+                }, c -> c.narrow, Parts.traits());
     }
 
-    public static <T> Collector<T, ?, Long> summingLong(ToLongFunction<? super T> mapper) {
-        return new Parts<T, long[], Long>(() -> new long[1], (a, t) -> a[0] += mapper.applyAsLong(t), (a, b) -> {
-            a[0] += b[0];
-            return a;
-        }, a -> a[0], Parts.traits());
+        public static <T> Collector<T, ?, Long> summingLong(ToLongFunction<? super T> mapper) {
+        return new Parts<T, Cells.Tally, Long>(() -> new Cells.Tally(), (c, t) -> c.total += mapper.applyAsLong(t),
+                (a, b) -> {
+                    a.total += b.total;
+                    return a;
+                }, c -> c.total, Parts.traits());
     }
 
     public static <T> Collector<T, ?, Double> summingDouble(ToDoubleFunction<? super T> mapper) {
@@ -172,24 +174,24 @@ public final class Collectors {
                 }, s -> s.getSum(), Parts.traits());
     }
 
-    public static <T> Collector<T, ?, Double> averagingInt(ToIntFunction<? super T> mapper) {
-        return averaging((a, t) -> a[0] += mapper.applyAsInt(t));
+        public static <T> Collector<T, ?, Double> averagingInt(ToIntFunction<? super T> mapper) {
+        return mean((c, t) -> c.total += mapper.applyAsInt(t));
     }
 
-    public static <T> Collector<T, ?, Double> averagingLong(ToLongFunction<? super T> mapper) {
-        return averaging((a, t) -> a[0] += mapper.applyAsLong(t));
+        public static <T> Collector<T, ?, Double> averagingLong(ToLongFunction<? super T> mapper) {
+        return mean((c, t) -> c.total += mapper.applyAsLong(t));
     }
 
-    /** The mean of integral values: a sum and a count that `addValue` fills in a two-slot array. */
-    private static <T> Collector<T, ?, Double> averaging(BiConsumer<long[], T> addValue) {
-        return new Parts<T, long[], Double>(() -> new long[2], (a, t) -> {
-            addValue.accept(a, t);
-            a[1]++;
+    /** The mean of integral values: `addTo` adds one element's value to the tally's total, the count is kept here. */
+    private static <T> Collector<T, ?, Double> mean(BiConsumer<Cells.Tally, T> addTo) {
+        return new Parts<T, Cells.Tally, Double>(() -> new Cells.Tally(), (c, t) -> {
+            addTo.accept(c, t);
+            c.count++;
         }, (a, b) -> {
-            a[0] += b[0];
-            a[1] += b[1];
+            a.total += b.total;
+            a.count += b.count;
             return a;
-        }, a -> a[1] == 0 ? 0.0d : (double) a[0] / a[1], Parts.traits());
+        }, c -> c.count == 0 ? Double.valueOf(0) : Double.valueOf((double) c.total / c.count), Parts.traits());
     }
 
     public static <T> Collector<T, ?, Double> averagingDouble(ToDoubleFunction<? super T> mapper) {

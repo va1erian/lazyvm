@@ -35,7 +35,7 @@ final class LongFlow extends Flow<Long, LongStream> implements LongStream {
     }
 
     @Override
-    Relay.Layer sorting() { return next -> new Sorting.Longs(next); }
+    Relay.Layer sorting(boolean exact) { return next -> new Sorting.Longs(next, exact); }
 
     @Override
     public LongStream filter(LongPredicate predicate) {

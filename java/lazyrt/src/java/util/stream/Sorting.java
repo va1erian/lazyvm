@@ -11,15 +11,18 @@ final class Sorting {
     private Sorting() {
     }
 
-    /** The capacity to gather into: the announced size, or a small start when it is unknown. */
-    private static int room(long size) {
+    /**
+     * The capacity to gather into. An announced size is exact only while the pipeline is still SIZED here; after a
+     * limit or skip it is a hint (and still tells a size that cannot be an array), so the array may grow.
+     */
+    private static int room(long size, boolean exact) {
         if (size < 0) {
             return 16;
         }
         if (size >= Flow.MAX_ARRAY) {
             throw new IllegalArgumentException("Stream size exceeds max array size");
         }
-        return (int) size;
+        return exact ? (int) size : (int) Math.min(size, 1024);
     }
 
     /** Grows a gathering array that has no announced size. */
@@ -30,16 +33,18 @@ final class Sorting {
         private Object[] items;
         private int n;
         private boolean fixed;
+        private final boolean exact;
 
-        Refs(Relay next, Comparator<Object> order) {
+        Refs(Relay next, Comparator<Object> order, boolean exact) {
             super(next);
+            this.exact = exact;
             this.order = order;
         }
 
         @Override
         void start(long size) {
-            items = new Object[room(size)];
-            fixed = size >= 0;
+            items = new Object[room(size, exact)];
+            fixed = exact && size >= 0;
         }
 
         @Override
@@ -72,13 +77,17 @@ final class Sorting {
         private int[] items;
         private int n;
         private boolean fixed;
+        private final boolean exact;
 
-        Ints(Relay next) { super(next); }
+        Ints(Relay next, boolean exact) {
+            super(next);
+            this.exact = exact;
+        }
 
         @Override
         void start(long size) {
-            items = new int[room(size)];
-            fixed = size >= 0;
+            items = new int[room(size, exact)];
+            fixed = exact && size >= 0;
         }
 
         @Override
@@ -107,13 +116,17 @@ final class Sorting {
         private long[] items;
         private int n;
         private boolean fixed;
+        private final boolean exact;
 
-        Longs(Relay next) { super(next); }
+        Longs(Relay next, boolean exact) {
+            super(next);
+            this.exact = exact;
+        }
 
         @Override
         void start(long size) {
-            items = new long[room(size)];
-            fixed = size >= 0;
+            items = new long[room(size, exact)];
+            fixed = exact && size >= 0;
         }
 
         @Override
@@ -142,13 +155,17 @@ final class Sorting {
         private double[] items;
         private int n;
         private boolean fixed;
+        private final boolean exact;
 
-        Doubles(Relay next) { super(next); }
+        Doubles(Relay next, boolean exact) {
+            super(next);
+            this.exact = exact;
+        }
 
         @Override
         void start(long size) {
-            items = new double[room(size)];
-            fixed = size >= 0;
+            items = new double[room(size, exact)];
+            fixed = exact && size >= 0;
         }
 
         @Override

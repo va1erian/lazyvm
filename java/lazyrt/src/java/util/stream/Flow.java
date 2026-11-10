@@ -140,10 +140,10 @@ abstract class Flow<T, S extends BaseStream<T, S>> implements BaseStream<T, S> {
     }
 
     /** The layer that gathers and sorts this kind's elements. */
-    abstract Relay.Layer sorting();
+    abstract Relay.Layer sorting(boolean exact);
 
     public S sorted() {
-        Relay.Layer l = natural && (flags & Spliterator.SORTED) != 0 ? Relay.SAME : sorting();
+        Relay.Layer l = natural && (flags & Spliterator.SORTED) != 0 ? Relay.SAME : sorting((flags & Spliterator.SIZED) != 0);
         return stage(l, flags | Spliterator.ORDERED | Spliterator.SORTED, true, false);
     }
 

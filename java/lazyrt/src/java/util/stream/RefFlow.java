@@ -35,7 +35,7 @@ final class RefFlow<T> extends Flow<T, Stream<T>> implements Stream<T> {
     }
 
     @Override
-    Relay.Layer sorting() { return next -> new Sorting.Refs(next, NATURAL); }
+    Relay.Layer sorting(boolean exact) { return next -> new Sorting.Refs(next, NATURAL, exact); }
 
     @Override
     public Stream<T> filter(Predicate<? super T> predicate) {
@@ -129,7 +129,7 @@ final class RefFlow<T> extends Flow<T, Stream<T>> implements Stream<T> {
     public Stream<T> sorted(Comparator<? super T> comparator) {
         Comparator<Object> by = (a, b) -> comparator.compare(cast(a), cast(b));
         // The stage is made first, which fails on a used stream; only then is the comparator looked at.
-        Stream<T> stage = stage(next -> new Sorting.Refs(next, by), (flags | Spliterator.ORDERED)
+        Stream<T> stage = stage(next -> new Sorting.Refs(next, by, (flags & Spliterator.SIZED) != 0), (flags | Spliterator.ORDERED)
                 & ~Spliterator.SORTED, false, false);
         Objects.requireNonNull(comparator);
         return stage;

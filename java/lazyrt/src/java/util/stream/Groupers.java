@@ -37,15 +37,23 @@ final class Groupers {
         }
         BiConsumer<Map<K, A>, T> accumulator = (m, t) -> {
             K key = Objects.requireNonNull(classifier.apply(t), "element cannot be mapped to a null key");
-            addTo.accept(m.computeIfAbsent(key, k -> makeValue.get()), t);
-        };
-        BinaryOperator<Map<K, A>> combiner = (m1, m2) -> {
-            for (Map.Entry<K, A> e : m2.entrySet()) {
-                m1.merge(e.getKey(), e.getValue(), join);
+            A holder = m.get(key);
+            if (holder == null) {
+                holder = makeValue.get();
+                m.put(key, holder);
             }
-            return m1;
+            addTo.accept(holder, t);
         };
-        Supplier<Map<K, A>> supplier = (Supplier<Map<K, A>>) (Supplier<?>) mapFactory;
+        // Two partial results join key by key: a key only one of them has keeps its value.
+        BinaryOperator<Map<K, A>> combiner = (left, right) -> {
+            for (K key : right.keySet()) {
+                A mine = left.get(key);
+                A theirs = right.get(key);
+                left.put(key, mine == null ? theirs : join.apply(mine, theirs));
+            }
+            return left;
+        };
+        Supplier<Map<K, A>> supplier = () -> Flow.<Map<K, A>>cast(mapFactory.get());
         if (direct) {
             return new Parts<T, Map<K, A>, M>(supplier, accumulator, combiner, m -> (M) m, groupTraits(concurrent, true));
         }
@@ -103,11 +111,11 @@ final class Groupers {
             Function<? super T, ? extends V> valueMapper, BinaryOperator<V> merge, Supplier<M> mapFactory,
             Set<Collector.Characteristics> traits) {
         BiConsumer<M, T> accumulator = (m, t) -> m.merge(keyMapper.apply(t), valueMapper.apply(t), merge);
-        BinaryOperator<M> combiner = (m1, m2) -> {
-            for (Map.Entry<K, V> e : m2.entrySet()) {
-                m1.merge(e.getKey(), e.getValue(), merge);
+        BinaryOperator<M> combiner = (left, right) -> {
+            for (K key : right.keySet()) {
+                left.merge(key, right.get(key), merge);
             }
-            return m1;
+            return left;
         };
         return Parts.direct(mapFactory, accumulator, combiner, traits);
     }

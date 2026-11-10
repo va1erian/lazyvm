@@ -33,7 +33,7 @@ final class DoubleFlow extends Flow<Double, DoubleStream> implements DoubleStrea
     }
 
     @Override
-    Relay.Layer sorting() { return next -> new Sorting.Doubles(next); }
+    Relay.Layer sorting(boolean exact) { return next -> new Sorting.Doubles(next, exact); }
 
     @Override
     public DoubleStream filter(DoublePredicate predicate) {

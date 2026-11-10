@@ -34,7 +34,7 @@ final class IntFlow extends Flow<Integer, IntStream> implements IntStream {
     }
 
     @Override
-    Relay.Layer sorting() { return next -> new Sorting.Ints(next); }
+    Relay.Layer sorting(boolean exact) { return next -> new Sorting.Ints(next, exact); }
 
     @Override
     public IntStream filter(IntPredicate predicate) {

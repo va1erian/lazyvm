@@ -28,16 +28,17 @@ final class Steps {
         this.queue = new Queue(kind);
     }
 
-    private void open() {
+    /** `watch` is whether stages may stop the line early: always while stepping, as the pipeline says in bulk. */
+    private void open(boolean watch) {
         source = flow.pipe.source();
-        head = flow.build(queue, true);
+        head = flow.build(queue, watch);
         head.start(source.getExactSizeIfKnown());
     }
 
     /** Makes sure an element is queued; false when the pipeline has no more. */
     boolean ready() {
         if (head == null) {
-            open();
+            open(true);
         }
         while (queue.isEmpty()) {
             if (done) {
@@ -65,7 +66,7 @@ final class Steps {
             }
             return;
         }
-        open();
+        open(flow.stops);
         queue.redirect(sink);
         Pipe.push(flow.pipe.kind, source, head, flow.stops);
         head.finish();

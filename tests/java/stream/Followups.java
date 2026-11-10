@@ -135,5 +135,28 @@ public class Followups {
         t("supplier claims DISTINCT distinct", () -> StreamSupport.stream(() -> Spliterators.spliterator(new Object[] {1, 1, 2}, Spliterator.ORDERED), Spliterator.ORDERED | Spliterator.DISTINCT, false).distinct().collect(Collectors.toList()));
         t("supplier no claim sorted", () -> StreamSupport.stream(() -> Spliterators.spliterator(new Object[] {3, 1, 2}, Spliterator.ORDERED | Spliterator.SORTED), Spliterator.ORDERED, false).sorted().collect(Collectors.toList()));
         t("supplier claims SORTED int", () -> Arrays.toString(StreamSupport.intStream(() -> Spliterators.spliterator(new int[] {3, 1, 2}, Spliterator.ORDERED | Spliterator.SORTED), Spliterator.ORDERED | Spliterator.SORTED, false).sorted().toArray()));
+
+        // third review: bulk run keeps inner pipelines in bulk; a sort after limit or skip may be fed more or less
+        t("flatMap sorted peek bulk spliterator", () -> { Stream.of(1).flatMap(x -> Stream.of(3, 1, 2).sorted().peek(pk("i"))).spliterator().forEachRemaining(pk("r")); return "-"; });
+        t("concat flatMap sorted peek bulk", () -> { Stream.concat(Stream.of(1).flatMap(x -> Stream.of(3, 1, 2).sorted().peek(pk("i"))), Stream.of(9)).forEach(pk("r")); return "-"; });
+        t("flatMap sorted peek step then rest", () -> { Spliterator<Integer> sp = Stream.of(1).flatMap(x -> Stream.of(3, 1, 2).sorted().peek(pk("i"))).spliterator(); sp.tryAdvance(pk("t")); sp.forEachRemaining(pk("r")); return "-"; });
+        t("lying chars limit sorted", () -> { StringBuilder sb = new StringBuilder("abcde"); return sb.chars().peek(x -> sb.append('c')).limit(10).sorted().count(); });
+        t("lying chars sorted", () -> { StringBuilder sb = new StringBuilder("abcde"); return sb.chars().peek(x -> { if (sb.length() < 8) sb.append('c'); }).sorted().count(); });
+        t("huge boxed limit sorted", () -> LongStream.range(0, Long.MAX_VALUE).boxed().limit(3).sorted().count());
+        t("huge boxed sorted iterator", () -> LongStream.range(0, Long.MAX_VALUE).boxed().sorted().iterator().hasNext());
+        t("huge boxed sorted spliterator", () -> LongStream.range(0, Long.MAX_VALUE).boxed().sorted().spliterator().tryAdvance(x -> {}));
+        t("huge boxed limit sorted iterator", () -> LongStream.range(0, Long.MAX_VALUE).boxed().limit(3).sorted().iterator().next());
+        t("int array forEachRemaining throws", () -> { Spliterator.OfInt sp = Arrays.spliterator(new int[] {1, 2, 3}); try { sp.forEachRemaining((IntConsumer) x -> { throw new RuntimeException("x"); }); } catch (RuntimeException e) { log.append("caught "); } StringBuilder b = new StringBuilder(); sp.forEachRemaining((IntConsumer) b::append); return b.length() + " " + sp.estimateSize(); });
+        t("double array forEachRemaining throws", () -> { Spliterator.OfDouble sp = Arrays.spliterator(new double[] {1, 2, 3}); try { sp.forEachRemaining((DoubleConsumer) x -> { throw new RuntimeException("x"); }); } catch (RuntimeException e) { log.append("caught "); } StringBuilder b = new StringBuilder(); sp.forEachRemaining((DoubleConsumer) b::append); return b.length() + " " + sp.estimateSize(); });
+        t("long array forEachRemaining throws", () -> { Spliterator.OfLong sp = Arrays.spliterator(new long[] {1, 2, 3}); try { sp.forEachRemaining((LongConsumer) x -> { throw new RuntimeException("x"); }); } catch (RuntimeException e) { log.append("caught "); } StringBuilder b = new StringBuilder(); sp.forEachRemaining((LongConsumer) b::append); return b.length() + " " + sp.estimateSize(); });
+        t("long rangeClosed skip past end", () -> LongStream.rangeClosed(0, 5).skip(6).count());
+        t("long rangeClosed skip all", () -> LongStream.rangeClosed(0, 5).skip(5).sum());
+        t("long rangeClosed skip over", () -> LongStream.rangeClosed(0, 5).skip(100).count());
+        t("int range skip past end", () -> IntStream.range(0, 5).skip(9).count());
+        t("int range skip exactly end", () -> IntStream.range(0, 5).skip(5).count());
+        t("int rangeClosed skip one less", () -> IntStream.rangeClosed(0, 5).skip(5).sum());
+        t("sorted distinct equals side", () -> { class E { final String n; E(String n) { this.n = n; } public boolean equals(Object o) { log.append(n + "=" + ((E) o).n + " "); return n.equals(((E) o).n); } public int hashCode() { return 1; } public String toString() { return n; } } return StreamSupport.stream(Spliterators.spliterator(new Object[] {new E("p"), new E("q"), new E("q"), new E("r")}, Spliterator.ORDERED | Spliterator.SORTED), false).distinct().collect(Collectors.toList()); });
+        t("linkedlist shrink during walk", () -> { LinkedList<Integer> l = new LinkedList<>(Arrays.asList(1, 2, 3, 4)); Spliterator<Integer> sp = l.spliterator(); StringBuilder b = new StringBuilder(); sp.tryAdvance(x -> b.append(x).append(' ')); l.removeLast(); try { sp.forEachRemaining(x -> b.append(x).append(' ')); b.append("end"); } catch (ConcurrentModificationException e) { b.append("CME"); } return b; });
+        t("linkedlist shrink before first use", () -> { LinkedList<Integer> l = new LinkedList<>(Arrays.asList(1, 2, 3, 4)); Spliterator<Integer> sp = l.spliterator(); l.removeFirst(); StringBuilder b = new StringBuilder(); sp.forEachRemaining(x -> b.append(x).append(' ')); return b; });
     }
 }

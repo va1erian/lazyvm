@@ -65,3 +65,24 @@ supplier claims SORTED sorted: [3, 1, 2]
 supplier claims DISTINCT distinct: [1, 1, 2]
 supplier no claim sorted: [1, 2, 3]
 supplier claims SORTED int: [3, 1, 2]
+flatMap sorted peek bulk spliterator: - | i1 r1 i2 r2 i3 r3
+concat flatMap sorted peek bulk: - | i1 r1 i2 r2 i3 r3 r9
+flatMap sorted peek step then rest: - | i1 i2 i3 t1 r2 r3
+lying chars limit sorted: 10
+lying chars sorted: !java.lang.ArrayIndexOutOfBoundsException: 5
+huge boxed limit sorted: 3
+huge boxed sorted iterator: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+huge boxed sorted spliterator: !java.lang.IllegalArgumentException: Stream size exceeds max array size
+huge boxed limit sorted iterator: 0
+int array forEachRemaining throws: 0 0 | caught
+double array forEachRemaining throws: 0 0 | caught
+long array forEachRemaining throws: 0 0 | caught
+long rangeClosed skip past end: 0
+long rangeClosed skip all: 5
+long rangeClosed skip over: 0
+int range skip past end: 0
+int range skip exactly end: 0
+int rangeClosed skip one less: 5
+sorted distinct equals side: [p, q, r] | q=p q=q r=q
+linkedlist shrink during walk: 1 2 3 CME
+linkedlist shrink before first use: 2 3 4 
