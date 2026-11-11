@@ -14,22 +14,19 @@
 
 mod arith;
 mod asm;
+mod compile;
 mod flow;
 mod frame;
 mod helpers;
 mod layout;
 mod mem;
 mod ops;
+mod run;
 mod stack;
 
 use crate::Vm;
-use crate::class::{InitState, MethodRef, Resolved};
-use crate::heap::Heap;
-use crate::interp::Frame;
-use crate::thread::Gil;
-use classfile::Constant;
 
-pub(crate) use frame::BACKWARD;
+pub(crate) use frame::{BACKWARD, CONTINUE};
 
 /// Runs of a method's frames before it is compiled, by default.
 pub const THRESHOLD: u32 = 200;
@@ -76,15 +73,6 @@ pub fn parse_policy(text: &str) -> Option<Option<u32>> {
     }
 }
 
-impl Slot {
-    pub(crate) fn compiled(&self) -> Option<&Compiled> {
-        match &self.state {
-            State::Compiled(c) => Some(c),
-            _ => None,
-        }
-    }
-}
-
 impl Vm {
     /// Counts a run of the top frame's method and compiles it once hot.
     #[inline]
@@ -103,7 +91,7 @@ impl Vm {
         if slot.runs <= limit {
             return;
         }
-        let state = match compile(self, m) {
+        let state = match compile::compile(self, m) {
             Some(c) => State::Compiled(Box::new(c)),
             None => State::Failed,
         };
@@ -111,130 +99,4 @@ impl Vm {
             .jit
             .state = state;
     }
-}
-
-fn compile(vm: &Vm, m: MethodRef) -> Option<Compiled> {
-    let class = vm.class(m.class);
-    if !class.checked {
-        return None;
-    }
-    let method = vm.method(m);
-    let code = method.code.as_ref()?;
-    let pool = &class.file.as_ref()?.pool;
-    let shapes = flow::shapes(code, pool)?;
-    let cache = &class.cp_cache;
-    let cached = |i: u16| cache.get(usize::from(i)).copied().flatten();
-    let constant = |i: u16| -> Option<(u32, u32, u64)> {
-        Some(match pool.get(i)? {
-            Constant::Integer(v) => (layout::INT, *v as u32, 0),
-            Constant::Float(v) => (layout::FLOAT, v.to_bits(), 0),
-            Constant::Long(v) => (layout::LONG, 0, *v as u64),
-            Constant::Double(v) => (layout::DOUBLE, 0, v.to_bits()),
-            Constant::String(_) => match cached(i)? {
-                Resolved::String(r) => (layout::REF, r.index(), u64::from(r.generation)),
-                _ => return None,
-            },
-            _ => return None,
-        })
-    };
-    let field = |i: u16| match cached(i)? {
-        Resolved::Field {
-            slot,
-            is_static: false,
-            ..
-        } => Some(slot),
-        _ => None,
-    };
-    let statics = |i: u16| match cached(i)? {
-        Resolved::Field {
-            class,
-            slot,
-            is_static: true,
-        } => {
-            let c = vm.class(class);
-            let ok = c.state == InitState::Initialized && (slot as usize) < c.statics.len();
-            ok.then(|| c.statics.as_ptr().wrapping_add(slot as usize) as usize)
-        }
-        _ => None,
-    };
-    let bc = &code.bytecode;
-    let mut g = frame::Gen::new();
-    let labels: Vec<_> = shapes
-        .iter()
-        .map(|s| s.as_ref().map(|_| g.a.label()))
-        .collect();
-    let env = ops::Env {
-        code: bc,
-        shapes: &shapes,
-        labels: &labels,
-        constant: &constant,
-        field: &field,
-        statics: &statics,
-    };
-    for (pc, shape) in shapes.iter().enumerate() {
-        if let (Some(shape), Some(l)) = (shape, labels[pc]) {
-            g.a.bind(l);
-            ops::emit(&mut g, &env, pc, shape);
-        }
-    }
-    let entries: Vec<u32> = labels
-        .iter()
-        .map(|l| l.and_then(|l| g.a.pos(l)).map_or(NONE, |p| p as u32))
-        .collect();
-    let depth = shapes
-        .iter()
-        .map(|s| s.as_ref().map_or(u16::MAX, |s| s.len() as u16))
-        .collect();
-    let bytes = g.finish()?;
-    Some(Compiled {
-        code: mem::Code::install(&bytes)?,
-        entries,
-        depth,
-        max_stack: usize::from(code.max_stack),
-        locals: usize::from(code.max_locals),
-    })
-}
-
-/// Runs compiled code from the frame's pc. None (nothing done) if the frame
-/// is not in a state the code can take: then the interpreter runs it. Else
-/// the exit reason, with the frame's pc and stack where compiled code left.
-pub(crate) fn run(c: &Compiled, f: &mut Frame, heap: &mut Heap, gil: &Gil) -> Option<u32> {
-    let pc = f.pc;
-    let entry = *c.entries.get(pc)?;
-    if entry == NONE
-        || usize::from(c.depth[pc]) != f.stack.len()
-        || f.stack.capacity() < c.max_stack
-        || f.locals.len() < c.locals
-    {
-        return None;
-    }
-    let mut ctx = frame::Ctx {
-        locals: f.locals.as_mut_ptr(),
-        stack: f.stack.as_mut_ptr(),
-        heap,
-        wanted: gil.wanted_flag(),
-        pc: 0,
-        sp: 0,
-    };
-    // `code.at(0)` is the function `frame::Gen` emits, with this signature;
-    // `entry` is the code of an instruction whose stack shape matches the
-    // frame (checked above); the locals and the stack have the room the code
-    // addresses (`flow` bounds the stack by max_stack, and verified code
-    // reads and writes locals below max_locals); the heap is borrowed for
-    // the call alone.
-    // SAFETY: as above.
-    let reason = unsafe {
-        let f_entry: Entry = std::mem::transmute::<*const u8, Entry>(c.code.at(0));
-        f_entry(&mut ctx, c.code.at(entry as usize))
-    };
-    let sp = ctx.sp as usize;
-    if sp > f.stack.capacity() {
-        // Cannot happen: compiled code only exits with a shape from `flow`.
-        std::process::abort();
-    }
-    // SAFETY: compiled code wrote a whole Value (tag and payload) to every
-    // entry below `sp` that it pushed, and the rest were already there.
-    unsafe { f.stack.set_len(sp) };
-    f.pc = ctx.pc as usize;
-    Some(reason)
 }

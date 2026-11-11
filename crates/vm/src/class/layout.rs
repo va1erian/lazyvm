@@ -58,7 +58,7 @@ pub(super) fn build(
         state: InitState::Linked,
         mirror: None,
         cp_cache: vec![None; cp_len],
-        call_cache: vec![None; cp_len],
+        call_cache: vec![[None; 2]; cp_len],
         from_boot: false,
         verified: false,
         checked: false,

@@ -41,24 +41,25 @@ impl Vm {
     pub(super) fn run_simple(&mut self, base: usize) {
         loop {
             self.jit_tick();
-            let Vm {
-                frames,
-                heap,
-                classes,
-                gil,
-                ..
-            } = self;
-            let Some(f) = frames.last_mut() else { return };
-            let m = f.method;
-            let compiled = classes[m.class.0 as usize].methods[usize::from(m.index)]
-                .jit
-                .compiled()
-                .and_then(|c| jit::run(c, f, heap, gil));
-            let stop = match compiled {
-                Some(jit::BACKWARD) => Stop::Backward,
+            let stop = match self.jit_enter(base) {
+                // Frames changed in compiled code, or a loop's safepoint is
+                // due: go round (after the safepoint below).
+                Some(jit::BACKWARD | jit::CONTINUE) => Stop::Backward,
                 // Where compiled code stopped; past the end, `step` reports it.
-                Some(_) => Stop::At(f.code.bytecode.get(f.pc).copied().unwrap_or(0xff)),
-                None => run(f, heap, classes),
+                Some(_) => match self.frames.last() {
+                    Some(f) => Stop::At(f.code.bytecode.get(f.pc).copied().unwrap_or(0xff)),
+                    None => return,
+                },
+                None => {
+                    let Vm {
+                        frames,
+                        heap,
+                        classes,
+                        ..
+                    } = self;
+                    let Some(f) = frames.last_mut() else { return };
+                    run(f, heap, classes)
+                }
             };
             match stop {
                 Stop::Backward => {}

@@ -11,7 +11,8 @@ use std::path::PathBuf;
 use std::sync::atomic::Ordering::Relaxed;
 
 use super::sampler::{
-    CALLS, FAST_INSNS, FAST_RUNS, GC_NANOS, GCS, Key, NATIVES, NONE, SAMPLES, STEP_OPS, take_report,
+    CALLEES, CALLS, FAST_INSNS, FAST_RUNS, GC_NANOS, GCS, Key, NATIVES, NONE, SAMPLES, STEP_OPS,
+    take_report,
 };
 use crate::Vm;
 use crate::class::{ClassId, MethodRef};
@@ -125,6 +126,7 @@ fn text(vm: &Vm, s: &HashMap<Key, u64>) -> String {
         let t = by_op.get(&(*op as u8)).copied().unwrap_or(0);
         let _ = writeln!(out, "  {op:#04x} {n:>14}  {:5.1}%", pct(t, total));
     }
+    callees(vm, &mut out);
     let _ = writeln!(out, "\n== methods (self): total fast step native gc ==");
     let mut ms: Vec<_> = by_method.into_iter().collect();
     ms.sort_by_key(|m| std::cmp::Reverse(m.1.iter().sum::<u64>()));
@@ -156,4 +158,31 @@ fn counters(out: &mut String) {
         GCS.load(Relaxed),
         GC_NANOS.load(Relaxed) / 1_000_000
     );
+}
+
+/// The most called methods, with their bytecode length: what inlining
+/// small methods would save.
+fn callees(vm: &Vm, out: &mut String) {
+    let counts = CALLEES
+        .lock()
+        .ok()
+        .and_then(|c| c.clone())
+        .unwrap_or_default();
+    let mut v: Vec<(u64, u64)> = counts.into_iter().collect();
+    v.sort_by_key(|e| std::cmp::Reverse(e.1));
+    let total: u64 = v.iter().map(|e| e.1).sum();
+    let _ = writeln!(out, "\n== callees: calls, share, code bytes ==");
+    for (id, n) in v.iter().take(TOP_METHODS) {
+        let m = MethodRef {
+            class: ClassId((id >> 16) as u32),
+            index: (id & 0xffff) as u16,
+        };
+        let len = vm.method(m).code().map_or(0, |c| c.bytecode.len());
+        let _ = writeln!(
+            out,
+            "  {n:>12} {:5.1}% {len:>5}  {}",
+            pct(*n, total),
+            name(vm, *id)
+        );
+    }
 }

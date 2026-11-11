@@ -226,6 +226,8 @@ fn inline(g: &mut Gen, env: &Env, pc: usize, sh: &[bool]) -> bool {
             );
         }
         0xbe => g.helper(helpers::array_length as Helper, d - 1, 0, pc, d),
+        // Calls and returns stay in compiled code when they can (`run.rs`).
+        0xac..=0xb1 | 0xb6..=0xb9 => g.transfer(pc, d),
         _ => return false,
     }
     true

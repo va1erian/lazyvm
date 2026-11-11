@@ -19,7 +19,7 @@ impl Vm {
     /// fast loop handles. `base` is the frame count below which this run
     /// loop must not return (`Vm::run`).
     #[inline]
-    pub(super) fn fast_transfer(&mut self, op: u8, base: usize) -> bool {
+    pub(crate) fn fast_transfer(&mut self, op: u8, base: usize) -> bool {
         match op {
             0xac..=0xb1 => self.fast_return(op, base),
             0xb6..=0xb9 => self.fast_invoke(op),
@@ -150,17 +150,20 @@ impl Vm {
         resolved: MethodRef,
         interface: bool,
     ) -> Option<MethodRef> {
-        if let Some(Some((seen, target))) = self.class(from).call_cache.get(index)
-            && *seen == rc
-        {
-            return Some(*target);
+        if let Some(ways) = self.class(from).call_cache.get(index) {
+            for &(seen, target) in ways.iter().flatten() {
+                if seen == rc {
+                    return Some(target);
+                }
+            }
         }
         if interface && !self.is_assignable(rc, resolved.class) {
             return None;
         }
         let target = self.select(rc, resolved).ok()?;
-        if let Some(slot) = self.class_mut(from).call_cache.get_mut(index) {
-            *slot = Some((rc, target));
+        if let Some(ways) = self.class_mut(from).call_cache.get_mut(index) {
+            ways[1] = ways[0];
+            ways[0] = Some((rc, target));
         }
         Some(target)
     }

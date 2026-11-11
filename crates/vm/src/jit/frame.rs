@@ -23,6 +23,11 @@ pub(super) struct Ctx {
     pub wanted: *const u8,
     pub pc: u32,
     pub sp: u32,
+    /// The VM, for `run::transfer`; reached only through this pointer while
+    /// compiled code runs.
+    pub vm: *mut crate::Vm,
+    /// `Vm::run`'s base: a return to below it is the interpreter's.
+    pub base: u32,
 }
 
 pub(super) const CTX_HEAP: i32 = 16;
@@ -37,6 +42,9 @@ pub(super) type Helper =
 /// Exit reasons.
 pub(crate) const AT: u32 = 0;
 pub(crate) const BACKWARD: u32 = 1;
+/// The frames changed (a call or return was done) and the top one is for
+/// the interpreter; the frames are already as they must be.
+pub(crate) const CONTINUE: u32 = 2;
 
 /// The first two argument registers.
 #[cfg(windows)]
@@ -57,6 +65,8 @@ pub(super) struct Gen {
     pub a: Asm,
     epilogue: Label,
     stubs: Vec<Stub>,
+    /// Exits after a transfer that changed the frames (`CONTINUE`).
+    leaves: Vec<Label>,
 }
 
 /// The stack entry `i` (from the bottom) and local `i`, relative to r13/r12.
@@ -88,6 +98,7 @@ impl Gen {
             a,
             epilogue,
             stubs: Vec::new(),
+            leaves: Vec::new(),
         }
     }
 
@@ -134,6 +145,30 @@ impl Gen {
         self.a.jcc(Cc::E, out);
     }
 
+    /// An invoke or return at `pc` with `sp` entries, through
+    /// `run::transfer`: on into the next frame's code if it is compiled.
+    pub(super) fn transfer(&mut self, pc: usize, sp: usize) {
+        let out = self.exit_stub(pc, sp, AT);
+        let leave = self.label();
+        self.a.mov_rr(true, ARGS[0], RBX);
+        self.a.mov_imm64(ARGS[1], pc as u64);
+        self.a.mov_imm64(ARGS[2], sp as u64);
+        let f: extern "C" fn(*mut Ctx, u32, u32) -> usize = super::run::transfer;
+        self.a.mov_imm64(RAX, f as usize as u64);
+        self.a.call_reg(RAX);
+        self.a.alu_reg_imm(Alu::Cmp, true, RAX, 1);
+        self.a.jcc(Cc::B, out);
+        self.a.jcc(Cc::E, leave);
+        self.a.load(true, R12, RBX, 0);
+        self.a.load(true, R13, RBX, 8);
+        self.a.jmp_reg(RAX);
+        self.leaves.push(leave);
+    }
+
+    fn label(&mut self) -> Label {
+        self.a.label()
+    }
+
     /// The stubs and the epilogue; the code bytes.
     pub(super) fn finish(mut self) -> Option<Vec<u8>> {
         for st in std::mem::take(&mut self.stubs) {
@@ -141,6 +176,11 @@ impl Gen {
             self.a.store_imm(false, RBX, CTX_PC, st.pc as i32);
             self.a.store_imm(false, RBX, CTX_SP, st.sp as i32);
             self.a.mov_imm64(RAX, u64::from(st.reason));
+            self.a.jmp(self.epilogue);
+        }
+        for l in std::mem::take(&mut self.leaves) {
+            self.a.bind(l);
+            self.a.mov_imm64(RAX, u64::from(CONTINUE));
             self.a.jmp(self.epilogue);
         }
         self.a.bind(self.epilogue);

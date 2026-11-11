@@ -44,7 +44,7 @@ pub(crate) fn enter(m: MethodRef) {
 pub(crate) fn call(m: MethodRef) {
     enter(m);
     #[cfg(feature = "prof")]
-    sampler::count_call();
+    sampler::count_call(m);
 }
 
 #[inline(always)]
