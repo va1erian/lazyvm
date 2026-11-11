@@ -6,15 +6,13 @@
 //! the instruction and raises whatever it raises. What is left to `step`:
 //! unresolved refs, natives, `synchronized` methods, a static method whose
 //! class is not initialised, `invokespecial` that needs the superclass
-//! lookup (JVMS 6.5), a selection that fails, more than `MAX_ARGS`
+//! lookup (JVMS 6.5), a selection that fails, more than `INLINE_ARGS`
 //! arguments, a frame holding monitors, and every malformed case.
 
+use super::ops_invoke::INLINE_ARGS;
 use crate::class::{InitState, MethodRef, Resolved};
 use crate::value::Value;
 use crate::{ClassId, Vm};
-
-/// Larger argument lists take the full path.
-const MAX_ARGS: usize = 8;
 
 impl Vm {
     /// Runs the invoke or return at the top frame's `pc`, if it is one the
@@ -181,10 +179,10 @@ impl Vm {
         let Some(at) = caller.stack.len().checked_sub(n) else {
             return false;
         };
-        if n > MAX_ARGS {
+        if n > INLINE_ARGS {
             return false;
         }
-        let mut args = [Value::Top; MAX_ARGS];
+        let mut args = [Value::Top; INLINE_ARGS];
         args[..n].copy_from_slice(&caller.stack[at..]);
         if self.push_frame(target, &args[..n]).is_err() {
             return false;

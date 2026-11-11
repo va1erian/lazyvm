@@ -5,8 +5,10 @@ use crate::class::MethodRef;
 use crate::value::Value;
 use crate::{Vm, VmError, VmResult};
 
-/// Arguments copied to the Rust stack for a call; more spill to the heap.
-const INLINE_ARGS: usize = 8;
+/// Arguments copied to the Rust stack for a call; more spill to the heap
+/// (`step`) or take the full path (`fast_call.rs`). Game drawing methods
+/// take a dozen (S11-06).
+pub(super) const INLINE_ARGS: usize = 16;
 
 impl Vm {
     pub(super) fn op_invoke(&mut self, op: u8) -> VmResult<Flow> {
