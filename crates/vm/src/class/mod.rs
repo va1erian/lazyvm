@@ -71,8 +71,8 @@ pub struct Method {
     pub descriptor: Arc<str>,
     pub access: u16,
     /// Set when the class is laid out and never replaced: frames point
-    /// into it (`interp::CodeRef`).
-    pub code: Option<Arc<Code>>,
+    /// into it (`interp::CodeRef`), so it is crate-private; `code()` reads it.
+    pub(crate) code: Option<Arc<Code>>,
     /// Argument slots in the callee's locals, including `this`.
     pub arg_slots: u16,
     /// Arguments as values (`this` included), the operand stack's count.
@@ -84,6 +84,10 @@ pub struct Method {
 }
 
 impl Method {
+    pub fn code(&self) -> Option<&Arc<Code>> {
+        self.code.as_ref()
+    }
+
     pub fn is_static(&self) -> bool {
         self.access & classfile::ACC_STATIC != 0
     }
@@ -114,7 +118,8 @@ pub struct Class {
     pub all_interfaces: Box<[ClassId]>,
     pub file: Option<Arc<ClassFile>>,
     pub fields: Vec<Field>,
-    pub methods: Vec<Method>,
+    /// Crate-private for `interp::CodeRef`'s sake; `methods()` reads them.
+    pub(crate) methods: Vec<Method>,
     /// Default field values of a new instance, superclass fields first.
     pub instance_template: Box<[Value]>,
     pub statics: Vec<Value>,
@@ -135,6 +140,10 @@ pub struct Class {
 }
 
 impl Class {
+    pub fn methods(&self) -> &[Method] {
+        &self.methods
+    }
+
     pub fn is_interface(&self) -> bool {
         self.access & classfile::ACC_INTERFACE != 0
     }

@@ -15,8 +15,11 @@ use classfile::Code;
 /// `Vm::classes` is never removed, a method's `code` is set when its class is
 /// laid out and never replaced (`class/layout.rs`), and frames live in the
 /// VM (its current thread's or a parked thread's), so they go when it goes.
+/// Each of these is crate-private (`Vm::classes`, `Class::methods`,
+/// `Method::code`, `Frame::code`, this type), so only this crate can break
+/// them, and it does not.
 #[derive(Clone, Copy)]
-pub struct CodeRef(NonNull<Code>);
+pub(crate) struct CodeRef(NonNull<Code>);
 
 impl CodeRef {
     pub(crate) fn new(code: &Arc<Code>) -> CodeRef {

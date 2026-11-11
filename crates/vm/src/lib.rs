@@ -90,7 +90,7 @@ pub struct WellKnown {
 }
 
 pub struct Vm {
-    pub classes: Vec<Class>,
+    pub(crate) classes: Vec<Class>,
     pub(crate) by_name: HashMap<Arc<str>, ClassId>,
     /// Names being loaded, to detect `ClassCircularityError`.
     pub(crate) loading: Vec<Arc<str>>,

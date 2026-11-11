@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::atomic::Ordering::Relaxed;
 
 use super::sampler::{
-    CALLS, FAST_INSNS, FAST_RUNS, GC_NANOS, GCS, Key, NATIVES, NONE, SAMPLES, STEP_OPS, is_on,
+    CALLS, FAST_INSNS, FAST_RUNS, GC_NANOS, GCS, Key, NATIVES, NONE, SAMPLES, STEP_OPS, take_report,
 };
 use crate::Vm;
 use crate::class::{ClassId, MethodRef};
@@ -55,7 +55,7 @@ pub(super) fn snapshot(seconds: u64) {
 
 /// Writes the report, the raw samples and the names, once.
 pub(super) fn write(vm: &Vm) {
-    if !is_on() {
+    if !take_report() {
         return;
     }
     let s = samples();

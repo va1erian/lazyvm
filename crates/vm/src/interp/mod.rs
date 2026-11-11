@@ -20,7 +20,7 @@ mod ops_math;
 mod ops_object;
 mod sync;
 
-pub use code_ref::CodeRef;
+pub(crate) use code_ref::CodeRef;
 pub use frame::Frame;
 pub use frame_stack::FrameStack;
 pub use lend::with_lent;

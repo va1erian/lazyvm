@@ -79,8 +79,10 @@ pub(super) fn gc_done(nanos: u64) {
     bump(&GC_NANOS, nanos);
 }
 
-pub(super) fn is_on() -> bool {
-    ON.load(Relaxed)
+/// True the first time it is asked while the profiler is on: the report is
+/// written once, though the launcher and `System.exit` both ask for it.
+pub(super) fn take_report() -> bool {
+    ON.swap(false, Relaxed)
 }
 
 pub(super) fn start() {

@@ -15,7 +15,7 @@ use crate::{VmError, VmResult};
 pub struct Frame {
     pub method: MethodRef,
     pub class: ClassId,
-    pub code: CodeRef,
+    pub(crate) code: CodeRef,
     /// The start of the instruction being executed.
     pub pc: usize,
     /// Where to continue after a call made by this frame returns.
