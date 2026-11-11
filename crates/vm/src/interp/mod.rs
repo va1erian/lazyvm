@@ -10,6 +10,7 @@ mod fast_call;
 mod fast_field;
 mod fast_wide;
 mod frame;
+mod frame_stack;
 mod lend;
 mod ops_array;
 mod ops_basic;
@@ -21,6 +22,7 @@ mod sync;
 
 pub use code_ref::CodeRef;
 pub use frame::Frame;
+pub use frame_stack::FrameStack;
 pub use lend::with_lent;
 
 use crate::class::MethodRef;
@@ -40,11 +42,6 @@ const OVERFLOW_HEADROOM: usize = 64;
 /// The same allowance for nested calls from Rust and for frame slots.
 const OVERFLOW_NESTING: usize = 16;
 const OVERFLOW_SLOTS: usize = 64 * 1024;
-/// Locals and stack buffers kept for the next call; deeper recursion
-/// allocates. Game code calls 8 to 12 deep in a tick, and with 4 kept, a
-/// sixth of `tick`'s time went to the allocator (S11-06).
-const MAX_SPARE_BUFFERS: usize = 64;
-const MAX_SPARE_SLOTS: usize = 32;
 
 impl Vm {
     /// Calls a method from Rust and runs it to completion. Reference
@@ -110,10 +107,8 @@ impl Vm {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let arg_slots = method.arg_slots;
-        let (locals, stack) = self.spare_buffers.pop().unwrap_or_default();
-        let frame = Frame::new(m, code, arg_slots, args, locals, stack)?;
+        self.frames.push(m, code, arg_slots, args)?;
         self.frame_slots += slots;
-        self.frames.push(frame);
         crate::prof::call(m);
         Ok(())
     }
@@ -130,16 +125,12 @@ impl Vm {
 
     #[inline]
     pub(crate) fn pop_frame(&mut self) {
-        if let Some(f) = self.frames.pop() {
+        if let Some(f) = self.frames.retire() {
             self.frame_slots -= f.locals.len() + usize::from(f.code.max_stack);
             if !f.monitors.is_empty() || f.method_lock.is_some() {
-                self.release_frame_monitors(&f);
-            }
-            if self.spare_buffers.len() < MAX_SPARE_BUFFERS
-                && f.locals.capacity() <= MAX_SPARE_SLOTS
-                && f.stack.capacity() <= MAX_SPARE_SLOTS
-            {
-                self.spare_buffers.push((f.locals, f.stack));
+                let monitors = std::mem::take(&mut f.monitors);
+                let lock = f.method_lock.take();
+                self.release_frame_monitors(&monitors, lock);
             }
         }
     }

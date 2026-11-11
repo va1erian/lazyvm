@@ -31,7 +31,7 @@ impl Vm {
         if self.frames.len() <= base + 1 {
             return false;
         }
-        let [.., caller, callee] = self.frames.as_mut_slice() else {
+        let [.., caller, callee] = &mut self.frames[..] else {
             return false;
         };
         if !callee.monitors.is_empty() || callee.method_lock.is_some() {
@@ -187,7 +187,7 @@ impl Vm {
         if self.push_frame(target, &args[..n]).is_err() {
             return false;
         }
-        let [.., caller, _] = self.frames.as_mut_slice() else {
+        let [.., caller, _] = &mut self.frames[..] else {
             return false;
         };
         caller.stack.truncate(at);
