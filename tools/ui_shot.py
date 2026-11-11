@@ -30,8 +30,15 @@ WM_CLOSE = 0x0010
 PW_RENDERFULLCONTENT = 2
 
 
-def find_window(pid: int) -> int | None:
-    """The largest visible top-level window of process `pid` (toolkits make small helpers)."""
+def title_of(hwnd: int) -> str:
+    buf = ctypes.create_unicode_buffer(512)
+    user32.GetWindowTextW(hwnd, buf, 512)
+    return buf.value
+
+
+def find_window(pid: int, title: str | None = None) -> int | None:
+    """The largest visible top-level window of process `pid` (toolkits make small helpers),
+    or the one titled `title`."""
     found: list[tuple[int, int]] = []
     proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 
@@ -42,7 +49,7 @@ def find_window(pid: int) -> int | None:
             rect = wintypes.RECT()
             user32.GetClientRect(hwnd, ctypes.byref(rect))
             area = (rect.right - rect.left) * (rect.bottom - rect.top)
-            if area > 0:
+            if area > 0 and (title is None or title_of(hwnd) == title):
                 found.append((area, hwnd))
         return True
 
@@ -97,6 +104,7 @@ def main() -> None:
     parser.add_argument("--wait", type=float, default=2.0, help="seconds to wait once the window shows")
     parser.add_argument("--resize", type=int, default=0, help="resize the window this many times first")
     parser.add_argument("--min-non-blank", type=float, default=0.01)
+    parser.add_argument("--title", help="capture the window with this title (a message box)")
     parser.add_argument("program", nargs=argparse.REMAINDER, help="-- then the VM's arguments")
     args = parser.parse_args()
     if sys.platform != "win32":
@@ -109,7 +117,7 @@ def main() -> None:
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     hwnd = None
     while hwnd is None and time.perf_counter() - started < 30 and proc.poll() is None:
-        hwnd = find_window(proc.pid)
+        hwnd = find_window(proc.pid, args.title)
         time.sleep(0.01)
     if hwnd is None:
         out, err = proc.communicate(timeout=5) if proc.poll() is None else proc.communicate()

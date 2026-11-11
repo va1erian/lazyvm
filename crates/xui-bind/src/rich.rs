@@ -47,6 +47,10 @@ pub mod op {
     pub const INSERT_IMAGE: i32 = 119;
     pub const WORDS: i32 = 121;
     pub const GET_WRAP: i32 = 122;
+    /// The style at the start of the document: `{bits, size * 100}`.
+    pub const GET_STYLE: i32 = 123;
+    /// The family the start of the document has, or null.
+    pub const GET_FAMILY: i32 = 124;
 }
 
 /// `EXEC`'s argument-free commands, in `lazy.ui.RichText`'s order.
@@ -395,6 +399,13 @@ pub fn call(e: &RichTextEditor<Msg>, op: i32, i: i32, d: f64, arg: Arg) -> Resul
             _ => Err("picture bytes are required".into()),
         },
         op::WORDS => Ok(Ret::Int(e.with_document(words))),
+        op::GET_STYLE | op::GET_FAMILY => {
+            let m = e.with_document(|d| style(0, &d.style_summary(&Selection::default())));
+            Ok(match op {
+                op::GET_STYLE => Ret::Ints(vec![m.i, (m.d * 100.0).round() as i32]),
+                _ => m.s.map_or(Ret::None, Ret::Str),
+            })
+        }
         crate::props::op::FOCUS => {
             e.focus();
             Ok(Ret::None)

@@ -31,7 +31,8 @@ public final class RichText extends Widget {
     private static final int LIST = 106, WRAP = 107, PAGE_VIEW = 108, PAGE = 109, GET_PAGE = 110;
     private static final int PAGE_INFO = 111, TABLE_CURSOR = 112, INSERT_TABLE = 113, TABLE_SWITCH = 114;
     private static final int GET_JSON = 115, SET_JSON = 116, SET_PLAIN = 117, MARKDOWN = 118;
-    private static final int INSERT_IMAGE = 119, WORDS = 121, GET_WRAP = 122;
+    private static final int INSERT_IMAGE = 119, WORDS = 121, GET_WRAP = 122, GET_STYLE = 123;
+    private static final int GET_FAMILY = 124;
 
     private boolean pageView = true;
     private IntConsumer onChange;
@@ -245,6 +246,15 @@ public final class RichText extends Widget {
      */
     public void insertImage(byte[] file, String alt) {
         call(INSERT_IMAGE, new Object[] {Ui.nonNull(alt, "alt"), Ui.nonNull(file, "file").clone()});
+    }
+
+    /**
+     * The formatting at the start of the document, as {@link #onStyle} would report it for a
+     * caret there: what to show once a document is loaded.
+     */
+    public Style startStyle() {
+        int[] s = (int[]) call(GET_STYLE, null);
+        return new Style(s[0], s[1] / 100.0, (String) call(GET_FAMILY, null));
     }
 
     /** The number of words in the document. */

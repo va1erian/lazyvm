@@ -134,6 +134,7 @@ final class Documents {
         app.refreshTable();
         app.refreshPages();
         app.editor.focus();
+        app.selection(app.editor.startStyle());
     }
 
     private void fail(String what, String path, String error) {

@@ -13,7 +13,9 @@ import lazy.ui.Window;
  * <pre>lazyvm-ui -jar writer.jar [--serif=FAMILY] [--mono=FAMILY] [file.lzw]</pre>
  *
  * {@code --serif} and {@code --mono} name the font families Serif and Mono stand for on this
- * system; other options ({@code --client}, which LazyOS passes to a desktop app) are ignored.
+ * system, a {@code +} for each space (LazyOS splits its launch line on spaces). As LazyOS's own
+ * apps do, other {@code -} options ({@code --client}) and the {@code attempt=N} that LazyOS
+ * appends are skipped, and the file must be an absolute path.
  */
 public final class Writer {
     /** The paragraph kinds the picker offers, in RichText's order. */
@@ -56,9 +58,10 @@ public final class Writer {
     public static void main(String[] args) {
         String serif = "serif", mono = "monospace", file = null;
         for (String a : args) {
-            if (a.startsWith("--serif=")) serif = a.substring(8);
-            else if (a.startsWith("--mono=")) mono = a.substring(7);
-            else if (!a.startsWith("--") && file == null) file = a;
+            if (a.startsWith("--serif=")) serif = a.substring(8).replace('+', ' ');
+            else if (a.startsWith("--mono=")) mono = a.substring(7).replace('+', ' ');
+            else if (file == null && !a.startsWith("-") && !a.startsWith("attempt=")
+                && new java.io.File(a).isAbsolute()) file = a;
         }
         final Writer w = new Writer(960, 600, serif, mono);
         if (file != null) {

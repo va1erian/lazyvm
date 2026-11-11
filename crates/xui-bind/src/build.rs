@@ -43,6 +43,7 @@ pub mod op {
     pub const TABS: i32 = 32;
     pub const GROUP: i32 = 33;
     pub const CANVAS: i32 = 40;
+    #[cfg(feature = "rich-text")]
     pub const RICH: i32 = 50;
 }
 

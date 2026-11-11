@@ -2,10 +2,10 @@
 `lazyvm-ui` (tools/lazyos_ui.py), `lazyrt.jar` and the sample apps' jars, in the checkout's
 default stage, `<LazyOS>/target/lazyvm/stage`:
 
-    bin/lazyvm  bin/lazyvm-ui  lib/lazyrt.jar  apps/writer.jar  tests/
+    bin/lazyvm  bin/lazyvm-ui  lib/lazyrt.jar  apps/writer.jar  apps/notes.jar  tests/
 
-LazyOS then packages `apps/writer.jar` as the core package `os.lazy.writerj` (`abi = "lazyvm"`)
-and an image built with `LAZYOS_LAZYVM=1` on the desktop ships it:
+LazyOS then packages the jars as the core packages `os.lazy.writerj` and `os.lazy.notesj`
+(`abi = "lazyvm"`), and an image built with `LAZYOS_LAZYVM=1` on the desktop ships them:
 
     python tools/lazyos_demo.py --lazyos <LazyOS checkout>
     cd <LazyOS checkout>
@@ -29,7 +29,7 @@ import sample  # noqa: E402
 import size  # noqa: E402
 from common import DIST, die  # noqa: E402
 
-APPS = ["writer"]
+APPS = ["writer", "notes"]
 
 
 def stage(lazyos: Path) -> Path:

@@ -78,7 +78,7 @@ written for AWT, whose loop is one thread doing tick, render and sleep.
 | `-Dlazy.gfx=` | Where | What |
 |---|---|---|
 | (unset) | Windows | A real window: winit for the window and input, softbuffer for the pixels |
-| (unset) | LazyOS | Not yet: `open` throws `IllegalStateException`. The host will speak xuid's `os.lazy.display.v1` from `crates/lazyvm-lazyos` (S9-04, needs LOS-02) |
+| (unset) | LazyOS | Not yet: `open` throws `IllegalStateException`. `crates/lazyvm-lazyos` hosts `lazy.ui` there since S9-04; a `lazy.gfx` host on it is still to do |
 | `headless` | both | No window. Frames stay in memory for `capture()`; `-Dlazy.gfx.dump=<file>` writes the last one as a binary PPM when the program calls `close()` (not at exit) |
 
 winit and softbuffer are what `xui-canvas` uses, so S9-03 can move the
