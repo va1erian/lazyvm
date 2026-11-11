@@ -1,0 +1,17 @@
+// Streams: type arguments inferred through a pipeline, with no casts.
+import java.util.*;
+import java.util.stream.*;
+
+List<String> words = ["siesta", "lazy", "os", "vm", "xui"];
+List<String> longWords = words.stream().filter(w -> w.length() > 2).map(String::toUpperCase).collect(Collectors.toList());
+System.out.println(longWords);
+int total = words.stream().mapToInt(String::length).sum();
+System.out.println(total);
+Map<Integer, List<String>> byLength = words.stream().collect(Collectors.groupingBy(String::length));
+System.out.println(new TreeMap<>(byLength));
+String joined = words.stream().sorted().collect(Collectors.joining(", ", "[", "]"));
+System.out.println(joined);
+Optional<String> first = words.stream().filter(w -> w.startsWith("x")).findFirst();
+System.out.println(first.orElse("none") + " " + first.isPresent());
+List<Integer> squares = IntStream.rangeClosed(1, 5).map(i -> i * i).boxed().collect(Collectors.toList());
+System.out.println(squares);

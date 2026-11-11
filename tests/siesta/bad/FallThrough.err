@@ -1,0 +1,1 @@
+2:24: use `->`: `switch` cases do not fall through

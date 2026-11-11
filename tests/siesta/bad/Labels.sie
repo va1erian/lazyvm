@@ -1,0 +1,3 @@
+void f() {
+    while (true) { break outer; }
+}

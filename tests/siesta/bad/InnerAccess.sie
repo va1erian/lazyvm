@@ -1,0 +1,6 @@
+class Outer {
+    int x = 1;
+    static class In {
+        int get() { return x; }
+    }
+}

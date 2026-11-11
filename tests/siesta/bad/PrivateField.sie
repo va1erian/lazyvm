@@ -1,0 +1,4 @@
+class P {
+    int secret = 1;
+}
+System.out.println(new P().secret);

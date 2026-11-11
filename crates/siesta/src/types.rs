@@ -124,6 +124,13 @@ impl Type {
     }
 }
 
+/// `t` with its article, for messages: "an int", "a String".
+pub fn with_article(t: &Type) -> String {
+    let s = t.to_string();
+    let vowel = s.chars().next().is_some_and(|c| "aeiouAEIOU".contains(c));
+    format!("{} {s}", if vowel { "an" } else { "a" })
+}
+
 pub fn prim_descriptor(p: Prim) -> char {
     match p {
         Prim::Boolean => 'Z',

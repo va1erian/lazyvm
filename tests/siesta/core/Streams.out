@@ -1,0 +1,6 @@
+[SIESTA, LAZY, XUI]
+17
+{2=[os, vm], 3=[xui], 4=[lazy], 6=[siesta]}
+[lazy, os, siesta, vm, xui]
+xui true
+[1, 4, 9, 16, 25]

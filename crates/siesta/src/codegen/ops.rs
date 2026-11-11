@@ -255,7 +255,11 @@ impl Body<'_> {
         if !self.assignable(from, to, true) {
             return Err(Diag::new(
                 span,
-                format!("a {from} cannot be used as a {to}"),
+                format!(
+                    "{} cannot be used as {}",
+                    crate::types::with_article(from),
+                    crate::types::with_article(to)
+                ),
             ));
         }
         match (from, to) {
