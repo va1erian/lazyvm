@@ -77,7 +77,8 @@ impl World {
         let Some(c) = self.class(name) else {
             return Vec::new();
         };
-        let raw = args.is_empty() || args.len() != c.sig.params.len();
+        // Raw only when the class is generic and used without its arguments.
+        let raw = !c.sig.params.is_empty() && args.len() != c.sig.params.len();
         let map: HashMap<Rc<str>, Type> = if raw {
             HashMap::new()
         } else {
@@ -166,11 +167,19 @@ impl World {
                     if out.iter().any(|o| same_params(&o.info.desc, &m.desc)) {
                         continue;
                     }
+                    // A method's own type variables shadow the class's, and
+                    // a static method ignores the receiver's arguments.
+                    let on = if m.is_static() {
+                        Type::Class(n.clone(), Vec::new())
+                    } else {
+                        cur.clone()
+                    };
+                    let sub = |t: &Type| substitute_except(&c, &on, t, &m.tparams);
                     out.push(Method {
                         owner: c.clone(),
                         info: m.clone(),
-                        params: m.params.iter().map(|p| substitute(&c, &cur, p)).collect(),
-                        ret: substitute(&c, &cur, &m.ret),
+                        params: m.params.iter().map(sub).collect(),
+                        ret: sub(&m.ret),
                     });
                 }
             }
@@ -237,31 +246,37 @@ impl World {
 
 /// `member` as seen on `on`, a use of `owner`'s class with arguments.
 fn substitute(owner: &ClassInfo, on: &Type, member: &Type) -> Type {
-    match on {
-        Type::Class(_, args) if !args.is_empty() && args.len() == owner.sig.params.len() => {
-            let map: HashMap<Rc<str>, Type> = owner
-                .sig
-                .params
-                .iter()
-                .map(|p| p.name.clone())
-                .zip(args.iter().cloned())
-                .collect();
-            member.subst(&map)
-        }
-        Type::Class(..) if !owner.sig.params.is_empty() => raw_member(owner, member),
-        _ => member.clone(),
-    }
+    substitute_except(owner, on, member, &[])
 }
 
-/// A member of a raw type is erased (JLS 4.8), but only the class's own
-/// variables: a generic method's variables stay for inference.
-fn raw_member(owner: &ClassInfo, member: &Type) -> Type {
-    let map: HashMap<Rc<str>, Type> = owner
-        .sig
-        .params
-        .iter()
-        .map(|p| (p.name.clone(), p.bound.erasure()))
-        .collect();
+/// The same, leaving alone the variables named in `own` (a generic
+/// method's), which shadow the class's. A member of a raw type is erased
+/// (JLS 4.8), but a generic method's variables stay for inference.
+fn substitute_except(
+    owner: &ClassInfo,
+    on: &Type,
+    member: &Type,
+    own: &[crate::sig::TypeParam],
+) -> Type {
+    let keep = |n: &Rc<str>| !own.iter().any(|p| p.name == *n);
+    let map: HashMap<Rc<str>, Type> = match on {
+        Type::Class(_, args) if !args.is_empty() && args.len() == owner.sig.params.len() => owner
+            .sig
+            .params
+            .iter()
+            .map(|p| p.name.clone())
+            .zip(args.iter().cloned())
+            .filter(|(n, _)| keep(n))
+            .collect(),
+        Type::Class(..) => owner
+            .sig
+            .params
+            .iter()
+            .filter(|p| keep(&p.name))
+            .map(|p| (p.name.clone(), p.bound.erasure()))
+            .collect(),
+        _ => HashMap::new(),
+    };
     member.subst(&map)
 }
 

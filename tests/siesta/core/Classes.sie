@@ -1,0 +1,74 @@
+// Classes, constructors, inheritance, interfaces, static nested classes,
+// generics of our own, enums and bridges.
+import java.util.*;
+
+interface Shape {
+    double area();
+    default String describe() { return getClass().getSimpleName() + " " + area(); }
+    static Shape square(double side) { return new Rect(side, side); }
+}
+
+class Rect implements Shape, Comparable<Rect> {
+    final double w;
+    final double h;
+    Rect(double w, double h) { this.w = w; this.h = h; }
+    double area() { return w * h; }
+    int compareTo(Rect other) { return Double.compare(area(), other.area()); }
+    String toString() { return "Rect(" + w + "x" + h + ")"; }
+}
+
+class Circle implements Shape {
+    private double r;
+    public static int made = 0;
+    Circle(double r) { this.r = r; made++; }
+    double area() { return 3 * r * r; }
+}
+
+abstract class Animal {
+    String name;
+    Animal(String name) { this.name = name; }
+    abstract String sound();
+    String speak() { return name + " says " + sound(); }
+}
+
+class Dog extends Animal {
+    Dog() { super("dog"); }
+    String sound() { return "woof"; }
+}
+
+class Box<T> {
+    T value;
+    Box(T value) { this.value = value; }
+    T get() { return value; }
+    <R> Box<R> map(java.util.function.Function<T, R> f) { return new Box<>(f.apply(value)); }
+}
+
+enum Color {
+    RED, GREEN(7), BLUE;
+    public int code;
+    Color() { code = -1; }
+    Color(int c) { code = c; }
+}
+
+class Counter {
+    static class Step {
+        public int by = 2;
+    }
+    public int n = 10;
+}
+
+List<Rect> rects = [new Rect(2, 3), new Rect(1, 1), (Rect) Shape.square(2)];
+Collections.sort(rects);
+System.out.println(rects);
+Shape c = new Circle(1);
+new Circle(2);
+System.out.println(c.describe() + " " + Circle.made);
+System.out.println(new Dog().speak());
+Box<String> b = new Box<>("siesta");
+Box<Integer> len = b.map(s -> s.length());
+System.out.println(b.get() + " " + len.get());
+for (Color k : Color.values()) {
+    System.out.print(k + ":" + k.ordinal() + ":" + k.code + " ");
+}
+System.out.println(Color.valueOf("BLUE").name());
+System.out.println(new Counter().n + new Counter.Step().by);

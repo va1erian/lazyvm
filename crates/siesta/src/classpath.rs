@@ -13,7 +13,7 @@ use classfile::{ACC_VARARGS, ClassFile, Member};
 use crate::sig::{self, ClassSig, Scope, TypeParam};
 use crate::types::Type;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct FieldInfo {
     pub name: String,
     pub access: u16,
@@ -45,7 +45,7 @@ impl MethodInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ClassInfo {
     pub name: Rc<str>,
     pub access: u16,

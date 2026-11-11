@@ -50,6 +50,10 @@ jobs:
         run: python tools/test.py
         env:
           LAZYVM_JIT: all
+      - name: Siesta suite (docs/siesta.md section 10)
+        run: python tools/siesta_test.py
+      - name: size budget (siestac)
+        run: python tools/size.py --siestac target/release/siestac.exe
       - name: launcher (-jar, manifests, jar errors)
         run: python tools/launcher_test.py
       - name: tight loop on malformed bytecode

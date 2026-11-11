@@ -1,0 +1,46 @@
+// if, loops, switch with arrows, break and continue, ?: and short circuits.
+int count = 0;
+for (int i = 0; i < 20; i++) {
+    if (i % 3 == 0) continue;
+    if (i > 14) break;
+    count += i;
+}
+System.out.println(count);
+int k = 0;
+while (true) {
+    k++;
+    if (k == 5) break;
+}
+do {
+    k += 10;
+} while (k < 30);
+System.out.println(k);
+for (int day = 0; day < 8; day++) {
+    switch (day) {
+        case 0, 6 -> System.out.print("weekend ");
+        case 3 -> {
+            System.out.print("middle ");
+        }
+        case 7 -> {
+            System.out.print("none ");
+            break;
+        }
+        default -> System.out.print("work ");
+    }
+}
+System.out.println();
+String word = "two";
+switch (word) {
+    case "one" -> System.out.println(1);
+    case "two" -> System.out.println(2);
+    default -> System.out.println("?");
+}
+int x = 5;
+String size = x > 3 ? "big" : "small";
+System.out.println(size + " " + (x > 10 ? 1 : x > 4 ? 2 : 3));
+Object o = "text";
+if (o instanceof String t && t.length() == 4) {
+    System.out.println("string of 4: " + t);
+}
+boolean flag = x > 3 && x < 10;
+System.out.println(flag + " " + !flag + " " + (x == 5 || x / 0 == 1));

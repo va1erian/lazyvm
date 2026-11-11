@@ -5,12 +5,15 @@
 
 pub mod ast;
 pub mod classpath;
+pub mod codegen;
+pub mod compile;
 pub mod declare;
 pub mod diag;
 pub mod lex;
 pub mod parse;
 pub mod resolve;
 pub mod sig;
+pub mod signatures;
 pub mod types;
 pub mod world;
 

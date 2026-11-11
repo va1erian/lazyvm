@@ -123,3 +123,13 @@ fn supertypes_carry_type_arguments() {
         .unwrap_or_else(|| panic!());
     assert_eq!(out, Type::class("java/io/PrintStream"));
 }
+
+#[test]
+#[ignore = "needs dist/lazyrt.jar: python tools/siesta_test.py runs it"]
+fn static_generic_methods_are_found() {
+    let w = world();
+    let c = w.class("java/util/Collections");
+    assert!(c.is_some(), "{:?}", w.broken.borrow());
+    let sort = w.methods(&Type::class("java/util/Collections"), "sort");
+    assert_eq!(sort.len(), 2, "{sort:?}");
+}

@@ -9,6 +9,11 @@ the `.pdb`, so it is measured as built; an ELF binary is stripped first with
 
     python tools/size.py                                   # the host release binary
     python tools/size.py --exe target/x86_64-unknown-linux-musl/release/lazyvm
+    python tools/size.py --siestac target/x86_64-unknown-linux-musl/release/siestac
+
+`--siestac` checks the Siesta compiler instead (docs/siesta.md section 9):
+stripped as above but not compressed, under SIESTAC_BUDGET bytes. It is a
+separate program, so it does not count against the VM's budget.
 """
 
 from __future__ import annotations
@@ -26,6 +31,7 @@ from common import DIST, die, lazyvm_exe  # noqa: E402
 
 BUDGET = 4_000_000
 UI_BUDGET = 6_000_000
+SIESTAC_BUDGET = 2_000_000
 WARN_AT = 0.8
 
 
@@ -48,7 +54,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--exe", type=Path, default=lazyvm_exe())
     parser.add_argument("--jar", type=Path, default=DIST / "lazyrt.jar")
+    parser.add_argument("--siestac", type=Path, help="check the Siesta compiler's budget instead")
     args = parser.parse_args()
+    if args.siestac:
+        check_siestac(args.siestac)
+        return
     for path in (args.exe, args.jar):
         if not path.is_file():
             die(f"{path} does not exist; build it first (cargo build --release, tools/lazyrt.py)")
@@ -61,6 +71,17 @@ def main() -> None:
     if total >= budget:
         die("over the size budget (decisions.md D14): shrink something before adding more")
     if total > budget * WARN_AT:
+        print(f"size: warning: above {WARN_AT:.0%} of the budget")
+
+
+def check_siestac(exe: Path) -> None:
+    if not exe.is_file():
+        die(f"{exe} does not exist; build it first (cargo build --release -p siesta)")
+    size = len(shipped_binary(exe))
+    print(f"size: siestac {size:,} B of {SIESTAC_BUDGET:,} B ({size / SIESTAC_BUDGET:.0%})")
+    if size >= SIESTAC_BUDGET:
+        die("siestac is over its size budget (docs/siesta.md section 9): cut a feature, do not raise it")
+    if size > SIESTAC_BUDGET * WARN_AT:
         print(f"size: warning: above {WARN_AT:.0%} of the budget")
 
 
