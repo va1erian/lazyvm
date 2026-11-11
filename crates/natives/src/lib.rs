@@ -32,6 +32,9 @@ mod unicode_decode;
 
 use vm::{Ref, Value, Vm, VmError, VmResult};
 
+/// A new `byte[]` holding `data`, for natives outside this crate.
+pub use reflect::byte_array;
+
 /// Registers every native with `vm`.
 pub fn register_all(vm: &mut Vm) {
     lang_object::register(vm);

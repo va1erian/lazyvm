@@ -14,3 +14,10 @@ workspace = true
 [dependencies]
 xui-core = { git = "https://github.com/va1erian/xui", rev = "832c61f29419bf31a0518a47e050b15c97b316e3" }
 xui-canvas = { git = "https://github.com/va1erian/xui", rev = "832c61f29419bf31a0518a47e050b15c97b316e3", default-features = false }
+# `lazy.ui.RichText`, the editor a word processor needs (docs/ui.md,
+# "RichText"); its JSON format needs `serde`.
+xui-rich-text = { git = "https://github.com/va1erian/xui", rev = "832c61f29419bf31a0518a47e050b15c97b316e3", optional = true, features = ["serde"] }
+
+[features]
+default = ["rich-text"]
+rich-text = ["dep:xui-rich-text"]

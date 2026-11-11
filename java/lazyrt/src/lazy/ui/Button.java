@@ -1,8 +1,12 @@
 package lazy.ui;
 
-/** A push button. */
+/**
+ * A push button: a caption, an icon, or both. Icons are Lucide names as xui spells them
+ * ({@code "FilePlus"}, {@code "Bold"}).
+ */
 public final class Button extends Widget {
-    private String text;
+    private String text, icon;
+    private boolean primary;
     private Runnable onClick;
 
     Button(String text) {
@@ -16,8 +20,23 @@ public final class Button extends Widget {
 
     /** Shows {@code text} as the caption instead. */
     public Button text(String text) {
-        this.text = Ui.nonNull(text, "text");
-        if (mounted()) Ui.setText0(id, text);
+        Ui.nonNull(text, "text");
+        if (mounted()) call(Op.TEXT, text);
+        this.text = text;
+        return this;
+    }
+
+    /** Shows the Lucide icon {@code name}, before the window opens. */
+    public Button icon(String name) {
+        if (mounted()) throw new IllegalStateException("set the icon before the window opens");
+        icon = Ui.nonNull(name, "name");
+        return this;
+    }
+
+    /** Draws the button as the window's main action, before the window opens. */
+    public Button primary() {
+        if (mounted()) throw new IllegalStateException("set primary before the window opens");
+        primary = true;
         return this;
     }
 
@@ -30,13 +49,15 @@ public final class Button extends Widget {
 
     @Override
     void encode(Encoder out) {
-        out.node(Encoder.BUTTON, this);
+        head(out, Encoder.BUTTON);
         out.string(text);
-        out.op(onClick != null ? 1 : 0);
+        out.string(icon);
+        out.flag(primary);
+        out.flag(onClick != null);
     }
 
     @Override
-    void fire(int kind) {
+    void fire(int kind, int i, double d, String s) {
         if (kind == Ui.CLICK && onClick != null) onClick.run();
     }
 }

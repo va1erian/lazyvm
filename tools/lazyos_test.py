@@ -31,32 +31,39 @@ WORK = BUILD / "lazyos"  # stage, command list and results; bench.py uses its ow
 OS_ROOT = "/system/lazyvm"
 
 
-def build_musl() -> Path:
-    cmd = ["cargo", "build", "-q", "--release", "-p", "launcher", "--target", TARGET]
+def build_musl(package: str = "launcher") -> Path:
+    """The musl `lazyvm`, or `lazyvm-ui` (headless there) with `package="launcher-ui"`."""
+    cmd = ["cargo", "build", "-q", "--release", "-p", package, "--target", TARGET]
     if subprocess.run(cmd, cwd=ROOT).returncode != 0:
         die("musl build failed")
-    return ROOT / "target" / TARGET / "release" / "lazyvm"
+    name = "lazyvm-ui" if package == "launcher-ui" else "lazyvm"
+    return ROOT / "target" / TARGET / "release" / name
 
 
-def stage(exe: Path, tests_jar: Path | None = None, work: Path = WORK) -> None:
-    """The layout LazyOS embeds under /system/lazyvm; `tests_jar` is the jar of programs to run."""
+def stage(exe: Path, tests_jar: Path | None = None, work: Path = WORK,
+          ui_exe: Path | None = None) -> None:
+    """The layout LazyOS embeds under /system/lazyvm; `tests_jar` is the jar of programs to run,
+    and `ui_exe` the `lazyvm-ui` beside `lazyvm` (LOS-02)."""
     stage_dir = work / "stage"
     shutil.rmtree(stage_dir, ignore_errors=True)
     for sub in ("bin", "lib", "tests"):
         (stage_dir / sub).mkdir(parents=True)
     shutil.copyfile(exe, stage_dir / "bin" / "lazyvm")
+    if ui_exe is not None:
+        shutil.copyfile(ui_exe, stage_dir / "bin" / "lazyvm-ui")
     shutil.copyfile(DIST / "lazyrt.jar", stage_dir / "lib" / "lazyrt.jar")
     shutil.copyfile(tests_jar or testlib.tests_jar(), stage_dir / "tests" / "tests.jar")
 
 
-def command_line(main_class: str, args: list[str], vm_args: list[str]) -> str:
-    argv = [f"{OS_ROOT}/bin/lazyvm", f"-Xbootclasspath:{OS_ROOT}/lib/lazyrt.jar", *vm_args,
+def command_line(main_class: str, args: list[str], vm_args: list[str], exe: str = "lazyvm") -> str:
+    argv = [f"{OS_ROOT}/bin/{exe}", f"-Xbootclasspath:{OS_ROOT}/lib/lazyrt.jar", *vm_args,
             "-cp", f"{OS_ROOT}/tests/tests.jar", main_class, *args]
     return " ".join(shlex.quote(a) for a in argv)
 
 
 def command(test: testlib.Test) -> str:
-    return command_line(test.main_class, test.args, test.vm_args)
+    exe = "lazyvm-ui" if test.needs == "ui" else "lazyvm"
+    return command_line(test.main_class, test.args, test.vm_args, exe)
 
 
 def run_commands(lazyos: Path, lines: list[str], timeout: int, no_build: bool, work: Path = WORK,
@@ -104,11 +111,12 @@ def main() -> None:
     args = parser.parse_args()
     if args.lazyos is None or not (args.lazyos / "tools" / "lazyvm" / "run.py").is_file():
         die("pass --lazyos <LazyOS checkout with tools/lazyvm/run.py> or set LAZYOS_DIR")
-    wanted = ("net", "lazyos-net") if args.net else ("",)
+    wanted = ("net", "lazyos-net") if args.net else ("", "ui")
     tests = [t for t in testlib.discover(args.filter) if t.golden.is_file() and t.needs in wanted]
     if not args.no_build:
         testlib.build(tests)
-        stage(build_musl())
+        ui = build_musl("launcher-ui") if any(t.needs == "ui" for t in tests) else None
+        stage(build_musl(), ui_exe=ui)
     out = run_commands(args.lazyos, [command(t) for t in tests], args.timeout, args.no_build, net=args.net)
     failed = 0
     for n, test in enumerate(tests, start=1):

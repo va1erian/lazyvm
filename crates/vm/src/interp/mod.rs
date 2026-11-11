@@ -11,7 +11,6 @@ mod fast_field;
 mod fast_wide;
 mod frame;
 mod frame_stack;
-mod lend;
 mod ops_array;
 mod ops_basic;
 mod ops_branch;
@@ -23,7 +22,6 @@ mod sync;
 pub(crate) use code_ref::CodeRef;
 pub use frame::Frame;
 pub use frame_stack::FrameStack;
-pub use lend::with_lent;
 
 use crate::class::MethodRef;
 use crate::prof::{self, Phase};

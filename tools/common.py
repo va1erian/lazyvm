@@ -47,21 +47,22 @@ def java_sources(root: Path) -> list[Path]:
     return sorted(root.rglob("*.java"))
 
 
-def lazyvm_exe(release: bool = True, target: str | None = None) -> Path:
-    """Path of the built launcher (`cargo build -p launcher`)."""
+def lazyvm_exe(release: bool = True, target: str | None = None, name: str = "lazyvm") -> Path:
+    """Path of a built launcher: `lazyvm` (`-p launcher`) or `lazyvm-ui` (`-p launcher-ui`)."""
     profile = "release" if release else "debug"
     base = ROOT / "target"
     if target:
         base = base / target
     suffix = "" if target and "linux" in target else EXE
-    return base / profile / f"lazyvm{suffix}"
+    return base / profile / f"{name}{suffix}"
 
 
-def cargo_build_launcher(release: bool = True) -> Path:
-    """Build the launcher and return its path; exit on a build failure."""
-    cmd = ["cargo", "build", "-q", "-p", "launcher"]
+def cargo_build_launcher(release: bool = True, ui: bool = False) -> Path:
+    """Build `lazyvm`, or `lazyvm-ui` with `ui`, and return its path; exit on a build failure."""
+    package, name = ("launcher-ui", "lazyvm-ui") if ui else ("launcher", "lazyvm")
+    cmd = ["cargo", "build", "-q", "-p", package]
     if release:
         cmd.append("--release")
     if subprocess.run(cmd, cwd=ROOT).returncode != 0:
-        die("cargo build -p launcher failed")
-    return lazyvm_exe(release)
+        die(f"cargo build -p {package} failed")
+    return lazyvm_exe(release, name=name)
