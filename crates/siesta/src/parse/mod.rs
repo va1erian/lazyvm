@@ -123,10 +123,16 @@ impl Parser {
         }
     }
 
+    /// A name. `async` and `await` are contextual, like Java's `var`: a
+    /// name too, so `lazy.async` can be imported.
     fn ident(&mut self) -> Result<Ident> {
         match self.tok(0).clone() {
             Tok::Ident(name) => Ok(Ident {
                 name,
+                span: self.bump().span,
+            }),
+            Tok::Kw(k @ (Kw::Async | Kw::Await)) => Ok(Ident {
+                name: k.text().into(),
                 span: self.bump().span,
             }),
             Tok::Kw(k) => self.fail(&format!("`{}` is a reserved word", k.text())),

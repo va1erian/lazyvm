@@ -50,6 +50,7 @@ impl ClassGen<'_> {
             dry: false,
             name: name.to_string(),
             ret_seen: None,
+            async_cx: None,
         }
     }
 
@@ -108,10 +109,7 @@ impl ClassGen<'_> {
             return Ok(m);
         };
         if sm.decl.mods.bits & crate::ast::mods::ASYNC != 0 {
-            return Err(Diag::new(
-                span,
-                "`async` methods are not supported yet (S16-07)",
-            ));
+            return self.async_method(sm, stmts);
         }
         if info.name == "<init>" {
             return self.constructor(Some(sm));
@@ -137,7 +135,7 @@ impl ClassGen<'_> {
         Ok(m)
     }
 
-    fn method_sig(&mut self, sm: &SourceMethod) -> Vec<(String, Vec<u8>)> {
+    pub(super) fn method_sig(&mut self, sm: &SourceMethod) -> Vec<(String, Vec<u8>)> {
         let info = &sm.info;
         let generic = !info.tparams.is_empty()
             || info
@@ -204,6 +202,9 @@ impl ClassGen<'_> {
     fn main(&mut self) -> Result<MethodDef> {
         let c = self.c;
         let args_t = Type::Array(Box::new(Type::string()));
+        if super::hoist::has_await(&c.stmts) {
+            return self.async_main(&args_t);
+        }
         let mut b = self.body(true, Type::Void, "main", vec![VType::of(&args_t)]);
         b.boxed = super::captures::boxed_locals(&c.stmts);
         if let Some(s) = b.scopes.last_mut() {

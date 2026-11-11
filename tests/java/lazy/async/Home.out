@@ -1,0 +1,5 @@
+main: true
+loop: true
+registered: true
+cleared: true
+other thread: true

@@ -3,6 +3,7 @@ package lazy.async;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import lazy.internal.Homes;
 import lazy.internal.Reactor;
 
 /**
@@ -18,6 +19,16 @@ public final class Loop {
     /** The loop's thread. Tasks run there one at a time, in the order they were given. */
     public static Executor executor() {
         return EXECUTOR;
+    }
+
+    /**
+     * The executor whose thread is the current one: {@link #executor()} on the loop's thread, the UI
+     * thread's executor there, and null on any other thread. Code that waits for a stage and must go
+     * on where it started hands its continuation to this.
+     */
+    public static Executor home() {
+        if (Reactor.onLoop()) return EXECUTOR;
+        return Homes.of(Thread.currentThread());
     }
 
     /** Completes after at least this long, on a later turn of the loop even if that is zero. */

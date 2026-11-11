@@ -1,0 +1,3 @@
+async int f() {
+    return 1;
+}

@@ -95,7 +95,7 @@ impl Body<'_> {
             Expr::InstanceOf { .. } => self.bool_value(e),
             Expr::Lambda { .. } | Expr::MethodRef { .. } => self.lambda_value(e, want),
             Expr::ClassLit(ty, _) => self.class_literal(ty),
-            Expr::Await(_, span) => self.err(*span, "`await` is not supported yet (S16-07)"),
+            Expr::Await(_, span) => self.err(*span, "`await` needs an `async` method or lambda"),
             Expr::Cascade { recv, calls } => self.cascade(recv, calls),
             Expr::List(items, span) => self.list_literal(items, *span, want),
             Expr::Map(entries, span) => self.map_literal(entries, *span, want),

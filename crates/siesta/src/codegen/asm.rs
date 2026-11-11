@@ -172,6 +172,28 @@ impl Asm {
         self.stack.last()
     }
 
+    /// Gives `l` the frame of this point now, for a label placed later in
+    /// code nothing falls into (an `await`'s resume point).
+    pub fn record(&mut self, l: Label) {
+        let f = self.frame_for(self.labels[l.0].scope);
+        self.labels[l.0].frame = Some(f);
+    }
+
+    /// The live local slots from `first` on, with their types, skipping
+    /// unset slots and the second half of wide ones.
+    pub fn live_slots(&self, first: u16) -> Vec<(u16, VType)> {
+        let mut out = Vec::new();
+        let mut i = usize::from(first);
+        while i < self.locals.len() {
+            let t = &self.locals[i];
+            if !matches!(t, VType::Top | VType::UninitThis | VType::Uninit(_)) {
+                out.push((i as u16, t.clone()));
+            }
+            i += if t.wide() { 2 } else { 1 };
+        }
+        out
+    }
+
     /// `swap` of two one-slot values.
     pub fn swap(&mut self) {
         if !self.reachable || self.stack.len() < 2 {

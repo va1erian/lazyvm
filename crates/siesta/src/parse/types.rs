@@ -52,6 +52,9 @@ impl Parser {
                 return Ok(TypeRef::Void(lo));
             }
         }
+        if self.is_kw(Kw::Async) || self.is_kw(Kw::Await) {
+            return self.fail("a type expected");
+        }
         let path = self.qualified()?;
         let args = if self.is_op("<") {
             self.type_args()?
@@ -68,7 +71,9 @@ impl Parser {
     /// `a.b.c`, stopping before a `.` that is not followed by a name.
     pub(super) fn qualified(&mut self) -> Result<Vec<Ident>> {
         let mut path = vec![self.ident()?];
-        while self.is_op(".") && matches!(self.tok(1), Tok::Ident(_)) {
+        while self.is_op(".")
+            && matches!(self.tok(1), Tok::Ident(_) | Tok::Kw(Kw::Async | Kw::Await))
+        {
             self.pos += 1;
             path.push(self.ident()?);
         }

@@ -1,1 +1,1 @@
-1:9: `await` is not supported yet (S16-07)
+2:13: `await` needs an `async` method or lambda

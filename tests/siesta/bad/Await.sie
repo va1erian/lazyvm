@@ -1,1 +1,3 @@
-var s = await java.util.concurrent.CompletableFuture.completedFuture(1);
+void f() {
+    var s = await java.util.concurrent.CompletableFuture.completedFuture(1);
+}

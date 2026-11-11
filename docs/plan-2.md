@@ -469,7 +469,13 @@ through `tools/siesta_test.py` (siesta.md section 9): the classes run on the
 oracle with `-Xverify:all` and on LazyVM, both matching the `.out`, and
 mirrored `.java` tests are blessed on the oracle.
 
-- [ ] S16-01 Lexer, parser, AST and diagnostics (siesta.md sections 4 and 8),
+Status (2026-11-11): S16-01, 02, 03 and 05 done; 04, 06 and 07 built and
+tested, each missing one part of its check: the `Showcase` enum mirror
+(04), the `finally` matrix for `break` and `throw` (06), and the UI-thread
+resumption case, which needs S9-06's `Ui.executor()` (07). The suite has 35
+tests, run on LazyVM and on the Java 8 oracle with `-Xverify:all`.
+
+- [x] S16-01 Lexer, parser, AST and diagnostics (siesta.md sections 4 and 8),
       in `crates/siesta`, which depends only on `crates/classfile`.
       Files: `crates/siesta/src/{lex,parse,ast,diag}*`,
       `fuzz/fuzz_targets/siesta.rs`, `tests/siesta/bad/`.
@@ -477,13 +483,13 @@ mirrored `.java` tests are blessed on the oracle.
       `tests/siesta/bad` file gives its `.err` diagnostic; the fuzz target runs
       10 minutes without a panic.
       Needs: the owner's confirmation of S16.
-- [ ] S16-02 Types, the class path and `Signature` parsing.
+- [x] S16-02 Types, the class path and `Signature` parsing.
       Files: `crates/siesta/src/{types,classpath,sig}.rs`.
       Check: a unit test loads every class of `dist/lazyrt.jar`, parses every
       `Signature` attribute and finds the functional interfaces of
       `java.util.function` and `lazy.async` with their single methods.
       Needs: S16-01.
-- [ ] S16-03 Scripts and expressions: top-level statements, locals,
+- [x] S16-03 Scripts and expressions: top-level statements, locals,
       primitives, strings and interpolation, `if`, `while`, `do`, both
       `for`s, `break`, `continue`, calls, fields and constructors of the
       Java API with overloads, boxing and varargs, the missing-`return`
@@ -505,7 +511,7 @@ mirrored `.java` tests are blessed on the oracle.
       including a `Comparable<Point>` sorted by `Collections.sort` and a
       mirror of `tests/java/s4/Showcase`'s enums.
       Needs: S16-03.
-- [ ] S16-05 Lambdas and method references through `LambdaMetafactory`,
+- [x] S16-05 Lambdas and method references through `LambdaMetafactory`,
       captures (changed ones in a shared array), trailing lambdas, method
       type inference.
       Files: `crates/siesta/src/{infer,check,gen}*`,

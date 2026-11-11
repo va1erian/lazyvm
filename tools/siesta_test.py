@@ -11,6 +11,11 @@ the same. A `<Name>.java` beside the test is its mirror: compiled by javac and
 run on the oracle, it must print the same too, which ties Siesta's semantics
 to Java's. `--bless` writes `.out` from the oracle run, for review.
 
+The oracle runs with `dist/lazyrt.jar` on its class path, after the JDK's
+own classes, so `lazy.*` code written in Java (`lazy.async.Loop.home`) is
+there. A test whose first lines say `// NEEDS: lazyvm` uses LazyVM's natives
+(the loop) and runs on LazyVM only, against a reviewed golden.
+
 `tests/siesta/bad/<Name>.sie` must fail to compile with the messages in
 `<Name>.err`, one `line:col: message` per line.
 
@@ -21,6 +26,7 @@ The Rust tests that need `dist/lazyrt.jar` (`cargo test -p siesta --
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -137,8 +143,10 @@ def run_test(src: Path, vm: Path, java: str | None, bless: bool) -> str | None:
     if err:
         return "compile error\n" + err
     golden = src.with_suffix(".out")
-    oracle = run([java, *ORACLE_FLAGS, "-cp", str(out), src.stem]) if java else None
-    if bless:
+    lazyvm_only = "// NEEDS: lazyvm" in src.read_text(encoding="utf-8")[:400]
+    cp = str(out) + os.pathsep + str(DIST / "lazyrt.jar")
+    oracle = run([java, *ORACLE_FLAGS, "-cp", cp, src.stem]) if java and not lazyvm_only else None
+    if bless and not lazyvm_only:
         if oracle is None:
             return "--bless needs the Java 8 oracle"
         golden.write_text(oracle, encoding="utf-8", newline="\n")
@@ -147,7 +155,7 @@ def run_test(src: Path, vm: Path, java: str | None, bless: bool) -> str | None:
     want = golden.read_text(encoding="utf-8")
     if oracle is not None and oracle != want:
         return f"oracle (-Xverify:all) differs from the golden:\n{oracle}"
-    if java is not None:
+    if java is not None and not lazyvm_only:
         m = mirror(src, java)
         if m is not None and m != want:
             return f"the Java mirror prints something else:\n{m}"

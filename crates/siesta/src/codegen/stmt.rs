@@ -25,6 +25,18 @@ impl Body<'_> {
             self.asm.line(line);
         }
         match s {
+            Stmt::Local {
+                ty,
+                name,
+                init: Expr::Await(e, span),
+            } => {
+                let declared = match ty {
+                    TypeRef::Var(_) => None,
+                    t => Some(self.resolve_type(t)?),
+                };
+                self.await_stmt(Some((name, declared)), e, *span)?;
+            }
+            Stmt::Expr(Expr::Await(e, span)) => self.await_stmt(None, e, *span)?,
             Stmt::Local { ty, name, init } => {
                 let declared = match ty {
                     TypeRef::Var(_) => None,
@@ -166,6 +178,9 @@ impl Body<'_> {
     }
 
     fn ret_stmt(&mut self, value: Option<&Expr>, span: crate::diag::Span) -> Result<()> {
+        if let Some(v) = self.async_cx.as_ref().map(|c| c.value.clone()) {
+            return self.async_return(&v, value, span);
+        }
         let ret = self.ret.clone();
         if ret == Type::Infer(u32::MAX) {
             let t = match value {

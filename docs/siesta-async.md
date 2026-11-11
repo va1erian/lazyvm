@@ -57,8 +57,14 @@ and `fetch` is exactly what a Java caller sees: a method returning
 - **`await e`** is a prefix operator at unary precedence. `e` must be a
   `CompletionStage<T>` (`CompletableFuture` included) and the result is a
   `T`. It may appear inside an `async` method or lambda, or at a file's top
-  level; anywhere else it is an error that names the enclosing method and
-  suggests `async`.
+  level; anywhere else it is an error that suggests `async`. `async` and
+  `await` are contextual keywords, like `var`, so `lazy.async` is still a
+  package name.
+- **The awaits of a statement run first.** An `await` inside a larger
+  expression is evaluated before the rest of its statement, awaits left to
+  right (section 3). One that might not run at all is refused instead of
+  moved: on the right of `&&` or `||`, in a branch of `?:`, or in a loop's
+  condition or update. Await into a variable first.
 - **A failed stage throws.** `await` rethrows the stage's exception, with
   one `CompletionException` wrapper removed, so `catch (IOException e)`
   works as it would around a blocking call. A cancelled stage throws

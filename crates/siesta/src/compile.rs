@@ -64,10 +64,11 @@ pub fn compile(sources: &[Source], classpath: ClassPath) -> Result<Vec<ClassOut>
     let mut out = Vec::new();
     for c in &classes {
         match codegen::compile_class(&unit, c) {
-            Ok(bytes) => out.push(ClassOut {
-                name: c.name.to_string(),
-                bytes,
-            }),
+            Ok(classes) => out.extend(
+                classes
+                    .into_iter()
+                    .map(|(name, bytes)| ClassOut { name, bytes }),
+            ),
             Err(mut e) => errors.append(&mut e),
         }
     }

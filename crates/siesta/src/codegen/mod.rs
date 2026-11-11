@@ -5,16 +5,21 @@
 mod arith;
 mod array;
 pub mod asm;
+mod async_body;
+mod async_entry;
 mod body;
 mod call;
 mod captures;
 mod cond;
 mod expr;
+mod frame_class;
+mod hoist;
 mod infer;
 mod lambda;
 mod literal;
 mod loops;
 mod members;
+mod methodref;
 mod names;
 mod ops;
 mod stmt;
@@ -41,6 +46,8 @@ pub struct Extra {
     /// `(bootstrap method handle, arguments)` for `BootstrapMethods`.
     pub bootstraps: Vec<(u16, Vec<u16>)>,
     pub lambda_count: u32,
+    /// Classes generated beside this one: `async` frames.
+    pub classes: Vec<(String, Vec<u8>)>,
     /// The classes whose top-level members unqualified names reach.
     pub file_classes: Vec<Rc<str>>,
 }
@@ -55,7 +62,7 @@ pub struct Unit<'a> {
 }
 
 /// Compiles one class, or returns every error its methods have.
-pub fn compile_class(u: &Unit, c: &SourceClass) -> Result<Vec<u8>, Vec<Diag>> {
+pub fn compile_class(u: &Unit, c: &SourceClass) -> Result<Vec<(String, Vec<u8>)>, Vec<Diag>> {
     let mut pool = Pool::default();
     let mut extra = Extra {
         file_classes: u.file_classes.to_vec(),
@@ -125,7 +132,9 @@ pub fn compile_class(u: &Unit, c: &SourceClass) -> Result<Vec<u8>, Vec<Diag>> {
         methods,
         attributes,
     };
-    Ok(classfile::writer::write(&def, pool))
+    let mut out = vec![(c.name.to_string(), classfile::writer::write(&def, pool))];
+    out.append(&mut extra.classes);
+    Ok(out)
 }
 
 fn class_fields(c: &SourceClass) -> Vec<(u16, String, Type)> {

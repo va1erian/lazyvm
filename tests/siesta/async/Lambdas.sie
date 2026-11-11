@@ -1,0 +1,36 @@
+// async lambdas: returning a stage, fire-and-forget, captures, failures.
+import java.util.concurrent.*;
+import java.util.function.*;
+
+Supplier<CompletionStage<String>> hello = async () -> "hi " + await CompletableFuture.completedFuture("there");
+Function<Integer, CompletionStage<Integer>> square = async x -> {
+    var y = await CompletableFuture.completedFuture(x);
+    return y * y;
+};
+System.out.println(await hello.get());
+System.out.println(await square.apply(7));
+
+var gate = new CompletableFuture<String>();
+int count = 0;
+Runnable waiter = async () -> {
+    var word = await gate;
+    count++;
+    System.out.println("woke with " + word + ", count " + count);
+};
+waiter.run();
+System.out.println("waiting, count " + count);
+Thread t = new Thread(() -> gate.complete("go"));
+t.start();
+t.join();
+System.out.println("after, count " + count);
+
+Thread failing = new Thread(() -> {
+    Runnable r = async () -> {
+        await CompletableFuture.completedFuture(1);
+        throw new IllegalStateException("lost?");
+    };
+    r.run();
+});
+failing.setUncaughtExceptionHandler((th, e) -> System.out.println("reported " + e.getMessage()));
+failing.start();
+failing.join();

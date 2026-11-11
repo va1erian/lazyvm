@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use super::asm::{Asm, VType};
 use super::body::{Body, Local};
-use crate::ast::{Expr, Ident, LambdaBody, LambdaParam};
+use crate::ast::{Expr, LambdaBody, LambdaParam};
 use crate::diag::{Diag, Result, Span};
 use crate::types::Type;
 use crate::world::Method;
@@ -59,9 +59,6 @@ impl Body<'_> {
             return Ok(target);
         }
         let (params, body, is_async) = self.as_lambda(e, f.params.len(), false)?;
-        if is_async {
-            return self.err(e.span(), "`async` lambdas are not supported yet (S16-07)");
-        }
         let mut types = Vec::new();
         for (p, ft) in params.iter().zip(&f.params) {
             types.push(match &p.ty {
@@ -114,8 +111,47 @@ impl Body<'_> {
             access |= classfile::ACC_STATIC;
         }
         let span = e.span();
+        if is_async {
+            let spec_params = captured
+                .iter()
+                .map(|(n, l)| (n.clone(), l.ty.clone(), l.boxed))
+                .chain(
+                    params
+                        .iter()
+                        .zip(&types)
+                        .map(|(p, t)| (p.name.name.clone(), t.clone(), false)),
+                )
+                .collect();
+            let m = self.async_lambda(&name, access, &impl_desc, spec_params, &ret, &body, span)?;
+            self.extra.methods.push(m);
+        } else {
+            self.plain_lambda(
+                &name, access, &impl_desc, &params, &types, &captured, &ret, &body, span,
+            )?;
+        }
+        self.lambda_site(
+            &target, &f, &name, &impl_desc, &types, &ret, &captured, &cap_types,
+        );
+        Ok(target)
+    }
+
+    /// The synthetic method of an ordinary lambda.
+    #[allow(clippy::too_many_arguments)]
+    fn plain_lambda(
+        &mut self,
+        name: &str,
+        access: u16,
+        impl_desc: &str,
+        params: &[LambdaParam],
+        types: &[Type],
+        captured: &[(String, Local)],
+        ret: &Type,
+        body: &LambdaBody,
+        span: Span,
+    ) -> Result<()> {
+        let ret = ret.clone();
         let asm = {
-            let mut nested = self.lambda_body(&params, &types, &captured, ret.clone(), false)?;
+            let mut nested = self.lambda_body(params, types, captured, ret.clone(), false)?;
             match &body {
                 LambdaBody::Expr(x) if ret == Type::Void => nested.expr_stmt(x)?,
                 LambdaBody::Expr(x) => {
@@ -132,15 +168,83 @@ impl Body<'_> {
             }
             std::mem::take(&mut nested.asm)
         };
-        let m = super::method_def(asm, self.pool, access, &name, &impl_desc)
-            .ok_or_else(|| Diag::new(e.span(), "this lambda is too large"))?;
+        let m = super::method_def(asm, self.pool, access, name, impl_desc)
+            .ok_or_else(|| Diag::new(span, "this lambda is too large"))?;
         self.extra.methods.push(m);
-        // invokedynamic: the captured values in, the interface out.
+        Ok(())
+    }
+
+    /// An `async` lambda: its synthetic method is an async entry. With a
+    /// `void` interface method the lambda is fire-and-forget and a failure
+    /// is rethrown where it happens (siesta-async.md section 2).
+    #[allow(clippy::too_many_arguments)]
+    fn async_lambda(
+        &mut self,
+        name: &str,
+        access: u16,
+        impl_desc: &str,
+        params: Vec<(String, Type, bool)>,
+        ret: &Type,
+        body: &LambdaBody,
+        span: Span,
+    ) -> Result<classfile::writer::MethodDef> {
+        let report = *ret == Type::Void;
+        let value = if report {
+            Type::Void
+        } else {
+            match self.w.as_super(ret, super::async_body::STAGE) {
+                Some(Type::Class(_, a)) if a.len() == 1 => a[0].clone(),
+                _ => {
+                    return self.err(
+                        span,
+                        format!(
+                            "an `async` lambda gives a CompletionStage, not {}",
+                            crate::types::with_article(ret)
+                        ),
+                    );
+                }
+            }
+        };
+        let stmts = match body {
+            LambdaBody::Expr(x) if report => vec![crate::ast::Stmt::Expr((**x).clone())],
+            LambdaBody::Expr(x) => vec![crate::ast::Stmt::Return(Some((**x).clone()), span)],
+            LambdaBody::Block(b) => b.clone(),
+        };
+        let body = super::hoist::Hoist::new(&format!("{name}_")).stmts(&stmts)?;
+        let spec = super::async_body::AsyncSpec {
+            name: name.to_string(),
+            access,
+            desc: impl_desc.to_string(),
+            is_static: self.is_static,
+            params,
+            value,
+            report,
+            returns_frame: !report,
+            body,
+            span,
+        };
+        self.build_async(spec)
+    }
+
+    /// The `invokedynamic` that makes the lambda: captured values in, the
+    /// interface out.
+    #[allow(clippy::too_many_arguments)]
+    fn lambda_site(
+        &mut self,
+        target: &Type,
+        f: &Method,
+        name: &str,
+        impl_desc: &str,
+        types: &[Type],
+        ret: &Type,
+        captured: &[(String, Local)],
+        cap_types: &[Type],
+    ) {
         let this_t = self.this_type();
         if !self.is_static {
             self.load(0, &this_t);
         }
-        for (_, l) in &captured {
+        for (_, l) in captured {
             let t = if l.boxed {
                 Type::Array(Box::new(l.ty.clone()))
             } else {
@@ -148,7 +252,7 @@ impl Body<'_> {
             };
             self.load(l.slot, &t);
         }
-        let bsm = self.bootstrap(&f, &name, &impl_desc, &types, &ret);
+        let bsm = self.bootstrap(f, name, impl_desc, types, ret);
         let site_params: String = (if self.is_static {
             None
         } else {
@@ -163,9 +267,8 @@ impl Body<'_> {
         self.asm.emit(
             &[0xba, h, l, 0, 0],
             captured.len() + usize::from(!self.is_static),
-            Some(VType::of(&target)),
+            Some(VType::of(target)),
         );
-        Ok(target)
     }
 
     fn bootstrap(
@@ -290,200 +393,7 @@ impl Body<'_> {
             dry: dry || self.dry,
             name: self.name.clone(),
             ret_seen: None,
-        })
-    }
-
-    /// A lambda, or the lambda a method reference stands for. A bound
-    /// receiver is evaluated into a local first, unless only typing.
-    fn as_lambda(
-        &mut self,
-        e: &Expr,
-        arity: usize,
-        dry: bool,
-    ) -> Result<(Vec<LambdaParam>, LambdaBody, bool)> {
-        match e {
-            Expr::Lambda {
-                params,
-                body,
-                is_async,
-                ..
-            } => Ok((params.clone(), body.clone(), *is_async)),
-            Expr::MethodRef { target, name } => {
-                let span = name.span;
-                let params: Vec<LambdaParam> = (0..arity)
-                    .map(|i| LambdaParam {
-                        ty: None,
-                        name: Ident {
-                            name: format!("$p{i}"),
-                            span,
-                        },
-                    })
-                    .collect();
-                let arg = |i: usize| {
-                    Expr::Name(Ident {
-                        name: format!("$p{i}"),
-                        span,
-                    })
-                };
-                let args: Vec<Expr> = (0..arity).map(arg).collect();
-                let body = self.ref_body(target, name, args, arity, dry)?;
-                Ok((params, LambdaBody::Expr(Box::new(body)), false))
-            }
-            other => self.err(other.span(), "not a lambda"),
-        }
-    }
-
-    fn ref_body(
-        &mut self,
-        target: &Expr,
-        name: &Ident,
-        args: Vec<Expr>,
-        arity: usize,
-        dry: bool,
-    ) -> Result<Expr> {
-        let span = name.span;
-        if name.name == "new" {
-            let (Expr::TypeExpr(t) | Expr::ClassLit(t, _)) = target else {
-                let ty = self.ref_type(target)?;
-                return Ok(Expr::New { ty, args, span });
-            };
-            if let crate::ast::TypeRef::Array(elem, _) = t {
-                return Ok(Expr::NewArray {
-                    elem: (**elem).clone(),
-                    dims: args,
-                    extra: 0,
-                    init: None,
-                    span,
-                });
-            }
-            return Ok(Expr::New {
-                ty: t.clone(),
-                args,
-                span,
-            });
-        }
-        let is_class = match target {
-            Expr::TypeExpr(_) => true,
-            Expr::Name(n) => {
-                self.find_local(&n.name).is_none() && self.place_of_name(n).ok().flatten().is_none()
-            }
-            Expr::Field { .. } => self.is_class_path(target),
-            _ => false,
-        };
-        if !is_class {
-            if matches!(target, Expr::This(_)) || dry || self.dry {
-                return Ok(Expr::Call {
-                    target: Some(Box::new(target.clone())),
-                    name: name.clone(),
-                    args,
-                    is_super: false,
-                });
-            }
-            // A bound receiver is evaluated once, when the reference is,
-            // and must not be null then (JLS 15.13.3).
-            let recv = format!("$recv{}", self.extra.lambda_count);
-            let t = self.expr(target, None)?;
-            self.asm.dup_under(0);
-            let gc = self
-                .pool
-                .method_ref("java/lang/Object", "getClass", "()Ljava/lang/Class;");
-            self.asm
-                .emit_u2(0xb6, gc, 1, Some(VType::Object("java/lang/Class".into())));
-            self.asm.emit(&[0x57], 1, None);
-            let l = self.declare(&recv, t.clone(), span)?;
-            self.store(l.slot, &t);
-            let r = Expr::Name(Ident { name: recv, span });
-            return Ok(Expr::Call {
-                target: Some(Box::new(r)),
-                name: name.clone(),
-                args,
-                is_super: false,
-            });
-        }
-        // `Type::m`: a static method taking every argument, or an
-        // instance method of the first.
-        let class = match self.receiver(target)? {
-            super::names::Recv::Class(c) => c,
-            _ => return self.err(target.span(), "not a class"),
-        };
-        let statics = self
-            .w
-            .methods(&Type::class(&class), &name.name)
-            .iter()
-            .any(|m| m.info.is_static() && m.params.len() == arity);
-        if statics || arity == 0 {
-            return Ok(Expr::Call {
-                target: Some(Box::new(target.clone())),
-                name: name.clone(),
-                args,
-                is_super: false,
-            });
-        }
-        let mut rest = args;
-        let recv = rest.remove(0);
-        Ok(Expr::Call {
-            target: Some(Box::new(recv)),
-            name: name.clone(),
-            args: rest,
-            is_super: false,
-        })
-    }
-
-    /// The class of `Type::method` (not `::new`), for inference.
-    pub fn ref_class(&self, e: &Expr) -> Option<Type> {
-        let Expr::MethodRef { target, name } = e else {
-            return None;
-        };
-        if name.name == "new" {
-            return None;
-        }
-        match &**target {
-            Expr::TypeExpr(t) => self.resolve_type(t).ok(),
-            t @ (Expr::Name(_) | Expr::Field { .. }) if self.is_class_path(t) => {
-                let ty = self.ref_type(t).ok()?;
-                self.resolve_type(&ty).ok()
-            }
-            _ => None,
-        }
-    }
-
-    /// Whether a dotted name is a class, without emitting anything.
-    fn is_class_path(&self, target: &Expr) -> bool {
-        let mut path = Vec::new();
-        let mut cur = target;
-        while let Expr::Field { target, name } = cur {
-            path.push(name.name.as_str());
-            cur = target;
-        }
-        let Expr::Name(first) = cur else { return false };
-        if self.find_local(&first.name).is_some() {
-            return false;
-        }
-        path.push(first.name.as_str());
-        path.reverse();
-        crate::resolve::qualified_class(self.w, &path).is_some()
-            || self
-                .fscope
-                .class(self.w, &first.name, &self.cls.enclosing)
-                .is_some()
-    }
-
-    fn ref_type(&self, target: &Expr) -> Result<crate::ast::TypeRef> {
-        let mut path = Vec::new();
-        let mut cur = target;
-        while let Expr::Field { target, name } = cur {
-            path.push(name.clone());
-            cur = target;
-        }
-        let Expr::Name(first) = cur else {
-            return self.err(target.span(), "a class expected before `::new`");
-        };
-        path.push(first.clone());
-        path.reverse();
-        Ok(crate::ast::TypeRef::Named {
-            path,
-            args: Vec::new(),
-            span: target.span(),
+            async_cx: None,
         })
     }
 }
