@@ -246,6 +246,7 @@ fn run_main(vm: &mut Vm, main_class: &str, args: &[options::Arg]) -> Result<(), 
 /// Turns the outcome of `main` into an exit status, printing an uncaught
 /// exception the way `ThreadGroup.uncaughtException` does.
 fn finish(vm: &mut Vm, result: Result<(), VmError>) -> Ended {
+    vm.prof_report();
     let err = match result {
         Ok(()) => return Ended::Main(ExitCode::SUCCESS),
         Err(VmError::Exit(code)) => return Ended::Exit(ExitCode::from(code as u8)),

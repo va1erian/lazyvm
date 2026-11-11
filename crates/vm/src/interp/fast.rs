@@ -21,6 +21,7 @@ use super::ops_branch::cond;
 use crate::Vm;
 use crate::class::Class;
 use crate::heap::Heap;
+use crate::prof::FastCount;
 use crate::value::{Ref, Value};
 
 impl Vm {
@@ -244,7 +245,20 @@ fn array_length(f: &mut Frame, heap: &Heap) -> bool {
 /// Runs until an instruction is not simple or not valid; true if it stopped
 /// after a taken backward branch.
 fn run(f: &mut Frame, heap: &mut Heap, classes: &mut [Class]) -> bool {
+    let mut count = FastCount::default();
+    let taken = run_counted(f, heap, classes, &mut count);
+    count.done(taken);
+    taken
+}
+
+fn run_counted(
+    f: &mut Frame,
+    heap: &mut Heap,
+    classes: &mut [Class],
+    count: &mut FastCount,
+) -> bool {
     loop {
+        count.tick();
         let start = f.pc;
         let Some(&op) = f.code.bytecode.get(start) else {
             return false;

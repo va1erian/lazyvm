@@ -24,6 +24,7 @@ impl Vm {
     }
 
     fn collect(&mut self, clear_soft: bool) {
+        let timer = crate::prof::gc_started();
         let roots = self.roots_now();
         let classes = self.reference_classes();
         let weak = WeakInfo {
@@ -34,6 +35,7 @@ impl Vm {
         for r in cleared {
             self.enqueue_cleared(r);
         }
+        timer.done();
     }
 
     fn roots_now(&self) -> Vec<Ref> {

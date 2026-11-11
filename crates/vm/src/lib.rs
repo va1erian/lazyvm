@@ -14,6 +14,7 @@ pub mod interp;
 mod lambda;
 pub mod native;
 mod objects;
+mod prof;
 mod properties;
 mod strings;
 pub mod thread;

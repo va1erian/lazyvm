@@ -20,6 +20,7 @@ pub use frame::Frame;
 pub use lend::with_lent;
 
 use crate::class::MethodRef;
+use crate::prof::{self, Phase};
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
@@ -107,6 +108,7 @@ impl Vm {
         let frame = Frame::new(m, code, arg_slots, args, locals, stack)?;
         self.frame_slots += slots;
         self.frames.push(frame);
+        crate::prof::call(m);
         Ok(())
     }
 
@@ -151,8 +153,11 @@ impl Vm {
     }
 
     fn run_loop(&mut self, base: usize) -> VmResult<Option<Value>> {
+        self.prof_start();
+        self.prof_top();
         loop {
             if !self.slow_interp {
+                prof::phase(Phase::Fast);
                 self.run_simple();
             }
             if self.heap.wants_gc() {
@@ -164,6 +169,7 @@ impl Vm {
                     Err(e) => Err(e),
                     Ok(()) => {
                         self.pop_frame();
+                        self.prof_top();
                         if self.frames.len() <= base {
                             return Ok(v);
                         }
@@ -177,7 +183,9 @@ impl Vm {
                     return Err(e);
                 }
                 let ex = self.materialize(e)?;
-                self.unwind(ex, base)?;
+                let found = self.unwind(ex, base);
+                self.prof_top();
+                found?;
             }
         }
     }
@@ -260,6 +268,7 @@ impl Vm {
     /// Executes one instruction of the top frame.
     fn step(&mut self) -> VmResult<Flow> {
         let op = self.top()?.u1(0)?;
+        prof::step(op);
         if self.slow_interp {
             if self.options.trace_interp {
                 self.trace_instruction(op);

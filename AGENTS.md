@@ -95,6 +95,7 @@ Run every gate that applies before each push. "It compiles" is not enough.
 ```bash
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
+cargo clippy -p vm -p launcher --all-targets --features vm/prof -- -D warnings   # the profiler (S11-06) still builds
 cargo test --workspace
 python tools/check_rules.py            # shared blocks, 500 lines, SAFETY comments
 python tools/licenses.py               # permissive dependency tree
@@ -144,6 +145,8 @@ python tools/lazyrt.py                 # dist/lazyrt.jar
 python tools/test.py --filter <area>   # differential suite on lazyvm
 python tools/golden.py --bless tests/java/<area>/<Name>.java
 python tools/lazyos_test.py --lazyos <LazyOS checkout> --filter <area>   # inside LazyOS (QEMU)
+python tools/bench.py run --out base.json   # the benchmark suite (bench/); `compare` checks two runs
+LAZYVM_PROF=out.txt <profiling lazyvm> ...   # sampling profile, built with --features vm/prof; tools/prof.py reports a window
 python tools/sdk.py                    # dist/lazyvm-sdk for IntelliJ (docs/intellij.md)
 python tools/verify_test.py --oracle   # the verifier's classes on Java 8 too (docs/design/verifier.md)
 cargo +nightly fuzz run verifier --fuzz-dir fuzz fuzz/corpus/verifier   # or parser

@@ -201,7 +201,9 @@ impl Vm {
             let native = self.native_for(m)?;
             let lock = self.lock_for_call(m, args)?;
             // The arguments stay on this frame's stack during the call, so they are rooted.
+            crate::prof::native(m);
             let result = native(self, args);
+            self.prof_top();
             self.drop_method_lock(lock);
             let result = result?;
             let ret = self.method(m).ret;

@@ -120,6 +120,7 @@ impl Vm {
     /// hooks have run, or `Runtime.halt`. Holding the VM, no other thread is
     /// running bytecode.
     pub fn exit_process(&mut self, code: i32) -> ! {
+        self.prof_report();
         self.debugger_vm_death();
         let _ = platform::flush(platform::Stream::Out);
         let _ = platform::flush(platform::Stream::Err);
