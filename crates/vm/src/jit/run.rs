@@ -122,6 +122,12 @@ pub(super) extern "C" fn transfer(ctx: *mut Ctx, pc: u32, sp: u32) -> usize {
     if vm.gil.wanted() || !vm.fast_transfer(op, ctx.base as usize) {
         return 0;
     }
+    entered(vm, ctx, op)
+}
+
+/// After the invoke or return `op` changed the frames: the top frame's
+/// code, or 1 for the interpreter (`transfer`'s result).
+pub(super) fn entered(vm: &mut Vm, ctx: &mut Ctx, op: u8) -> usize {
     if let Some(entry) = continuation(vm, ctx, op) {
         return entry;
     }

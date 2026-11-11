@@ -14,6 +14,7 @@
 
 mod arith;
 mod asm;
+mod call;
 mod compile;
 mod flow;
 mod frame;
@@ -72,6 +73,9 @@ pub(crate) struct Compiled {
     /// stay put); owned here so they live as long as the code.
     #[allow(dead_code)]
     deopts: Box<[frame::Deopt]>,
+    /// The call sites, held the same way (`call.rs`).
+    #[allow(dead_code)]
+    sites: Box<[call::CallSite]>,
     max_stack: usize,
     locals: usize,
 }

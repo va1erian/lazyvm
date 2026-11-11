@@ -3,6 +3,7 @@
 //! same emission serves a method inlined into another (`inline.rs`).
 
 use super::asm::Label;
+use super::call::CallSite;
 use super::frame::Gen;
 use super::{Compiled, NONE, flow, inline, layout, mem, ops};
 use crate::Vm;
@@ -32,6 +33,64 @@ pub(super) fn unit(vm: &Vm, m: MethodRef) -> Option<Unit<'_>> {
         code,
         shapes,
     })
+}
+
+/// The record of the invoke at `pc` of `u` (`call.rs`), if its method ref is
+/// resolved and of the kind the instruction needs.
+fn call_site(u: &Unit, pc: usize) -> Option<CallSite> {
+    let vm = u.vm;
+    let code = &u.code.bytecode;
+    let op = code[pc];
+    let index = u16::from_be_bytes([code[pc + 1], code[pc + 2]]);
+    let class = vm.class(u.m.class);
+    let Some(Resolved::Method(m)) = class.cp_cache.get(usize::from(index)).copied().flatten()
+    else {
+        return None;
+    };
+    let interface = match class.file.as_ref()?.pool.get(index)? {
+        Constant::MethodRef { .. } => false,
+        Constant::InterfaceMethodRef { .. } => true,
+        _ => return None,
+    };
+    let method = vm.method(m);
+    if interface != (op == 0xb9) || (op == 0xb8) != method.is_static() {
+        return None;
+    }
+    let target = match op {
+        0xb8 => (vm.class(m.class).state == InitState::Initialized).then_some(m)?,
+        // Constructors and calls within the class need no superclass lookup.
+        0xb7 => {
+            let plain = m.class == u.m.class || &*method.name == "<init>";
+            (plain && !method.is_abstract()).then_some(m)?
+        }
+        _ => return Some(site_of(u.m.class, pc, op, index, None, method.arg_values)),
+    };
+    Some(site_of(
+        u.m.class,
+        pc,
+        op,
+        index,
+        Some(target),
+        method.arg_values,
+    ))
+}
+
+fn site_of(
+    class: crate::class::ClassId,
+    pc: usize,
+    op: u8,
+    index: u16,
+    target: Option<MethodRef>,
+    nargs: u16,
+) -> CallSite {
+    CallSite {
+        pc: pc as u32,
+        op,
+        index,
+        class,
+        target,
+        nargs,
+    }
 }
 
 /// Emits `u`'s reachable instructions; `ret` is where an inlined method's
@@ -119,6 +178,7 @@ pub(super) fn emit_method(g: &mut Gen, u: &Unit, ret: Option<Label>) -> Vec<Opti
         };
         Some(id.0)
     };
+    let site = |pc: usize| call_site(u, pc);
     let try_inline = |g: &mut Gen, pc: usize, sh: &[bool]| inline::try_inline(g, u, pc, sh);
     let labels: Vec<_> = u
         .shapes
@@ -134,6 +194,7 @@ pub(super) fn emit_method(g: &mut Gen, u: &Unit, ret: Option<Label>) -> Vec<Opti
         statics: &statics,
         class: &class_id,
         new_class: &new_class,
+        site: &site,
         inline: &try_inline,
         ret,
     };
@@ -162,12 +223,14 @@ pub(super) fn compile(vm: &Vm, m: MethodRef, inlining: bool) -> Option<Compiled>
         .map(|s| s.as_ref().map_or(u16::MAX, |s| s.len() as u16))
         .collect();
     let deopts = std::mem::take(&mut g.deopts).into_boxed_slice();
-    let bytes = g.finish(&deopts)?;
+    let sites = std::mem::take(&mut g.sites).into_boxed_slice();
+    let bytes = g.finish(&deopts, &sites)?;
     Some(Compiled {
         code: mem::Code::install(&bytes)?,
         entries,
         depth,
         deopts,
+        sites,
         max_stack: usize::from(u.code.max_stack),
         locals: usize::from(u.code.max_locals),
     })

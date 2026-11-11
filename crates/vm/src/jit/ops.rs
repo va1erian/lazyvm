@@ -27,6 +27,8 @@ pub(super) struct Env<'a> {
     /// The class a `new`, `newarray` or `anewarray` at a pc makes, if
     /// compiled code can make it (`helpers::new_object`, `new_array`).
     pub new_class: &'a dyn Fn(usize) -> Option<u32>,
+    /// The record of the invoke at a pc, if its method is resolved.
+    pub site: &'a dyn Fn(usize) -> Option<super::call::CallSite>,
     /// Inlines the invoke at a pc, if it can (`inline.rs`).
     pub inline: &'a dyn Fn(&mut Gen, usize, &[bool]) -> bool,
     /// For an inlined method: where its returns go, the value in xmm0.
@@ -273,10 +275,11 @@ fn inline(g: &mut Gen, env: &Env, pc: usize, sh: &[bool]) -> bool {
         }
         0xb6..=0xb9 if (env.inline)(g, pc, sh) => {}
         // Calls and returns stay in compiled code when they can (`run.rs`).
-        0xac..=0xb1 => g.transfer(pc, d, None),
+        0xac..=0xb1 => g.transfer(pc, d, None, None),
         0xb6..=0xb9 => {
             let len = if op == 0xb9 { 5 } else { 3 };
-            g.transfer(pc, d, env.labels.get(pc + len).copied().flatten());
+            let next = env.labels.get(pc + len).copied().flatten();
+            g.transfer(pc, d, next, (env.site)(pc));
         }
         _ => return false,
     }

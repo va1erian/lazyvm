@@ -205,7 +205,7 @@ pub(super) fn try_inline(g: &mut Gen, caller: &Unit, pc: usize, sh: &[bool]) -> 
     }
     g.a.jmp(done);
     g.a.bind(slow);
-    g.transfer(pc, d, None);
+    g.transfer(pc, d, None, None);
     g.a.bind(done);
     true
 }

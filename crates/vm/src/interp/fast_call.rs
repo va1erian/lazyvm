@@ -170,7 +170,7 @@ impl Vm {
 
     /// Pushes a frame for `target` with its arguments from the caller's
     /// stack; the caller resumes `len` bytes on when it returns.
-    fn fast_call(&mut self, target: MethodRef, len: usize) -> bool {
+    pub(crate) fn fast_call(&mut self, target: MethodRef, len: usize) -> bool {
         let m = self.method(target);
         if m.is_native() || m.access & classfile::ACC_SYNCHRONIZED != 0 || m.code.is_none() {
             return false;

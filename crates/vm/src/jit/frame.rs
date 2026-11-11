@@ -13,6 +13,7 @@
 use std::mem::{MaybeUninit, offset_of};
 
 use super::asm::{Alu, Asm, Cc, Label, R12, R13, R14, R15, RAX, RBP, RBX, RDX, RSP};
+use super::call::CallSite;
 use super::layout::SIZE;
 use crate::class::MethodRef;
 use crate::value::Value;
@@ -138,6 +139,9 @@ pub(super) struct Gen {
     pub deopts: Vec<Deopt>,
     /// (stub label, deopt index)
     deopt_stubs: Vec<(Label, u32)>,
+    /// Call sites, and where in the code each one's address goes.
+    pub sites: Vec<CallSite>,
+    site_refs: Vec<(usize, usize)>,
 }
 
 /// The stack entry `i` (from the bottom) and local `i`, relative to r13/r12.
@@ -176,6 +180,8 @@ impl Gen {
             scratch_used: 0,
             deopts: Vec::new(),
             deopt_stubs: Vec::new(),
+            sites: Vec::new(),
+            site_refs: Vec::new(),
         }
     }
 
@@ -299,8 +305,15 @@ impl Gen {
     /// An invoke or return at `pc` with `sp` entries, through
     /// `run::transfer`: on into the next frame's code if it is compiled.
     /// Inside inlined code it is an exit: the interpreter does it. `next`
-    /// is the code after an invoke, which its return can go straight to.
-    pub(super) fn transfer(&mut self, pc: usize, sp: usize, next: Option<Label>) {
+    /// is the code after an invoke, which its return can go straight to;
+    /// `site` makes the invoke through `call::call`.
+    pub(super) fn transfer(
+        &mut self,
+        pc: usize,
+        sp: usize,
+        next: Option<Label>,
+        site: Option<CallSite>,
+    ) {
         if !self.inline.is_empty() {
             self.exit(pc, sp, AT);
             return;
@@ -315,10 +328,24 @@ impl Gen {
             None => self.a.store_imm(true, RBX, CTX_RET, 0),
         }
         self.a.mov_rr(true, ARGS[0], RBX);
-        self.a.mov_imm64(ARGS[1], pc as u64);
+        let f = match site {
+            Some(site) => {
+                // The record's address, filled in by `finish`.
+                self.a.mov_imm64(ARGS[1], 0);
+                self.site_refs
+                    .push((self.a.code.len() - 8, self.sites.len()));
+                self.sites.push(site);
+                let f: extern "C" fn(*mut Ctx, *const CallSite, u32) -> usize = super::call::call;
+                f as usize
+            }
+            None => {
+                self.a.mov_imm64(ARGS[1], pc as u64);
+                let f: extern "C" fn(*mut Ctx, u32, u32) -> usize = super::run::transfer;
+                f as usize
+            }
+        };
         self.a.mov_imm64(ARGS[2], sp as u64);
-        let f: extern "C" fn(*mut Ctx, u32, u32) -> usize = super::run::transfer;
-        self.a.mov_imm64(RAX, f as usize as u64);
+        self.a.mov_imm64(RAX, f as u64);
         self.a.call_reg(RAX);
         self.a.alu_reg_imm(Alu::Cmp, true, RAX, 1);
         self.a.jcc(Cc::B, out);
@@ -335,8 +362,13 @@ impl Gen {
 
     /// The stubs and the epilogue; the code bytes. `deopts` is where the
     /// deopt records will live, as long as the code: each deopt stub
-    /// passes its record's address (`run::materialize`).
-    pub(super) fn finish(mut self, deopts: &[Deopt]) -> Option<Vec<u8>> {
+    /// passes its record's address (`run::materialize`); `sites` likewise
+    /// for the call sites (`call::call`).
+    pub(super) fn finish(mut self, deopts: &[Deopt], sites: &[CallSite]) -> Option<Vec<u8>> {
+        for &(at, index) in &self.site_refs {
+            let address = sites.get(index)? as *const CallSite as u64;
+            self.a.code[at..at + 8].copy_from_slice(&address.to_le_bytes());
+        }
         for st in std::mem::take(&mut self.stubs) {
             self.a.bind(st.label);
             self.a.store_imm(false, RBX, CTX_PC, st.pc as i32);
