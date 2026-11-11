@@ -273,7 +273,11 @@ fn inline(g: &mut Gen, env: &Env, pc: usize, sh: &[bool]) -> bool {
         }
         0xb6..=0xb9 if (env.inline)(g, pc, sh) => {}
         // Calls and returns stay in compiled code when they can (`run.rs`).
-        0xac..=0xb1 | 0xb6..=0xb9 => g.transfer(pc, d),
+        0xac..=0xb1 => g.transfer(pc, d, None),
+        0xb6..=0xb9 => {
+            let len = if op == 0xb9 { 5 } else { 3 };
+            g.transfer(pc, d, env.labels.get(pc + len).copied().flatten());
+        }
         _ => return false,
     }
     true

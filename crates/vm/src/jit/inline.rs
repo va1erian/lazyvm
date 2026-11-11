@@ -131,6 +131,9 @@ fn fits(u: &Unit, level: usize, outer: &[MethodRef]) -> bool {
         let Some((target, _)) = candidate(vm, u.m.class, op, index) else {
             return false;
         };
+        if trivial(vm, target) {
+            return true;
+        }
         if level + 1 >= MAX_INLINE || chain.contains(&target) {
             return false;
         }
@@ -138,10 +141,28 @@ fn fits(u: &Unit, level: usize, outer: &[MethodRef]) -> bool {
     })
 }
 
+/// A body that only returns (`Object.<init>`, an empty hook): inlined, it
+/// is just the call's guard, and takes no inlining level.
+fn trivial(vm: &Vm, m: MethodRef) -> bool {
+    vm.method(m)
+        .code
+        .as_deref()
+        .is_some_and(|c| c.bytecode[..] == [0xb1])
+}
+
+/// The invoke being inlined: where, its stack shape there, its argument
+/// count (in Values).
+struct Site<'a> {
+    pc: usize,
+    op: u8,
+    sh: &'a [bool],
+    n: usize,
+}
+
 /// Inlines the invoke at `pc` (stack shape `sh`) of `caller` if it can;
 /// false leaves the call to be made as usual.
 pub(super) fn try_inline(g: &mut Gen, caller: &Unit, pc: usize, sh: &[bool]) -> bool {
-    if !g.inlining || g.inline.len() >= MAX_INLINE {
+    if !g.inlining {
         return false;
     }
     let code = &caller.code.bytecode;
@@ -157,11 +178,44 @@ pub(super) fn try_inline(g: &mut Gen, caller: &Unit, pc: usize, sh: &[bool]) -> 
         return false;
     };
     let m = vm.method(target);
-    let nlocals = usize::from(callee.code.max_locals.max(m.arg_slots));
-    let nstack = usize::from(callee.code.max_stack);
-    let n = usize::from(m.arg_values);
+    let site = Site {
+        pc,
+        op,
+        sh,
+        n: usize::from(m.arg_values),
+    };
     let d = sh.len();
-    if d < n || g.scratch_used + nlocals + nstack > SCRATCH {
+    let trivial = trivial(vm, target);
+    if d < site.n || !(trivial || room(g, caller, &callee)) {
+        return false;
+    }
+    let (slow, done) = (g.a.label(), g.a.label());
+    match guard {
+        Guard::None => {}
+        Guard::NonNull | Guard::Class(_) => {
+            g.a.alu_mem_imm(Alu::Cmp, false, R13, s(d - site.n) + LOW, 0);
+            g.a.jcc(Cc::E, slow);
+        }
+    }
+    if let Guard::Class(c) = guard {
+        g.check(helpers::is_class as Helper, d - site.n, c.0, slow);
+    }
+    if !trivial {
+        body(g, &callee, &site);
+    }
+    g.a.jmp(done);
+    g.a.bind(slow);
+    g.transfer(pc, d, None);
+    g.a.bind(done);
+    true
+}
+
+/// Whether `callee`'s body can go in at this level: a level and scratch
+/// left for it, and it `fits`.
+fn room(g: &Gen, caller: &Unit, callee: &Unit) -> bool {
+    let m = caller.vm.method(callee.m);
+    let need = usize::from(callee.code.max_locals.max(m.arg_slots) + callee.code.max_stack);
+    if g.inline.len() >= MAX_INLINE || g.scratch_used + need > SCRATCH {
         return false;
     }
     let outer: Vec<MethodRef> = g
@@ -170,20 +224,17 @@ pub(super) fn try_inline(g: &mut Gen, caller: &Unit, pc: usize, sh: &[bool]) -> 
         .map(|l| l.method)
         .chain([caller.m])
         .collect();
-    if !fits(&callee, g.inline.len(), &outer) {
-        return false;
-    }
-    let (slow, end, done) = (g.a.label(), g.a.label(), g.a.label());
-    match guard {
-        Guard::None => {}
-        Guard::NonNull | Guard::Class(_) => {
-            g.a.alu_mem_imm(Alu::Cmp, false, R13, s(d - n) + LOW, 0);
-            g.a.jcc(Cc::E, slow);
-        }
-    }
-    if let Guard::Class(c) = guard {
-        g.check(helpers::is_class as Helper, d - n, c.0, slow);
-    }
+    fits(callee, g.inline.len(), &outer)
+}
+
+/// Emits `callee`'s body for the call at `site`, its guard passed: the
+/// arguments to its locals in the scratch area, the body on r12/r13 pointed
+/// there, then the result to the caller's stack.
+fn body(g: &mut Gen, callee: &Unit, site: &Site) {
+    let m = callee.vm.method(callee.m);
+    let nlocals = usize::from(callee.code.max_locals.max(m.arg_slots));
+    let nstack = usize::from(callee.code.max_stack);
+    let (d, n, sh) = (site.sh.len(), site.n, site.sh);
     let level = g.inline.len();
     g.save_bases(level);
     let locals_off = g.scratch_used;
@@ -204,9 +255,9 @@ pub(super) fn try_inline(g: &mut Gen, caller: &Unit, pc: usize, sh: &[bool]) -> 
     g.a.lea(R12, RBX, at(0));
     g.a.lea(R13, RBX, CTX_SCRATCH + (stack_off as i32) * SIZE);
     g.inline.push(Inlined {
-        method: target,
-        invoke_pc: pc,
-        invoke_len: if op == 0xb9 { 5 } else { 3 },
+        method: callee.m,
+        invoke_pc: site.pc,
+        invoke_len: if site.op == 0xb9 { 5 } else { 3 },
         parent_depth: d,
         nargs: n,
         locals_off,
@@ -214,7 +265,8 @@ pub(super) fn try_inline(g: &mut Gen, caller: &Unit, pc: usize, sh: &[bool]) -> 
         stack_off,
     });
     g.scratch_used += nlocals + nstack;
-    emit_method(g, &callee, Some(end));
+    let end = g.a.label();
+    emit_method(g, callee, Some(end));
     g.inline.pop();
     g.scratch_used = locals_off;
     g.a.bind(end);
@@ -222,9 +274,4 @@ pub(super) fn try_inline(g: &mut Gen, caller: &Unit, pc: usize, sh: &[bool]) -> 
     if m.ret != b'V' {
         g.a.movups_store(R13, s(d - n), 0);
     }
-    g.a.jmp(done);
-    g.a.bind(slow);
-    g.transfer(pc, d);
-    g.a.bind(done);
-    true
 }

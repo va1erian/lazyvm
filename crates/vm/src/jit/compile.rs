@@ -161,8 +161,8 @@ pub(super) fn compile(vm: &Vm, m: MethodRef, inlining: bool) -> Option<Compiled>
         .iter()
         .map(|s| s.as_ref().map_or(u16::MAX, |s| s.len() as u16))
         .collect();
-    let deopts = std::mem::take(&mut g.deopts);
-    let bytes = g.finish()?;
+    let deopts = std::mem::take(&mut g.deopts).into_boxed_slice();
+    let bytes = g.finish(&deopts)?;
     Some(Compiled {
         code: mem::Code::install(&bytes)?,
         entries,

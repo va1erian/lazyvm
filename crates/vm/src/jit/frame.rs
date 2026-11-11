@@ -40,6 +40,8 @@ pub(super) struct Ctx {
     pub vm: *mut crate::Vm,
     /// `Vm::run`'s base: a return to below it is the interpreter's.
     pub base: u32,
+    /// At an invoke, the code that goes on after it returns (`run::transfer`).
+    pub ret: usize,
     /// Inlined methods' locals and stacks while their bodies run.
     pub scratch: [MaybeUninit<Value>; SCRATCH],
 }
@@ -90,6 +92,7 @@ const CTX_PC: i32 = 32;
 const CTX_SP: i32 = 36;
 
 const CTX_VM: i32 = offset_of!(Ctx, vm) as i32;
+const CTX_RET: i32 = offset_of!(Ctx, ret) as i32;
 
 /// A heap helper (`helpers.rs`).
 pub(super) type Helper =
@@ -295,14 +298,22 @@ impl Gen {
 
     /// An invoke or return at `pc` with `sp` entries, through
     /// `run::transfer`: on into the next frame's code if it is compiled.
-    /// Inside inlined code it is an exit: the interpreter does it.
-    pub(super) fn transfer(&mut self, pc: usize, sp: usize) {
+    /// Inside inlined code it is an exit: the interpreter does it. `next`
+    /// is the code after an invoke, which its return can go straight to.
+    pub(super) fn transfer(&mut self, pc: usize, sp: usize, next: Option<Label>) {
         if !self.inline.is_empty() {
             self.exit(pc, sp, AT);
             return;
         }
         let out = self.exit_stub(pc, sp, AT);
         let leave = self.label();
+        match next {
+            Some(next) => {
+                self.a.lea_label(RAX, next);
+                self.a.store(true, RBX, CTX_RET, RAX);
+            }
+            None => self.a.store_imm(true, RBX, CTX_RET, 0),
+        }
         self.a.mov_rr(true, ARGS[0], RBX);
         self.a.mov_imm64(ARGS[1], pc as u64);
         self.a.mov_imm64(ARGS[2], sp as u64);
@@ -322,8 +333,10 @@ impl Gen {
         self.a.label()
     }
 
-    /// The stubs and the epilogue; the code bytes.
-    pub(super) fn finish(mut self) -> Option<Vec<u8>> {
+    /// The stubs and the epilogue; the code bytes. `deopts` is where the
+    /// deopt records will live, as long as the code: each deopt stub
+    /// passes its record's address (`run::materialize`).
+    pub(super) fn finish(mut self, deopts: &[Deopt]) -> Option<Vec<u8>> {
         for st in std::mem::take(&mut self.stubs) {
             self.a.bind(st.label);
             self.a.store_imm(false, RBX, CTX_PC, st.pc as i32);
@@ -334,8 +347,9 @@ impl Gen {
         for (label, index) in std::mem::take(&mut self.deopt_stubs) {
             self.a.bind(label);
             self.a.mov_rr(true, ARGS[0], RBX);
-            self.a.mov_imm64(ARGS[1], u64::from(index));
-            let f: extern "C" fn(*mut Ctx, u32) -> u32 = super::run::materialize;
+            let record = deopts.get(index as usize)?;
+            self.a.mov_imm64(ARGS[1], record as *const Deopt as u64);
+            let f: extern "C" fn(*mut Ctx, *const Deopt) -> u32 = super::run::materialize;
             self.a.mov_imm64(RAX, f as usize as u64);
             self.a.call_reg(RAX);
             self.a.mov_imm64(RAX, u64::from(CONTINUE));

@@ -185,6 +185,15 @@ impl Asm {
         self.op_mem(None, true, &[0x8d], r, base, disp);
     }
 
+    /// `lea r64, [rip + label]`: the label's address.
+    pub(super) fn lea_label(&mut self, r: u8, l: Label) {
+        self.rex(true, r, 0);
+        self.byte(0x8d);
+        self.byte(((r & 7) << 3) | 0b101);
+        self.fixups.push((self.code.len(), l));
+        self.imm32(0);
+    }
+
     pub(super) fn mov_rr(&mut self, w: bool, dst: u8, src: u8) {
         self.op_reg(None, w, &[0x89], src, dst);
     }

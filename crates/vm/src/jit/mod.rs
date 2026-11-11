@@ -68,7 +68,10 @@ pub(crate) struct Compiled {
     /// Per pc, the stack entries there.
     depth: Vec<u16>,
     /// Exits from inlined code: the frames to build (`run::materialize`).
-    deopts: Vec<frame::Deopt>,
+    /// Read only through the addresses compiled code holds (boxed, so they
+    /// stay put); owned here so they live as long as the code.
+    #[allow(dead_code)]
+    deopts: Box<[frame::Deopt]>,
     max_stack: usize,
     locals: usize,
 }

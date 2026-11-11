@@ -61,6 +61,7 @@ impl Vm {
             sp: 0,
             vm: std::ptr::null_mut(),
             base: base as u32,
+            ret: 0,
             scratch: [const { std::mem::MaybeUninit::uninit() }; frame::SCRATCH],
         };
         let (func, entry) = self.jit_prepare(&mut ctx)?;
@@ -121,6 +122,9 @@ pub(super) extern "C" fn transfer(ctx: *mut Ctx, pc: u32, sp: u32) -> usize {
     if vm.gil.wanted() || !vm.fast_transfer(op, ctx.base as usize) {
         return 0;
     }
+    if let Some(entry) = continuation(vm, ctx, op) {
+        return entry;
+    }
     vm.jit_tick();
     match vm.jit_prepare(ctx) {
         Some((_, entry)) => entry as usize,
@@ -132,23 +136,16 @@ pub(super) extern "C" fn transfer(ctx: *mut Ctx, pc: u32, sp: u32) -> usize {
 /// frames the inlined calls stand for, from the scratch area, so the
 /// interpreter can run on from that instruction. The real frame stops at
 /// the outermost invoke with its arguments popped, as a call leaves it.
-pub(super) extern "C" fn materialize(ctx: *mut Ctx, index: u32) -> u32 {
-    // SAFETY: as in `transfer`.
-    let (ctx, vm) = unsafe { (&mut *ctx, &mut *(*ctx).vm) };
+pub(super) extern "C" fn materialize(ctx: *mut Ctx, deopt: *const frame::Deopt) -> u32 {
+    // SAFETY: as in `transfer`. `deopt` is one of the records of the code
+    // that called, which live as long as it does (a recompile retires both).
+    let (ctx, vm, d) = unsafe { (&mut *ctx, &mut *(*ctx).vm, (*deopt).clone()) };
     let Some(m) = vm.frames.last().map(|f| f.method) else {
         std::process::abort();
-    };
-    let deopt = match &vm.method(m).jit.state {
-        State::Compiled(c) => c.deopts.get(index as usize).cloned(),
-        _ => None,
     };
     vm.class_mut(m.class).methods[usize::from(m.index)]
         .jit
         .exited();
-    let Some(d) = deopt else {
-        // Cannot happen: the stub's index is one of this code's deopts.
-        std::process::abort();
-    };
     let Some(f) = vm.frames.last_mut() else {
         std::process::abort();
     };
@@ -181,4 +178,26 @@ pub(super) extern "C" fn materialize(ctx: *mut Ctx, index: u32) -> u32 {
         f.next_pc = level.next_pc as usize;
     }
     1
+}
+
+/// After an invoke, records where the caller goes on (`ctx.ret`); after a
+/// return, that code if the caller is back at that call. It is the caller's
+/// own code (or code it had before a recompile, which stays), entered at the
+/// stack shape a return there leaves, so it needs no lookup.
+fn continuation(vm: &mut Vm, ctx: &mut Ctx, op: u8) -> Option<usize> {
+    if matches!(op, 0xb6..=0xb9) {
+        if let [.., caller, _] = &mut vm.frames[..] {
+            caller.jit_ret = ctx.ret;
+            caller.jit_ret_pc = caller.next_pc;
+        }
+        return None;
+    }
+    let f = vm.frames.last_mut()?;
+    if f.jit_ret == 0 || f.jit_ret_pc != f.pc {
+        return None;
+    }
+    let entry = std::mem::take(&mut f.jit_ret);
+    ctx.locals = f.locals.as_mut_ptr();
+    ctx.stack = f.stack.as_mut_ptr();
+    Some(entry)
 }
