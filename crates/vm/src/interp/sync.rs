@@ -123,8 +123,8 @@ impl Vm {
 
     /// Releases the monitors of a frame being popped, newest first.
     #[cold]
-    pub(super) fn release_frame_monitors(&mut self, f: &super::Frame) {
-        for &obj in f.monitors.iter().rev().chain(&f.method_lock) {
+    pub(super) fn release_frame_monitors(&mut self, monitors: &[Ref], lock: Option<Ref>) {
+        for &obj in monitors.iter().rev().chain(&lock) {
             let _ = self.monitor_exit(obj);
         }
     }

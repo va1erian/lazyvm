@@ -72,7 +72,7 @@ never a panic.
       Check: `tools/bench.py` before and after on both platforms, in the PR;
       `tests/java/lang/CaseMapping` and `StringCaseLocale`, with ASCII
       strings under tr, az and lt added and blessed.
-- [ ] S11-06 Performance pass 2, led by a profile. S11-05 chose its changes
+- [x] S11-06 Performance pass 2, led by a profile. S11-05 chose its changes
       by reading the code; this pass measures first. Parts 1 and 2 are
       tools, kept on their own Checks. Each change in parts 3 and 4 is kept
       only if `tools/bench.py` shows a 20% win on the benchmark it targets

@@ -366,7 +366,8 @@ public final class String implements java.io.Serializable, Comparable<String>, C
     }
 
     public String[] split(String regex, int limit) {
-        return java.util.regex.Pattern.compile(regex).split(this, limit);
+        String[] plain = StringSplit.literal(this, regex, limit);
+        return plain != null ? plain : java.util.regex.Pattern.compile(regex).split(this, limit);
     }
 
     public String[] split(String regex) {

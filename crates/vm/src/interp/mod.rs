@@ -4,9 +4,13 @@
 //! depth is bounded by `Options::max_frames` alone. A call into Java from
 //! Rust (`Vm::invoke`) runs a nested loop that stops when its frame returns.
 
+mod code_ref;
 mod fast;
+mod fast_call;
 mod fast_field;
+mod fast_wide;
 mod frame;
+mod frame_stack;
 mod lend;
 mod ops_array;
 mod ops_basic;
@@ -16,10 +20,13 @@ mod ops_math;
 mod ops_object;
 mod sync;
 
+pub(crate) use code_ref::CodeRef;
 pub use frame::Frame;
+pub use frame_stack::FrameStack;
 pub use lend::with_lent;
 
 use crate::class::MethodRef;
+use crate::prof::{self, Phase};
 use crate::value::{Ref, Value};
 use crate::{Vm, VmError, VmResult};
 
@@ -35,9 +42,6 @@ const OVERFLOW_HEADROOM: usize = 64;
 /// The same allowance for nested calls from Rust and for frame slots.
 const OVERFLOW_NESTING: usize = 16;
 const OVERFLOW_SLOTS: usize = 64 * 1024;
-/// Locals and stack buffers kept for the next call; deeper recursion allocates.
-const MAX_SPARE_BUFFERS: usize = 4;
-const MAX_SPARE_SLOTS: usize = 32;
 
 impl Vm {
     /// Calls a method from Rust and runs it to completion. Reference
@@ -87,7 +91,7 @@ impl Vm {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let method = self.method(m);
-        let Some(code) = method.code.clone() else {
+        let Some(code) = method.code.as_ref().map(CodeRef::new) else {
             let msg = format!(
                 "{}.{}{}",
                 self.class(m.class).java_name(),
@@ -103,10 +107,9 @@ impl Vm {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let arg_slots = method.arg_slots;
-        let (locals, stack) = self.spare_buffers.pop().unwrap_or_default();
-        let frame = Frame::new(m, code, arg_slots, args, locals, stack)?;
+        self.frames.push(m, code, arg_slots, args)?;
         self.frame_slots += slots;
-        self.frames.push(frame);
+        crate::prof::call(m);
         Ok(())
     }
 
@@ -122,17 +125,14 @@ impl Vm {
 
     #[inline]
     pub(crate) fn pop_frame(&mut self) {
-        if let Some(f) = self.frames.pop() {
+        if let Some(f) = self.frames.retire() {
             self.frame_slots -= f.locals.len() + usize::from(f.code.max_stack);
             if !f.monitors.is_empty() || f.method_lock.is_some() {
-                self.release_frame_monitors(&f);
+                let monitors = std::mem::take(&mut f.monitors);
+                let lock = f.method_lock.take();
+                self.release_frame_monitors(&monitors, lock);
             }
-            if self.spare_buffers.len() < MAX_SPARE_BUFFERS
-                && f.locals.capacity() <= MAX_SPARE_SLOTS
-                && f.stack.capacity() <= MAX_SPARE_SLOTS
-            {
-                self.spare_buffers.push((f.locals, f.stack));
-            }
+            self.frames.trim_retired();
         }
     }
 
@@ -151,9 +151,12 @@ impl Vm {
     }
 
     fn run_loop(&mut self, base: usize) -> VmResult<Option<Value>> {
+        self.prof_start();
+        self.prof_top();
         loop {
             if !self.slow_interp {
-                self.run_simple();
+                prof::phase(Phase::Fast);
+                self.run_simple(base);
             }
             if self.heap.wants_gc() {
                 self.collect_garbage();
@@ -164,6 +167,7 @@ impl Vm {
                     Err(e) => Err(e),
                     Ok(()) => {
                         self.pop_frame();
+                        self.prof_top();
                         if self.frames.len() <= base {
                             return Ok(v);
                         }
@@ -177,7 +181,9 @@ impl Vm {
                     return Err(e);
                 }
                 let ex = self.materialize(e)?;
-                self.unwind(ex, base)?;
+                let found = self.unwind(ex, base);
+                self.prof_top();
+                found?;
             }
         }
     }
@@ -213,9 +219,14 @@ impl Vm {
     fn unwind_rooted(&mut self, mut ex: Ref, base: usize) -> VmResult<()> {
         let slot = self.roots.len() - 1;
         while self.frames.len() > base {
-            let (class, mut pc, code) = {
+            let (class, mut pc, method) = {
                 let f = self.top()?;
-                (f.class, f.pc, f.code.clone())
+                (f.class, f.pc, f.method)
+            };
+            // An owned `Arc`, not the frame's `CodeRef`: resolving a catch
+            // type can run Java, and a native could replace the whole VM.
+            let Some(code) = self.method(method).code.clone() else {
+                return Err(VmError::Internal("unwinding a frame without code".into()));
             };
             // Each failed resolution moves `pc`; a table whose entries keep
             // pointing into each other must not loop forever.
@@ -260,6 +271,7 @@ impl Vm {
     /// Executes one instruction of the top frame.
     fn step(&mut self) -> VmResult<Flow> {
         let op = self.top()?.u1(0)?;
+        prof::step(op);
         if self.slow_interp {
             if self.options.trace_interp {
                 self.trace_instruction(op);

@@ -48,7 +48,7 @@ impl Cell {
         match self {
             Cell::Instance(r, slot) => vm.set_field(r, slot, v),
             Cell::Static(c, slot) => {
-                *static_slot(vm.class_mut(c).statics.get_mut(slot))? = v;
+                *static_slot(vm.statics_mut(c).get_mut(slot))? = v;
                 Ok(())
             }
             Cell::Element(a, i) => vm.heap.array_mut(a)?.store(i, v, false),
@@ -213,7 +213,7 @@ fn ref_swap(vm: &mut Vm, cell: Cell, a: &[Value]) -> VmResult<Option<Value>> {
 /// The class of the frame below the one that called the native, looking
 /// through `Method.invoke`. A native has no frame of its own.
 fn caller_class(vm: &mut Vm, _: &[Value]) -> VmResult<Option<Value>> {
-    let mut frames = vm.frames.iter().rev().skip(1);
+    let mut frames = vm.frames().iter().rev().skip(1);
     let caller = frames
         .find(|f| &*vm.class(f.class).name != METHOD)
         .map(|f| f.class);

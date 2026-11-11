@@ -60,16 +60,20 @@ fn push(f: &mut Frame, v: Value, len: usize) -> VmResult<()> {
 }
 
 /// `kind`: 0 int, 1 long, 2 float, 3 double, 4 reference.
-fn check_kind(v: Value, kind: u8) -> VmResult<Value> {
-    let ok = matches!(
+#[inline(always)]
+pub(super) fn is_kind(v: Value, kind: u8) -> bool {
+    matches!(
         (kind, v),
         (0, Value::Int(_))
             | (1, Value::Long(_))
             | (2, Value::Float(_))
             | (3, Value::Double(_))
             | (4, Value::Ref(_))
-    );
-    if ok {
+    )
+}
+
+fn check_kind(v: Value, kind: u8) -> VmResult<Value> {
+    if is_kind(v, kind) {
         Ok(v)
     } else {
         Err(VmError::verify(format!("local of kind {kind} holds {v:?}")))
@@ -112,7 +116,7 @@ fn wide(f: &mut Frame) -> VmResult<()> {
 }
 
 /// The JVMS 6.5 stack instructions, which care about value categories.
-fn stack_op(f: &mut Frame, op: u8) -> VmResult<()> {
+pub(super) fn stack_op(f: &mut Frame, op: u8) -> VmResult<()> {
     let cat1 = |v: Value| -> VmResult<Value> {
         if v.is_wide() {
             Err(VmError::verify(

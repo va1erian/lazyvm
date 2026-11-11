@@ -51,9 +51,66 @@ class Pool:
         return self.add(("f", owner, name, desc), b"\x09" + struct.pack(
             ">HH", self.klass(owner), self.name_and_type(name, desc)))
 
+    def method(self, owner: str, name: str, desc: str, interface: bool = False) -> int:
+        tag = 11 if interface else 10
+        return self.add(("m", tag, owner, name, desc), bytes([tag]) + struct.pack(
+            ">HH", self.klass(owner), self.name_and_type(name, desc)))
+
+
+# Methods the call cases invoke: (name, access, descriptor, max_stack, max_locals, code).
+# A `new` or `invokestatic` operand of 0 is patched in by `helper_info`.
+HELPERS = [
+    ("h_int", 0x0009, "(I)I", 1, 1, bytes([0x1A, 0xAC])),
+    ("h_none", 0x0009, "()I", 1, 0, bytes([0x04, 0xAC])),
+    ("h_bad_ireturn", 0x0009, "(I)I", 1, 1, bytes([0x01, 0xAC])),
+    ("h_bad_areturn", 0x0009, "(I)Ljava/lang/Object;", 1, 1, bytes([0x1A, 0xB0])),
+    ("h_empty_ireturn", 0x0009, "(I)I", 1, 1, bytes([0xAC])),
+    ("h_monitor", 0x0009, "(I)V", 2, 1, bytes([0xBB, 0, 0, 0x59, 0xC2, 0x57, 0xB1])),
+    ("h_recurse", 0x0009, "(I)V", 1, 1, bytes([0x1A, 0xB8, 0, 0, 0xB1])),
+    ("h_nine", 0x0009, "(IIIIIIIII)I", 1, 9, bytes([0x15, 8, 0xAC])),
+    ("inst", 0x0001, "()I", 1, 1, bytes([0x10, 7, 0xAC])),
+    ("run", 0x0001, "()V", 0, 1, bytes([0xB1])),
+]
+
 
 def getstatic(index: int) -> bytes:
     return bytes([0xB2]) + struct.pack(">H", index)
+
+
+def call_cases(pool: Pool) -> list[tuple[str, int, int, bytes]]:
+    """Invokes and returns, which the fast loop does itself when it can (fast_call.rs)."""
+    def m(name: str, desc: str, owner: str = "Crafted", interface: bool = False) -> bytes:
+        return struct.pack(">H", pool.method(owner, name, desc, interface))
+
+    def st(name: str, desc: str) -> bytes:
+        return bytes([0xB8]) + m(name, desc)
+
+    new, ret = bytes([0xBB]) + struct.pack(">H", pool.klass("Crafted")), b"\xb1"
+    run_ref = m("run", "()V", "java/lang/Runnable", True)
+    pop = bytes([0x57])
+    return [
+        ("call_too_few_args", 1, 1, st("h_int", "(I)I") + pop + ret),
+        ("call_static_of_instance", 2, 1, new + st("inst", "()I") + pop + ret),
+        ("call_virtual_null", 1, 1, bytes([0x01, 0xB6]) + m("inst", "()I") + pop + ret),
+        ("call_virtual_int_receiver", 1, 1, bytes([0x04, 0xB6]) + m("inst", "()I") + pop + ret),
+        ("call_virtual_of_static", 1, 1, bytes([0x1A, 0xB6]) + m("h_int", "(I)I") + pop + ret),
+        ("call_virtual_interface_ref", 1, 1, new + bytes([0xB6]) + run_ref + ret),
+        ("call_interface_class_ref", 1, 1, new + bytes([0xB9]) + m("run", "()V") + bytes([1, 0]) + ret),
+        ("call_interface_not_implemented", 1, 1,
+         bytes([0x04, 0xBC, 10, 0xB9]) + run_ref + bytes([1, 0]) + ret),
+        ("call_special_null", 1, 1, bytes([0x01, 0xB7]) + m("inst", "()I") + pop + ret),
+        ("call_stack_overflow", 1, 1, bytes([0x1A]) + st("h_recurse", "(I)V") + ret),
+        ("ret_wrong_kind", 1, 1, bytes([0x1A]) + st("h_bad_ireturn", "(I)I") + pop + ret),
+        ("ret_ref_of_int", 1, 1, bytes([0x1A]) + st("h_bad_areturn", "(I)Ljava/lang/Object;") + pop + ret),
+        ("ret_empty_stack", 1, 1, bytes([0x1A]) + st("h_empty_ireturn", "(I)I") + pop + ret),
+        ("ret_into_full_stack", 1, 1, bytes([0x04]) + st("h_none", "()I") + pop + pop + ret),
+        ("ret_holding_monitor", 1, 1, bytes([0x1A]) + st("h_monitor", "(I)V") + ret),
+        ("control_call_static", 1, 1, bytes([0x1A]) + st("h_int", "(I)I") + pop + ret),
+        ("control_call_virtual", 2, 1, new + bytes([0x59, 0xB6]) + m("inst", "()I") + pop + pop + ret),
+        ("control_call_special", 1, 1, new + bytes([0xB7]) + m("inst", "()I") + pop + ret),
+        ("control_call_interface", 1, 1, new + bytes([0xB9]) + run_ref + bytes([1, 0]) + ret),
+        ("control_call_nine_args", 9, 1, bytes([0x1A] * 9) + st("h_nine", "(IIIIIIIII)I") + pop + ret),
+    ]
 
 
 def cases(f: int, g: int, c: int) -> list[tuple[str, int, int, bytes]]:
@@ -176,7 +233,25 @@ def cases(f: int, g: int, c: int) -> list[tuple[str, int, int, bytes]]:
         ("wide_istore_over_lstore", 2, 3, bytes([0x09, 0x40, 0x04, 0x3D, 0x1F]) + ret),
         ("wide_astore_over_lstore", 2, 3, bytes([0x09, 0x40, 0x01, 0x4E, 0x1F]) + ret),
         ("wide_iinc_over_lstore", 2, 3, bytes([0x09, 0x40, 0x84, 2, 1, 0x1F]) + ret),
+        # long, float and double arithmetic (fast_wide.rs and ops_math::binary).
+        ("wide_ldiv_zero", 4, 1, bytes([0x0A, 0x09, 0x6D, 0x58]) + ret),
+        ("wide_lrem_zero", 4, 1, bytes([0x0A, 0x09, 0x71, 0x58]) + ret),
+        ("wide_fadd_ints", 2, 1, bytes([0x04, 0x04, 0x62, 0x57]) + ret),
+        ("wide_dmul_float", 2, 1, bytes([0x0F, 0x0C, 0x6B, 0x58]) + ret),
+        ("wide_lshl_long_count", 2, 1, bytes([0x0A, 0x0A, 0x79, 0x58]) + ret),
+        ("wide_lcmp_ints", 2, 1, bytes([0x04, 0x04, 0x94, 0x57]) + ret),
+        ("wide_i2l_ref", 1, 1, bytes([0x01, 0x85, 0x58]) + ret),
+        ("wide_d2f_long", 1, 1, bytes([0x0A, 0x90, 0x57]) + ret),
+        ("wide_fneg_empty", 1, 1, bytes([0x76]) + ret),
+        ("wide_lload_of_int", 2, 2, bytes([0x1E]) + ret),
+        ("wide_dstore_float", 1, 3, bytes([0x0C, 0x48]) + ret),
+        ("wide_lstore_last_slot", 1, 2, bytes([0x0A, 0x40]) + ret),
+        ("wide_overflow_lconst", 1, 1, bytes([0x0A, 0x0A]) + ret),
+        ("wide_pop_long", 1, 1, bytes([0x0A, 0x57]) + ret),
+        ("wide_dup2_overflow", 2, 1, bytes([0x04, 0x04, 0x5C]) + ret),
         # Not malformed: controls that must run.
+        ("control_wide_math", 4, 3, bytes([0x0F, 0x0F, 0x63, 0x8E, 0x85, 0x40, 0x1F, 0x0A, 0x61, 0x88,
+                                           0x86, 0x0D, 0x96, 0x57]) + ret),
         ("control_array_roundtrip", 4, 1, bytes([0x04]) + ints + bytes([0x59, 0x03, 0x10, 7, 0x4F, 0x03, 0x2E, 0x57]) + ret),
         ("control_object_roundtrip", 3, 1, new + bytes([0x59, 0x10, 5]) + pf + gf + bytes([0x57]) + ret),
         ("control_wide_local", 2, 3, bytes([0x09, 0x40, 0x04, 0x3B, 0x1F, 0x58]) + ret),
@@ -185,10 +260,20 @@ def cases(f: int, g: int, c: int) -> list[tuple[str, int, int, bytes]]:
     ]
 
 
-def method_info(pool: Pool, name: str, stack: int, locals_: int, code: bytes) -> bytes:
+def method_info(pool: Pool, name: str, stack: int, locals_: int, code: bytes,
+                access: int = 0x0009, desc: str = "(I)V") -> bytes:
     body = struct.pack(">HHI", stack, locals_, len(code)) + code + struct.pack(">HH", 0, 0)
     attr = struct.pack(">HI", pool.utf8("Code"), len(body)) + body
-    return struct.pack(">HHHH", 0x0009, pool.utf8(name), pool.utf8("(I)V"), 1) + attr
+    return struct.pack(">HHHH", access, pool.utf8(name), pool.utf8(desc), 1) + attr
+
+
+def helper_info(pool: Pool, name: str, access: int, desc: str, stack: int, locals_: int,
+                code: bytes) -> bytes:
+    if name == "h_monitor":
+        code = code[:1] + struct.pack(">H", pool.klass("Crafted")) + code[3:]
+    if name == "h_recurse":
+        code = code[:2] + struct.pack(">H", pool.method("Crafted", "h_recurse", "(I)V")) + code[4:]
+    return method_info(pool, name, stack, locals_, code, access, desc)
 
 
 def crafted_class() -> tuple[bytes, list[str]]:
@@ -198,10 +283,13 @@ def crafted_class() -> tuple[bytes, list[str]]:
     inst = pool.field("Crafted", "g", "I")
     field_info = struct.pack(">HHHH", 0x0009, pool.utf8("f"), pool.utf8("I"), 0)
     field_info += struct.pack(">HHHH", 0x0001, pool.utf8("g"), pool.utf8("I"), 0)
-    methods = [method_info(pool, *c) for c in cases(field, inst, this)]
-    names = [c[0] for c in cases(field, inst, this)]
+    runnable = pool.klass("java/lang/Runnable")
+    all_cases = cases(field, inst, this) + call_cases(pool)
+    methods = [method_info(pool, *c) for c in all_cases]
+    methods += [helper_info(pool, *h) for h in HELPERS]
+    names = [c[0] for c in all_cases]
     head = b"\xca\xfe\xba\xbe" + struct.pack(">HHH", 0, 52, len(pool.items) + 1)
-    tail = struct.pack(">HHHHH", 0x0021, this, sup, 0, 2) + field_info
+    tail = struct.pack(">HHHHHH", 0x0021, this, sup, 1, runnable, 2) + field_info
     tail += struct.pack(">H", len(methods)) + b"".join(methods) + struct.pack(">H", 0)
     return head + b"".join(pool.items) + tail, names
 
@@ -265,11 +353,17 @@ def main() -> None:
         problems += [f"fast: {x!r}\n  trace: {y!r}" for x, y in zip(a, b) if x != y] or ["line counts differ"]
     # Every case is a VerifyError except those that throw a real Java exception, and the controls.
     aioobe, icce = "java.lang.ArrayIndexOutOfBoundsException", "java.lang.IncompatibleClassChangeError"
+    npe = "java.lang.NullPointerException"
     wanted = {"kind_getfield_null": "java.lang.NullPointerException",
               "array_load_oob": aioobe, "array_load_oob_far": aioobe, "array_load_negative": aioobe,
               "array_store_oob": aioobe, "array_store_negative": aioobe,
               "obj_getfield_static_ref": icce, "obj_putfield_static_ref": icce,
-              "obj_getstatic_instance_ref": icce, "obj_putstatic_instance_ref": icce}
+              "obj_getstatic_instance_ref": icce, "obj_putstatic_instance_ref": icce,
+              "call_static_of_instance": icce, "call_virtual_null": npe, "call_virtual_of_static": icce,
+              "call_interface_not_implemented": icce, "call_special_null": npe,
+              "call_stack_overflow": "java.lang.StackOverflowError",
+              "wide_ldiv_zero": "java.lang.ArithmeticException", "wide_lrem_zero": "java.lang.ArithmeticException",
+              "ret_holding_monitor": "java.lang.IllegalMonitorStateException"}
     for n in names:
         for i in (1, 2):
             line = next((x for x in a if x.startswith(f"{n} #{i} ")), "")

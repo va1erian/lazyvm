@@ -19,7 +19,7 @@ pub(crate) use gil::Gil;
 use gil::Line;
 pub(crate) use monitor::Monitors;
 
-use crate::interp::Frame;
+use crate::interp::FrameStack;
 use crate::value::Ref;
 use crate::{Vm, VmError, VmResult};
 
@@ -38,7 +38,7 @@ pub enum Blocked {
 /// The per-thread part of the `Vm`, kept here while the thread is outside.
 #[derive(Default)]
 pub(crate) struct ThreadState {
-    frames: Vec<Frame>,
+    frames: FrameStack,
     roots: Vec<Ref>,
     frame_slots: usize,
     nesting: u32,

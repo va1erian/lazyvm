@@ -203,7 +203,7 @@ fn field_set(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     if is_static {
         vm.initialize(class)?;
         let v = unboxed(vm, &desc, opt(args, 2)?)?;
-        vm.class_mut(class).statics[vslot] = v;
+        vm.statics_mut(class)[vslot] = v;
     } else {
         let r = check_receiver(vm, class, opt(args, 1)?)?;
         let v = unboxed(vm, &desc, opt(args, 2)?)?;
@@ -236,7 +236,7 @@ fn method_invoke(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let (class, slot) = member_of(vm, obj(args, 0)?)?;
     let index = u16::try_from(slot).map_err(|_| VmError::exception(IAE, "bad method slot"))?;
     let mut m = MethodRef { class, index };
-    if vm.class(class).methods.get(slot).is_none() {
+    if vm.class(class).methods().get(slot).is_none() {
         return Err(VmError::exception(IAE, "bad method slot"));
     }
     let mut vals = Vec::new();
@@ -276,7 +276,7 @@ fn constructor_new(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let m = MethodRef { class, index };
     if vm
         .class(class)
-        .methods
+        .methods()
         .get(slot)
         .is_none_or(|m| &*m.name != "<init>")
     {

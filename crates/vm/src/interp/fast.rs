@@ -1,6 +1,8 @@
 //! A tight loop for the instructions that dominate hot code: constants, local
-//! loads and stores, `int` arithmetic, compares and branches, and array element
-//! access. `step` stays the one full implementation of every instruction.
+//! loads and stores, arithmetic of every kind (`fast_wide.rs`), compares and
+//! branches, array element access, fields (`fast_field.rs`), and resolved
+//! calls and returns (`fast_call.rs`). `step` stays the one full
+//! implementation of every instruction.
 //!
 //! The loop checks exactly what `step` checks and, when anything is off (an
 //! operand of the wrong kind, a full or empty stack, a null or out-of-range
@@ -9,18 +11,21 @@
 //! raises the same error or exception, so no check is dropped and there is a
 //! single place that decides what malformed code does.
 //!
-//! It never allocates, resolves a constant-pool entry or calls a method, so it
-//! needs no collector root. Static field access only goes ahead for a class
+//! The loop proper never allocates, resolves a constant-pool entry or calls a
+//! method, so it needs no collector root; a call pushes a frame between runs
+//! of it (`run_simple`), where the frames themselves are the roots. Static field access only goes ahead for a class
 //! already initialised (JVMS 5.5); any other state takes the full path. A taken backward
 //! branch ends the run and polls for a safepoint, as `op_branch` does.
 
 use super::Frame;
 use super::fast_field::{get_field, get_static, put_field, put_static};
+use super::fast_wide::{self as wide, load as wload, store as wstore};
 use super::ops_array::kind_matches;
 use super::ops_branch::cond;
 use crate::Vm;
 use crate::class::Class;
 use crate::heap::Heap;
+use crate::prof::FastCount;
 use crate::value::{Ref, Value};
 
 impl Vm {
@@ -29,8 +34,11 @@ impl Vm {
     /// it polls for a safepoint and carries on, so a hot loop stays in here;
     /// the frame is borrowed again afterwards, as a thread switch may have run
     /// other code meanwhile. A pending collection goes back to the dispatch loop.
+    ///
+    /// A resolved invoke or a plain return is done here too (`fast_call.rs`),
+    /// so a call stays in the loop; `base` is `Vm::run`'s.
     #[inline]
-    pub(super) fn run_simple(&mut self) {
+    pub(super) fn run_simple(&mut self, base: usize) {
         loop {
             let Vm {
                 frames,
@@ -39,8 +47,13 @@ impl Vm {
                 ..
             } = self;
             let Some(f) = frames.last_mut() else { return };
-            if !run(f, heap, classes) {
-                return;
+            match run(f, heap, classes) {
+                Stop::Backward => {}
+                Stop::At(op) => {
+                    if !self.fast_transfer(op, base) {
+                        return;
+                    }
+                }
             }
             // After the thread was out, a debugger may have set a breakpoint.
             if self.safepoint() || self.heap.wants_gc() {
@@ -78,7 +91,10 @@ fn push_int(f: &mut Frame, v: i32, len: usize) -> bool {
     true
 }
 
-/// `iload`/`aload` of local `i`; `want_ref` picks the kind.
+/// `iload`/`aload` of local `i`; `want_ref` picks the kind. `long`, `float`
+/// and `double` locals go through `fast_wide::load`; routing these two through
+/// it as well cost `blit` a fifth of its speed (the loop's code generation is
+/// that sensitive), so the int and reference forms keep their own.
 fn load(f: &mut Frame, i: usize, want_ref: bool, len: usize) -> bool {
     let Some(&v) = f.locals.get(i) else {
         return false;
@@ -241,13 +257,36 @@ fn array_length(f: &mut Frame, heap: &Heap) -> bool {
     true
 }
 
-/// Runs until an instruction is not simple or not valid; true if it stopped
-/// after a taken backward branch.
-fn run(f: &mut Frame, heap: &mut Heap, classes: &mut [Class]) -> bool {
+/// Why `run` stopped.
+enum Stop {
+    /// After a taken backward branch: poll for a safepoint, then go on.
+    Backward,
+    /// At an instruction it does not do, or whose checks failed, unchanged.
+    At(u8),
+}
+
+/// Runs until an instruction is not simple or not valid, or after a taken
+/// backward branch.
+fn run(f: &mut Frame, heap: &mut Heap, classes: &mut [Class]) -> Stop {
+    let mut count = FastCount::default();
+    let stop = run_counted(f, heap, classes, &mut count);
+    count.done(matches!(stop, Stop::Backward));
+    stop
+}
+
+fn run_counted(
+    f: &mut Frame,
+    heap: &mut Heap,
+    classes: &mut [Class],
+    count: &mut FastCount,
+) -> Stop {
     loop {
+        count.tick();
         let start = f.pc;
         let Some(&op) = f.code.bytecode.get(start) else {
-            return false;
+            // Past the end of the code: `step` reports it. 0xff is reserved
+            // (JVMS 6.2), so `fast_transfer` leaves it alone.
+            return Stop::At(0xff);
         };
         let operand = |at: usize| f.code.bytecode.get(start + at).copied();
         let done = match op {
@@ -329,6 +368,35 @@ fn run(f: &mut Frame, heap: &mut Heap, classes: &mut [Class]) -> bool {
             0x55 => array_store(f, heap, 6),
             0x56 => array_store(f, heap, 7),
             0xbe => array_length(f, heap),
+            0x09 | 0x0a => wide::push(f, Value::Long(i64::from(op - 0x09)), 1),
+            0x0b..=0x0d => wide::push(f, Value::Float(f32::from(op - 0x0b)), 1),
+            0x0e | 0x0f => wide::push(f, Value::Double(f64::from(op - 0x0e)), 1),
+            0x12 => operand(1).is_some_and(|i| wide::ldc(f, classes, u16::from(i), 2)),
+            0x13 | 0x14 => match (operand(1), operand(2)) {
+                (Some(h), Some(l)) => wide::ldc(f, classes, u16::from_be_bytes([h, l]), 3),
+                _ => false,
+            },
+            0x16 => operand(1).is_some_and(|i| wload(f, usize::from(i), wide::LONG, 2)),
+            0x17 => operand(1).is_some_and(|i| wload(f, usize::from(i), wide::FLOAT, 2)),
+            0x18 => operand(1).is_some_and(|i| wload(f, usize::from(i), wide::DOUBLE, 2)),
+            0x1e..=0x21 => wload(f, usize::from(op - 0x1e), wide::LONG, 1),
+            0x22..=0x25 => wload(f, usize::from(op - 0x22), wide::FLOAT, 1),
+            0x26..=0x29 => wload(f, usize::from(op - 0x26), wide::DOUBLE, 1),
+            0x37 => operand(1).is_some_and(|i| wstore(f, usize::from(i), wide::LONG, 2)),
+            0x38 => operand(1).is_some_and(|i| wstore(f, usize::from(i), wide::FLOAT, 2)),
+            0x39 => operand(1).is_some_and(|i| wstore(f, usize::from(i), wide::DOUBLE, 2)),
+            0x3f..=0x42 => wstore(f, usize::from(op - 0x3f), wide::LONG, 1),
+            0x43..=0x46 => wstore(f, usize::from(op - 0x43), wide::FLOAT, 1),
+            0x47..=0x4a => wstore(f, usize::from(op - 0x47), wide::DOUBLE, 1),
+            0x57 | 0x58 | 0x5c => wide::shuffle(f, op),
+            0x61..=0x63 | 0x65..=0x67 | 0x69..=0x6b | 0x6d..=0x6f | 0x71..=0x73 | 0x75..=0x77 => {
+                wide::arith(f, op)
+            }
+            0x79 | 0x7b | 0x7d | 0x7f | 0x81 | 0x83 | 0x85..=0x90 | 0x94..=0x98 => {
+                wide::arith(f, op)
+            }
+            0x2f..=0x31 => array_load(f, heap, op - 0x2e),
+            0x50..=0x52 => array_store(f, heap, op - 0x4f),
             0xb2 => get_static(f, classes),
             0xb3 => put_static(f, classes),
             0xb4 => get_field(f, heap, classes),
@@ -336,10 +404,10 @@ fn run(f: &mut Frame, heap: &mut Heap, classes: &mut [Class]) -> bool {
             _ => false,
         };
         if !done {
-            return false;
+            return Stop::At(op);
         }
         if f.pc <= start {
-            return true;
+            return Stop::Backward;
         }
     }
 }

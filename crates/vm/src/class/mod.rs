@@ -70,7 +70,9 @@ pub struct Method {
     pub name: Arc<str>,
     pub descriptor: Arc<str>,
     pub access: u16,
-    pub code: Option<Arc<Code>>,
+    /// Set when the class is laid out and never replaced: frames point
+    /// into it (`interp::CodeRef`), so it is crate-private; `code()` reads it.
+    pub(crate) code: Option<Arc<Code>>,
     /// Argument slots in the callee's locals, including `this`.
     pub arg_slots: u16,
     /// Arguments as values (`this` included), the operand stack's count.
@@ -82,6 +84,10 @@ pub struct Method {
 }
 
 impl Method {
+    pub fn code(&self) -> Option<&Arc<Code>> {
+        self.code.as_ref()
+    }
+
     pub fn is_static(&self) -> bool {
         self.access & classfile::ACC_STATIC != 0
     }
@@ -112,7 +118,8 @@ pub struct Class {
     pub all_interfaces: Box<[ClassId]>,
     pub file: Option<Arc<ClassFile>>,
     pub fields: Vec<Field>,
-    pub methods: Vec<Method>,
+    /// Crate-private for `interp::CodeRef`'s sake; `methods()` reads them.
+    pub(crate) methods: Vec<Method>,
     /// Default field values of a new instance, superclass fields first.
     pub instance_template: Box<[Value]>,
     pub statics: Vec<Value>,
@@ -120,6 +127,10 @@ pub struct Class {
     pub mirror: Option<Ref>,
     /// Resolved constant pool entries, indexed like the pool.
     pub cp_cache: Vec<Option<Resolved>>,
+    /// Per method-ref entry, the receiver class `invokevirtual` or
+    /// `invokeinterface` last saw there and the method it selected: a
+    /// one-entry cache in front of `Vm::select` (`interp/fast_call.rs`).
+    pub call_cache: Vec<Option<(ClassId, MethodRef)>>,
     /// Loaded from the boot class path (`Class.getClassLoader` is null).
     pub from_boot: bool,
     /// Verification passed, or nothing to check (`Vm::link_class`).
@@ -129,6 +140,10 @@ pub struct Class {
 }
 
 impl Class {
+    pub fn methods(&self) -> &[Method] {
+        &self.methods
+    }
+
     pub fn is_interface(&self) -> bool {
         self.access & classfile::ACC_INTERFACE != 0
     }

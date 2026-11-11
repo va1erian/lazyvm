@@ -12,3 +12,8 @@ workspace = true
 [dependencies]
 classfile = { path = "../classfile" }
 platform = { path = "../platform" }
+
+[features]
+# The interpreter's sampling profiler (crates/vm/src/prof). Never on in a
+# shipped build: `cargo build --release -p launcher --features vm/prof`.
+prof = []

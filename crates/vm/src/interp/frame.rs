@@ -7,10 +7,7 @@
 //! compiler dropped them from the loop after unrelated changes
 //! (docs/design/threads.md, "Cost on one thread").
 
-use std::sync::Arc;
-
-use classfile::Code;
-
+use super::code_ref::CodeRef;
 use crate::class::{ClassId, MethodRef};
 use crate::value::{Ref, Value};
 use crate::{VmError, VmResult};
@@ -18,7 +15,7 @@ use crate::{VmError, VmResult};
 pub struct Frame {
     pub method: MethodRef,
     pub class: ClassId,
-    pub code: Arc<Code>,
+    pub(crate) code: CodeRef,
     /// The start of the instruction being executed.
     pub pc: usize,
     /// Where to continue after a call made by this frame returns.
@@ -33,44 +30,54 @@ pub struct Frame {
 }
 
 impl Frame {
-    /// A frame for `method` with `args` (one value each, `this` first) laid
-    /// out in local slots, wide values taking two. `locals` and `stack` are
-    /// spare buffers to reuse (any contents), so a call allocates nothing in
-    /// the common case.
-    pub fn new(
-        method: MethodRef,
-        code: Arc<Code>,
-        arg_slots: u16,
-        args: &[Value],
-        mut locals: Vec<Value>,
-        mut stack: Vec<Value>,
-    ) -> VmResult<Frame> {
-        let size = usize::from(code.max_locals.max(arg_slots));
-        locals.clear();
-        locals.resize(size, Value::Top);
-        let mut i = 0;
-        for &arg in args {
-            let wide = arg.is_wide();
-            let need = if wide { 2 } else { 1 };
-            if i + need > size {
-                return Err(VmError::verify("arguments do not fit max_locals"));
-            }
-            locals[i] = arg;
-            i += need;
-        }
-        stack.clear();
-        stack.reserve(usize::from(code.max_stack));
-        Ok(Frame {
+    /// A frame with no buffers yet, for `FrameStack` to `enter`.
+    pub(super) fn empty(method: MethodRef, code: CodeRef) -> Frame {
+        Frame {
             method,
             class: method.class,
             code,
             pc: 0,
             next_pc: 0,
-            locals,
-            stack,
+            locals: Vec::new(),
+            stack: Vec::new(),
             monitors: Vec::new(),
             method_lock: None,
-        })
+        }
+    }
+
+    /// Makes this frame (new, or retired by `FrameStack`) the one for
+    /// `method`, with `args` (one value each, `this` first) laid out in local
+    /// slots, wide values taking two. Its buffers are reused, so a call
+    /// allocates nothing in the common case.
+    pub(super) fn enter(
+        &mut self,
+        method: MethodRef,
+        code: CodeRef,
+        arg_slots: u16,
+        args: &[Value],
+    ) -> VmResult<()> {
+        let size = usize::from(code.max_locals.max(arg_slots));
+        self.locals.clear();
+        self.locals.resize(size, Value::Top);
+        let mut i = 0;
+        for &arg in args {
+            let need = if arg.is_wide() { 2 } else { 1 };
+            if i + need > size {
+                return Err(VmError::verify("arguments do not fit max_locals"));
+            }
+            self.locals[i] = arg;
+            i += need;
+        }
+        self.stack.clear();
+        self.stack.reserve(usize::from(code.max_stack));
+        self.method = method;
+        self.class = method.class;
+        self.code = code;
+        self.pc = 0;
+        self.next_pc = 0;
+        self.monitors.clear();
+        self.method_lock = None;
+        Ok(())
     }
 
     /// The references in locals and on the stack, and the objects whose

@@ -14,6 +14,7 @@ pub mod interp;
 mod lambda;
 pub mod native;
 mod objects;
+mod prof;
 mod properties;
 mod strings;
 pub mod thread;
@@ -27,7 +28,7 @@ use std::sync::Arc;
 
 pub use class::{Class, ClassId, ClassPath, MethodRef};
 pub use error::{VmError, VmResult};
-pub use interp::Frame;
+pub use interp::{Frame, FrameStack};
 pub use native::NativeFn;
 pub use throw::TraceFrame;
 pub use value::{Ref, Value};
@@ -89,13 +90,15 @@ pub struct WellKnown {
 }
 
 pub struct Vm {
-    pub classes: Vec<Class>,
+    pub(crate) classes: Vec<Class>,
     pub(crate) by_name: HashMap<Arc<str>, ClassId>,
     /// Names being loaded, to detect `ClassCircularityError`.
     pub(crate) loading: Vec<Arc<str>>,
     pub classpath: ClassPath,
     pub heap: heap::Heap,
-    pub frames: Vec<Frame>,
+    /// Crate-private, like `classes`: frames moved to another VM would point
+    /// into code it does not own (`interp::CodeRef`). `frames()` reads them.
+    pub(crate) frames: FrameStack,
     /// References held by Rust code across a call into Java (see `with_root`).
     pub roots: Vec<Ref>,
     pub(crate) interned: HashMap<Box<[u16]>, Ref>,
@@ -120,8 +123,6 @@ pub struct Vm {
     pub(crate) oom: throw::OomErrors,
     /// Slots used by `frames`, checked against `Options::max_frame_slots`.
     pub(crate) frame_slots: usize,
-    /// Locals and stack buffers of popped frames, reused by the next call.
-    pub(crate) spare_buffers: Vec<(Vec<Value>, Vec<Value>)>,
     /// Current nesting of `invoke` from Rust.
     pub(crate) nesting: u32,
     /// The VM lock, shared by every thread (`thread::Gil`).
@@ -172,7 +173,7 @@ impl Vm {
             loading: Vec::new(),
             classpath,
             heap,
-            frames: Vec::new(),
+            frames: FrameStack::default(),
             roots: Vec::new(),
             interned: HashMap::new(),
             natives: HashMap::new(),
@@ -187,7 +188,6 @@ impl Vm {
             creating_exception: 0,
             oom: throw::OomErrors::default(),
             frame_slots: 0,
-            spare_buffers: Vec::new(),
             nesting: 0,
             gil,
             polls_to_look: 1,
@@ -203,8 +203,20 @@ impl Vm {
         &self.classes[id.0 as usize]
     }
 
-    pub fn class_mut(&mut self, id: ClassId) -> &mut Class {
+    /// Crate-private: swapping classes between two VMs would move code that
+    /// frames point into (`interp::CodeRef`). `statics_mut` is the outside door.
+    pub(crate) fn class_mut(&mut self, id: ClassId) -> &mut Class {
         &mut self.classes[id.0 as usize]
+    }
+
+    /// A class's static field values, for natives that write them.
+    pub fn statics_mut(&mut self, id: ClassId) -> &mut [Value] {
+        &mut self.classes[id.0 as usize].statics
+    }
+
+    /// The running thread's frames, oldest first.
+    pub fn frames(&self) -> &[Frame] {
+        &self.frames
     }
 
     pub fn method(&self, m: MethodRef) -> &class::Method {
