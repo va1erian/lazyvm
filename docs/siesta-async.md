@@ -1,9 +1,7 @@
 # Siesta: `async` and `await`
 
 Status: proposal, part of S16 in [`plan-2.md`](plan-2.md). The language is
-[`siesta.md`](siesta.md); its use as an embedded script language, where the
-same two keywords suspend a script task, is
-[`siesta-script.md`](siesta-script.md).
+[`siesta.md`](siesta.md).
 
 ## 1. Goal
 
@@ -114,8 +112,7 @@ Ui.run(Ui.window("Fetch", 320, 120).content(Ui.column().add(
 
 The checker first linearises every expression that contains `await` into
 temporaries (A-normal form), so the operand stack is empty at every await,
-and both back ends (the JVM one here, a script host's in
-[`siesta-script.md`](siesta-script.md)) only see `x = await e` and `await e` as
+and the code generator only sees `x = await e` and `await e` as
 statements.
 
 Each `async` method or lambda then becomes two pieces:

@@ -294,6 +294,8 @@ own). LazyWriter was ported too ([`ui-writer.md`](ui-writer.md)).
 
 Goal: Java apps are first-class LazyOS apps. They talk Messenger with
 `CompletionStage`, are packaged as `.lzp`, and can be launched from the GUI.
+A proposed API with generated types and no reflection, in place of D8's
+annotation sketch, is [`msg.md`](msg.md); the owner has not confirmed it.
 
 - [ ] S10-01 midlc Java backend (LazyOS repo, LOS-03): it generates, per
       interface, a Java interface whose methods return `CompletionStage<…>`,
@@ -459,26 +461,24 @@ prints its status and size on both platforms (manual live run, recorded in the P
 Goal: a LazyOS machine compiles programs for LazyVM with `siestac`, a native
 compiler for Siesta, a small language with Java's syntax and a reduced
 rule set, LazyRAD builds its forms in it, `async`/`await` make
-LazyOS's asynchronous APIs read like blocking code, and game hosts such as
-miniscent embed its front end as their script language. Proposed in
-[`siesta.md`](siesta.md), [`siesta-async.md`](siesta-async.md) and
-[`siesta-script.md`](siesta-script.md); the owner has not confirmed it. Every item's tests run
+LazyOS's asynchronous APIs read like blocking code, and `lazy.ui` and
+Messenger apps need little plumbing. Proposed in [`siesta.md`](siesta.md),
+[`siesta-async.md`](siesta-async.md) and [`siesta-apps.md`](siesta-apps.md);
+the owner has not confirmed it. Every item's tests run
 through `tools/siesta_test.py` (siesta.md section 9): the classes run on the
 oracle with `-Xverify:all` and on LazyVM, both matching the `.out`, and
 mirrored `.java` tests are blessed on the oracle.
 
 - [ ] S16-01 Lexer, parser, AST and diagnostics (siesta.md sections 4 and 8),
-      in `siesta-syntax`, with no dependencies.
-      Files: `crates/siesta-syntax/`,
+      in `crates/siesta`, which depends only on `crates/classfile`.
+      Files: `crates/siesta/src/{lex,parse,ast,diag}*`,
       `fuzz/fuzz_targets/siesta.rs`, `tests/siesta/bad/`.
-      Check: `cargo test -p siesta-syntax` parses every `tests/siesta/**/*.sie`; each
+      Check: `cargo test -p siesta` parses every `tests/siesta/**/*.sie`; each
       `tests/siesta/bad` file gives its `.err` diagnostic; the fuzz target runs
       10 minutes without a panic.
       Needs: the owner's confirmation of S16.
-- [ ] S16-02 The `Universe` trait and types in `siesta-check`; the class
-      path, `Signature` parsing and the class-file universe in `siestac`.
-      Files: `crates/siesta-check/src/{types,universe}.rs`,
-      `crates/siestac/src/{classpath,sig}.rs`.
+- [ ] S16-02 Types, the class path and `Signature` parsing.
+      Files: `crates/siesta/src/{types,classpath,sig}.rs`.
       Check: a unit test loads every class of `dist/lazyrt.jar`, parses every
       `Signature` attribute and finds the functional interfaces of
       `java.util.function` and `lazy.async` with their single methods.
@@ -489,8 +489,7 @@ mirrored `.java` tests are blessed on the oracle.
       Java API with overloads, boxing and varargs, the missing-`return`
       check, stack maps, `classfile::writer`
       extensions, `siestac`, `siestac run`, and the size gate.
-      Files: `crates/siesta-check/src/{infer,overload,check}*`,
-      `crates/siestac/src/{gen,emit,main}*`,
+      Files: `crates/siesta/src/{infer,overload,check,gen,emit,main}*`,
       `crates/classfile/src/writer.rs`, `tools/siesta_test.py`,
       `tools/size.py`, `tests/siesta/core/`.
       Check: `tools/siesta_test.py --filter core` passes on Windows;
@@ -500,15 +499,16 @@ mirrored `.java` tests are blessed on the oracle.
 - [ ] S16-04 Classes and interfaces: fields, constructors, default and
       static interface methods, static nested classes, generic classes and
       methods, extending Java classes, bridge methods, `enum`, annotations.
-      Files: `crates/siesta-check/src/check/`, `crates/siestac/src/gen/`,
+      Files: `crates/siesta/src/{check,gen}/`,
       `tests/siesta/classes/`.
       Check: `tools/siesta_test.py --filter classes` passes on Windows,
       including a `Comparable<Point>` sorted by `Collections.sort` and a
       mirror of `tests/java/s4/Showcase`'s enums.
       Needs: S16-03.
 - [ ] S16-05 Lambdas and method references through `LambdaMetafactory`,
-      captures (changed ones in a shared array), method type inference.
-      Files: `crates/siesta-check/src/{infer,check}*`, `crates/siestac/src/gen/`,
+      captures (changed ones in a shared array), trailing lambdas, method
+      type inference.
+      Files: `crates/siesta/src/{infer,check,gen}*`,
       `tests/siesta/blocks/`.
       Check: `tools/siesta_test.py --filter blocks` passes on Windows, with a
       stream pipeline ending in `collect(Collectors.toList())` that needs no cast,
@@ -516,7 +516,7 @@ mirrored `.java` tests are blessed on the oracle.
       Needs: S16-04.
 - [ ] S16-06 Casts, `instanceof` with a binding, arrow `switch`, cascades,
       collection literals, `try`/`catch`/`finally` and `throw`.
-      Files: `crates/siesta-check/src/check/`, `crates/siestac/src/gen/`,
+      Files: `crates/siesta/src/{check,gen}/`,
       `tests/siesta/flow/`.
       Check: `tools/siesta_test.py --filter flow` passes on Windows; a
       `finally` test covers `return`, `break`, `continue` and a throw out of
@@ -524,9 +524,9 @@ mirrored `.java` tests are blessed on the oracle.
       its message.
       Needs: S16-05.
 - [ ] S16-07 `async` and `await` (siesta-async.md): linearisation in
-      `siesta-check`, frame classes and resumption in `siestac`, and
+      the checker, frame classes and resumption in the generator, and
       `lazy.async.Loop.home()` with `lazy.ui`'s registration.
-      Files: `crates/siesta-check/src/anf.rs`, `crates/siestac/src/gen/`,
+      Files: `crates/siesta/src/{anf.rs,gen/}`,
       `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/`,
       `tests/siesta/async/`, `tests/lazy/async/`.
       Check: `tools/siesta_test.py --filter async` passes on Windows with the
@@ -535,23 +535,19 @@ mirrored `.java` tests are blessed on the oracle.
       the timer, a UI handler resuming on the UI thread, fire-and-forget
       failures, top-level `await`); `Loop.home()` has its own `lazy.*` test.
       Needs: S16-06; S9's `Ui.executor()` for the UI case.
-- [ ] S16-08 The script profile and interface files (siesta-script.md):
-      `Profile::Script`, a `.siei` universe with `@Name` checks, and the
-      conformance suite.
-      Files: `crates/siesta-check/src/{profile,dzi}.rs`, `tests/siesta/script/`.
-      Check: `tools/siesta_test.py --filter script` runs every conformance
-      program through `siestac` on LazyVM against its `.out`; each
-      `tests/siesta/script/bad` file is refused with its message; a unit test
-      checks a stub `.siei` (name literals, unknown members, wrong handle
-      kind); a stub host binary embedding `siesta-syntax` and `siesta-check`,
-      built with `opt-level = "s"` and LTO, has its size measured and
-      recorded in siesta-script.md section 8.
-      Needs: S16-07. Adopting it in miniscent is a miniscent work item.
+- [ ] S16-08 A LazyOS app in Siesta (siesta-apps.md section 5): the Writer
+      port S9 makes in Java, written again in Siesta on the same `lazy.ui`
+      and `lazy.msg`.
+      Files: `samples/siesta/writer/`.
+      Check: headless, both ports give the same screenshots for the same
+      scripted session on Windows and LazyOS; the PR records both line
+      counts (without tests) and both jars' sizes.
+      Needs: S16-07; the S9 Writer port; S10-02 for its Messenger calls.
 - [ ] S16-09 LazyRAD forms (siesta.md section 11): the view-file shape, a
-      `siesta-syntax` API that reads and rewrites a view file for the
+      `siesta` library API that reads and rewrites a view file for the
       designer, and form tests on `lazy.ui`.
-      Files: `crates/siesta-syntax/src/view.rs`, `tests/siesta/forms/`.
-      Check: `cargo test -p siesta-syntax` round-trips every `tests/siesta/forms`
+      Files: `crates/siesta/src/view.rs`, `tests/siesta/forms/`.
+      Check: `cargo test -p siesta` round-trips every `tests/siesta/forms`
       view file byte for byte and refuses the hand-edited ones in
       `tests/siesta/forms/bad`; `tools/siesta_test.py --filter forms` runs each
       form headless with a click script and matches its screenshots and

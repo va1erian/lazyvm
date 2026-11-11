@@ -8,9 +8,9 @@ VM. Its compiler, `siestac`, is a Rust program, so a LazyOS machine builds
 programs for LazyVM in milliseconds without a Java compiler. It is also the
 language of LazyRAD (section 11); `async`/`await` make LazyOS's
 asynchronous APIs read like blocking code
-([`siesta-async.md`](siesta-async.md)); and the same front end serves game
-hosts such as miniscent as an embedded script language
-([`siesta-script.md`](siesta-script.md)). It is a proposal: nothing here is
+([`siesta-async.md`](siesta-async.md)); and the features that shorten
+`lazy.ui` and Messenger apps, with a proposed `lazy.msg`, are in
+[`siesta-apps.md`](siesta-apps.md). It is a proposal: nothing here is
 decided until the owner confirms it in [`decisions.md`](decisions.md), and
 the stage it implies is S16 in [`plan-2.md`](plan-2.md).
 
@@ -36,7 +36,7 @@ surface but drops the parts of the JLS that cost the most to implement
   straight into Siesta and Java code calls Siesta classes with no
   adapters. What Siesta adds lowers to plain Java-visible members.
 - **Least code for a complete language.** A feature is in when a LazyOS
-  app, a LazyRAD form or a script needs it and nothing already in the
+  app or a LazyRAD form needs it and nothing already in the
   language does the job; among two ways to provide it, the one that needs
   no new analysis wins. The ledger in section 3 is the rule applied.
 - **Fast to compile.** One pass collects declarations, one checks and
@@ -64,6 +64,7 @@ expressions, calls, classes and code generation), and why it is in or out.
 | generic classes and methods of your own, simple bounds | yes | 250 | reuses the reader's type variables; only parsing and `Signature` writing are new |
 | one-way inference of method type arguments | yes | 500 | `collect(Collectors.toList())`, `Collections.emptyList()` without casts |
 | lambdas and method references | yes | 600 | every callback in `lazy.*` and `java.util.function` |
+| trailing lambda `button.onClick { save(); }` | yes | 60 | every event, menu entry and subscription in an app ([`siesta-apps.md`](siesta-apps.md)) |
 | lambdas that change captured locals | yes | 120 | a Smalltalk block habit; the counter in a click handler |
 | classes, interfaces with default and static methods, abstract classes, static nested classes | yes | core | apps and libraries |
 | `enum` with fields and constructors | yes | 200 | state machines, `switch` cases |
@@ -89,7 +90,7 @@ expressions, calls, classes and code generation), and why it is in or out.
 | `synchronized` blocks, `static { }` initialisers, `assert` | no | 150 | field initialisers and `java.util.concurrent` cover them |
 | wildcard capture, intersection types, full JLS 18 inference | no | 2,000+ | the largest cost in javac; one-way inference plus `(T)` casts covers real code |
 
-The "no" rows are what keep `siestac` near 9,500 lines, against about
+The "no" rows are what keep `siestac` near 9,400 lines, against about
 13,500 if they were all in.
 
 ## 4. A taste
@@ -158,6 +159,7 @@ label     = literal | "null" | qualifiedEnumConstant ;
 relational = ... | expr "instanceof" type [ Ident ] ;
 unary     = ... | "await" unary ;
 lambda    = [ "async" ] javaLambda ;
+call      = ... | call [ "async" ] "{" [ Ident { "," Ident } "->" ] { stmt } "}" ;  (* trailing lambda *)
 postfix   = ... | ".." Ident args ;               (* cascade *)
 primary   = ... | "[" [ expr { "," expr } ] "]" | "[" ":" "]"
           | "[" expr ":" expr { "," expr ":" expr } "]" ;
@@ -260,28 +262,26 @@ written, so stack traces and JDWP (S11) point at `.sie` lines.
 
 ## 9. The compiler
 
-Three crates: `siesta-syntax` (lexer, parser, AST, diagnostics) and
-`siesta-check` (types, producing typed IR), with no dependencies, which game
-hosts embed too ([`siesta-script.md`](siesta-script.md)); and `siestac`,
-the JVM back end and binary, which adds `crates/classfile`. That crate
+One crate, `crates/siesta`: a library (parser, checker, code generator)
+and the `siestac` binary, depending only on `crates/classfile`. That crate
 already parses class files and reads jars (with `miniz_oxide`); its writer
 gains `StackMapTable`, `BootstrapMethods`, `LineNumberTable`, `Signature`,
 annotations and a stored-jar writer rather than a second writer being
 added (shared rule 4). Malformed source, class files and jars are
-diagnostics, never panics. LazyRAD links `siesta-syntax` to edit view files
+diagnostics, never panics. LazyRAD links the library to edit view files
 (section 11), so there is one Siesta parser.
 
-| Crate: module | Job | Estimated lines |
+| Module | Job | Estimated lines |
 |---|---|---|
-| syntax: `lex`, `parse/`, `ast`, `diag` | tokens, interpolation, Java's grammar minus the cuts, `file:line:col` messages | 2,000 |
-| check: `types`, `universe` | subtyping, erasure, boxing, member lookup, functional interfaces, the `Universe` trait | 1,000 |
-| check: `infer`, `overload` | sections 6 and 7 | 1,100 |
-| check: `check/`, `anf` | names, types, captures, reachability, `async` linearisation, typed IR | 2,100 |
-| siestac: `classpath`, `sig` | jars and directories, `Signature` reading and writing, the class-file universe | 900 |
-| siestac: `gen/` | bytecode, max stack and locals, stack maps, lambdas, bridges, `async` frames | 2,000 |
-| siestac: `emit`, `main` | class and jar output, the command line | 400 |
+| `lex`, `parse/`, `ast`, `diag` | tokens, interpolation, Java's grammar minus the cuts, `file:line:col` messages | 2,000 |
+| `types` | subtyping, erasure, boxing, member lookup, functional interfaces | 900 |
+| `infer`, `overload` | sections 6 and 7 | 1,100 |
+| `check/`, `anf` | names, types, captures, reachability, `async` linearisation, typed IR | 2,100 |
+| `classpath`, `sig` | jars and directories, `Signature` reading and writing, the class-file universe | 900 |
+| `gen/` | bytecode, max stack and locals, stack maps, lambdas, bridges, `async` frames | 2,000 |
+| `emit`, `main` | class and jar output, the command line | 400 |
 
-About 9,500 lines, every file under 500.
+About 9,400 lines, every file under 500.
 
 **The 2 MB budget.** The stripped static musl `siestac` stays under
 2,000,000 bytes, uncompressed; `python tools/size.py --siestac` checks it
@@ -385,7 +385,7 @@ Ui.run(new MainForm().window);
   from the compiler (`siestac check`), not from run-time lookups.
 - **The view file has a fixed shape**: one field per control initialised
   by a `Ui` factory, and one cascade of `place` calls. The designer reads
-  it back with `siesta-syntax`'s parser and refuses to open a view that was
+  it back with the `siesta` library's parser and refuses to open a view that was
   edited outside that shape.
 - **Running and packaging.** F5 is `siestac run`; Make LazyOS App packages
   the jar `siestac -o` writes, depending on `lazyvm`. The debugger is JDWP
