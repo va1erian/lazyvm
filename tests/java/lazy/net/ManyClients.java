@@ -2,18 +2,35 @@
 // TIMEOUT: 120
 package lazy.net;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 
-/** 500 clients at once, each echoing a message of its own, on one loop. LazyOS has 64 sockets. */
+/**
+ * 500 clients at once, each echoing a message of its own, on one loop. LazyOS has 64 sockets.
+ *
+ * <p>So many connects at once can overflow the kernel's listen queues (Linux under load: SYN
+ * retransmits and cookies). It may then complete a second, stale handshake for a client that has
+ * already come and gone, and hand the listener a connection nobody will ever write to or close.
+ * Its read would keep the loop, and the program, alive for good; the server drops what is still
+ * open once every client is done.
+ */
 public class ManyClients {
     static final int CLIENTS = 500;
+    static final Set<Connection> OPEN = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     static void serve(Connection c) {
+        OPEN.add(c);
+        next(c);
+    }
+
+    static void next(Connection c) {
         c.read().thenCompose(bytes -> bytes.length == 0
-                ? c.close()
-                : c.write(bytes).thenRun(() -> serve(c)))
-         .exceptionally(error -> { c.close(); return null; });
+                ? c.close().thenRun(() -> OPEN.remove(c))
+                : c.write(bytes).thenRun(() -> next(c)))
+         .exceptionally(error -> { c.close(); OPEN.remove(c); return null; });
     }
 
     static CompletionStage<Integer> client(int port, int i) {
@@ -34,5 +51,7 @@ public class ManyClients {
         for (CompletableFuture<Integer> c : all) right += c.join();
         System.out.println(right + " of " + CLIENTS + " echoed");
         listener.close();
+        // A cancelled close closes the socket as it stands.
+        for (Connection c : OPEN) c.close().toCompletableFuture().cancel(false);
     }
 }
