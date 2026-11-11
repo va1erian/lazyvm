@@ -203,7 +203,7 @@ fn field_set(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     if is_static {
         vm.initialize(class)?;
         let v = unboxed(vm, &desc, opt(args, 2)?)?;
-        vm.class_mut(class).statics[vslot] = v;
+        vm.statics_mut(class)[vslot] = v;
     } else {
         let r = check_receiver(vm, class, opt(args, 1)?)?;
         let v = unboxed(vm, &desc, opt(args, 2)?)?;

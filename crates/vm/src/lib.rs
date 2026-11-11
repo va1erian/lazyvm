@@ -96,7 +96,9 @@ pub struct Vm {
     pub(crate) loading: Vec<Arc<str>>,
     pub classpath: ClassPath,
     pub heap: heap::Heap,
-    pub frames: FrameStack,
+    /// Crate-private, like `classes`: frames moved to another VM would point
+    /// into code it does not own (`interp::CodeRef`). `frames()` reads them.
+    pub(crate) frames: FrameStack,
     /// References held by Rust code across a call into Java (see `with_root`).
     pub roots: Vec<Ref>,
     pub(crate) interned: HashMap<Box<[u16]>, Ref>,
@@ -201,8 +203,20 @@ impl Vm {
         &self.classes[id.0 as usize]
     }
 
-    pub fn class_mut(&mut self, id: ClassId) -> &mut Class {
+    /// Crate-private: swapping classes between two VMs would move code that
+    /// frames point into (`interp::CodeRef`). `statics_mut` is the outside door.
+    pub(crate) fn class_mut(&mut self, id: ClassId) -> &mut Class {
         &mut self.classes[id.0 as usize]
+    }
+
+    /// A class's static field values, for natives that write them.
+    pub fn statics_mut(&mut self, id: ClassId) -> &mut [Value] {
+        &mut self.classes[id.0 as usize].statics
+    }
+
+    /// The running thread's frames, oldest first.
+    pub fn frames(&self) -> &[Frame] {
+        &self.frames
     }
 
     pub fn method(&self, m: MethodRef) -> &class::Method {

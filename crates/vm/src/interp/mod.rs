@@ -132,6 +132,7 @@ impl Vm {
                 let lock = f.method_lock.take();
                 self.release_frame_monitors(&monitors, lock);
             }
+            self.frames.trim_retired();
         }
     }
 

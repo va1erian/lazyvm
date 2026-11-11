@@ -48,20 +48,27 @@ impl FrameStack {
     }
 
     /// Retires the top frame and hands it out for its owner's last rites
-    /// (monitors, slot budget); its contents stay until it is reused.
+    /// (monitors, slot budget), which `trim_retired` must follow; its
+    /// contents stay until it is reused.
     pub(crate) fn retire(&mut self) -> Option<&mut Frame> {
         self.depth = self.depth.checked_sub(1)?;
         if self.slots.len() > self.depth + MAX_RETIRED {
             self.slots.truncate(self.depth + MAX_RETIRED);
         }
-        let f = self.slots.get_mut(self.depth)?;
-        if f.locals.capacity() > MAX_KEPT_SLOTS {
-            f.locals = Vec::new();
+        self.slots.get_mut(self.depth)
+    }
+
+    /// Frees the large buffers of the frame `retire` just handed out, once
+    /// its owner is done with it.
+    pub(crate) fn trim_retired(&mut self) {
+        if let Some(f) = self.slots.get_mut(self.depth) {
+            if f.locals.capacity() > MAX_KEPT_SLOTS {
+                f.locals = Vec::new();
+            }
+            if f.stack.capacity() > MAX_KEPT_SLOTS {
+                f.stack = Vec::new();
+            }
         }
-        if f.stack.capacity() > MAX_KEPT_SLOTS {
-            f.stack = Vec::new();
-        }
-        Some(f)
     }
 }
 
@@ -134,8 +141,13 @@ mod tests {
         assert_eq!(frames[0].locals[0], Value::Top, "reset on reuse");
         frames.retire();
         assert!(frames.push(M, CodeRef::new(&big), 0, &[]).is_ok());
-        let retired = frames.retire().map(|f| f.locals.capacity());
-        assert_eq!(retired, Some(0), "a large buffer is not kept");
+        assert!(frames.retire().is_some());
+        frames.trim_retired();
+        frames.push(M, CodeRef::new(&small), 0, &[]).ok();
+        assert!(
+            frames[0].locals.capacity() <= MAX_KEPT_SLOTS,
+            "a large buffer is not kept"
+        );
     }
 
     #[test]
