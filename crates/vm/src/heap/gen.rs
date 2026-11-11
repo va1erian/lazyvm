@@ -11,9 +11,10 @@
 //! follows the young objects, not the whole heap.
 //!
 //! References (`java.lang.ref`) keep their rule: a young referent reached
-//! only through one is cleared. An old reference never holds a young
-//! referent: when it was promoted its referent was either promoted with it
-//! or cleared, and a reference's referent is never set again but to null.
+//! only through one is cleared. An old reference can hold a young referent:
+//! one promoted before its constructor stored the referent. Such a store
+//! remembers it, so the remembered references are checked with the young
+//! ones.
 
 use super::{Heap, WeakInfo, trace};
 use crate::value::Ref;
@@ -34,12 +35,15 @@ impl Heap {
         let mut work: Vec<Ref> = roots.into_iter().collect();
         let mut discovered = Vec::new();
         for &i in &self.remembered {
-            if let Some(object) = self.slots.get(i as usize).and_then(|s| s.object.as_ref()) {
-                trace(
-                    object,
-                    &mut work,
-                    weak.and_then(|w| w.referent_slot(object.class)),
-                );
+            let Some(slot) = self.slots.get(i as usize) else {
+                continue;
+            };
+            if let Some(object) = &slot.object {
+                let skip = weak.and_then(|w| w.referent_slot(object.class));
+                if skip.is_some() {
+                    discovered.push(super::make_ref(i, slot.generation));
+                }
+                trace(object, &mut work, skip);
             }
         }
         while let Some(r) = work.pop() {

@@ -114,6 +114,10 @@ impl Vm {
     /// Counts a run of the top frame's method and compiles it once hot.
     #[inline]
     pub(crate) fn jit_tick(&mut self) {
+        // The templates are x86-64 code: elsewhere everything is interpreted.
+        if !cfg!(target_arch = "x86_64") {
+            return;
+        }
         let Some(limit) = self.options.jit else {
             return;
         };

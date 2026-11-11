@@ -9,6 +9,11 @@
 //! code is as exact as the rest: the interpreter sees the same frames, with
 //! the same values, as if nothing had been inlined.
 //!
+//! An inlined call pushes no frame, so it is not counted against the frame
+//! and slot limits: a recursion near the limit may throw
+//! `StackOverflowError` a few calls (at most `MAX_INLINE`) later than the
+//! interpreter would, as on other JVMs whose compilers inline.
+//!
 //! Calls inlined: `invokestatic` of an initialised class, `invokespecial` of
 //! a constructor or a method of the same class, and `invokevirtual` or
 //! `invokeinterface` at a site that has seen one receiver class (guarded by
@@ -214,7 +219,8 @@ pub(super) fn try_inline(g: &mut Gen, caller: &Unit, pc: usize, sh: &[bool]) -> 
 /// left for it, and it `fits`.
 fn room(g: &Gen, caller: &Unit, callee: &Unit) -> bool {
     let m = caller.vm.method(callee.m);
-    let need = usize::from(callee.code.max_locals.max(m.arg_slots) + callee.code.max_stack);
+    let need =
+        usize::from(callee.code.max_locals.max(m.arg_slots)) + usize::from(callee.code.max_stack);
     if g.inline.len() >= MAX_INLINE || g.scratch_used + need > SCRATCH {
         return false;
     }

@@ -279,6 +279,32 @@ fn step(code: &[u8], pool: &ConstantPool, pc: usize, before: &[bool]) -> Option<
     })
 }
 
+/// One past the last local the instruction at `pc` uses (0 if none), or
+/// None if its operands run past the code.
+fn locals_end(bc: &[u8], pc: usize) -> Option<usize> {
+    let op = *bc.get(pc)?;
+    // Kinds 1 and 3 (long, double) take two locals.
+    let width = |kind: u8| if kind == 1 || kind == 3 { 2 } else { 1 };
+    let (index, n) = match op {
+        0x15..=0x19 => (usize::from(*bc.get(pc + 1)?), width(op - 0x15)),
+        0x36..=0x3a => (usize::from(*bc.get(pc + 1)?), width(op - 0x36)),
+        0x1a..=0x2d => (usize::from((op - 0x1a) % 4), width((op - 0x1a) / 4)),
+        0x3b..=0x4e => (usize::from((op - 0x3b) % 4), width((op - 0x3b) / 4)),
+        0x84 | 0xa9 => (usize::from(*bc.get(pc + 1)?), 1),
+        0xc4 => {
+            let inner = *bc.get(pc + 1)?;
+            let index = usize::from(u2(bc, pc + 2)?);
+            match inner {
+                0x15..=0x19 => (index, width(inner - 0x15)),
+                0x36..=0x3a => (index, width(inner - 0x36)),
+                _ => (index, 1),
+            }
+        }
+        _ => return Some(0),
+    };
+    Some(index + n)
+}
+
 /// The shapes of `code`, or None if this method cannot be compiled.
 pub(super) fn shapes(code: &Code, pool: &ConstantPool) -> Option<Shapes> {
     let bc = &code.bytecode;
@@ -308,6 +334,10 @@ pub(super) fn shapes(code: &Code, pool: &ConstantPool) -> Option<Shapes> {
                 merge(usize::from(h.handler_pc), &[false], &mut shapes, &mut work)?;
             }
         }
+        // Compiled code addresses locals without a bounds check.
+        if locals_end(bc, pc)? > usize::from(code.max_locals) {
+            return None;
+        }
         let st = step(bc, pool, pc, &before)?;
         if st.after.len() > max {
             return None;
@@ -325,6 +355,11 @@ pub(super) fn shapes(code: &Code, pool: &ConstantPool) -> Option<Shapes> {
     while pc < bc.len() {
         starts[pc] = true;
         pc += length(bc, pc)?;
+    }
+    // The last instruction must end with the code: templates read operands
+    // without a bounds check.
+    if pc != bc.len() {
+        return None;
     }
     shapes
         .iter()
