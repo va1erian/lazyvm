@@ -152,7 +152,8 @@ impl Vm {
             if self.heap.unlimited {
                 return Ok(());
             }
-            self.collect_garbage();
+            // Full: a minor collection would leave old garbage in place.
+            self.collect_garbage_full();
             if self.heap.would_exceed(bytes) {
                 // Soft references are cleared before running out of memory.
                 self.collect_garbage_all();

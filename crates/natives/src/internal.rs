@@ -33,7 +33,7 @@ pub fn register(vm: &mut Vm) {
     vm.register_native(VM_CLASS, "gc", "()V", |vm, _| {
         // Safe: a native's caller frames hold every live reference, and
         // Rust code that called into Java has rooted its own (`with_root`).
-        vm.collect_garbage();
+        vm.collect_garbage_full();
         ret_void()
     });
     vm.register_native(VM_CLASS, "freeMemory", "()J", |vm, _| {
