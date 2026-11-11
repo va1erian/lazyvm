@@ -1,8 +1,9 @@
 # Siesta: `async` and `await`
 
 Status: proposal, part of S16 in [`plan-2.md`](plan-2.md). The language is
-[`siesta.md`](siesta.md); its use as an embedded script language, where the same
-two keywords suspend a script task, is [`siesta-script.md`](siesta-script.md).
+[`siesta.md`](siesta.md); its use as an embedded script language, where the
+same two keywords suspend a script task, is
+[`siesta-script.md`](siesta-script.md).
 
 ## 1. Goal
 
@@ -13,63 +14,66 @@ with `thenCompose`, a five-step flow is five nested lambdas, and a loop or a
 top to bottom, as if it blocked, while it never blocks a thread:
 
 ```siesta
-import lazy.net.*
-import java.io.IOException
-import java.nio.charset.StandardCharsets
+import lazy.net.*;
+import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
-async String fetch: String host path: String path {
-    var c := await Tcp connect: host port: 80
-    [
-        await c write: ("GET ${path} HTTP/1.0
+async CompletionStage<String> fetch(String host, String path) {
+    var c = await Tcp.connect(host, 80);
+    try {
+        await c.write("GET ${path} HTTP/1.0
 Host: ${host}
 
-" getBytes: StandardCharsets UTF_8)
-        ^ String new: (await c readAll) charset: StandardCharsets UTF_8
-    ] ensure: [c close]
+".getBytes(UTF_8));
+        return new String(await c.readAll(), UTF_8);
+    } finally {
+        c.close();
+    }
 }
 
-async void serve: Connection c {
-    var bytes := await c read
-    [bytes size > 0] whileTrue: [
-        await c write: bytes
-        bytes := await c read
-    ]
-    await c close
+async CompletionStage<Void> serve(Connection c) {
+    var bytes = await c.read();
+    while (bytes.length > 0) {
+        await c.write(bytes);
+        bytes = await c.read();
+    }
+    await c.close();
 }
 
-[println: (await fetch: "example.com" path: "/") length]
-    on: IOException do: [:e | println: "fetch failed: ${e getMessage}"]
+try {
+    System.out.println((await fetch("example.com", "/")).length());
+} catch (IOException e) {
+    System.out.println("fetch failed: ${e.getMessage()}");
+}
 ```
 
-The `on: IOException do:` handler sees the `IOException` itself, not a `CompletionException`, and
-`fetch` is an ordinary Java method to Java callers: it returns
+The `catch` sees the `IOException` itself, not a `CompletionException`,
+and `fetch` is exactly what a Java caller sees: a method returning
 `CompletionStage<String>`.
 
 ## 2. The rules
 
-- **`async` marks a method or a block whose body may suspend.** An
-  `async T m: ...` is declared with the type of its result; to the JVM and
-  to Java code it returns `CompletionStage<T>` (`CompletionStage<Void>` for
-  `void`, boxed for a primitive). `async [:a | ...]` is a block whose body
-  may suspend.
-- **`await e`** (prefix, over a whole keyword message: `await c write:
-  data`) needs `e` to be a `CompletionStage<T>` (a subtype such as
-  `CompletableFuture` included) and has type `T`. Inside a larger expression it is
-  parenthesised: `(await c readAll) size`. It may appear an `async` method or block, or at a file's top
-  level. Anywhere else it is a compile error that names the enclosing method
-  and suggests `async`.
+- **`async` marks a method or a lambda whose body may suspend.** An `async`
+  method is declared with its real return type, `CompletionStage<T>`, and
+  its `return` statements give a `T` (`CompletionStage<Void>` and a bare
+  `return` for no value). What the source says is what Java callers see,
+  so there is no second signature to keep in mind. `async (a) -> ...` is a
+  lambda whose body may suspend.
+- **`await e`** is a prefix operator at unary precedence. `e` must be a
+  `CompletionStage<T>` (`CompletableFuture` included) and the result is a
+  `T`. It may appear inside an `async` method or lambda, or at a file's top
+  level; anywhere else it is an error that names the enclosing method and
+  suggests `async`.
 - **A failed stage throws.** `await` rethrows the stage's exception, with
-  one `CompletionException` wrapper removed, so `on: IOException do:`
+  one `CompletionException` wrapper removed, so `catch (IOException e)`
   works as it would around a blocking call. A cancelled stage throws
   `CancellationException`.
 - **Calling without `await` starts the work and goes on.** The call returns
   the stage, which can be awaited later, so two requests run at once:
-  `var a := fetch: x path: "/"`, `var b := fetch: y path: "/"`, then
-  `println: (await a) + (await b)`.
-- **Not in `ensure:` or `on:do:` handler blocks, constructors or field
-  initialisers.** The same restriction C# started with; it keeps the
-  lowering free of copied `ensure:` code that suspends. The protected block
-  of `on:do:` or `ensure:` may await.
+  `var a = fetch(x, "/"); var b = fetch(y, "/"); println(await a + await b);`.
+- **Not in `catch` or `finally` blocks, constructors or field
+  initialisers.** The restriction C# started with; it keeps the lowering
+  free of copied `finally` code that suspends. A `try` block may await.
 - **Where the code after `await` runs.** An `async` body remembers its
   *home*: the executor whose thread started it, if it has one
   (`lazy.async.Loop.home()`, section 4). Each resumption runs on the home,
@@ -79,16 +83,16 @@ The `on: IOException do:` handler sees the `IOException` itself, not a `Completi
   thread that completed the stage, `CompletableFuture`'s own rule.
 - **Cancellation reaches the awaited operation.** Cancelling the stage an
   `async` call returned cancels the stage it is awaiting at that moment, so
-  `(fetch: h path: p) toCompletableFuture cancel: true` aborts the connection as
+  `fetch(h, p).toCompletableFuture().cancel(true)` aborts the connection as
   `lazy.net` defines ([`async.md`](async.md), "Cancellation"), and the body
   does not resume.
-- **Fire and forget.** An `async` block given where the functional
-  interface returns `void` (`button onClick: async [...]`) is started
-  and its stage dropped. If it fails, the exception is rethrown on its home
-  executor, so it is handled exactly as a throwing task there is (a loop
-  task is reported and the loop goes on; a `lazy.ui` callback ends
-  `Ui run:`); with no home, it goes to the thread's uncaught exception
-  handler. Where the interface returns a `CompletionStage`, the block's
+- **Fire and forget.** An `async` lambda given where the functional
+  interface returns `void` (`button.onClick(async () -> { ... })`) is
+  started and its stage dropped. If it fails, the exception is rethrown on
+  its home executor, so it is handled exactly as a throwing task there is
+  (a loop task is reported and the loop goes on; a `lazy.ui` callback ends
+  `Ui.run`); with no home, it goes to the thread's uncaught exception
+  handler. Where the interface returns a `CompletionStage`, the lambda's
   stage is returned.
 - **Top-level `await`.** A file whose top level awaits gets a `main` that
   starts the body and waits for it, rethrowing its failure unwrapped, so a
@@ -96,14 +100,14 @@ The `on: IOException do:` handler sees the `IOException` itself, not a `Completi
 
 ```siesta
 // A window that stays responsive while it fetches.
-var status := Ui label: "idle"
-var go := Ui button: "Go"
-go onClick: async [
-    status text: "fetching"
-    var page := await fetch: "example.com" path: "/"   // the UI thread is free meanwhile
-    status text: "${page length} characters"           // back on the UI thread
-]
-Ui run: ((Ui window: "Fetch" width: 320 height: 120) content: (Ui column add: status with: go))
+var status = Ui.label("idle");
+Ui.run(Ui.window("Fetch", 320, 120).content(Ui.column().add(
+    status,
+    Ui.button("Go").onClick(async () -> {
+        status.text("fetching");
+        var page = await fetch("example.com", "/");   // the UI thread is free meanwhile
+        status.text("${page.length()} characters");    // back on the UI thread
+    }))));
 ```
 
 ## 3. Lowering on the JVM
@@ -111,10 +115,10 @@ Ui run: ((Ui window: "Fetch" width: 320 height: 120) content: (Ui column add: st
 The checker first linearises every expression that contains `await` into
 temporaries (A-normal form), so the operand stack is empty at every await,
 and both back ends (the JVM one here, a script host's in
-[`siesta-script.md`](siesta-script.md)) only see `x := await e` and `await e` as
+[`siesta-script.md`](siesta-script.md)) only see `x = await e` and `await e` as
 statements.
 
-Each `async` method or block then becomes two pieces:
+Each `async` method or lambda then becomes two pieces:
 
 | Piece | What it is |
 |---|---|
@@ -141,7 +145,7 @@ Each `async` method or block then becomes two pieces:
   into the target local, and jumps to the instruction after the await. A
   jump into the middle of a protected range is legal bytecode; the exception
   table covers the resumed code, so a failed await is caught by the
-  surrounding `on:do:` handler with no extra work.
+  surrounding `catch` with no extra work.
 - **Completion.** `return v` completes the frame with `v`; the whole body
   sits in a catch-all handler that completes it exceptionally.
 - **`cancel(boolean)`** is overridden: it calls `super.cancel` and, if that
@@ -150,7 +154,7 @@ Each `async` method or block then becomes two pieces:
   `CompletableFuture`'s public methods do not call each other virtually).
 - **Stack maps.** Every resume label's frame is the scope at its await plus
   the target temporary, which the generator already knows (siesta.md
-  section 7).
+  section 8).
 
 Cost per await on an interpreter: one `whenComplete` node and, off the home
 thread, one executor task. Nothing is allocated for an await whose stage is
@@ -175,7 +179,7 @@ part of `lazyrt`, not a Siesta library.
 they run on LazyVM against hand-written goldens: `tests/siesta/async/`.
 Programs that use only `CompletableFuture` still run on the oracle too.
 The suite covers: a loop over already-completed stages a million times (no
-`StackOverflowError`); an await inside `on:do:` in a loop with a failure on
+`StackOverflowError`); an await inside `try` in a loop with a failure on
 the third turn; cancellation of an `async` call while it waits on
 `Loop.delay`, with the timer removed (`lazy.async` pending count back to
 zero); a UI handler that awaits a `lazy.net` read and checks it resumed on

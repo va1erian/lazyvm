@@ -15,7 +15,7 @@ embedding LazyVM for reasons Siesta has to respect:
 | Miniscent needs | What Siesta gives it |
 |---|---|
 | no compile step in the agent loop | the front end runs in-process at level load, in milliseconds, like today's |
-| a script really suspends (`wait:` parks one handler) | `async` blocks and `await`, lowered to the host VM's own task parking |
+| a script really suspends (`wait:` parks one handler) | `async` lambdas and `await`, lowered to the host VM's own task parking |
 | typos fail at load, even in handlers that never fire | static types: an unknown method, a call on the wrong kind of handle and an unknown level name in a literal are load errors |
 | determinism and replays | the language has no clock, threads or hash-ordered iteration; budgets stay the host VM's |
 | untrusted input, never a panic | the front end's limits and fuzzing (section 7) |
@@ -28,12 +28,12 @@ host's own bytecode.
 
 ## 2. One front end, two back ends
 
-The compiler is split into crates with one job each (siesta.md section 8):
+The compiler is split into crates with one job each (siesta.md section 9):
 
 | Crate | Job | Depends on |
 |---|---|---|
 | `siesta-syntax` | lexer, parser, AST, diagnostics | nothing |
-| `siesta-check` | names, types, inference, blocks, `async` linearisation; produces typed IR | `siesta-syntax` |
+| `siesta-check` | names, types, inference, lambdas, `async` linearisation; produces typed IR | `siesta-syntax` |
 | `siestac` | the JVM back end: class path, class files, jars | the two above and `classfile` |
 
 `siesta-check` sees types only through a `Universe` trait: look up a type, its
@@ -57,9 +57,9 @@ anything outside it is a load error saying "not available in scripts".
 |---|---|
 | top-level statements, `var`s and methods; several files share one namespace | `package`, `import`; declaring `class`, `interface`, `enum` (except in interface files) |
 | `boolean`, `int` (32-bit, wrapping), `double` (IEEE 754), `String`, `List<T>`, handle types from the host | `long`, `float`, `byte`, `short`, `char`, arrays, maps |
-| the built-in messages of siesta.md 4.4: `ifTrue:`, `whileTrue:`, `to:do:`, `do:`, `ifNil:`, `^` | `on:do:`, `ensure:`, `signal`: an error ends the task, as miniscent fails closed |
-| blocks, capturing and changing outer variables; cascades | annotations (except name checks in interface files) |
-| `async`, `await`, string interpolation, `=` by value, `is:`/`as:` on handle types | generics beyond `List<T>`; anything reached through Java class files |
+| `if`, `while`, `do`, both `for`s, arrow `switch`, `break`, `continue`, `return` | `try`, `catch`, `finally`, `throw`: an error ends the task, as miniscent fails closed |
+| lambdas, capturing and changing outer variables; cascades; list literals | annotations (except name checks in interface files) |
+| `async`, `await`, string interpolation, `==` and `equals`, `instanceof` and casts on handle types | generics beyond `List<T>`; anything reached through Java class files |
 
 Semantics are Siesta's, which are Java's for arithmetic and strings: the
 host's VM implements them, not its old rules. For miniscent that means
@@ -77,51 +77,45 @@ without bodies. It is also the API reference agents read, so miniscent's
 ```siesta
 // miniscent.siei (abridged)
 interface Vec {}
-interface Handler { void run }
-interface PlayerHandler { void run: Player p }
-interface EnemyHandler { void run: Enemy e }
-interface Condition { boolean test }
+interface Enemy {}
+interface Player { int hp(); void heal(int n); void give(String key); boolean has(String key); }
+interface PlayerHandler { void run(Player p); }
+interface EnemyHandler { void run(Enemy e); }
+interface Condition { boolean test(); }
 
 interface Mover {
-    void pose: String pose move: Vec offset
-    async void moveTo: String pose in: double seconds   // await it to wait for arrival
-    boolean moving
-    void onArrived: Handler h
+    void pose(String pose, Vec move);
+    async CompletionStage<Void> moveTo(String pose, double seconds);   // await it to wait for arrival
+    boolean moving();
+    void onArrived(Runnable r);
 }
 interface Zone {
-    void onEnter: PlayerHandler h
-    void onceEnter: PlayerHandler h
-    void onExit: PlayerHandler h
+    void onEnter(PlayerHandler h);
+    void onceEnter(PlayerHandler h);
+    void onExit(PlayerHandler h);
 }
 interface Group {
-    int alive
-    void onEachDestroyed: EnemyHandler h
-    void onAllDestroyed: Handler h
-}
-interface Enemy {}
-interface Player {
-    int hp
-    void heal: int n
-    void give: String key
-    boolean has: String key
+    int alive();
+    void onEachDestroyed(EnemyHandler h);
+    void onAllDestroyed(Runnable r);
 }
 
-Mover mover: @Name("mover") String name
-Zone zone: @Name("zone") String name
-List<Vec> markers: @Name("marker") String tagOrPrefix
-Group tagged: String tag
-Player player
-Vec x: double x y: double y z: double z
-void spawn: String kind at: Vec at tag: String tag
-void spawnAll: String kind at: List<Vec> at tag: String tag
-void say: String text
-async void wait: double seconds
-async void waitDestroyed: Group g
-void fork: Handler h
+Mover mover(@Name("mover") String name);
+Zone zone(@Name("zone") String name);
+List<Vec> markers(@Name("marker") String tagOrPrefix);
+Group tagged(String tag);
+Player player();
+Vec xyz(double x, double y, double z);
+void spawn(String kind, Vec at, String tag);
+void spawnAll(String kind, List<Vec> at, String tag);
+void say(String text);
+async CompletionStage<Void> wait(double seconds);
+async CompletionStage<Void> destroyed(Group g);
+void fork(Runnable r);
 ```
 
 - **Natives bind by name.** The host gives one Rust function per declared
-  function and method, by full selector (`"Mover>>moveTo:in:"`); a declared one with no binding,
+  function and method, by qualified name and arity (`"Mover.moveTo/2"`); a declared one with no binding,
   or a binding with no declaration, fails at start-up, and a unit test
   keeps the two lists equal. The declaration is the single source of
   argument types, so the natives no longer check them.
@@ -137,68 +131,66 @@ void fork: Handler h
 
 ## 5. Async in a host
 
-The rules of [`siesta-async.md`](siesta-async.md) section 2 hold, with the host
-in place of executors: an `async` block given to a handler runs as its own
-task, `await` parks that task until the host wakes it, and a failure ends
-the task with file and line. There is no `CompletionStage`: an `async` call
-without `await` gives a task handle that can only be awaited later, and its
-type has no name in scripts (`var t := waitDestroyed: g` then `await t`).
-Cancellation is the host's: miniscent ends a task when its handler is
-disabled.
+The rules of [`siesta-async.md`](siesta-async.md) section 2 hold, with the
+host in place of executors: an `async` lambda given to a handler runs as its
+own task, `await` parks that task until the host wakes it, and a failure
+ends the task with file and line. In the script profile `CompletionStage<T>`
+names the host's task handle, and awaiting it is the only thing a script
+can do with it: `var t = destroyed(g);` then `await t;`. `Runnable` is
+built in too, for handlers that take nothing. Cancellation is the host's:
+miniscent ends a task when its handler is disabled.
 
 ## 6. Miniscent in Siesta
 
 The examples of miniscent's `docs/scripting.md`, written against the
-interface above. Siesta's message syntax is close to what miniscent scripts
-already look like; the visible changes are `var` on declarations,
-`"..."` strings, a `.` at the end of a line becoming optional, Java's
-operator precedence, and `async`/`await` where a handler waits (`wait: 1`
-becomes `await wait: 1`).
+interface above:
 
 ```siesta
-var vault := mover: "vault_door"
-vault pose: "open" move: (x: 0 y: 0 z: 4)
+var vault = mover("vault_door");
+vault.pose("open", xyz(0, 0, 4));
 
-(markers: "vault_switch") do: [:m | spawn: "switch" at: m tag: "vault_switch"]
+for (var m : markers("vault_switch")) {
+    spawn("switch", m, "vault_switch");
+}
 
-var entry := mover: "hall_entry"
-var wayOut := mover: "hall_exit"
-var switches := tagged: "vault_switch"
-switches onEachDestroyed: [:e | say: "${switches alive} left"]
-switches onAllDestroyed: [
-    vault moveTo: "open" in: 1.5
-    say: "Vault unlocked"
-]
+var entry = mover("hall_entry");
+var wayOut = mover("hall_exit");
+var switches = tagged("vault_switch");
+switches.onEachDestroyed(e -> say("${switches.alive()} left"));
+switches.onAllDestroyed(() -> {
+    vault.moveTo("open", 1.5);
+    say("Vault unlocked");
+});
 
-(zone: "hall") onceEnter: async [:p |
-    entry moveTo: "closed" in: 0.5
-    await wait: 1
-    spawnAll: "drone" at: (markers: "hall_wave1") tag: "wave1"
-    await waitDestroyed: (tagged: "wave1")
-    p hp < 50 ifTrue: [p heal: 50]
-    wayOut moveTo: "open" in: 1.5
-]
+zone("hall").onceEnter(async p -> {
+    entry.moveTo("closed", 0.5);
+    await wait(1);
+    spawnAll("drone", markers("hall_wave1"), "wave1");
+    await destroyed(tagged("wave1"));
+    if (p.hp() < 50) p.heal(50);
+    wayOut.moveTo("open", 1.5);
+});
 ```
 
-Library code is plain script, and other files call it without a receiver:
+Library code is plain script, and other files call it unqualified:
 
 ```siesta
 // assets/scripts/lib/doors.sie
-void autoDoor: String name travel: Vec travel key: String key {
-    var door := mover: name
-    door pose: "open" move: travel
-    var area := zone: name + "_area"
-    area onEnter: [:p |
-        (key isNil or: [p has: key])
-            ifTrue: [door moveTo: "open" in: 0.6]
-            ifFalse: [say: "Needs the ${key} keycard"]
-    ]
-    area onExit: [:p | door moveTo: "closed" in: 0.8]
+void autoDoor(String name, Vec travel, String key) {
+    var door = mover(name);
+    door.pose("open", travel);
+    var area = zone(name + "_area");
+    area.onEnter(p -> {
+        if (key == null || p.has(key)) door.moveTo("open", 0.6);
+        else say("Needs the ${key} keycard");
+    });
+    area.onExit(p -> door.moveTo("closed", 0.8));
 }
 ```
 
 Miniscent's prelude (`waitUntil:`, `every:do:`, `after:do:`) becomes Siesta
-too: `async void waitUntil: Condition c { [c test] whileFalse: [await wait: 0] }`.
+too:
+`async CompletionStage<Void> waitUntil(Condition c) { while (!c.test()) await wait(0); }`.
 
 ## 7. Untrusted input
 

@@ -457,8 +457,8 @@ prints its status and size on both platforms (manual live run, recorded in the P
 ## S16. Proposed: the Siesta language
 
 Goal: a LazyOS machine compiles programs for LazyVM with `siestac`, a native
-compiler for Siesta, a small language with Smalltalk's message syntax over
-Java's types, LazyRAD builds its forms in it, `async`/`await` make
+compiler for Siesta, a small language with Java's syntax and a reduced
+rule set, LazyRAD builds its forms in it, `async`/`await` make
 LazyOS's asynchronous APIs read like blocking code, and game hosts such as
 miniscent embed its front end as their script language. Proposed in
 [`siesta.md`](siesta.md), [`siesta-async.md`](siesta-async.md) and
@@ -483,11 +483,11 @@ mirrored `.java` tests are blessed on the oracle.
       `Signature` attribute and finds the functional interfaces of
       `java.util.function` and `lazy.async` with their single methods.
       Needs: S16-01.
-- [ ] S16-03 Scripts and messages: top-level statements, locals,
-      primitives, strings and interpolation, unary, binary and keyword
-      messages to the Java API (labels, class-side messages, constructors,
-      fields) with overloads, boxing and varargs, the inlined `ifTrue:`,
-      `and:`, `whileTrue:`, `to:do:`, `timesRepeat:` and `do:`, stack maps, `classfile::writer`
+- [ ] S16-03 Scripts and expressions: top-level statements, locals,
+      primitives, strings and interpolation, `if`, `while`, `do`, both
+      `for`s, `break`, `continue`, calls, fields and constructors of the
+      Java API with overloads, boxing and varargs, the missing-`return`
+      check, stack maps, `classfile::writer`
       extensions, `siestac`, `siestac run`, and the size gate.
       Files: `crates/siesta-check/src/{infer,overload,check}*`,
       `crates/siestac/src/{gen,emit,main}*`,
@@ -498,29 +498,30 @@ mirrored `.java` tests are blessed on the oracle.
       (under 2,000,000 bytes, uncompressed).
       Needs: S16-02.
 - [ ] S16-04 Classes and interfaces: fields, constructors, default and
-      static interface methods, extending Java classes, bridge methods,
-      `enum`, annotations.
+      static interface methods, static nested classes, generic classes and
+      methods, extending Java classes, bridge methods, `enum`, annotations.
       Files: `crates/siesta-check/src/check/`, `crates/siestac/src/gen/`,
       `tests/siesta/classes/`.
       Check: `tools/siesta_test.py --filter classes` passes on Windows,
       including a `Comparable<Point>` sorted by `Collections.sort` and a
       mirror of `tests/java/s4/Showcase`'s enums.
       Needs: S16-03.
-- [ ] S16-05 Blocks: lambdas through `LambdaMetafactory`, captures (mutated
-      ones in a shared array), method type inference.
+- [ ] S16-05 Lambdas and method references through `LambdaMetafactory`,
+      captures (changed ones in a shared array), method type inference.
       Files: `crates/siesta-check/src/{infer,check}*`, `crates/siestac/src/gen/`,
       `tests/siesta/blocks/`.
       Check: `tools/siesta_test.py --filter blocks` passes on Windows, with a
-      stream pipeline ending in `collect: Collectors toList` that needs no `as:`,
+      stream pipeline ending in `collect(Collectors.toList())` that needs no cast,
       and a `lazy.async` program.
       Needs: S16-04.
-- [ ] S16-06 `is:`/`as:` with smart casts, the `ifNil:` family, cascades,
-      collection literals, `on:do:`, `ensure:` and `signal`.
+- [ ] S16-06 Casts, `instanceof` with a binding, arrow `switch`, cascades,
+      collection literals, `try`/`catch`/`finally` and `throw`.
       Files: `crates/siesta-check/src/check/`, `crates/siestac/src/gen/`,
       `tests/siesta/flow/`.
-      Check: `tools/siesta_test.py --filter flow` passes on Windows; an
-      `ensure:` test covers `^` from an inlined block, a `whileTrue:` exit
-      and a `signal` out of each branch.
+      Check: `tools/siesta_test.py --filter flow` passes on Windows; a
+      `finally` test covers `return`, `break`, `continue` and a throw out of
+      each branch; each cut feature of siesta.md section 3 is refused with
+      its message.
       Needs: S16-05.
 - [ ] S16-07 `async` and `await` (siesta-async.md): linearisation in
       `siesta-check`, frame classes and resumption in `siestac`, and
