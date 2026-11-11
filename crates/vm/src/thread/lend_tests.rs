@@ -26,7 +26,11 @@ fn a_callback_gets_the_vm_and_its_own_callbacks_do_not() {
         (outer, inner)
     });
     assert_eq!(outer, Some(marker));
-    assert_eq!(inner, Some(true), "a callback's own with_lent finds nothing");
+    assert_eq!(
+        inner,
+        Some(true),
+        "a callback's own with_lent finds nothing"
+    );
     // The VM is whole again once the lend returns.
     assert_eq!(vm.current, marker);
     assert!(with_lent(|_| ()).is_none());
@@ -42,8 +46,6 @@ fn every_callback_takes_the_vm_back() {
 #[test]
 fn a_nested_lend_stacks_on_top() {
     let mut vm = vm();
-    let got = vm.lend(|| {
-        with_lent(|vm| vm.lend(|| with_lent(|_| 7)))
-    });
+    let got = vm.lend(|| with_lent(|vm| vm.lend(|| with_lent(|_| 7))));
     assert_eq!(got, Some(Some(7)));
 }

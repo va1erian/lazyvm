@@ -2,7 +2,8 @@
 resolver = "3"
 members = ["crates/classfile", "crates/platform", "crates/vm", "crates/natives", "crates/gfx", "crates/xui-bind", "crates/lazyvm-win", "crates/natives-ui", "crates/launcher", "crates/launcher-ui"]
 
-exclude = ["fuzz"]
+# `lazyvm-lazyos` is its own workspace: musl only, and it needs a LazyOS checkout.
+exclude = ["fuzz", "crates/lazyvm-lazyos"]
 
 [workspace.package]
 version = "0.1.0"

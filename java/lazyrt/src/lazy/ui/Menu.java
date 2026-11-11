@@ -9,7 +9,7 @@ import java.util.function.Consumer;
  * {@link #enabled} and {@link #checked} take that number.
  */
 public final class Menu extends Free {
-    private static final int ITEM = 0, CHECK = 1, SEPARATOR = 2, SUBMENU = 3;
+    private static final int ITEM = 0, CHECK = 1, SEPARATOR = 2, SUBMENU = 3, RADIO = 4;
 
     /** Per entry: type, text, icon, checked, and the entry's action. */
     private final ArrayList<Entry> entries = new ArrayList<Entry>();
@@ -61,6 +61,17 @@ public final class Menu extends Free {
         return this;
     }
 
+    /**
+     * Adds a choice among the radio entries next to it: picking it checks it and clears the
+     * others, and runs {@code action} with true.
+     */
+    public Menu radio(String text, boolean checked, Consumer<Boolean> action) {
+        Entry e = add(RADIO, Ui.nonNull(text, "text"), null);
+        e.checked = checked;
+        e.toggle = Ui.nonNull(action, "action");
+        return this;
+    }
+
     public Menu separator() {
         add(SEPARATOR, "", null);
         return this;
@@ -91,7 +102,7 @@ public final class Menu extends Free {
     /** Checks or clears the switch at {@code index}, without running its action. */
     public Menu checked(int index, boolean on) {
         Entry e = entry(index);
-        if (e.type != CHECK) throw new IllegalArgumentException("entry " + index + " is not a switch");
+        if (e.type != CHECK && e.type != RADIO) throw new IllegalArgumentException("entry " + index + " is not a switch");
         if (mounted()) call(Op.ITEM_CHECKED, index, on ? 1 : 0, null);
         e.checked = on;
         return this;

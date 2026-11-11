@@ -95,7 +95,10 @@ impl<'a> Reader<'a> {
         if i == -1 {
             return Ok(None);
         }
-        match usize::try_from(i).ok().and_then(|i| self.tree.objects.get(i)) {
+        match usize::try_from(i)
+            .ok()
+            .and_then(|i| self.tree.objects.get(i))
+        {
             Some(Obj::Str(s)) => Ok(Some(s.clone())),
             _ => Err(format!("string index {i} out of range")),
         }
@@ -104,7 +107,10 @@ impl<'a> Reader<'a> {
     /// An `int[]` from the object table.
     pub fn ints(&mut self) -> Result<Vec<i32>, String> {
         let i = self.int()?;
-        match usize::try_from(i).ok().and_then(|i| self.tree.objects.get(i)) {
+        match usize::try_from(i)
+            .ok()
+            .and_then(|i| self.tree.objects.get(i))
+        {
             Some(Obj::Ints(v)) => Ok(v.clone()),
             _ => Err(format!("array index {i} out of range")),
         }
@@ -114,7 +120,6 @@ impl<'a> Reader<'a> {
         let n = self.count(1)?;
         (0..n).map(|_| self.string()).collect()
     }
-
 }
 
 #[cfg(test)]

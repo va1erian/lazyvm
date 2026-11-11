@@ -69,5 +69,7 @@ public final class VM {
         } catch (Throwable u) {
             // Not the handler's failure: with the heap full, this is all that went wrong.
         }
+        // A UI app may have no console: once a window was open, its host shows the report too.
+        lazy.internal.ui.ErrorReport.uncaught(t);
     }
 }

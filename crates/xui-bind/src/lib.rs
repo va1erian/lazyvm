@@ -10,6 +10,8 @@ mod free;
 mod headless;
 mod host;
 mod msg;
+#[cfg(feature = "rich-text")]
+mod probe;
 mod props;
 mod reader;
 #[cfg(feature = "rich-text")]
@@ -144,7 +146,8 @@ pub fn mount(panel: i32, tree: &Tree) -> Result<Vec<i32>, String> {
         owner: Some(panel),
     };
     let layout = build::decode(tree, ctx)?;
-    p.set_layout(layout).map_err(|e| format!("cannot mount: {e:?}"))?;
+    p.set_layout(layout)
+        .map_err(|e| format!("cannot mount: {e:?}"))?;
     drop(removed);
     Ok(old)
 }

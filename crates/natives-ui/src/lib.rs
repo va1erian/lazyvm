@@ -12,20 +12,39 @@ use std::rc::Rc;
 
 use vm::thread::with_lent;
 use vm::{MethodRef, Value, Vm, VmError, VmResult};
-use xui_bind::{Headless, Msg, Stats, WindowSpec};
 pub use xui_bind::Host;
+use xui_bind::{Headless, Msg, Stats, WindowSpec};
 
 use natives::{arg, int, ret_void};
 
 const UI: &str = "lazy/ui/Ui";
+const ERROR_REPORT: &str = "lazy/internal/ui/ErrorReport";
 
-/// The window host a build without one stands in with.
-pub type Desktop = fn() -> Result<Host, String>;
+/// What the platform's binary provides: its window host, and how it shows
+/// the report of an uncaught exception once a window was open.
+#[derive(Clone, Copy)]
+pub struct UiHost {
+    pub desktop: fn() -> Result<Host, String>,
+    /// Shows `(title, text)`; on Windows a system message box.
+    pub error_box: fn(&str, &str),
+}
 
 /// Registers the `lazy.ui` natives; `launcher-ui` calls it after
-/// `natives::register_all`. `desktop` makes the platform's window host.
-pub fn register(vm: &mut Vm, desktop: Desktop) {
-    DESKTOP.with(|d| d.set(Some(desktop)));
+/// `natives::register_all`.
+pub fn register(vm: &mut Vm, host: UiHost) {
+    DESKTOP.with(|d| d.set(Some(host)));
+    vm.register_native(
+        ERROR_REPORT,
+        "show0",
+        "(Ljava/lang/String;Ljava/lang/String;)V",
+        |vm, a| {
+            let (title, text) = (vm.string_arg(arg(a, 0)?)?, vm.string_arg(arg(a, 1)?)?);
+            if let Some(host) = DESKTOP.with(std::cell::Cell::get) {
+                (host.error_box)(&title, &text);
+            }
+            ret_void()
+        },
+    );
     let window = "(ILjava/lang/String;II[I[Ljava/lang/Object;[I)V";
     vm.register_native(UI, "run0", window, run0);
     let open = "(IILjava/lang/String;II[I[Ljava/lang/Object;[I)V";
@@ -95,7 +114,7 @@ pub fn register(vm: &mut Vm, desktop: Desktop) {
 }
 
 thread_local! {
-    static DESKTOP: std::cell::Cell<Option<Desktop>> = const { std::cell::Cell::new(None) };
+    static DESKTOP: std::cell::Cell<Option<UiHost>> = const { std::cell::Cell::new(None) };
 }
 
 fn state(msg: String) -> VmError {
@@ -180,7 +199,7 @@ fn run0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
         }
         false => DESKTOP.with(std::cell::Cell::get).map_or_else(
             || Err("no window host in this build; use -Dlazy.ui=headless".into()),
-            |make| make(),
+            |host| (host.desktop)(),
         ),
     };
     let stats = vm.lend(|| xui_bind::run(host, spec, up)).map_err(state)?;

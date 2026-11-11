@@ -6,15 +6,15 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use xui_core::Dip;
 use xui_core::arrange::{Entry, Handle, build};
 use xui_core::geometry::Rect;
 use xui_core::image::Image;
-use xui_core::Dip;
 use xui_rich_text::edit::Command;
 use xui_rich_text::format::{ImageExport, from_json, to_json, to_markdown};
 use xui_rich_text::model::{
-    Align, BlockKind, CharStylePatch, Document, InlineImage, ListKind, PageSetup, Selection,
-    Side, StyleSummary, Tri, Wrap, mm,
+    Align, BlockKind, CharStylePatch, Document, InlineImage, ListKind, PageSetup, Selection, Side,
+    StyleSummary, Tri, Wrap, mm,
 };
 use xui_rich_text::{RichTextEditor, ViewMode};
 
@@ -91,7 +91,11 @@ pub fn decode(d: &mut Decoder, head: &Head) -> Result<Entry<Msg>, String> {
         if listens & 4 != 0 {
             e = e.on_link(move |url| Some(Msg::text(id, ev::LINK, url.to_owned())));
         }
-        let mode = if page { ViewMode::Page } else { ViewMode::Draft };
+        let mode = if page {
+            ViewMode::Page
+        } else {
+            ViewMode::Draft
+        };
         Ok(e.view_mode(mode))
     })
     .bind(&h);
@@ -99,7 +103,10 @@ pub fn decode(d: &mut Decoder, head: &Head) -> Result<Entry<Msg>, String> {
 }
 
 fn words(doc: &Document) -> i32 {
-    doc.to_plain_text().split_whitespace().count().min(i32::MAX as usize) as i32
+    doc.to_plain_text()
+        .split_whitespace()
+        .count()
+        .min(i32::MAX as usize) as i32
 }
 
 fn tri(t: &Tri<bool>) -> i32 {
@@ -171,7 +178,9 @@ fn wrap_at(index: i32) -> Result<Wrap, String> {
 fn wrap_index(w: Wrap) -> i32 {
     match w {
         Wrap::Inline => 1,
-        Wrap::Square { side: Side::Left, .. } => 2,
+        Wrap::Square {
+            side: Side::Left, ..
+        } => 2,
         Wrap::Square { .. } => 3,
         Wrap::TopAndBottom { .. } => 4,
     }
@@ -216,11 +225,14 @@ const MAX_IMAGE_SIDE: u32 = 4096;
 const MAX_IMAGE_WIDTH: f32 = 360.0;
 
 fn image(bytes: &[u8], alt: String) -> Result<InlineImage, String> {
+    let (w, h) = crate::probe::dimensions(bytes).ok_or("not a PNG or JPEG picture")?;
+    if w == 0 || h == 0 || w > MAX_IMAGE_SIDE || h > MAX_IMAGE_SIDE {
+        return Err(format!(
+            "the picture is {w} x {h} pixels; the largest is 4096 x 4096"
+        ));
+    }
     let image = Image::decode(bytes).map_err(|e| format!("not a PNG or JPEG picture: {e:?}"))?;
     let (w, h) = (image.width(), image.height());
-    if w > MAX_IMAGE_SIDE || h > MAX_IMAGE_SIDE {
-        return Err(format!("the picture is {w} x {h} pixels; the largest is 4096 x 4096"));
-    }
     let scale = (MAX_IMAGE_WIDTH / w as f32).min(1.0);
     Ok(InlineImage {
         image: Arc::new(image),
@@ -244,7 +256,10 @@ fn markdown(doc: &Document, prefix: &str) -> Result<Ret, String> {
     let md = to_markdown(doc, &export);
     drop(export);
     let pngs = Rc::try_unwrap(pngs).map_err(|_| "export still running")?;
-    let pngs = pngs.into_inner().into_iter().collect::<Result<Vec<_>, _>>()?;
+    let pngs = pngs
+        .into_inner()
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(Ret::Export(md, pngs))
 }
 
@@ -297,7 +312,10 @@ pub fn call(e: &RichTextEditor<Msg>, op: i32, i: i32, d: f64, arg: Arg) -> Resul
             _ => return Err(format!("list kind {i}")),
         })),
         op::WRAP => match e.selection() {
-            Selection::Object(id) => exec(Command::SetWrap { id, wrap: wrap_at(i)? }),
+            Selection::Object(id) => exec(Command::SetWrap {
+                id,
+                wrap: wrap_at(i)?,
+            }),
             Selection::Text { .. } => Ok(Ret::None),
         },
         op::GET_WRAP => Ok(Ret::Int(match e.selection() {
@@ -307,7 +325,11 @@ pub fn call(e: &RichTextEditor<Msg>, op: i32, i: i32, d: f64, arg: Arg) -> Resul
             Selection::Text { .. } => 0,
         })),
         op::PAGE_VIEW => {
-            e.set_view_mode(if i != 0 { ViewMode::Page } else { ViewMode::Draft });
+            e.set_view_mode(if i != 0 {
+                ViewMode::Page
+            } else {
+                ViewMode::Draft
+            });
             Ok(Ret::None)
         }
         op::PAGE => match arg {

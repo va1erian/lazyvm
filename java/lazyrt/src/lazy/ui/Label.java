@@ -17,7 +17,7 @@ public final class Label extends Widget {
     /** Shows {@code text} instead. */
     public Label text(String text) {
         Ui.nonNull(text, "text");
-        if (mounted()) call(Op.TEXT, text);
+        if (mounted() && !text.equals(this.text)) call(Op.TEXT, text);
         this.text = text;
         return this;
     }

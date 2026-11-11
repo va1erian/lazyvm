@@ -7,8 +7,8 @@
 //! comes next depends on the kind (see `lazy.ui.Encoder`).
 
 use xui_core::arrange::{
-    Build, Entry, Handle, IntoEntry, Layout, LayoutExt, column, group, panel, row, scroll,
-    spacer, tabs, wrap,
+    Build, Entry, Handle, IntoEntry, Layout, LayoutExt, column, group, panel, row, scroll, spacer,
+    tabs, wrap,
 };
 use xui_core::layout::{Align, Insets};
 use xui_core::widget::{Placeable, Tooltip};
@@ -174,9 +174,7 @@ impl Decoder<'_> {
         let kind = self.r.int()?;
         let head = self.head()?;
         let entry = match kind {
-            op::COLUMN | op::ROW | op::WRAP => {
-                self.arrangement(kind, head.id, depth)?.into_entry()
-            }
+            op::COLUMN | op::ROW | op::WRAP => self.arrangement(kind, head.id, depth)?.into_entry(),
             op::SPACER => {
                 self.insert(head.id, Widget::Inert)?;
                 spacer()

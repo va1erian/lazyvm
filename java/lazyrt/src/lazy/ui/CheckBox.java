@@ -23,14 +23,18 @@ public final class CheckBox extends Widget {
         return this;
     }
 
-    /** Whether the box is checked; the user changes it, so it is read from the window. */
+    /**
+     * Whether it is on. The user changes it, so it is read from the window, unless {@link
+     * #onToggle} keeps this side's copy current.
+     */
     public boolean checked() {
-        return mounted() ? callInt(Op.GET_CHECKED) != 0 : checked;
+        return mounted() && onToggle == null ? callInt(Op.GET_CHECKED) != 0 : checked;
     }
 
     /** Checks or clears the box, without running the toggle action. */
     public CheckBox checked(boolean on) {
-        if (mounted()) call(Op.CHECKED, on ? 1 : 0, 0, null);
+        // With onToggle this side knows what is shown, and skips a change to the same state.
+        if (mounted() && (onToggle == null || on != checked)) call(Op.CHECKED, on ? 1 : 0, 0, null);
         checked = on;
         return this;
     }
@@ -52,6 +56,9 @@ public final class CheckBox extends Widget {
 
     @Override
     void fire(int kind, int i, double d, String s) {
-        if (kind == Ui.TOGGLE && onToggle != null) onToggle.accept(i != 0);
+        if (kind == Ui.TOGGLE && onToggle != null) {
+            checked = i != 0;
+            onToggle.accept(checked);
+        }
     }
 }

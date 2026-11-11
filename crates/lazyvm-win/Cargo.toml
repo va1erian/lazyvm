@@ -10,9 +10,11 @@ rust-version.workspace = true
 workspace = true
 
 # Windows-only parts (decisions.md D10): the `lazy.ui` window host on xui's
-# winit backend. Natives depend on it on Windows only, so the musl build
+# winit backend, and the uncaught-exception message box. Natives depend on it on Windows only, so the musl build
 # never pulls winit in; on other targets, as a workspace member, it builds to
 # nothing. Same xui revision as `xui-bind` (docs/ui.md).
 [target.'cfg(windows)'.dependencies]
 xui-core = { git = "https://github.com/va1erian/xui", rev = "832c61f29419bf31a0518a47e050b15c97b316e3" }
 xui-canvas = { git = "https://github.com/va1erian/xui", rev = "832c61f29419bf31a0518a47e050b15c97b316e3", default-features = false, features = ["winit-backend"] }
+# MessageBoxW for the uncaught-exception box; the version winit already links.
+windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }

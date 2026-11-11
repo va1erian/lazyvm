@@ -207,6 +207,7 @@ public final class Ui {
         lazy.internal.Windowing.claim("lazy.ui");
         ran = true;
         uiThread = Thread.currentThread();
+        if (!"headless".equals(System.getProperty("lazy.ui"))) lazy.internal.ui.ErrorReport.windowOpening();
         main = window;
         Encoder out = window.encode();
         running = true;

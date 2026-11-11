@@ -27,15 +27,18 @@ public final class ComboBox extends Widget {
         return items.length;
     }
 
-    /** The selected item's index; the user changes it, so it is read from the window. */
+    /**
+     * The selected item's index. The user changes it, so it is read from the window, unless
+     * {@link #onSelect} keeps this side's copy current.
+     */
     public int selected() {
-        return mounted() ? callInt(Op.GET_SELECTED) : selected;
+        return mounted() && onSelect == null ? callInt(Op.GET_SELECTED) : selected;
     }
 
     /** Selects item {@code index}, without running the select action. */
     public ComboBox select(int index) {
         check(index);
-        if (mounted()) call(Op.SELECT, index, 0, null);
+        if (mounted() && (onSelect == null || index != selected)) call(Op.SELECT, index, 0, null);
         selected = index;
         return this;
     }
@@ -66,6 +69,9 @@ public final class ComboBox extends Widget {
 
     @Override
     void fire(int kind, int i, double d, String s) {
-        if (kind == Ui.SELECT && onSelect != null) onSelect.accept(i);
+        if (kind == Ui.SELECT && onSelect != null) {
+            selected = i;
+            onSelect.accept(i);
+        }
     }
 }

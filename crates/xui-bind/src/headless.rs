@@ -72,7 +72,10 @@ pub fn is_active() -> bool {
 
 /// A point of widget `id` and the window it is in: its centre, or `at`
 /// pixels from its top-left corner.
-fn point(id: i32, at: Option<(i32, i32)>) -> Result<(Rc<OffscreenBackend>, WindowId, i32, i32), String> {
+fn point(
+    id: i32,
+    at: Option<(i32, i32)>,
+) -> Result<(Rc<OffscreenBackend>, WindowId, i32, i32), String> {
     let (b, _) = active()?;
     let (w, window) = table::get(id)?;
     let node = w.node().ok_or_else(|| format!("widget {id} has no node"))?;
@@ -100,8 +103,24 @@ pub fn click(id: i32, at: Option<(i32, i32)>) -> Result<(), String> {
     let (b, window, x, y) = point(id, at)?;
     let (button, modifiers) = (MouseButton::Left, Modifiers::default());
     b.inject(window, Event::MouseMove { x, y, modifiers });
-    b.inject(window, Event::MouseDown { x, y, button, modifiers });
-    b.inject(window, Event::MouseUp { x, y, button, modifiers });
+    b.inject(
+        window,
+        Event::MouseDown {
+            x,
+            y,
+            button,
+            modifiers,
+        },
+    );
+    b.inject(
+        window,
+        Event::MouseUp {
+            x,
+            y,
+            button,
+            modifiers,
+        },
+    );
     pump(&b, window);
     Ok(())
 }
@@ -121,7 +140,16 @@ pub fn scroll(id: i32, delta: i32) -> Result<(), String> {
     let delta = i16::try_from(delta).map_err(|_| format!("wheel delta {delta}"))?;
     let modifiers = Modifiers::default();
     let horizontal = false;
-    b.inject(window, Event::MouseWheel { delta, horizontal, x, y, modifiers });
+    b.inject(
+        window,
+        Event::MouseWheel {
+            delta,
+            horizontal,
+            x,
+            y,
+            modifiers,
+        },
+    );
     pump(&b, window);
     Ok(())
 }
@@ -137,8 +165,23 @@ pub fn key(code: i32, mods: i32) -> Result<(), String> {
         alt: mods & i32::from(host::modifier::ALT) != 0,
         ..Modifiers::default()
     };
-    b.inject(window, Event::KeyDown { key, modifiers, repeat: 0, system: false });
-    b.inject(window, Event::KeyUp { key, modifiers, system: false });
+    b.inject(
+        window,
+        Event::KeyDown {
+            key,
+            modifiers,
+            repeat: 0,
+            system: false,
+        },
+    );
+    b.inject(
+        window,
+        Event::KeyUp {
+            key,
+            modifiers,
+            system: false,
+        },
+    );
     pump(&b, window);
     Ok(())
 }
@@ -175,7 +218,11 @@ pub fn advance(ms: u64) -> Result<(), String> {
     loop {
         let next = CLOCK.with(|c| {
             let mut c = c.borrow_mut();
-            let t = c.timers.iter_mut().filter(|t| t.due <= end).min_by_key(|t| t.due)?;
+            let t = c
+                .timers
+                .iter_mut()
+                .filter(|t| t.due <= end)
+                .min_by_key(|t| t.due)?;
             let fired = (t.id, t.due);
             t.due += t.period;
             c.now = fired.1;

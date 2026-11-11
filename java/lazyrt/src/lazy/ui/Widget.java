@@ -71,7 +71,7 @@ public abstract class Widget extends Node {
 
     /** Lets the widget take input, or greys it out. */
     public Widget enabled(boolean on) {
-        if (mounted()) call(Op.ENABLED, on ? 1 : 0, 0, null);
+        if (mounted() && on != enabled) call(Op.ENABLED, on ? 1 : 0, 0, null);
         enabled = on;
         return this;
     }
@@ -83,7 +83,7 @@ public abstract class Widget extends Node {
 
     /** Shows or hides the widget. */
     public Widget visible(boolean on) {
-        if (mounted()) call(Op.VISIBLE, on ? 1 : 0, 0, null);
+        if (mounted() && on != visible) call(Op.VISIBLE, on ? 1 : 0, 0, null);
         visible = on;
         return this;
     }

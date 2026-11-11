@@ -19,7 +19,7 @@ public final class StatusBar extends Widget {
     public StatusBar text(int index, String text) {
         check(index);
         Ui.nonNull(text, "text");
-        if (mounted()) call(Op.PART, index, 0, text);
+        if (mounted() && !text.equals(parts[index])) call(Op.PART, index, 0, text);
         parts[index] = text;
         return this;
     }

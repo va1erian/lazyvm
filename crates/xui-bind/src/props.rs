@@ -2,12 +2,12 @@
 //! dispatched on (widget kind, op) to xui's typed methods (docs/ui.md,
 //! "Changing a widget"). Ops are shared with `lazy.ui.Op`.
 
-use xui_core::widget::{HasText, MenuId};
 use xui_core::Ui;
+use xui_core::widget::{HasText, MenuId};
 
+use crate::Tree;
 use crate::msg::Msg;
 use crate::table::{self, Widget};
-use crate::Tree;
 
 pub mod op {
     pub const TEXT: i32 = 1;
@@ -170,10 +170,16 @@ fn widget_op(w: &Widget, op: i32, i: i32, d: f64, arg: &Arg) -> Option<Result<Re
         (Widget::TextArea(h), op::GET_TEXT) => return ok(Ret::Str(h.try_get()?.text())),
         (Widget::Toggle(h), op::CHECKED) => h.try_get()?.set_checked(i != 0),
         (Widget::Check(h), op::CHECKED) => h.try_get()?.set_checked(i != 0),
-        (Widget::Toggle(h), op::GET_CHECKED) => return ok(Ret::Int(h.try_get()?.is_checked() as i32)),
-        (Widget::Check(h), op::GET_CHECKED) => return ok(Ret::Int(h.try_get()?.is_checked() as i32)),
+        (Widget::Toggle(h), op::GET_CHECKED) => {
+            return ok(Ret::Int(h.try_get()?.is_checked() as i32));
+        }
+        (Widget::Check(h), op::GET_CHECKED) => {
+            return ok(Ret::Int(h.try_get()?.is_checked() as i32));
+        }
         (Widget::Combo(h, n), op::SELECT) => h.try_get()?.select(t!(index(i, *n))),
-        (Widget::Combo(h, _), op::GET_SELECTED) => return ok(Ret::Int(h.try_get()?.selected() as i32)),
+        (Widget::Combo(h, _), op::GET_SELECTED) => {
+            return ok(Ret::Int(h.try_get()?.selected() as i32));
+        }
         (Widget::List(h), op::SELECT) => {
             let l = h.try_get()?;
             l.select(usize::try_from(i).ok());
@@ -186,9 +192,15 @@ fn widget_op(w: &Widget, op: i32, i: i32, d: f64, arg: &Arg) -> Option<Result<Re
             let Arg::Strs(cells) = arg else {
                 return err("cells are required".into());
             };
-            let columns = t!(usize::try_from(i).ok().filter(|&c| c > 0).ok_or("bad column count"));
+            let columns = t!(usize::try_from(i)
+                .ok()
+                .filter(|&c| c > 0)
+                .ok_or("bad column count"));
             if cells.len() % columns != 0 {
-                return err(format!("{} cells do not fill rows of {columns}", cells.len()));
+                return err(format!(
+                    "{} cells do not fill rows of {columns}",
+                    cells.len()
+                ));
             }
             let rows: Vec<Vec<String>> = cells.chunks(columns).map(<[String]>::to_vec).collect();
             h.try_get()?.set_model(rows);

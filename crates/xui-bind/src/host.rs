@@ -77,11 +77,14 @@ fn setup(ui: &mut Ui<Msg>, spec: &WindowSpec) -> Result<(), String> {
         owner: None,
     };
     let layout = build::decode(&spec.tree, ctx)?;
-    ui.root(layout).map_err(|e| format!("cannot build the window: {e:?}"))?;
+    ui.root(layout)
+        .map_err(|e| format!("cannot build the window: {e:?}"))?;
     ui.on_close(move || Some(Msg::new(id, ev::CLOSE)));
     ui.on_timer(|t| table::timer_owner(t).map(|j| Msg::new(j, ev::TIMER)));
     ui.on_key(move |key: Key, m: Modifiers| {
-        let found = keys.iter().position(|&(code, mods)| Key::from_code(code) == key && mods == mask(m));
+        let found = keys
+            .iter()
+            .position(|&(code, mods)| Key::from_code(code) == key && mods == mask(m));
         found.map(|i| Msg::int(id, ev::KEY, i as i32))
     });
     Ok(())
@@ -95,10 +98,8 @@ pub fn run(host: &Host, start: Instant, spec: WindowSpec) -> Result<(), String> 
         Host::Headless(script) => crate::headless::backend(script),
     };
     MAIN.with(|m| m.set(spec.id));
-    let platform = PlatformSpec::new(&spec.title).size(
-        Dip(spec.size.0 as f32),
-        Dip(spec.size.1 as f32),
-    );
+    let platform =
+        PlatformSpec::new(&spec.title).size(Dip(spec.size.0 as f32), Dip(spec.size.1 as f32));
     let made = run_app(backend, platform, |ui: &mut Ui<Msg>| {
         crate::headless::bind(ui.window());
         if let Err(e) = setup(ui, &spec) {
@@ -128,10 +129,8 @@ pub fn run(host: &Host, start: Instant, spec: WindowSpec) -> Result<(), String> 
 pub fn open(opener: i32, spec: WindowSpec) -> Result<(), String> {
     let ui = table::window(opener)?.ui.clone();
     let id = spec.id;
-    let platform = PlatformSpec::new(&spec.title).size(
-        Dip(spec.size.0 as f32),
-        Dip(spec.size.1 as f32),
-    );
+    let platform =
+        PlatformSpec::new(&spec.title).size(Dip(spec.size.0 as f32), Dip(spec.size.1 as f32));
     let error = RefCell::new(None);
     let handle = ui
         .open_window(platform, |ui: &mut Ui<Msg>| {

@@ -9,13 +9,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use xui_core::{Dip, Ui};
 use xui_core::backend::{NodeKind, NodeSpec, Result as XuiResult, TextStyle, WidgetId};
 use xui_core::color::Color;
 use xui_core::geometry::{Point, Rect, Size};
 use xui_core::image::Image;
 use xui_core::layout::Constraints;
 use xui_core::widget::Placeable;
+use xui_core::{Dip, Ui};
 
 use crate::msg::Msg;
 

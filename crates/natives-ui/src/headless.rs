@@ -80,7 +80,12 @@ fn step0(vm: &mut Vm, a: &[Value]) -> VmResult<Option<Value>> {
                 return Ok(());
             }
             let mut ppm = format!("P6\n{w} {h}\n255\n").into_bytes();
-            ppm.extend(px.as_chunks::<4>().0.iter().flat_map(|p| [p[0], p[1], p[2]]));
+            ppm.extend(
+                px.as_chunks::<4>()
+                    .0
+                    .iter()
+                    .flat_map(|p| [p[0], p[1], p[2]]),
+            );
             let path = s()?;
             std::fs::write(&path, ppm).map_err(|e| format!("{path}: {e}"))
         }),

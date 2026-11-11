@@ -14,8 +14,8 @@ use xui_core::arrange::Handle;
 use xui_core::backend::{TimerId, WidgetId};
 use xui_core::widget::{
     Button, CheckBox, ComboBox, Dialog, Edit, FileDialog, GroupBox, Label, ListView, Menu,
-    MultilineEdit, Panel, ProgressBar, ScrollView, Slider, StatusBar, Tabs, TaskDialog,
-    Placeable, ToggleButton, Toolbar, Tooltip,
+    MultilineEdit, Panel, Placeable, ProgressBar, ScrollView, Slider, StatusBar, Tabs, TaskDialog,
+    ToggleButton, Toolbar, Tooltip,
 };
 
 use crate::msg::Msg;
@@ -156,7 +156,8 @@ pub fn get(id: i32) -> Result<(Widget, i32), String> {
 }
 
 pub fn window(id: i32) -> Result<Rc<WindowState>, String> {
-    TABLE.with(|t| t.borrow().windows.get(&id).cloned())
+    TABLE
+        .with(|t| t.borrow().windows.get(&id).cloned())
         .ok_or_else(|| format!("no open window {id}"))
 }
 

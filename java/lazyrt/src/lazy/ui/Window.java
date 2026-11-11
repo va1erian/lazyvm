@@ -44,7 +44,7 @@ public final class Window extends Node {
     /** Retitles the window. */
     public Window title(String title) {
         Ui.nonNull(title, "title");
-        if (mounted()) {
+        if (mounted() && !title.equals(this.title)) {
             live();
             Ui.title0(id, title);
         }

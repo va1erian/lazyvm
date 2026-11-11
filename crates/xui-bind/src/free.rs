@@ -24,7 +24,7 @@ pub mod op {
     /// `label extensions`.
     pub const FILE: i32 = 62;
     /// `entries` with each `type id text checked icon?`; type 0 item,
-    /// 1 check, 2 separator.
+    /// 1 check, 2 separator, 3 submenu, 4 radio.
     pub const MENU: i32 = 63;
 }
 
@@ -85,7 +85,9 @@ fn task(r: &mut Reader, ui: &Ui<Msg>, id: i32) -> Result<TaskDialog<Msg>, String
         3 => TaskDialogIcon::Error,
         v => return Err(format!("task dialog icon {v}")),
     };
-    let mut d = TaskDialog::new(ui, &title, &message).map_err(xe)?.icon(icon);
+    let mut d = TaskDialog::new(ui, &title, &message)
+        .map_err(xe)?
+        .icon(icon);
     for command in r.strings()? {
         d = d.command(&command).map_err(xe)?;
     }
@@ -124,8 +126,7 @@ fn file(r: &mut Reader, ui: &Ui<Msg>, id: i32) -> Result<FileDialog<Msg>, String
         d = d.filter(&label, &exts);
     }
     let path = move |p: PathBuf| Some(Msg::text(id, ev::DIALOG, p.to_string_lossy().into()));
-    Ok(d
-        .on_accept(path)
+    Ok(d.on_accept(path)
         .on_cancel(move || Some(Msg::int(id, ev::DIALOG, -1))))
 }
 
@@ -143,7 +144,12 @@ const MAX_MENU_DEPTH: usize = 4;
 
 /// `n` entries, each `type id text checked icon?`; a submenu (type 3) uses
 /// `checked` as its child count, and its children follow it.
-fn items(r: &mut Reader, n: usize, depth: usize, ids: &mut Vec<usize>) -> Result<Vec<Item>, String> {
+fn items(
+    r: &mut Reader,
+    n: usize,
+    depth: usize,
+    ids: &mut Vec<usize>,
+) -> Result<Vec<Item>, String> {
     if depth > MAX_MENU_DEPTH {
         return Err("menus nest too deep".into());
     }
@@ -153,22 +159,34 @@ fn items(r: &mut Reader, n: usize, depth: usize, ids: &mut Vec<usize>) -> Result
         let id = usize::try_from(r.int()?).map_err(|_| "negative menu id".to_string())?;
         let text = r.string()?;
         let extra = r.int()?;
-        let icon = r.opt_string()?.map(|s| crate::widgets::icon(&s)).transpose()?;
+        let icon = r
+            .opt_string()?
+            .map(|s| crate::widgets::icon(&s))
+            .transpose()?;
         if ids.contains(&id) {
             return Err(format!("menu id {id} used twice"));
         }
         ids.push(id);
         let children = match kind {
-            0..=2 => Vec::new(),
+            0..=2 | 4 => Vec::new(),
             3 => {
                 // Each child takes at least five ints.
-                let count = usize::try_from(extra).ok().filter(|&c| c <= r.remaining() / 5);
+                let count = usize::try_from(extra)
+                    .ok()
+                    .filter(|&c| c <= r.remaining() / 5);
                 let count = count.ok_or_else(|| "bad submenu size".to_string())?;
                 items(r, count, depth + 1, ids)?
             }
             _ => return Err(format!("menu entry type {kind}")),
         };
-        out.push(Item { kind, id, text, checked: extra != 0, icon, children });
+        out.push(Item {
+            kind,
+            id,
+            text,
+            checked: extra != 0,
+            icon,
+            children,
+        });
     }
     Ok(out)
 }
@@ -180,6 +198,7 @@ fn fill(scope: &mut xui_core::widget::MenuScope<'_>, items: &[Item]) {
             0 => scope.item(id, &item.text),
             1 => scope.check(id, &item.text, item.checked),
             3 => scope.submenu(id, &item.text, |m| fill(m, &item.children)),
+            4 => scope.radio(id, &item.text, item.checked),
             _ => {
                 scope.separator();
                 continue;

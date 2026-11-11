@@ -1,13 +1,13 @@
 //! The leaf widgets of an op list: what follows each kind's header
 //! (`lazy.ui.Encoder` writes the same order).
 
+use xui_core::Dip;
 use xui_core::arrange::{
-    Entry, Handle, build, button, checkbox, combo_box, edit, label, list, multiline_edit,
-    progress, separator, slider, status_bar, toggle_button, toolbar, vertical_separator,
+    Entry, Handle, build, button, checkbox, combo_box, edit, label, list, multiline_edit, progress,
+    separator, slider, status_bar, toggle_button, toolbar, vertical_separator,
 };
 use xui_core::icon::IconRef;
 use xui_core::widget::{ColumnWidth, HasText, Lucide};
-use xui_core::Dip;
 
 use crate::build::{Decoder, Head, finish, op};
 use crate::canvas::{Canvas, Drawing};
@@ -136,7 +136,12 @@ pub fn leaf(d: &mut Decoder, kind: i32, head: &Head) -> Result<Entry<Msg>, Strin
             let h = Handle::new();
             let parts = d.r.strings()?;
             let parts: Vec<&str> = parts.iter().map(String::as_str).collect();
-            finish(d, head, Widget::Status(h.clone()), status_bar(&parts).bind(&h))
+            finish(
+                d,
+                head,
+                Widget::Status(h.clone()),
+                status_bar(&parts).bind(&h),
+            )
         }
         op::TOOLBAR => tool_bar(d, head),
         op::SEPARATOR => {
@@ -242,7 +247,10 @@ fn list_view(d: &mut Decoder, head: &Head) -> Result<Entry<Msg>, String> {
 pub fn rows(d: &mut Decoder, columns: usize) -> Result<Vec<Vec<String>>, String> {
     let cells = d.r.strings()?;
     if cells.len() % columns != 0 {
-        return Err(format!("{} cells do not fill rows of {columns}", cells.len()));
+        return Err(format!(
+            "{} cells do not fill rows of {columns}",
+            cells.len()
+        ));
     }
     Ok(cells.chunks(columns).map(<[String]>::to_vec).collect())
 }

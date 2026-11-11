@@ -128,10 +128,14 @@ fn export(vm: &mut Vm, text: &str, files: &[Vec<u8>]) -> VmResult<Ref> {
     let out = vm.new_array_of("Ljava/lang/Object;", len)?;
     vm.with_root(out, |vm| {
         let s = vm.new_string(text)?;
-        vm.heap.array_mut(out)?.store(0, Value::Ref(Some(s)), false)?;
+        vm.heap
+            .array_mut(out)?
+            .store(0, Value::Ref(Some(s)), false)?;
         for (i, f) in files.iter().enumerate() {
             let b = natives::byte_array(vm, f)?;
-            vm.heap.array_mut(out)?.store(i + 1, Value::Ref(Some(b)), false)?;
+            vm.heap
+                .array_mut(out)?
+                .store(i + 1, Value::Ref(Some(b)), false)?;
         }
         Ok(out)
     })
