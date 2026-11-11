@@ -1,0 +1,4 @@
+hover and scroll: 0 upcalls
+typing without onChange: 0 upcalls, text quiet text
+typing with onChange: 10 upcalls
+[0][01][012][0123][01234][012345][0123456][01234567][012345678][0123456789]

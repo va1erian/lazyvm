@@ -24,6 +24,7 @@ mod step {
     pub const DUMP: i32 = 9;
     /// Returns `{upcalls}` made so far.
     pub const UPCALLS: i32 = 10;
+    pub const CLICK_AT: i32 = 11;
 }
 
 pub fn register(vm: &mut Vm) {
@@ -64,7 +65,9 @@ fn step0(vm: &mut Vm, a: &[Value]) -> VmResult<Option<Value>> {
     // A step pumps the loop, so the callbacks it causes run nested in the
     // script's: the VM is lent again for them.
     let r = vm.lend(|| match op {
-        step::CLICK => drive::click(id),
+        step::CLICK => drive::click(id, None),
+        // `i` holds the offset: x in the high 16 bits, y in the low.
+        step::CLICK_AT => drive::click(id, Some((i >> 16, i & 0xffff))),
         step::HOVER => drive::hover(id),
         step::SCROLL => drive::scroll(id, i),
         step::KEY => drive::key(id, i),

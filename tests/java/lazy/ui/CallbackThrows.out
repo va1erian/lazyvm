@@ -1,0 +1,18 @@
+clicks that ran: 1
+--- stderr ---
+Exception in thread "main" java.lang.IllegalArgumentException: boom from a callback
+	at lazy.ui.CallbackThrows.lambda$main$0(CallbackThrows.java:20)
+	at lazy.ui.CallbackThrows-Lambda-1.run(Unknown Source)
+	at lazy.ui.Button.fire(Button.java:61)
+	at lazy.ui.Ui.dispatch(Ui.java:375)
+	at lazy.internal.ui.Headless.step(Headless.java:59)
+	at lazy.internal.ui.Headless.click(Headless.java:69)
+	at lazy.ui.CallbackThrows.lambda$main$1(CallbackThrows.java:24)
+	at lazy.ui.CallbackThrows-Lambda-2.run(Unknown Source)
+	at lazy.ui.Ui.guard(Ui.java:391)
+	at lazy.ui.Ui$2.guard(Ui.java:58)
+	at lazy.internal.ui.Headless.script(Headless.java:55)
+	at lazy.ui.Ui.run(Ui.java:214)
+	at lazy.internal.ui.Headless.run(Headless.java:26)
+	at lazy.ui.CallbackThrows.main(CallbackThrows.java:23)
+--- exit 1 ---

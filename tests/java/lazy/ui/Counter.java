@@ -2,9 +2,7 @@
 // NEEDS: ui
 package lazy.ui;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 import lazy.internal.ui.Headless;
 
@@ -14,21 +12,13 @@ import lazy.internal.ui.Headless;
  * pinned by their pixel checksums, drawn with the test tree's font.
  */
 public class Counter {
-    static void font() throws IOException {
-        InputStream in = Counter.class.getResourceAsStream("DroidSans.ttf");
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buf = new byte[8192];
-        for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
-        Headless.font(out.toByteArray());
-    }
-
     static String frame() {
         int[] f = Headless.frame();
         return f[0] + "x" + f[1] + " " + Integer.toHexString(f[2]);
     }
 
     public static void main(String[] args) throws IOException {
-        font();
+        Headless.font(Counter.class, "DroidSans.ttf");
         final Label clicks = Ui.label("0 clicks");
         final int[] n = {0};
         final Button button = Ui.button("Click me").onClick(() -> clicks.text(++n[0] + " clicks"));

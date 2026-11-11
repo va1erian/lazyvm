@@ -1,0 +1,13 @@
+built: 640x420 7bcba548
+button
+bold true
+check true
+edit h
+edit hi
+list select 1
+tool new
+bold true, check true
+edit 'hi', list row 1
+combo 2, list 1 of 2, tab 1, slider 80.0
+changed: 640x420 a961132c
+upcalls: 7

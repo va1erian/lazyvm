@@ -13,7 +13,7 @@ import lazy.ui.Window;
 public final class Headless {
     // Steps, shared with crates/natives-ui/src/headless.rs.
     private static final int CLICK = 1, HOVER = 2, SCROLL = 3, KEY = 4, TYPE = 5, ADVANCE = 6;
-    private static final int CLOSE = 7, FRAME = 8, DUMP = 9, UPCALLS = 10;
+    private static final int CLOSE = 7, FRAME = 8, DUMP = 9, UPCALLS = 10, CLICK_AT = 11;
 
     private static Runnable script;
 
@@ -35,6 +35,20 @@ public final class Headless {
         font0(file.clone());
     }
 
+    /** {@link #font(byte[])} with the resource {@code name} next to class {@code anchor}. */
+    public static void font(Class<?> anchor, String name) throws java.io.IOException {
+        java.io.InputStream in = anchor.getResourceAsStream(name);
+        if (in == null) throw new java.io.FileNotFoundException(name);
+        try {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+            font(out.toByteArray());
+        } finally {
+            in.close();
+        }
+    }
+
     /** The VM's run hook: runs the script as a callback would. */
     private static void script() {
         final Runnable s = script;
@@ -45,13 +59,20 @@ public final class Headless {
         return step0(op, id, i, s);
     }
 
-    private static int id(Widget w) {
+    /** The registry id of mounted widget {@code w}: a slot in the low 20 bits, a generation above. */
+    public static int id(Widget w) {
         return UiAccess.ops().id(w);
     }
 
     /** A left click in the middle of {@code w}. */
     public static void click(Widget w) {
         step(CLICK, id(w), 0, null);
+    }
+
+    /** A left click {@code x}, {@code y} pixels from {@code w}'s top-left corner. */
+    public static void click(Widget w, int x, int y) {
+        if (x < 0 || y < 0 || x > 0x7fff || y > 0xffff) throw new IllegalArgumentException(x + ", " + y);
+        step(CLICK_AT, id(w), x << 16 | y, null);
     }
 
     /** The pointer moves over {@code w}. */

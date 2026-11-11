@@ -70,14 +70,23 @@ pub fn is_active() -> bool {
     active().is_ok()
 }
 
-/// The centre of widget `id` and the window it is in.
-fn centre(id: i32) -> Result<(Rc<OffscreenBackend>, WindowId, i32, i32), String> {
+/// A point of widget `id` and the window it is in: its centre, or `at`
+/// pixels from its top-left corner.
+fn point(id: i32, at: Option<(i32, i32)>) -> Result<(Rc<OffscreenBackend>, WindowId, i32, i32), String> {
     let (b, _) = active()?;
     let (w, window) = table::get(id)?;
     let node = w.node().ok_or_else(|| format!("widget {id} has no node"))?;
     let window = table::window(window)?.ui.window();
     let r = b.bounds(node);
-    Ok((b, window, (r.left + r.right) / 2, (r.top + r.bottom) / 2))
+    let (x, y) = match at {
+        Some((x, y)) => (r.left.saturating_add(x), r.top.saturating_add(y)),
+        None => ((r.left + r.right) / 2, (r.top + r.bottom) / 2),
+    };
+    Ok((b, window, x, y))
+}
+
+fn centre(id: i32) -> Result<(Rc<OffscreenBackend>, WindowId, i32, i32), String> {
+    point(id, None)
 }
 
 fn pump(b: &OffscreenBackend, window: WindowId) {
@@ -85,9 +94,10 @@ fn pump(b: &OffscreenBackend, window: WindowId) {
     b.render(window);
 }
 
-/// A left click in the middle of widget `id`.
-pub fn click(id: i32) -> Result<(), String> {
-    let (b, window, x, y) = centre(id)?;
+/// A left click in the middle of widget `id`, or `at` pixels from its
+/// top-left corner.
+pub fn click(id: i32, at: Option<(i32, i32)>) -> Result<(), String> {
+    let (b, window, x, y) = point(id, at)?;
     let (button, modifiers) = (MouseButton::Left, Modifiers::default());
     b.inject(window, Event::MouseMove { x, y, modifiers });
     b.inject(window, Event::MouseDown { x, y, button, modifiers });

@@ -25,7 +25,11 @@ public final class Panel extends Widget {
         return content;
     }
 
-    /** Shows {@code layout} instead of the current content. */
+    /**
+     * Shows {@code layout} instead of the current content. The old content's widgets leave the
+     * screen first, and their slots go to the new ones; should the VM refuse the new content, the
+     * panel is left empty of live widgets.
+     */
     public Panel set(Layout layout) {
         Ui.nonNull(layout, "layout");
         if (!mounted()) {
@@ -33,6 +37,8 @@ public final class Panel extends Widget {
             return this;
         }
         live();
+        content.unmount();
+        content = layout;
         Encoder out = new Encoder();
         Ui.building = window;
         try {
@@ -44,8 +50,6 @@ public final class Panel extends Widget {
         } finally {
             Ui.building = null;
         }
-        content.unmount();
-        content = layout;
         return this;
     }
 
@@ -58,7 +62,9 @@ public final class Panel extends Widget {
 
     @Override
     void unmount() {
-        super.unmount();
+        // Children first: freed slots are reused last-in first-out, so a new tree
+        // encoded in the same order takes the same slots.
         content.unmount();
+        super.unmount();
     }
 }

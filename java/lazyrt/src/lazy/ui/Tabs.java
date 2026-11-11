@@ -56,7 +56,9 @@ public final class Tabs extends Widget {
 
     @Override
     void unmount() {
-        super.unmount();
+        // Children first: freed slots are reused last-in first-out, so a new tree
+        // encoded in the same order takes the same slots.
         for (Layout page : pages) page.unmount();
+        super.unmount();
     }
 }

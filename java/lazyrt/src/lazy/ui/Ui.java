@@ -377,7 +377,8 @@ public final class Ui {
             drainLater();
             return true;
         } catch (Throwable t) {
-            failure = t;
+            // The first failure is the one Ui.run rethrows.
+            if (failure == null) failure = t;
             return false;
         }
     }
@@ -391,7 +392,8 @@ public final class Ui {
             drainLater();
             return true;
         } catch (Throwable t) {
-            failure = t;
+            // The first failure is the one Ui.run rethrows.
+            if (failure == null) failure = t;
             return false;
         }
     }

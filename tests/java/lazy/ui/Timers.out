@@ -1,0 +1,10 @@
+tick 1
+later after tick 1
+tick 2
+later after tick 2
+one-shot at 250, cancelling
+ticks: 2, active false
+second window clicked
+second window closed, main still running: ticks: 2
+upcalls: 5
+run returned

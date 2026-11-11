@@ -1,0 +1,4 @@
+before: 320x160 4bfa8818, 0 upcalls
+label: 1000 clicks, count 1000
+after: 320x160 2b506ab0, 1000 upcalls
+run returned
