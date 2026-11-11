@@ -72,6 +72,52 @@ never a panic.
       Check: `tools/bench.py` before and after on both platforms, in the PR;
       `tests/java/lang/CaseMapping` and `StringCaseLocale`, with ASCII
       strings under tr, az and lt added and blessed.
+- [ ] S11-06 Performance pass 2, led by a profile. S11-05 chose its changes
+      by reading the code; this pass measures first. Its parts, each kept
+      only if `tools/bench.py` shows a 20% win on the benchmark it targets
+      and no regression elsewhere ([`decisions.md`](decisions.md) D5):
+      1. A sampling profiler behind the `vm` crate's `prof` cargo feature,
+         off in the shipped build, so it costs nothing in size or speed
+         there. A sampler thread records the running Java method and
+         whether the thread is in the fast loop, the full `step`, a native or
+         the collector, and counts the instructions that leave the fast loop.
+         `LAZYVM_PROF=<file>` writes the report at exit. Windows' own samplers
+         (xperf, WPR) need an elevated shell, which agents do not have.
+      2. Benchmarks shaped like a game tick, our own code: virtual and
+         interface calls over a list of small objects, `ArrayList` and
+         `HashMap` iteration with boxing, short-lived allocation (so the
+         collector shows), and a `float` and `double` noise kernel.
+      3. The changes the profile ranks first. A first profile of the suite
+         on `54de4ed` ranks them so (`numeric` runs 93% of its instructions
+         in `step`; `calls` and `worldgen` leave the fast loop every 3 to 7
+         instructions, mostly at invokes, returns and `ldc`):
+         a. the fast loop for `long`, `float` and `double`: loads, stores,
+            arithmetic, conversions, `lcmp`/`fcmp*`/`dcmp*`, and `ldc`,
+            `ldc_w` and `ldc2_w` of an already resolved numeric constant;
+         b. invokes and returns without leaving the fast loop for a resolved,
+            non-native, non-`synchronized` target, and a cheaper frame push
+            and pop (no `Arc<Code>` clone, arguments moved once);
+         c. an inline cache for `invokevirtual` and `invokeinterface` in the
+            constant-pool cache (no `HashMap` lookup or pool read per call).
+         Each change is recorded in the PR with the profile line that
+         motivated it.
+      4. Library costs the profile shows in game-shaped code, as their own
+         commits: `HashMap` iteration that calls a lambda per element
+         (`HashViews`), and any regular expression on a per-frame path that
+         has a plain fast path (`String.split` on one literal character).
+      Not in this item: dropping checks the verifier has proven. It needs
+      the rule at the top of S11 changed for `-Xverify:none` (an owner
+      decision, for example sending unverified code down the checked path).
+      The Minicraft Plus port stays an outside measure, as in S11-05: the
+      owner's world-generation time and walking ms/tick go in the PR, never
+      in the repo.
+      Files: `crates/vm/src/prof.rs`, `crates/vm/src/interp`,
+      `crates/vm/src/class/resolve.rs`, `bench/`, `tools/bench.py`.
+      Check: `tools/bench.py` before and after on both platforms, in the PR,
+      with the new benchmarks; a `prof` report of the suite before and after;
+      `cargo build --release` without the feature is byte-identical in size
+      to a build without `prof.rs` (`python tools/size.py`); `tools/test.py`,
+      `tools/fastloop_test.py` and `tools/lazyos_test.py` pass.
 
 Gate: `tools/test.py` passes on both platforms, and `tools/bench.py` shows
 no regression against the S8 baseline.
