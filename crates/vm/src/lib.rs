@@ -11,7 +11,7 @@ mod gc;
 pub mod heap;
 mod init;
 pub mod interp;
-pub(crate) mod jit;
+pub mod jit;
 mod lambda;
 pub mod native;
 mod objects;
@@ -56,6 +56,9 @@ pub struct Options {
     pub max_method_code: usize,
     /// `-agentlib:jdwp=...`: the debugger agent to start.
     pub jdwp: Option<debug::Config>,
+    /// Runs of a method before the JIT compiles it; None turns it off
+    /// (`-Xjit:`, `LAZYVM_JIT`).
+    pub jit: Option<u32>,
 }
 
 impl Default for Options {
@@ -72,6 +75,7 @@ impl Default for Options {
             max_classes: 1 << 20,
             max_method_code: 65535,
             jdwp: None,
+            jit: Some(jit::THRESHOLD),
         }
     }
 }

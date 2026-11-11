@@ -153,12 +153,13 @@ never a panic.
       from a dataflow pass; any doubt leaves the method interpreted.
       `unsafe` for executable memory, entering compiled code and the helpers
       lives in `crates/vm/src/jit`, each block with its `// SAFETY:`.
-      `LAZYVM_JIT=off|all|<runs>` picks the policy.
+      `-Xjit:off|all|<runs>` (or `LAZYVM_JIT`) picks the policy.
       Files: `crates/vm/src/jit/*`, `crates/vm/src/interp/fast.rs`,
       `crates/vm/src/value.rs` (`repr(u32)`), `crates/vm/Cargo.toml`
       (`windows-sys`, `libc`, already in the tree).
       Check: `LAZYVM_JIT=all python tools/test.py` (every verified method
-      compiled at its first run) and the plain run, on both platforms;
+      compiled at its first run), `tools/lazyos_test.py --jit-all`, and the
+      plain runs;
       `tests/java/lang/JitEdges`; `LAZYVM_JIT=all` fastloop, verify and jdwp
       gates; `tools/bench.py` before and after on both platforms.
 

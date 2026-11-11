@@ -8,9 +8,8 @@
 //! throws) and is entered again at the next one; a loop polls the safepoint.
 //!
 //! Only verified methods are compiled: the stack's shape at each pc must be
-//! known (`flow.rs`). `LAZYVM_JIT` picks the policy: unset for the default
-//! threshold, `off`, `all` (compile at first run, for tests) or a number of
-//! runs.
+//! known (`flow.rs`). `-Xjit:` (or `LAZYVM_JIT`) picks the policy: `off`,
+//! `all` (compile at the first run, for tests) or a number of runs.
 #![allow(unsafe_code)]
 
 mod arith;
@@ -23,8 +22,6 @@ mod mem;
 mod ops;
 mod stack;
 
-use std::sync::OnceLock;
-
 use crate::Vm;
 use crate::class::{InitState, MethodRef, Resolved};
 use crate::heap::Heap;
@@ -34,8 +31,8 @@ use classfile::Constant;
 
 pub(crate) use frame::BACKWARD;
 
-/// Runs of a method's frames before it is compiled.
-const THRESHOLD: u32 = 200;
+/// Runs of a method's frames before it is compiled, by default.
+pub const THRESHOLD: u32 = 200;
 
 /// No entry at this pc.
 const NONE: u32 = u32::MAX;
@@ -69,15 +66,14 @@ pub(crate) struct Compiled {
 // unsafe, and `run` says why its call is sound.
 type Entry = unsafe extern "C" fn(*mut frame::Ctx, *const u8) -> u32;
 
-/// The run count after which a method compiles; None when the JIT is off.
-fn threshold() -> Option<u32> {
-    static T: OnceLock<Option<u32>> = OnceLock::new();
-    *T.get_or_init(|| match std::env::var("LAZYVM_JIT").as_deref() {
-        Ok("off") => None,
-        Ok("all") => Some(0),
-        Ok(n) => n.parse().ok(),
-        Err(_) => Some(THRESHOLD),
-    })
+/// A JIT policy, as `-Xjit:` and `LAZYVM_JIT` spell it: `off`, `all` (at the
+/// first run) or a number of runs. None for anything else.
+pub fn parse_policy(text: &str) -> Option<Option<u32>> {
+    match text {
+        "off" => Some(None),
+        "all" => Some(Some(0)),
+        n => n.parse().ok().map(Some),
+    }
 }
 
 impl Slot {
@@ -93,7 +89,9 @@ impl Vm {
     /// Counts a run of the top frame's method and compiles it once hot.
     #[inline]
     pub(crate) fn jit_tick(&mut self) {
-        let Some(limit) = threshold() else { return };
+        let Some(limit) = self.options.jit else {
+            return;
+        };
         let Some(m) = self.frames.last().map(|f| f.method) else {
             return;
         };

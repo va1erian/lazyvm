@@ -13,6 +13,7 @@ pub(super) const RBP: u8 = 5;
 pub(super) const RSI: u8 = 6;
 #[cfg_attr(windows, allow(dead_code))]
 pub(super) const RDI: u8 = 7;
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(super) const R8: u8 = 8;
 pub(super) const R12: u8 = 12;
 pub(super) const R13: u8 = 13;
