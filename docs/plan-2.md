@@ -72,6 +72,72 @@ never a panic.
       Check: `tools/bench.py` before and after on both platforms, in the PR;
       `tests/java/lang/CaseMapping` and `StringCaseLocale`, with ASCII
       strings under tr, az and lt added and blessed.
+- [ ] S11-06 Performance pass 2, led by a profile. S11-05 chose its changes
+      by reading the code; this pass measures first. Parts 1 and 2 are
+      tools, kept on their own Checks. Each change in parts 3 and 4 is kept
+      only if `tools/bench.py` shows a 20% win on the benchmark it targets
+      and no regression elsewhere ([`decisions.md`](decisions.md) D5).
+      1. A sampling profiler: `crates/vm/src/prof.rs` and every hook it
+         needs in the interpreter, all behind `cfg(feature = "prof")` of the
+         `vm` crate, which no default build turns on
+         (`cargo build --release -p launcher --features vm/prof`). A sampler
+         thread records the running Java method and whether the thread is
+         in the fast loop, the full `step`, a native or the collector, and
+         counts the instructions that leave the fast loop.
+         `LAZYVM_PROF=<file>` writes the report at exit. Windows' own samplers
+         (xperf, WPR) need an elevated shell, which agents do not have.
+      2. Benchmarks shaped like a game tick, our own code, in their own first
+         commit so the baseline is recorded with them: virtual and interface
+         calls over a list of small objects, `ArrayList` and `HashMap`
+         iteration with boxing, short-lived allocation (so the collector
+         shows), and a `float` noise kernel next to `numeric`'s `double` one.
+      3. Interpreter changes in the order the `prof` report of the suite
+         ranks them. A prototype profile (hand instrumentation of `54de4ed`,
+         not in the repo) suggests this order: `numeric` runs 93% of its
+         instructions in `step`, and `calls` and `worldgen` leave the fast
+         loop every 3 to 7 instructions, mostly at invokes, returns and `ldc`.
+         a. The fast loop for `long`, `float` and `double`: loads, stores,
+            arithmetic, conversions, `lcmp`/`fcmp*`/`dcmp*`, and `ldc`,
+            `ldc_w` and `ldc2_w` of an already resolved numeric constant.
+         b. Invokes and returns without leaving the fast loop, only for a
+            resolved, non-native, non-`synchronized` target whose class is
+            initialised; anything else falls back to `step`. A cheaper frame
+            push and pop (no `Arc<Code>` clone, arguments moved once). This
+            breaks the `fast.rs` header's promise that the loop never
+            allocates or calls, so the header is rewritten, the rule that a
+            failing instruction changes no state is kept, the checks `step`
+            makes (`StackOverflowError` among them) are kept, and
+            `tools/fastloop_test.py` gains invoke and return cases.
+         c. A per-call-site cache for `invokevirtual` and `invokeinterface`
+            (resolved method, last receiver class and its target), so a hit
+            does no `select_cache` lookup and no pool tag read. It keeps
+            `op_invoke`'s receiver checks and stays right as classes load.
+         `fast.rs` is split (for example `fast_wide.rs`, `fast_invoke.rs`)
+         to keep every file under 500 lines.
+      4. Library costs the profile shows in game-shaped code, as their own
+         commits: `HashMap` views that call a lambda per element
+         (`HashViews`), and `String.split` on one literal character, which
+         gets a plain path past `Pattern` (no regex engine code is added).
+      Not in this item: dropping checks the verifier has proven. It needs
+      the rule at the top of S11 changed for `-Xverify:none` (an owner
+      decision, for example sending unverified code down the checked path).
+      The Minicraft Plus port stays an outside measure, as in S11-05: the
+      owner's world-generation time and walking ms/tick go in the PR, never
+      in the repo.
+      Files: `crates/vm/Cargo.toml`, `crates/vm/src/lib.rs`,
+      `crates/vm/src/prof.rs`, `crates/vm/src/interp`,
+      `crates/vm/src/class/resolve.rs`, `bench/`, `tools/bench.py`,
+      `tools/fastloop_test.py`, `java/lazyrt/src/java/util/HashViews.java`,
+      `java/lazyrt/src/java/lang/String.java`.
+      Check: `tools/bench.py` on both platforms against a baseline recorded
+      at the part 2 commit, in the PR; a `prof` report of the suite before
+      and after part 3; the release binary built without the feature holds
+      no `prof` symbol, and `python tools/size.py` passes for the Windows and
+      musl binaries (D14); `tests/java/lang/StringSplit` (one literal
+      character, an escaped metacharacter, limits, leading and trailing
+      empty strings) and a `HashMap` view iteration test, blessed on the
+      oracle; `tools/test.py`, `tools/fastloop_test.py` and
+      `tools/lazyos_test.py` pass.
 
 Gate: `tools/test.py` passes on both platforms, and `tools/bench.py` shows
 no regression against the S8 baseline.
