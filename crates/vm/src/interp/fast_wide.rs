@@ -1,37 +1,23 @@
 //! The fast loop's (`fast.rs`) locals of every kind, `long`, `float` and
 //! `double` arithmetic, numeric `ldc`, and `pop`/`pop2`/`dup2`.
 //!
-//! Arithmetic and the stack shuffles run the very functions `step` runs
-//! (`ops_math::math`, `ops_basic::stack_op`); what this file adds is a check,
-//! before them, that they cannot fail: the operands are there and of the
-//! right kind, there is room for the result, and an integer divisor is not
-//! zero. When the check fails nothing has changed and `step` takes over.
+//! Arithmetic computes with the functions `step` uses (`ops_math::binary`
+//! and `unary`), on operands read in place; the stack shuffles run
+//! `ops_basic::stack_op` after a check that it cannot fail. When there is no
+//! result, nothing has changed and `step` takes over.
 
 use super::Frame;
 use super::fast::can_push;
 use super::ops_basic::{is_kind, stack_op};
-use super::ops_math::math;
+use super::ops_math::{binary, is_unary, unary};
 use crate::class::{Class, Resolved};
 use crate::value::Value;
 use classfile::Constant;
 
 /// Kinds as `ops_basic` numbers them.
-pub(super) const INT: u8 = 0;
 pub(super) const LONG: u8 = 1;
 pub(super) const FLOAT: u8 = 2;
 pub(super) const DOUBLE: u8 = 3;
-
-/// The kind of value each conversion (0x85-0x93) reads.
-const CONVERT_FROM: [u8; 15] = [
-    INT, INT, INT, LONG, LONG, LONG, FLOAT, FLOAT, FLOAT, DOUBLE, DOUBLE, DOUBLE, INT, INT, INT,
-];
-
-fn kind_at(f: &Frame, depth: usize, kind: u8) -> bool {
-    f.stack
-        .len()
-        .checked_sub(depth + 1)
-        .is_some_and(|i| is_kind(f.stack[i], kind))
-}
 
 /// Pushes `v` and moves on `len` bytes, if there is room.
 #[inline(always)]
@@ -77,32 +63,21 @@ pub(super) fn store(f: &mut Frame, i: usize, kind: u8, len: usize) -> bool {
     true
 }
 
-/// Whether `ops_math::math` can run `op` without failing.
-fn math_ready(f: &Frame, op: u8) -> bool {
-    let both = |kind| kind_at(f, 0, kind) && kind_at(f, 1, kind);
-    match op {
-        0x60..=0x73 => {
-            let kind = (op - 0x60) % 4;
-            let divides = op >= 0x6c;
-            let zero = matches!(f.stack.last(), Some(Value::Int(0) | Value::Long(0)));
-            both(kind) && !(divides && kind <= LONG && zero)
-        }
-        0x74..=0x77 => kind_at(f, 0, op - 0x74),
-        0x78..=0x7d => kind_at(f, 0, INT) && kind_at(f, 1, (op - 0x78) % 2),
-        0x7e..=0x83 => both((op - 0x7e) % 2),
-        0x85..=0x93 => kind_at(f, 0, CONVERT_FROM[usize::from(op - 0x85)]),
-        0x94 => both(LONG),
-        0x95 | 0x96 => both(FLOAT),
-        0x97 | 0x98 => both(DOUBLE),
-        _ => false,
-    }
-}
-
-/// An arithmetic, logic, conversion or compare instruction (0x60-0x98).
+/// An arithmetic, logic, conversion or compare instruction (0x60-0x98 but
+/// `iinc`): the operands are read in place and only replaced by a result.
+#[inline(always)]
 pub(super) fn arith(f: &mut Frame, op: u8) -> bool {
-    if !math_ready(f, op) || math(f, op).is_err() {
-        return false;
-    }
+    let n = f.stack.len();
+    let result = if is_unary(op) {
+        n.checked_sub(1).and_then(|i| unary(op, f.stack[i]))
+    } else {
+        n.checked_sub(2)
+            .and_then(|i| binary(op, f.stack[i], f.stack[i + 1]))
+    };
+    let Some(v) = result else { return false };
+    let operands = if is_unary(op) { 1 } else { 2 };
+    f.stack.truncate(n - operands);
+    f.stack.push(v);
     f.pc += 1;
     true
 }

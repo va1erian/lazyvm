@@ -233,7 +233,25 @@ def cases(f: int, g: int, c: int) -> list[tuple[str, int, int, bytes]]:
         ("wide_istore_over_lstore", 2, 3, bytes([0x09, 0x40, 0x04, 0x3D, 0x1F]) + ret),
         ("wide_astore_over_lstore", 2, 3, bytes([0x09, 0x40, 0x01, 0x4E, 0x1F]) + ret),
         ("wide_iinc_over_lstore", 2, 3, bytes([0x09, 0x40, 0x84, 2, 1, 0x1F]) + ret),
+        # long, float and double arithmetic (fast_wide.rs and ops_math::binary).
+        ("wide_ldiv_zero", 4, 1, bytes([0x0A, 0x09, 0x6D, 0x58]) + ret),
+        ("wide_lrem_zero", 4, 1, bytes([0x0A, 0x09, 0x71, 0x58]) + ret),
+        ("wide_fadd_ints", 2, 1, bytes([0x04, 0x04, 0x62, 0x57]) + ret),
+        ("wide_dmul_float", 2, 1, bytes([0x0F, 0x0C, 0x6B, 0x58]) + ret),
+        ("wide_lshl_long_count", 2, 1, bytes([0x0A, 0x0A, 0x79, 0x58]) + ret),
+        ("wide_lcmp_ints", 2, 1, bytes([0x04, 0x04, 0x94, 0x57]) + ret),
+        ("wide_i2l_ref", 1, 1, bytes([0x01, 0x85, 0x58]) + ret),
+        ("wide_d2f_long", 1, 1, bytes([0x0A, 0x90, 0x57]) + ret),
+        ("wide_fneg_empty", 1, 1, bytes([0x76]) + ret),
+        ("wide_lload_of_int", 2, 2, bytes([0x1E]) + ret),
+        ("wide_dstore_float", 1, 3, bytes([0x0C, 0x48]) + ret),
+        ("wide_lstore_last_slot", 1, 2, bytes([0x0A, 0x40]) + ret),
+        ("wide_overflow_lconst", 1, 1, bytes([0x0A, 0x0A]) + ret),
+        ("wide_pop_long", 1, 1, bytes([0x0A, 0x57]) + ret),
+        ("wide_dup2_overflow", 2, 1, bytes([0x04, 0x04, 0x5C]) + ret),
         # Not malformed: controls that must run.
+        ("control_wide_math", 4, 3, bytes([0x0F, 0x0F, 0x63, 0x8E, 0x85, 0x40, 0x1F, 0x0A, 0x61, 0x88,
+                                           0x86, 0x0D, 0x96, 0x57]) + ret),
         ("control_array_roundtrip", 4, 1, bytes([0x04]) + ints + bytes([0x59, 0x03, 0x10, 7, 0x4F, 0x03, 0x2E, 0x57]) + ret),
         ("control_object_roundtrip", 3, 1, new + bytes([0x59, 0x10, 5]) + pf + gf + bytes([0x57]) + ret),
         ("control_wide_local", 2, 3, bytes([0x09, 0x40, 0x04, 0x3B, 0x1F, 0x58]) + ret),
@@ -344,6 +362,7 @@ def main() -> None:
               "call_static_of_instance": icce, "call_virtual_null": npe, "call_virtual_of_static": icce,
               "call_interface_not_implemented": icce, "call_special_null": npe,
               "call_stack_overflow": "java.lang.StackOverflowError",
+              "wide_ldiv_zero": "java.lang.ArithmeticException", "wide_lrem_zero": "java.lang.ArithmeticException",
               "ret_holding_monitor": "java.lang.IllegalMonitorStateException"}
     for n in names:
         for i in (1, 2):
