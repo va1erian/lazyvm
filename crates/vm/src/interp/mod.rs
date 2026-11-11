@@ -5,6 +5,7 @@
 //! Rust (`Vm::invoke`) runs a nested loop that stops when its frame returns.
 
 mod fast;
+mod fast_call;
 mod fast_field;
 mod frame;
 mod lend;
@@ -158,7 +159,7 @@ impl Vm {
         loop {
             if !self.slow_interp {
                 prof::phase(Phase::Fast);
-                self.run_simple();
+                self.run_simple(base);
             }
             if self.heap.wants_gc() {
                 self.collect_garbage();

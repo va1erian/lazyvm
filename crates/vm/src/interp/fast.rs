@@ -30,8 +30,11 @@ impl Vm {
     /// it polls for a safepoint and carries on, so a hot loop stays in here;
     /// the frame is borrowed again afterwards, as a thread switch may have run
     /// other code meanwhile. A pending collection goes back to the dispatch loop.
+    ///
+    /// A resolved invoke or a plain return is done here too (`fast_call.rs`),
+    /// so a call stays in the loop; `base` is `Vm::run`'s.
     #[inline]
-    pub(super) fn run_simple(&mut self) {
+    pub(super) fn run_simple(&mut self, base: usize) {
         loop {
             let Vm {
                 frames,
@@ -40,8 +43,13 @@ impl Vm {
                 ..
             } = self;
             let Some(f) = frames.last_mut() else { return };
-            if !run(f, heap, classes) {
-                return;
+            match run(f, heap, classes) {
+                Stop::Backward => {}
+                Stop::At(op) => {
+                    if !self.fast_transfer(op, base) {
+                        return;
+                    }
+                }
             }
             // After the thread was out, a debugger may have set a breakpoint.
             if self.safepoint() || self.heap.wants_gc() {
@@ -242,13 +250,21 @@ fn array_length(f: &mut Frame, heap: &Heap) -> bool {
     true
 }
 
-/// Runs until an instruction is not simple or not valid; true if it stopped
-/// after a taken backward branch.
-fn run(f: &mut Frame, heap: &mut Heap, classes: &mut [Class]) -> bool {
+/// Why `run` stopped.
+enum Stop {
+    /// After a taken backward branch: poll for a safepoint, then go on.
+    Backward,
+    /// At an instruction it does not do, or whose checks failed, unchanged.
+    At(u8),
+}
+
+/// Runs until an instruction is not simple or not valid, or after a taken
+/// backward branch.
+fn run(f: &mut Frame, heap: &mut Heap, classes: &mut [Class]) -> Stop {
     let mut count = FastCount::default();
-    let taken = run_counted(f, heap, classes, &mut count);
-    count.done(taken);
-    taken
+    let stop = run_counted(f, heap, classes, &mut count);
+    count.done(matches!(stop, Stop::Backward));
+    stop
 }
 
 fn run_counted(
@@ -256,12 +272,14 @@ fn run_counted(
     heap: &mut Heap,
     classes: &mut [Class],
     count: &mut FastCount,
-) -> bool {
+) -> Stop {
     loop {
         count.tick();
         let start = f.pc;
         let Some(&op) = f.code.bytecode.get(start) else {
-            return false;
+            // Past the end of the code: `step` reports it. 0xff is reserved
+            // (JVMS 6.2), so `fast_transfer` leaves it alone.
+            return Stop::At(0xff);
         };
         let operand = |at: usize| f.code.bytecode.get(start + at).copied();
         let done = match op {
@@ -350,10 +368,10 @@ fn run_counted(
             _ => false,
         };
         if !done {
-            return false;
+            return Stop::At(op);
         }
         if f.pc <= start {
-            return true;
+            return Stop::Backward;
         }
     }
 }

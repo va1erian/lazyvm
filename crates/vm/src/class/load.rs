@@ -283,6 +283,7 @@ fn synthetic(
         state: InitState::Initialized,
         mirror: None,
         cp_cache: Vec::new(),
+        call_cache: Vec::new(),
         from_boot: true,
         verified: true,
         host: None,

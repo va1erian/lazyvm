@@ -120,6 +120,10 @@ pub struct Class {
     pub mirror: Option<Ref>,
     /// Resolved constant pool entries, indexed like the pool.
     pub cp_cache: Vec<Option<Resolved>>,
+    /// Per method-ref entry, the receiver class `invokevirtual` or
+    /// `invokeinterface` last saw there and the method it selected: a
+    /// one-entry cache in front of `Vm::select` (`interp/fast_call.rs`).
+    pub call_cache: Vec<Option<(ClassId, MethodRef)>>,
     /// Loaded from the boot class path (`Class.getClassLoader` is null).
     pub from_boot: bool,
     /// Verification passed, or nothing to check (`Vm::link_class`).
