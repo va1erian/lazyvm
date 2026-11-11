@@ -11,6 +11,7 @@ mod gc;
 pub mod heap;
 mod init;
 pub mod interp;
+pub(crate) mod jit;
 mod lambda;
 pub mod native;
 mod objects;

@@ -22,11 +22,11 @@ use super::fast_field::{get_field, get_static, put_field, put_static};
 use super::fast_wide::{self as wide, load as wload, store as wstore};
 use super::ops_array::kind_matches;
 use super::ops_branch::cond;
-use crate::Vm;
 use crate::class::Class;
 use crate::heap::Heap;
 use crate::prof::FastCount;
 use crate::value::{Ref, Value};
+use crate::{Vm, jit};
 
 impl Vm {
     /// Executes simple instructions of the top frame until one needs the full
@@ -40,14 +40,27 @@ impl Vm {
     #[inline]
     pub(super) fn run_simple(&mut self, base: usize) {
         loop {
+            self.jit_tick();
             let Vm {
                 frames,
                 heap,
                 classes,
+                gil,
                 ..
             } = self;
             let Some(f) = frames.last_mut() else { return };
-            match run(f, heap, classes) {
+            let m = f.method;
+            let compiled = classes[m.class.0 as usize].methods[usize::from(m.index)]
+                .jit
+                .compiled()
+                .and_then(|c| jit::run(c, f, heap, gil));
+            let stop = match compiled {
+                Some(jit::BACKWARD) => Stop::Backward,
+                // Where compiled code stopped; past the end, `step` reports it.
+                Some(_) => Stop::At(f.code.bytecode.get(f.pc).copied().unwrap_or(0xff)),
+                None => run(f, heap, classes),
+            };
+            match stop {
                 Stop::Backward => {}
                 Stop::At(op) => {
                     if !self.fast_transfer(op, base) {

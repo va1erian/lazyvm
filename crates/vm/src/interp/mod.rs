@@ -24,6 +24,7 @@ pub(crate) use code_ref::CodeRef;
 pub use frame::Frame;
 pub use frame_stack::FrameStack;
 pub use lend::with_lent;
+pub(crate) use ops_array::kind_matches;
 
 use crate::class::MethodRef;
 use crate::prof::{self, Phase};

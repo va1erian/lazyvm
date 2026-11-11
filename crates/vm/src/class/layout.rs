@@ -61,6 +61,7 @@ pub(super) fn build(
         call_cache: vec![None; cp_len],
         from_boot: false,
         verified: false,
+        checked: false,
         host: None,
     })
 }
@@ -89,5 +90,6 @@ fn build_method(cf: &ClassFile, m: &classfile::Member) -> VmResult<Method> {
             .and_then(|r| r.bytes().next())
             .unwrap_or(b'V'),
         native: None,
+        jit: crate::jit::Slot::default(),
     })
 }

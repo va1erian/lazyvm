@@ -99,9 +99,13 @@ decision marked **(proposed)** is not in force until the owner confirms it.
 
 ## D5. Execution engine, memory, threads
 
-- **Interpreter only:** a `match` over opcodes, with constant-pool entries
-  resolved lazily and cached in place. No JIT. Quickening is a possible S11+
-  item behind a benchmark.
+- **Interpreter, then a baseline JIT (revised in S11-07, the owner's call):**
+  a `match` over opcodes, with constant-pool entries resolved lazily and
+  cached in place; on x86-64 a hot, verified method is compiled to machine
+  code, one template per instruction, working on the interpreter's own
+  frame (`crates/vm/src/jit`, the one place outside `heap` and `interp` with
+  `unsafe`). Compiled code leaves for the interpreter at anything it does
+  not do, so the interpreter stays the reference for every instruction.
 - **Heap (revised in S0):** a slot table. A reference is a `Ref`, a checked
   index into the table, never a raw pointer, so the VM core needs no `unsafe`.
   The collector is precise, non-moving mark-sweep: roots are every thread's

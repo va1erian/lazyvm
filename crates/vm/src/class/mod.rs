@@ -81,6 +81,8 @@ pub struct Method {
     pub ret: u8,
     /// Resolved on first call for native methods.
     pub native: Option<NativeFn>,
+    /// Run counts and compiled code (`jit`).
+    pub(crate) jit: crate::jit::Slot,
 }
 
 impl Method {
@@ -135,6 +137,9 @@ pub struct Class {
     pub from_boot: bool,
     /// Verification passed, or nothing to check (`Vm::link_class`).
     pub verified: bool,
+    /// The verifier ran and passed (not skipped by `-Xverify`): only such a
+    /// class's methods are compiled (`jit`).
+    pub(crate) checked: bool,
     /// A generated lambda class: the class it counts as part of.
     pub host: Option<ClassId>,
 }

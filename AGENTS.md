@@ -107,6 +107,7 @@ python tools/fixtures.py --check       # checked-in class files match their sour
 python tools/verify_test.py            # every class verifies, tests/verify/bad is rejected, limits never abort
 python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
+LAZYVM_JIT=all python tools/test.py    # the same, every verified method compiled by the JIT (S11-07)
 python tools/launcher_test.py          # -jar, manifests and jar errors
 python tools/fastloop_test.py         # malformed bytecode: the interpreter's tight loop matches -Xtrace:interp
 python tools/jdwp_smoke.py            # a scripted debugger over -agentlib:jdwp (--oracle runs it on Java 8: local, needs the oracle)

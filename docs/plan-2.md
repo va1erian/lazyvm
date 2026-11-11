@@ -139,6 +139,29 @@ never a panic.
       oracle; `tools/test.py`, `tools/fastloop_test.py` and
       `tools/lazyos_test.py` pass.
 
+- [ ] S11-07 A baseline JIT for x86-64, Windows and LazyOS ([`decisions.md`](decisions.md)
+      D5, revised): a verified method that runs often is compiled, one
+      template per instruction, to code that works on the interpreter's frame
+      (locals and operand stack stay Values where the interpreter keeps them),
+      so the collector, exceptions, the debugger and thread switches are
+      unchanged. Constants, locals, arithmetic of every kind, conversions,
+      compares, branches, fields, statics and array elements run inline or
+      through small Rust helpers; anything else (calls, returns, allocation,
+      anything that throws) leaves for the interpreter with the frame as it
+      would have left it, and the next instruction enters compiled code
+      again. Loops poll the safepoint. The stack's shape at each pc comes
+      from a dataflow pass; any doubt leaves the method interpreted.
+      `unsafe` for executable memory, entering compiled code and the helpers
+      lives in `crates/vm/src/jit`, each block with its `// SAFETY:`.
+      `LAZYVM_JIT=off|all|<runs>` picks the policy.
+      Files: `crates/vm/src/jit/*`, `crates/vm/src/interp/fast.rs`,
+      `crates/vm/src/value.rs` (`repr(u32)`), `crates/vm/Cargo.toml`
+      (`windows-sys`, `libc`, already in the tree).
+      Check: `LAZYVM_JIT=all python tools/test.py` (every verified method
+      compiled at its first run) and the plain run, on both platforms;
+      `tests/java/lang/JitEdges`; `LAZYVM_JIT=all` fastloop, verify and jdwp
+      gates; `tools/bench.py` before and after on both platforms.
+
 Gate: `tools/test.py` passes on both platforms, and `tools/bench.py` shows
 no regression against the S8 baseline.
 
