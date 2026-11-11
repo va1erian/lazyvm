@@ -107,9 +107,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
     // ---- lookup and change ----
 
-    // The lookup every get, containsKey and view walk ends in. mixHash, isTree and findIn are
-    // written out here: each call is a frame in the interpreter, and this is the hottest path
-    // of game code (plan S11-06 part 4).
+    // mixHash, isTree and Objects.equals written out: a call is a frame in the interpreter (S11-06).
     final Cell<K, V> find(Object key) {
         Cell<K, V>[] t = table;
         if (t == null) {
@@ -117,25 +115,14 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         }
         int h = key == null ? 0 : key.hashCode();
         h ^= h >>> 16;
-        int i = h & (t.length - 1);
-        Cell<K, V>[] r = roots;
-        if (r != null && r[i] != null) {
-            return HashTree.lookup(t[i], r[i], h, key);
-        }
-        for (Cell<K, V> e = t[i]; e != null; e = e.next) {
-            Object k;
-            if (e.hash == h && ((k = e.key) == key || key != null && key.equals(k))) {
-                return e;
-            }
-        }
-        return null;
+        return findIn(h & (t.length - 1), h, key);
     }
 
-    // Spec 8.C3: the probe key's equals is called, after a cheap identity test; a tree bin is
-    // searched down its tree (spec 1.H6).
+    // Spec 8.C3: identity, then the probe key's equals; a tree bin is searched down (spec 1.H6).
     private Cell<K, V> findIn(int i, int h, Object key) {
-        if (isTree(i)) {
-            return HashTree.lookup(table[i], roots[i], h, key);
+        Cell<K, V>[] r = roots;
+        if (r != null && r[i] != null) {
+            return HashTree.lookup(table[i], r[i], h, key);
         }
         for (Cell<K, V> e = table[i]; e != null; e = e.next) {
             Object k;

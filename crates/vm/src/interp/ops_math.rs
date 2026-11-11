@@ -11,15 +11,21 @@ const DIV_ZERO: &str = "/ by zero";
 impl Vm {
     pub(super) fn op_math(&mut self, op: u8) -> VmResult<Flow> {
         let f = self.top()?;
-        match op {
-            0x60..=0x77 => arith(f, op)?,
-            0x78..=0x83 => bits(f, op)?,
-            0x85..=0x93 => convert(f, op)?,
-            0x94..=0x98 => compare(f, op)?,
-            _ => return Err(VmError::verify(format!("op_math cannot run {op:#04x}"))),
-        }
+        math(f, op)?;
         f.advance(1);
         Ok(Flow::Next)
+    }
+}
+
+/// Runs one of 0x60-0x98 but `iinc` on `f`'s stack; the caller moves `pc`.
+/// The fast loop runs it too, after checking it cannot fail (`fast_wide.rs`).
+pub(super) fn math(f: &mut Frame, op: u8) -> VmResult<()> {
+    match op {
+        0x60..=0x77 => arith(f, op),
+        0x78..=0x83 => bits(f, op),
+        0x85..=0x93 => convert(f, op),
+        0x94..=0x98 => compare(f, op),
+        _ => Err(VmError::verify(format!("op_math cannot run {op:#04x}"))),
     }
 }
 

@@ -7,6 +7,7 @@
 mod fast;
 mod fast_call;
 mod fast_field;
+mod fast_wide;
 mod frame;
 mod lend;
 mod ops_array;
