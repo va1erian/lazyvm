@@ -441,7 +441,7 @@ What it says:
   flags [tooltip]`. Changes go through one `call0(id, op, i, d, o)`
   (`props.rs`, `rich.rs`). Setters skip the native call when the value shown
   is already the one asked for, which cut LazyWriter's calls by five.
-- **Ids** are a 20-bit slot and an 11-bit generation; a panel's old content
+- **Ids** are a 16-bit slot and a 15-bit generation; a panel's old content
   is freed children first, so new content reuses the same slots and a stale
   message is dropped by its generation (`tests/java/lazy/ui/StaleId`).
 - **The lend moves the VM through the thread lock** (`vm::thread::lend`): the

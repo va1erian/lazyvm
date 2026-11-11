@@ -76,9 +76,10 @@ fn setup(ui: &mut Ui<Msg>, spec: &WindowSpec) -> Result<(), String> {
         window: id,
         owner: None,
     };
-    let layout = build::decode(&spec.tree, ctx)?;
+    let (layout, pending) = build::decode(&spec.tree, ctx)?;
     ui.root(layout)
         .map_err(|e| format!("cannot build the window: {e:?}"))?;
+    build::apply(pending, ui)?;
     ui.on_close(move || Some(Msg::new(id, ev::CLOSE)));
     ui.on_timer(|t| table::timer_owner(t).map(|j| Msg::new(j, ev::TIMER)));
     ui.on_key(move |key: Key, m: Modifiers| {
@@ -142,7 +143,9 @@ pub fn open(opener: i32, spec: WindowSpec) -> Result<(), String> {
         .map_err(|e| format!("cannot open the window: {e:?}"))?;
     if let Some(e) = error.into_inner() {
         handle.close();
-        drop(table::remove(&table::of_window(id)));
+        let mut ids = table::of_window(id);
+        ids.push(id);
+        drop(table::remove(&ids));
         return Err(e);
     }
     SECONDARY.with(|s| s.borrow_mut().insert(id, handle));

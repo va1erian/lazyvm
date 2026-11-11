@@ -104,6 +104,8 @@ pub struct WindowState {
 #[derive(Default)]
 struct Table {
     slots: HashMap<i32, Slot>,
+    /// The widgets each panel's content holds, so removal is linear.
+    owned: HashMap<i32, Vec<i32>>,
     windows: HashMap<i32, Rc<WindowState>>,
     timers: HashMap<TimerId, i32>,
 }
@@ -121,6 +123,9 @@ pub fn insert(id: i32, window: i32, owner: Option<i32>, widget: Widget) -> Resul
         }
         if let Widget::Timer(timer) = &widget {
             t.timers.insert(*timer, id);
+        }
+        if let Some(panel) = owner {
+            t.owned.entry(panel).or_default().push(id);
         }
         let slot = Slot {
             window,
@@ -174,10 +179,16 @@ pub fn timer_owner(timer: TimerId) -> Option<i32> {
     TABLE.with(|t| t.borrow().timers.get(&timer).copied())
 }
 
+/// What `remove` took out: dropped by the caller, outside the table's
+/// borrow, since dropping a widget or tooltip calls into xui.
+pub struct Removed {
+    _widgets: Vec<Widget>,
+    _tooltips: Vec<Rc<Tooltip<Msg>>>,
+}
+
 /// Removes `id` and, recursively, every widget a panel among them owned.
-/// Returns what was removed, so the caller drops it outside the borrow.
-pub fn remove(ids: &[i32]) -> Vec<Widget> {
-    let mut out = Vec::new();
+pub fn remove(ids: &[i32]) -> Removed {
+    let (mut widgets, mut tooltips) = (Vec::new(), Vec::new());
     TABLE.with(|t| {
         let mut t = t.borrow_mut();
         let mut queue: Vec<i32> = ids.to_vec();
@@ -186,26 +197,30 @@ pub fn remove(ids: &[i32]) -> Vec<Widget> {
                 if let Widget::Timer(timer) = &slot.widget {
                     t.timers.remove(timer);
                 }
-                out.push(slot.widget);
+                if let Some(owner) = slot.owner
+                    && let Some(list) = t.owned.get_mut(&owner)
+                {
+                    list.retain(|&i| i != id);
+                }
+                widgets.push(slot.widget);
+                tooltips.extend(slot.tooltip);
             }
             t.windows.remove(&id);
-            queue.extend(owned_by(&t, id));
+            queue.extend(t.owned.remove(&id).unwrap_or_default());
         }
     });
-    out
+    Removed {
+        _widgets: widgets,
+        _tooltips: tooltips,
+    }
 }
 
-fn owned_by(t: &Table, panel: i32) -> Vec<i32> {
-    t.slots
-        .iter()
-        .filter(|(_, s)| s.owner == Some(panel))
-        .map(|(&id, _)| id)
-        .collect()
-}
-
-/// The widgets a panel's current content holds.
-pub fn content_of(panel: i32) -> Vec<i32> {
-    TABLE.with(|t| owned_by(&t.borrow(), panel))
+/// Removes everything panel `panel`'s content holds; returns its ids too.
+pub fn remove_content(panel: i32) -> (Vec<i32>, Removed) {
+    // Taken first, so removing each one finds no list to search.
+    let ids = TABLE.with(|t| t.borrow_mut().owned.remove(&panel).unwrap_or_default());
+    let removed = remove(&ids);
+    (ids, removed)
 }
 
 /// Every widget of window `window`, for its closing.

@@ -15,7 +15,8 @@ public final class Ui {
     static final int CLICK = 1, TOGGLE = 2, SELECT = 3, CHANGE = 4, ACTIVATE = 5, SLIDE = 6;
     static final int TIMER = 7, CLOSE = 8, KEY = 9, DIALOG = 10, STYLE = 11, LINK = 12, WAKE = 13;
 
-    private static final int SLOT_BITS = 20, SLOT_MASK = (1 << SLOT_BITS) - 1, GEN_MASK = 0x7ff;
+    // 65,535 live nodes and 32,768 generations a slot before an id repeats.
+    private static final int SLOT_BITS = 16, SLOT_MASK = (1 << SLOT_BITS) - 1, GEN_MASK = 0x7fff;
 
     private static Node[] nodes = new Node[64];
     private static int[] gens = new int[64];
@@ -23,6 +24,7 @@ public final class Ui {
     private static int freeCount, used;
 
     private static boolean ran;
+    private static final boolean headless = "headless".equals(System.getProperty("lazy.ui"));
     private static Thread uiThread;
     /** True while the loop runs. */
     static boolean running;
@@ -207,7 +209,6 @@ public final class Ui {
         lazy.internal.Windowing.claim("lazy.ui");
         ran = true;
         uiThread = Thread.currentThread();
-        if (!"headless".equals(System.getProperty("lazy.ui"))) lazy.internal.ui.ErrorReport.windowOpening();
         main = window;
         Encoder out = window.encode();
         running = true;
@@ -281,10 +282,16 @@ public final class Ui {
             wakePending = true;
         }
         if (!wake) return;
+        boolean sent;
         try {
-            wake0();
+            sent = wake0();
         } catch (UnsatisfiedLinkError e) {
             // The plain lazyvm launcher: Ui.run will say so; the task waits.
+            sent = false;
+        }
+        // Not sent: let the next submit try again rather than wait for a drain that never comes.
+        if (!sent) synchronized (queued) {
+            wakePending = false;
         }
     }
 
@@ -368,6 +375,8 @@ public final class Ui {
      */
     private static boolean dispatch(int id, int kind, int i, double d, String s) {
         if (failure != null) return false;
+        // A message means a window is up: from now on an uncaught exception is shown.
+        if (!headless) lazy.internal.ui.ErrorReport.windowOpening();
         try {
             if (kind == WAKE) {
                 drainExecutor();

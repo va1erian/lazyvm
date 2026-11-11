@@ -78,8 +78,9 @@ def capture(hwnd: int) -> tuple[int, int, bytes]:
 
 
 def write_png(path: Path, w: int, h: int, bgra: bytes) -> None:
-    rows = b"".join(b"\0" + bytes(c for px in range(w) for c in (
-        bgra[(y * w + px) * 4 + 2], bgra[(y * w + px) * 4 + 1], bgra[(y * w + px) * 4])) for y in range(h))
+    rgb = bytearray(w * h * 3)
+    rgb[0::3], rgb[1::3], rgb[2::3] = bgra[2::4], bgra[1::4], bgra[0::4]  # BGRA to RGB, in C
+    rows = b"".join(bytes(1) + rgb[y * w * 3:(y + 1) * w * 3] for y in range(h))
 
     def chunk(kind: bytes, data: bytes) -> bytes:
         return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))

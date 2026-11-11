@@ -139,15 +139,15 @@ pub fn mount(panel: i32, tree: &Tree) -> Result<Vec<i32>, String> {
         return Err(format!("widget {panel} is not a panel"));
     };
     let p = handle.try_get().ok_or("the panel is not built")?;
-    let old = table::content_of(panel);
-    let removed = table::remove(&old);
+    let (old, removed) = table::remove_content(panel);
     let ctx = build::Ctx {
         window,
         owner: Some(panel),
     };
-    let layout = build::decode(tree, ctx)?;
+    let (layout, pending) = build::decode(tree, ctx)?;
     p.set_layout(layout)
         .map_err(|e| format!("cannot mount: {e:?}"))?;
+    build::apply(pending, &table::window(window)?.ui)?;
     drop(removed);
     Ok(old)
 }

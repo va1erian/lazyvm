@@ -177,7 +177,14 @@ fn upcall(dispatch: MethodRef, failed: &RefCell<Option<VmError>>, m: &Msg) -> bo
             *failed.borrow_mut() = Some(e);
             false
         }
-        _ => false,
+        Some(Ok(_)) => false,
+        None => {
+            // A nested pump that did not lend the VM again: say so, rather
+            // than stop the loop with nothing to show for it.
+            let msg = "lazy.ui: a message came with no VM lent (a nested loop)";
+            *failed.borrow_mut() = Some(VmError::Internal(msg.into()));
+            false
+        }
     }
 }
 

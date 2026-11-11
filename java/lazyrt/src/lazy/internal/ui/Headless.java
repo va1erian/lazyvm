@@ -59,7 +59,7 @@ public final class Headless {
         return step0(op, id, i, s);
     }
 
-    /** The registry id of mounted widget {@code w}: a slot in the low 20 bits, a generation above. */
+    /** The registry id of mounted widget {@code w}: a slot in the low 16 bits, a generation above. */
     public static int id(Widget w) {
         return UiAccess.ops().id(w);
     }

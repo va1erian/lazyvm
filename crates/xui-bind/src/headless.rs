@@ -210,12 +210,19 @@ pub fn remove_timer(id: i32) {
     CLOCK.with(|c| c.borrow_mut().timers.retain(|t| t.id != id));
 }
 
+/// The most timer runs one `advance` makes: a test that asks for more has a
+/// timer far faster than its clock step, and would only hang.
+const MAX_FIRES: u32 = 100_000;
+
 /// Moves the manual clock on by `ms`, firing each timer as it falls due, in
 /// time order.
 pub fn advance(ms: u64) -> Result<(), String> {
     let (b, window) = active()?;
     let end = CLOCK.with(|c| c.borrow().now) + ms;
-    loop {
+    for fired in 0.. {
+        if fired == MAX_FIRES {
+            return Err(format!("more than {MAX_FIRES} timer runs in one advance"));
+        }
         let next = CLOCK.with(|c| {
             let mut c = c.borrow_mut();
             let t = c

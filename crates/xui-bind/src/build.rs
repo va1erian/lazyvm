@@ -85,6 +85,25 @@ pub struct Decoder<'a> {
     pub ctx: Ctx,
     /// Every id inserted so far, so a failed decode can take them out again.
     pub ids: Vec<i32>,
+    /// Containers whose header asks for something only a built node can
+    /// take: applied by [`apply`] once the layout is mounted.
+    pub pending: Vec<Head>,
+}
+
+impl Head {
+    fn flagged(&self) -> bool {
+        self.disabled || self.hidden || self.tooltip.is_some()
+    }
+
+    /// An arrangement or a spacer has no node to disable, hide or tip.
+    fn nodeless(self) -> Result<i32, String> {
+        match self.flagged() {
+            true => Err(
+                "a layout or spacer has no node: it cannot be disabled, hidden or tipped".into(),
+            ),
+            false => Ok(self.id),
+        }
+    }
 }
 
 impl Decoder<'_> {
@@ -132,7 +151,8 @@ impl Decoder<'_> {
         if head.sizing.0 != sizing::AUTO {
             return Err("a root layout takes no sizing".into());
         }
-        self.arrangement(kind, head.id, depth)
+        let id = head.nodeless()?;
+        self.arrangement(kind, id, depth)
     }
 
     fn arrangement(&mut self, kind: i32, id: i32, depth: usize) -> Result<Layout<Msg>, String> {
@@ -162,8 +182,8 @@ impl Decoder<'_> {
         if let Some(a) = align(self.r.int()?)? {
             layout = layout.justify(a);
         }
-        // Each child takes at least its kind and a six-int header.
-        let n = self.r.count(7)?;
+        // Each child takes at least its kind and a five-int header (a spacer).
+        let n = self.r.count(6)?;
         let mut children = Vec::with_capacity(n);
         for _ in 0..n {
             children.push(self.entry(depth + 1)?);
@@ -173,11 +193,26 @@ impl Decoder<'_> {
 
     fn entry(&mut self, depth: usize) -> Result<Entry<Msg>, String> {
         let kind = self.r.int()?;
-        let head = self.head()?;
+        let mut head = self.head()?;
+        let sizing = head.sizing;
+        if matches!(kind, op::PANEL | op::SCROLL | op::GROUP | op::TABS) && head.flagged() {
+            // Their builders take no hook: the flags apply once mounted.
+            self.pending.push(Head {
+                id: head.id,
+                sizing,
+                disabled: head.disabled,
+                hidden: head.hidden,
+                tooltip: head.tooltip.take(),
+            });
+        }
         let entry = match kind {
-            op::COLUMN | op::ROW | op::WRAP => self.arrangement(kind, head.id, depth)?.into_entry(),
+            op::COLUMN | op::ROW | op::WRAP => {
+                let id = head.nodeless()?;
+                self.arrangement(kind, id, depth)?.into_entry()
+            }
             op::SPACER => {
-                self.insert(head.id, Widget::Inert)?;
+                let id = head.nodeless()?;
+                self.insert(id, Widget::Inert)?;
                 spacer()
             }
             op::PANEL => {
@@ -208,7 +243,7 @@ impl Decoder<'_> {
             op::TABS => self.tabs(head.id, depth)?,
             _ => widgets::leaf(self, kind, &head)?,
         };
-        Ok(size(entry, head.sizing))
+        Ok(size(entry, sizing))
     }
 
     /// A layout decoded with another context (a panel's content).
@@ -286,13 +321,36 @@ fn align(v: i32) -> Result<Option<Align>, String> {
     }))
 }
 
-/// The root layout of `tree` for `ctx`; the list must hold exactly one
-/// layout. On an error nothing stays in the table.
-pub fn decode(tree: &crate::Tree, ctx: Ctx) -> Result<Layout<Msg>, String> {
+/// Applies the containers' flags once their layout is mounted.
+pub fn apply(pending: Vec<Head>, ui: &Ui<Msg>) -> Result<(), String> {
+    for head in pending {
+        let (widget, _) = table::get(head.id)?;
+        let node = widget
+            .node()
+            .ok_or_else(|| format!("widget {} is not built", head.id))?;
+        if head.disabled {
+            ui.set_enabled(node, false);
+        }
+        if head.hidden {
+            ui.set_visible(node, false);
+        }
+        if let Some(tip) = head.tooltip {
+            let tip = Tooltip::attach(ui, node, &tip).map_err(|e| format!("{e:?}"))?;
+            table::attach_tooltip(head.id, tip);
+        }
+    }
+    Ok(())
+}
+
+/// The root layout of `tree` for `ctx`, and the flags to [`apply`] once it
+/// is mounted; the list must hold exactly one layout. On an error nothing
+/// stays in the table.
+pub fn decode(tree: &crate::Tree, ctx: Ctx) -> Result<(Layout<Msg>, Vec<Head>), String> {
     let mut d = Decoder {
         r: Reader::new(tree),
         ctx,
         ids: Vec::new(),
+        pending: Vec::new(),
     };
     let root = d.layout(1).and_then(|root| match d.r.done() {
         true => Ok(root),
@@ -301,5 +359,5 @@ pub fn decode(tree: &crate::Tree, ctx: Ctx) -> Result<Layout<Msg>, String> {
     if root.is_err() {
         drop(table::remove(&d.ids));
     }
-    root
+    root.map(|root| (root, d.pending))
 }

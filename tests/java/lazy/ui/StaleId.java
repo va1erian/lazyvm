@@ -39,7 +39,7 @@ public class StaleId {
             log.setLength(0);
             int before = Headless.upcalls();
             Headless.click(swap);
-            System.out.println("same slot: " + ((ids[0] & 0xfffff) == (ids[1] & 0xfffff)));
+            System.out.println("same slot: " + ((ids[0] & 0xffff) == (ids[1] & 0xffff)));
             System.out.println("same id: " + (ids[0] == ids[1]));
             System.out.println("upcalls for the swap: " + (Headless.upcalls() - before));
             System.out.println("handlers run after the swap: [" + log + "]");

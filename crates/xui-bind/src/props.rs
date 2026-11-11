@@ -120,6 +120,7 @@ pub fn call(id: i32, op: i32, i: i32, d: f64, arg: Arg) -> Result<Ret, String> {
                     owner: None,
                 },
                 ids: Vec::new(),
+                pending: Vec::new(),
             };
             let drawing = crate::widgets::drawing(&mut dec)?;
             h.try_get().ok_or_else(gone)?.set(drawing);
@@ -182,7 +183,11 @@ fn widget_op(w: &Widget, op: i32, i: i32, d: f64, arg: &Arg) -> Option<Result<Re
         }
         (Widget::List(h), op::SELECT) => {
             let l = h.try_get()?;
-            l.select(usize::try_from(i).ok());
+            let row = match i {
+                -1 => None,
+                _ => Some(t!(index(i, l.len()))),
+            };
+            l.select(row);
         }
         (Widget::List(h), op::GET_SELECTED) => {
             let s = h.try_get()?.selected().map_or(-1, |s| s as i32);

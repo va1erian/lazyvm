@@ -6,6 +6,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -199,7 +200,10 @@ final class Documents {
         }
     }
 
-    /** Writes a sibling file, then renames it over {@code path}, so a failed save loses nothing. */
+    /**
+     * Writes a sibling file, then moves it over {@code path} in one step, so a failed save leaves
+     * the old file whole.
+     */
     static void write(String path, byte[] bytes) throws IOException {
         File target = new File(path);
         File temp = new File(target.getAbsoluteFile().getParentFile(), "." + target.getName() + ".tmp");
@@ -209,8 +213,13 @@ final class Documents {
         } finally {
             out.close();
         }
-        if (target.exists() && !target.delete()) throw new IOException("cannot replace " + path);
-        if (!temp.renameTo(target)) throw new IOException("cannot write " + path);
+        try {
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException e) {
+            temp.delete();
+            throw e;
+        }
     }
 
     void export() {

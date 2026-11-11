@@ -70,6 +70,24 @@ public final class Layout extends Widget {
         return this;
     }
 
+    /** A layout has no node of its own to grey out: put it in a {@link Panel}. */
+    @Override
+    public Widget enabled(boolean on) {
+        throw new UnsupportedOperationException("a layout has no node: put it in a panel");
+    }
+
+    /** A layout has no node of its own to hide: put it in a {@link Panel}. */
+    @Override
+    public Widget visible(boolean on) {
+        throw new UnsupportedOperationException("a layout has no node: put it in a panel");
+    }
+
+    /** A layout has no node of its own to name: put it in a {@link Panel}. */
+    @Override
+    public Widget tooltip(String text) {
+        throw new UnsupportedOperationException("a layout has no node: put it in a panel");
+    }
+
     private void fixed() {
         if (mounted()) throw new IllegalStateException("a layout is fixed once its window opens");
     }

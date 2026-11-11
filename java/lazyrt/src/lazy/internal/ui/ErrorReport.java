@@ -14,7 +14,7 @@ public final class ErrorReport {
 
     private ErrorReport() {}
 
-    /** Called by {@code lazy.ui.Ui.run} before it opens a window on a window system. */
+    /** Called by {@code lazy.ui.Ui} once a window on a window system delivered a message. */
     public static void windowOpening() {
         windowOpened = true;
     }

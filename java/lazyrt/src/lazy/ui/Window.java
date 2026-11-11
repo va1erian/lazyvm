@@ -97,6 +97,7 @@ public final class Window extends Node {
             Ui.open0(Ui.main.id, id, title, width, height, out.ops(), out.objects(), keys());
         } catch (RuntimeException e) {
             out.abandon();
+            Ui.free(this);
             throw e;
         }
     }
