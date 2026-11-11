@@ -139,7 +139,7 @@ never a panic.
       oracle; `tools/test.py`, `tools/fastloop_test.py` and
       `tools/lazyos_test.py` pass.
 
-- [ ] S11-07 A baseline JIT for x86-64, Windows and LazyOS ([`decisions.md`](decisions.md)
+- [x] S11-07 A baseline JIT for x86-64, Windows and LazyOS ([`decisions.md`](decisions.md)
       D5, revised): a verified method that runs often is compiled, one
       template per instruction, to code that works on the interpreter's frame
       (locals and operand stack stay Values where the interpreter keeps them),
