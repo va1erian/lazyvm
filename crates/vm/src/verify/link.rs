@@ -58,11 +58,15 @@ impl Vm {
             VerifyMode::Remote => k.from_boot,
             VerifyMode::None => true,
         };
+        let mut checked = false;
         if let (false, Some(file)) = (skip, k.file.clone()) {
             let host = k.host.map(|h| self.class(h).name.clone());
             verify_class(&file, host.as_deref(), self)?;
+            checked = true;
         }
-        self.class_mut(class).verified = true;
+        let c = self.class_mut(class);
+        c.verified = true;
+        c.checked = checked;
         self.debug_class_prepared(class);
         Ok(())
     }

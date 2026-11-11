@@ -260,6 +260,11 @@ impl Gil {
         self.waiting.load(Ordering::Relaxed)
     }
 
+    /// The `waiting` flag's byte, which compiled code polls (`jit`).
+    pub(crate) fn wanted_flag(&self) -> *const u8 {
+        self.waiting.as_ptr().cast_const().cast()
+    }
+
     fn lock(&self) -> MutexGuard<'_, Slot> {
         // The slot holds no invariant a panic elsewhere could break.
         self.slot.lock().unwrap_or_else(PoisonError::into_inner)

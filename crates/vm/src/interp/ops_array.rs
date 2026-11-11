@@ -8,7 +8,7 @@ use crate::{Vm, VmError, VmResult};
 
 /// The array variant each opcode works on, in opcode order:
 /// int, long, float, double, reference, byte/boolean, char, short.
-pub(super) fn kind_matches(op_kind: u8, a: &Array) -> bool {
+pub(crate) fn kind_matches(op_kind: u8, a: &Array) -> bool {
     matches!(
         (op_kind, a),
         (0, Array::Int(_))

@@ -17,3 +17,11 @@ platform = { path = "../platform" }
 # The interpreter's sampling profiler (crates/vm/src/prof). Never on in a
 # shipped build: `cargo build --release -p launcher --features vm/prof`.
 prof = []
+
+# Executable memory for the JIT (crates/vm/src/jit/mem.rs), already in the
+# tree through mio.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Memory", "Win32_System_SystemInformation"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = { version = "0.2", default-features = false }

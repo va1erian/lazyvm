@@ -46,6 +46,10 @@ jobs:
         run: python tools/test.py
       - name: differential suite from jars
         run: python tools/test.py --jar
+      - name: differential suite, every method compiled (JIT)
+        run: python tools/test.py
+        env:
+          LAZYVM_JIT: all
       - name: launcher (-jar, manifests, jar errors)
         run: python tools/launcher_test.py
       - name: tight loop on malformed bytecode

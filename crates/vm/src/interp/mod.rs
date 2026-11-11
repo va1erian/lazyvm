@@ -24,6 +24,8 @@ pub(crate) use code_ref::CodeRef;
 pub use frame::Frame;
 pub use frame_stack::FrameStack;
 pub use lend::with_lent;
+pub(crate) use ops_array::kind_matches;
+pub(crate) use ops_object::array_name;
 
 use crate::class::MethodRef;
 use crate::prof::{self, Phase};
@@ -108,6 +110,23 @@ impl Vm {
         }
         let arg_slots = method.arg_slots;
         self.frames.push(m, code, arg_slots, args)?;
+        self.frame_slots += slots;
+        crate::prof::call(m);
+        Ok(())
+    }
+
+    /// Pushes a frame for `m` that compiled code had inlined
+    /// (`jit::run::materialize`), its locals Top and stack empty for the
+    /// caller to fill. No depth or slot limit: the call was already made.
+    pub(crate) fn push_frame_rebuilt(&mut self, m: MethodRef) -> VmResult<()> {
+        let method = self.method(m);
+        let Some(code) = method.code.as_ref().map(CodeRef::new) else {
+            return Err(VmError::Internal("rebuilt frame without code".into()));
+        };
+        let slots =
+            usize::from(code.max_locals.max(method.arg_slots)) + usize::from(code.max_stack);
+        let arg_slots = method.arg_slots;
+        self.frames.push(m, code, arg_slots, &[])?;
         self.frame_slots += slots;
         crate::prof::call(m);
         Ok(())

@@ -99,6 +99,8 @@ def main() -> None:
     parser.add_argument("--filter", nargs="*", help="substrings of test class names")
     parser.add_argument("--no-build", action="store_true", help="reuse the last image (same tests)")
     parser.add_argument("--timeout", type=int, default=120, help="seconds per test inside LazyOS")
+    parser.add_argument("--jit-all", action="store_true",
+                        help="compile every verified method at its first run (-Xjit:all)")
     parser.add_argument("--net", action="store_true",
                         help="only the tests that need the network, on an image with netd and a card")
     args = parser.parse_args()
@@ -109,7 +111,9 @@ def main() -> None:
     if not args.no_build:
         testlib.build(tests)
         stage(build_musl())
-    out = run_commands(args.lazyos, [command(t) for t in tests], args.timeout, args.no_build, net=args.net)
+    jit = ["-Xjit:all"] if args.jit_all else []
+    lines = [command_line(t.main_class, t.args, jit + t.vm_args) for t in tests]
+    out = run_commands(args.lazyos, lines, args.timeout, args.no_build, net=args.net)
     failed = 0
     for n, test in enumerate(tests, start=1):
         actual = read_result(out, n)

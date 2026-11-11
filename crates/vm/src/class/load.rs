@@ -286,6 +286,7 @@ fn synthetic(
         call_cache: Vec::new(),
         from_boot: true,
         verified: true,
+        checked: false,
         host: None,
     }
 }

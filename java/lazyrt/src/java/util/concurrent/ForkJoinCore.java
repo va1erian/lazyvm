@@ -199,33 +199,40 @@ final class ForkJoinCore extends ForkJoinRoster {
     /**
      * Runs what it can find, then waits for the workers to have nothing to do. Blocked workers do
      * not count as doing something, nor do others waiting here ("two in helpQuiesce"), but one that
-     * leaves counts again at once: the second stays until the first's task is over. Nothing called
-     * with its count taken goes deeper than the look that came first, so a stack that ends here
-     * cannot leave the count behind ("helpQuiesce beside a busy worker").
+     * leaves counts again at once: the second stays until the first's task is over. The count is
+     * given back however this ends, a stack that ends here included ("helpQuiesce beside a busy
+     * worker"): a compiled caller may reach a call deeper than one that went before.
      */
     void helpQuiesce(ForkJoinWorkerThread w) {
         boolean waiting = false;
-        for (;;) {
-            ForkJoinTask<?> t;
-            synchronized (this) {
-                t = queues.ownNext(w);
-                t = t != null ? t : queues.takeForeign(w);
-                if (t != null && waiting) {
-                    quiescing--;
-                    waiting = false;
-                } else if (t == null && !waiting) {
-                    quiescing++;
-                    waiting = true;
+        try {
+            for (;;) {
+                ForkJoinTask<?> t;
+                synchronized (this) {
+                    t = queues.ownNext(w);
+                    t = t != null ? t : queues.takeForeign(w);
+                    if (t != null && waiting) {
+                        quiescing--;
+                        waiting = false;
+                    } else if (t == null && !waiting) {
+                        quiescing++;
+                        waiting = true;
+                    }
+                    if (t == null && !queues.anyQueued() && running() == quiescing) {
+                        return;
+                    }
                 }
-                if (t == null && !queues.anyQueued() && running() == quiescing) {
-                    quiescing--;
-                    return;
+                if (t != null) {
+                    t.run0();
+                } else {
+                    LockSupport.parkNanos(this, POLL_NANOS);
                 }
             }
-            if (t != null) {
-                t.run0();
-            } else {
-                LockSupport.parkNanos(this, POLL_NANOS);
+        } finally {
+            if (waiting) {
+                synchronized (this) {
+                    quiescing--;
+                }
             }
         }
     }

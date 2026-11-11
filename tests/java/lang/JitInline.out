@@ -1,0 +1,8 @@
+statics 298329
+ArithmeticException < divide:18 < statics:48 < main:71
+ArrayIndexOutOfBoundsException < cell:22 < cells:52 < main:80
+NullPointerException < cell:22 < cells:52 < main:85
+instance 723 44850 44850
+ArrayIndexOutOfBoundsException < store:27 < instance:57 < main:98 counter 44850 field 427
+npe instance:56
+virtual 8100 42 48
