@@ -6,7 +6,7 @@
 //! index out of range) also leaves before changing anything.
 
 use super::asm::{Alu, Cc, Label, R12, R13, RAX, RCX};
-use super::frame::{AT, Gen, Helper, l, s};
+use super::frame::{AT, Gen, Helper, VmHelper, l, s};
 use super::helpers;
 use super::layout::{DOUBLE, FLOAT, HIGH, INT, LONG, LOW, REF, TAG, TOP};
 
@@ -22,6 +22,15 @@ pub(super) struct Env<'a> {
     pub field: &'a dyn Fn(u16) -> Option<u32>,
     /// The address of a resolved static field of an initialised class.
     pub statics: &'a dyn Fn(u16) -> Option<usize>,
+    /// A resolved class's id.
+    pub class: &'a dyn Fn(u16) -> Option<u32>,
+    /// The class a `new`, `newarray` or `anewarray` at a pc makes, if
+    /// compiled code can make it (`helpers::new_object`, `new_array`).
+    pub new_class: &'a dyn Fn(usize) -> Option<u32>,
+    /// Inlines the invoke at a pc, if it can (`inline.rs`).
+    pub inline: &'a dyn Fn(&mut Gen, usize, &[bool]) -> bool,
+    /// For an inlined method: where its returns go, the value in xmm0.
+    pub ret: Option<Label>,
 }
 
 fn u2(code: &[u8], at: usize) -> u16 {
@@ -214,8 +223,6 @@ fn inline(g: &mut Gen, env: &Env, pc: usize, sh: &[bool]) -> bool {
             pc,
             d,
         ),
-        // aastore needs the element class check and bastore whether the
-        // array is boolean[]: both are the interpreter's.
         0x4f..=0x52 | 0x55 | 0x56 => {
             g.helper(
                 helpers::array_store as Helper,
@@ -225,7 +232,46 @@ fn inline(g: &mut Gen, env: &Env, pc: usize, sh: &[bool]) -> bool {
                 d,
             );
         }
+        0x53 | 0x54 => g.vm_helper(
+            helpers::array_store_checked as VmHelper,
+            d - 3,
+            u32::from(op - 0x4f),
+            pc,
+            d,
+        ),
+        0xbb..=0xbd => {
+            let Some(c) = (env.new_class)(pc) else {
+                return false;
+            };
+            if op == 0xbb {
+                g.vm_helper(helpers::new_object as VmHelper, d, c, pc, d);
+            } else {
+                g.vm_helper(helpers::new_array as VmHelper, d - 1, c, pc, d);
+            }
+        }
         0xbe => g.helper(helpers::array_length as Helper, d - 1, 0, pc, d),
+        0xc0 | 0xc1 => {
+            let Some(c) = (env.class)(u2(code, pc + 1)).filter(|c| c & helpers::INSTANCEOF == 0)
+            else {
+                return false;
+            };
+            let arg = if op == 0xc1 {
+                c | helpers::INSTANCEOF
+            } else {
+                c
+            };
+            g.vm_helper(helpers::type_check as VmHelper, d - 1, arg, pc, d);
+        }
+        // An inlined method's return: the value to xmm0, on to its end.
+        0xac..=0xb1 if env.ret.is_some() => {
+            if op != 0xb1 {
+                g.a.movups_load(0, R13, s(d - 1));
+            }
+            if let Some(end) = env.ret {
+                g.a.jmp(end);
+            }
+        }
+        0xb6..=0xb9 if (env.inline)(g, pc, sh) => {}
         // Calls and returns stay in compiled code when they can (`run.rs`).
         0xac..=0xb1 | 0xb6..=0xb9 => g.transfer(pc, d),
         _ => return false,

@@ -10,7 +10,7 @@
 //! runs, the VM is reached only through the context's raw pointer: no Rust
 //! reference to it is alive across the call.
 
-use super::frame::{CONTINUE, Ctx};
+use super::frame::{self, CONTINUE, Ctx};
 use super::{Compiled, Entry, NONE, State};
 use crate::Vm;
 use crate::interp::Frame;
@@ -61,6 +61,7 @@ impl Vm {
             sp: 0,
             vm: std::ptr::null_mut(),
             base: base as u32,
+            scratch: [const { std::mem::MaybeUninit::uninit() }; frame::SCRATCH],
         };
         let (func, entry) = self.jit_prepare(&mut ctx)?;
         let vm: *mut Vm = self;
@@ -125,4 +126,59 @@ pub(super) extern "C" fn transfer(ctx: *mut Ctx, pc: u32, sp: u32) -> usize {
         Some((_, entry)) => entry as usize,
         None => 1,
     }
+}
+
+/// An exit inside inlined code (`inline.rs`), from compiled code: makes the
+/// frames the inlined calls stand for, from the scratch area, so the
+/// interpreter can run on from that instruction. The real frame stops at
+/// the outermost invoke with its arguments popped, as a call leaves it.
+pub(super) extern "C" fn materialize(ctx: *mut Ctx, index: u32) -> u32 {
+    // SAFETY: as in `transfer`.
+    let (ctx, vm) = unsafe { (&mut *ctx, &mut *(*ctx).vm) };
+    let Some(m) = vm.frames.last().map(|f| f.method) else {
+        std::process::abort();
+    };
+    let deopt = match &vm.method(m).jit.state {
+        State::Compiled(c) => c.deopts.get(index as usize).cloned(),
+        _ => None,
+    };
+    vm.class_mut(m.class).methods[usize::from(m.index)]
+        .jit
+        .exited();
+    let Some(d) = deopt else {
+        // Cannot happen: the stub's index is one of this code's deopts.
+        std::process::abort();
+    };
+    let Some(f) = vm.frames.last_mut() else {
+        std::process::abort();
+    };
+    if d.root_stack as usize > f.stack.capacity() {
+        std::process::abort();
+    }
+    f.pc = d.root_pc as usize;
+    f.next_pc = d.root_next_pc as usize;
+    // SAFETY: compiled code wrote every entry below the invoke's arguments.
+    unsafe { f.stack.set_len(d.root_stack as usize) };
+    for level in &d.levels {
+        if vm.push_frame_rebuilt(level.method).is_err() {
+            std::process::abort();
+        }
+        let Some(f) = vm.frames.last_mut() else {
+            std::process::abort();
+        };
+        let take = |i: u32| {
+            // SAFETY: inlined code set every local of its level (arguments,
+            // then Top) and every stack entry below its depth there.
+            unsafe { ctx.scratch[i as usize].assume_init() }
+        };
+        for i in 0..level.nlocals.min(f.locals.len() as u32) {
+            f.locals[i as usize] = take(level.locals_off + i);
+        }
+        for i in 0..level.stack {
+            f.stack.push(take(level.stack_off + i));
+        }
+        f.pc = level.pc as usize;
+        f.next_pc = level.next_pc as usize;
+    }
+    1
 }

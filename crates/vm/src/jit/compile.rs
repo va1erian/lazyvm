@@ -1,20 +1,48 @@
 //! Compiling a method: its stack shapes (`flow`), what the templates need
-//! resolved beforehand, then one template per reachable instruction.
+//! resolved beforehand, then one template per reachable instruction. The
+//! same emission serves a method inlined into another (`inline.rs`).
 
-use super::{Compiled, NONE, flow, frame, layout, mem, ops};
+use super::asm::Label;
+use super::frame::Gen;
+use super::{Compiled, NONE, flow, inline, layout, mem, ops};
 use crate::Vm;
-use crate::class::{InitState, MethodRef, Resolved};
-use classfile::Constant;
+use crate::class::{ClassKind, InitState, MethodRef, Resolved};
+use classfile::{Code, Constant};
 
-pub(super) fn compile(vm: &Vm, m: MethodRef) -> Option<Compiled> {
+/// A method to emit: its code and stack shapes.
+pub(super) struct Unit<'a> {
+    pub vm: &'a Vm,
+    pub m: MethodRef,
+    pub code: &'a Code,
+    pub shapes: flow::Shapes,
+}
+
+/// The method `m` if it can be compiled: a class the verifier checked, code,
+/// and stack shapes `flow` is sure of.
+pub(super) fn unit(vm: &Vm, m: MethodRef) -> Option<Unit<'_>> {
     let class = vm.class(m.class);
     if !class.checked {
         return None;
     }
-    let method = vm.method(m);
-    let code = method.code.as_ref()?;
-    let pool = &class.file.as_ref()?.pool;
-    let shapes = flow::shapes(code, pool)?;
+    let code = vm.method(m).code.as_deref()?;
+    let shapes = flow::shapes(code, &class.file.as_ref()?.pool)?;
+    Some(Unit {
+        vm,
+        m,
+        code,
+        shapes,
+    })
+}
+
+/// Emits `u`'s reachable instructions; `ret` is where an inlined method's
+/// returns go (the value, if any, in xmm0). The labels of its pcs.
+pub(super) fn emit_method(g: &mut Gen, u: &Unit, ret: Option<Label>) -> Vec<Option<Label>> {
+    let vm = u.vm;
+    let class = vm.class(u.m.class);
+    let Some(file) = class.file.as_ref() else {
+        return Vec::new();
+    };
+    let pool = &file.pool;
     let cache = &class.cp_cache;
     let cached = |i: u16| cache.get(usize::from(i)).copied().flatten();
     let constant = |i: u16| -> Option<(u32, u32, u64)> {
@@ -50,40 +78,97 @@ pub(super) fn compile(vm: &Vm, m: MethodRef) -> Option<Compiled> {
         }
         _ => None,
     };
-    let bc = &code.bytecode;
-    let mut g = frame::Gen::new();
-    let labels: Vec<_> = shapes
+    let class_id = |i: u16| match cached(i)? {
+        Resolved::Class(c) => Some(c.0),
+        _ => None,
+    };
+    let new_class = |pc: usize| -> Option<u32> {
+        let code = &u.code.bytecode;
+        let index = || u16::from_be_bytes([code[pc + 1], code[pc + 2]]);
+        let id = match code[pc] {
+            0xbb => {
+                let Resolved::Class(c) = cached(index())? else {
+                    return None;
+                };
+                let k = vm.class(c);
+                let plain = matches!(k.kind, ClassKind::Instance)
+                    && !k.is_interface()
+                    && k.access & classfile::ACC_ABSTRACT == 0;
+                (plain && k.verified && k.state == InitState::Initialized).then_some(c)?
+            }
+            0xbc => {
+                let elem = match code[pc + 1] {
+                    4 => "[Z",
+                    5 => "[C",
+                    6 => "[F",
+                    7 => "[D",
+                    8 => "[B",
+                    9 => "[S",
+                    10 => "[I",
+                    11 => "[J",
+                    _ => return None,
+                };
+                vm.loaded_class(elem)?
+            }
+            _ => {
+                let Resolved::Class(c) = cached(index())? else {
+                    return None;
+                };
+                vm.loaded_class(&crate::interp::array_name(&vm.class(c).name))?
+            }
+        };
+        Some(id.0)
+    };
+    let try_inline = |g: &mut Gen, pc: usize, sh: &[bool]| inline::try_inline(g, u, pc, sh);
+    let labels: Vec<_> = u
+        .shapes
         .iter()
         .map(|s| s.as_ref().map(|_| g.a.label()))
         .collect();
     let env = ops::Env {
-        code: bc,
-        shapes: &shapes,
+        code: &u.code.bytecode,
+        shapes: &u.shapes,
         labels: &labels,
         constant: &constant,
         field: &field,
         statics: &statics,
+        class: &class_id,
+        new_class: &new_class,
+        inline: &try_inline,
+        ret,
     };
-    for (pc, shape) in shapes.iter().enumerate() {
+    for (pc, shape) in u.shapes.iter().enumerate() {
         if let (Some(shape), Some(l)) = (shape, labels[pc]) {
             g.a.bind(l);
-            ops::emit(&mut g, &env, pc, shape);
+            ops::emit(g, &env, pc, shape);
         }
     }
+    labels
+}
+
+/// Compiles `m`, inlining small calls if `inlining`.
+pub(super) fn compile(vm: &Vm, m: MethodRef, inlining: bool) -> Option<Compiled> {
+    let u = unit(vm, m)?;
+    let mut g = Gen::new();
+    g.inlining = inlining;
+    let labels = emit_method(&mut g, &u, None);
     let entries: Vec<u32> = labels
         .iter()
         .map(|l| l.and_then(|l| g.a.pos(l)).map_or(NONE, |p| p as u32))
         .collect();
-    let depth = shapes
+    let depth = u
+        .shapes
         .iter()
         .map(|s| s.as_ref().map_or(u16::MAX, |s| s.len() as u16))
         .collect();
+    let deopts = std::mem::take(&mut g.deopts);
     let bytes = g.finish()?;
     Some(Compiled {
         code: mem::Code::install(&bytes)?,
         entries,
         depth,
-        max_stack: usize::from(code.max_stack),
-        locals: usize::from(code.max_locals),
+        deopts,
+        max_stack: usize::from(u.code.max_stack),
+        locals: usize::from(u.code.max_locals),
     })
 }

@@ -2030,7 +2030,9 @@ name = "vm"
 version = "0.1.0"
 dependencies = [
  "classfile",
+ "libc",
  "platform",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

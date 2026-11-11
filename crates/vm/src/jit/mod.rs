@@ -18,6 +18,7 @@ mod compile;
 mod flow;
 mod frame;
 mod helpers;
+mod inline;
 mod layout;
 mod mem;
 mod ops;
@@ -39,7 +40,18 @@ const NONE: u32 = u32::MAX;
 pub(crate) struct Slot {
     runs: u32,
     state: State,
+    /// Exits from inlined code since it was compiled (`run::materialize`).
+    exits: u32,
+    /// Code replaced by a recompile. Kept: an exit or a transfer may still
+    /// be returning into it.
+    retired: Vec<Compiled>,
 }
+
+/// Exits from inlined code after which a method is compiled again, from the
+/// call sites as they are now (one that saw a second receiver class is no
+/// longer inlined); the last time without inlining.
+const RECOMPILE_EXITS: u32 = 1000;
+const RECOMPILES: usize = 2;
 
 #[derive(Default)]
 enum State {
@@ -55,6 +67,8 @@ pub(crate) struct Compiled {
     entries: Vec<u32>,
     /// Per pc, the stack entries there.
     depth: Vec<u16>,
+    /// Exits from inlined code: the frames to build (`run::materialize`).
+    deopts: Vec<frame::Deopt>,
     max_stack: usize,
     locals: usize,
 }
@@ -70,6 +84,22 @@ pub fn parse_policy(text: &str) -> Option<Option<u32>> {
         "off" => Some(None),
         "all" => Some(Some(0)),
         n => n.parse().ok().map(Some),
+    }
+}
+
+impl Slot {
+    /// Counts an exit from inlined code; past `RECOMPILE_EXITS`, retires
+    /// the code for `jit_tick` to compile again.
+    fn exited(&mut self) {
+        self.exits += 1;
+        if self.exits < RECOMPILE_EXITS || self.retired.len() >= RECOMPILES {
+            return;
+        }
+        if let State::Compiled(c) = std::mem::take(&mut self.state) {
+            self.retired.push(*c);
+        }
+        self.exits = 0;
+        self.runs = 0;
     }
 }
 
@@ -91,7 +121,8 @@ impl Vm {
         if slot.runs <= limit {
             return;
         }
-        let state = match compile::compile(self, m) {
+        let inlining = slot.retired.len() < RECOMPILES;
+        let state = match compile::compile(self, m, inlining) {
             Some(c) => State::Compiled(Box::new(c)),
             None => State::Failed,
         };
