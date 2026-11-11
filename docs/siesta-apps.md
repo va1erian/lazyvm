@@ -177,6 +177,21 @@ reading the code, not measurements. Two numbers will settle it:
 - a Siesta version of the same port (S16-08), compared line for line with
   the Java one and checked against the same screenshots.
 
+The first is measured (S9's Java port, `samples/writer` and
+`docs/ui-writer.md` on its branch, 2026-11-11; it has no printing, which
+needs Messenger, and a light theme only):
+
+| | Rust (xui) | Java on LazyVM |
+|---|---|---|
+| Code | 3,224 lines in `src/` plus a 96-line binary | 823 lines in 6 files |
+| App as shipped | `xui-writer.elf` 5,042,712 B stripped (904 KB fonts); package 2,423,894 B | `writer.jar` 24,879 B; package 35,294 B |
+| Shared runtime, once per machine | none | `lazyvm-ui` 7,444,560 B + `lazyrt.jar` 1,555,168 B |
+| Start to first frame on LazyOS (median of 7 QEMU boots) | 1,204 ms (981 to 2,247) | 1,425 ms (943 to 3,608) |
+
+So the app itself is about 70 times smaller once the runtime is on the
+machine, at a start-up cost of about a fifth of a second; the Siesta port
+is measured against the 823 Java lines.
+
 ## 6. Open questions for the owner
 
 1. Accept the `lazy.ui` additions of section 3 into S9-05's widget coverage
