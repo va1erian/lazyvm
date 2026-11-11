@@ -11,15 +11,24 @@ final class HashViews {
     private HashViews() {
     }
 
-    /** Spec 9.F2: next() checks for a change before the end; hasNext() is whether a node is left. */
+    /** What a Walk returns of each cell. */
+    static final int KEYS = 0;
+    static final int VALUES = 1;
+    static final int ENTRIES = 2;
+
+    /**
+     * Spec 9.F2: next() checks for a change before the end; hasNext() is whether a node is left.
+     * What it returns is picked by a switch, not a lambda: a call per element costs a frame in the
+     * interpreter, and game code walks maps every frame (plan S11-06 part 4).
+     */
     static final class Walk<K, V, T> implements Iterator<T> {
         private final HashMap<K, V> map;
-        private final Function<HashMap.Cell<K, V>, T> pick;
+        private final int pick;
         private HashMap.Cell<K, V> next;
         private HashMap.Cell<K, V> current;
         private int expected;
 
-        Walk(HashMap<K, V> map, Function<HashMap.Cell<K, V>, T> pick) {
+        Walk(HashMap<K, V> map, int pick) {
             this.map = map;
             this.pick = pick;
             this.expected = map.modCount;
@@ -28,16 +37,18 @@ final class HashViews {
 
         public boolean hasNext() { return next != null; }
 
+        @SuppressWarnings("unchecked")
         public T next() {
             if (map.modCount != expected) {
                 throw new ConcurrentModificationException();
             }
-            if (next == null) {
+            HashMap.Cell<K, V> c = next;
+            if (c == null) {
                 throw new NoSuchElementException();
             }
-            current = next;
-            next = map.nextNode(current);
-            return pick.apply(current);
+            current = c;
+            next = map.nextNode(c);
+            return (T) (pick == KEYS ? c.key : pick == VALUES ? c.value : c);
         }
 
         public void remove() {
@@ -145,7 +156,7 @@ final class HashViews {
         Keys(HashMap<K, V> map) { this.map = map; }
         public int size() { return map.size; }
         public void clear() { map.clear(); }
-        public Iterator<K> iterator() { return new Walk<K, V, K>(map, e -> e.key); }
+        public Iterator<K> iterator() { return new Walk<K, V, K>(map, KEYS); }
         public Spliterator<K> spliterator() { return viewSplit(map, this, e -> e.key, Spliterator.DISTINCT | Spliterator.SIZED); }
         public boolean contains(Object o) { return map.containsKey(o); }
         public boolean remove(Object o) { return map.removeMapping(o, null, false) != null; }
@@ -162,7 +173,7 @@ final class HashViews {
         Values(HashMap<K, V> map) { this.map = map; }
         public int size() { return map.size; }
         public void clear() { map.clear(); }
-        public Iterator<V> iterator() { return new Walk<K, V, V>(map, e -> e.value); }
+        public Iterator<V> iterator() { return new Walk<K, V, V>(map, VALUES); }
         public Spliterator<V> spliterator() { return viewSplit(map, this, e -> e.value, Spliterator.SIZED); }
         public boolean contains(Object o) { return map.containsValue(o); }
 
@@ -178,7 +189,7 @@ final class HashViews {
         Entries(HashMap<K, V> map) { this.map = map; }
         public int size() { return map.size; }
         public void clear() { map.clear(); }
-        public Iterator<Map.Entry<K, V>> iterator() { return new Walk<K, V, Map.Entry<K, V>>(map, e -> e); }
+        public Iterator<Map.Entry<K, V>> iterator() { return new Walk<K, V, Map.Entry<K, V>>(map, ENTRIES); }
         public Spliterator<Map.Entry<K, V>> spliterator() { return viewSplit(map, this, e -> e, Spliterator.DISTINCT | Spliterator.SIZED); }
 
         public boolean contains(Object o) {
