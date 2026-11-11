@@ -7,10 +7,7 @@
 //! compiler dropped them from the loop after unrelated changes
 //! (docs/design/threads.md, "Cost on one thread").
 
-use std::sync::Arc;
-
-use classfile::Code;
-
+use super::code_ref::CodeRef;
 use crate::class::{ClassId, MethodRef};
 use crate::value::{Ref, Value};
 use crate::{VmError, VmResult};
@@ -18,7 +15,7 @@ use crate::{VmError, VmResult};
 pub struct Frame {
     pub method: MethodRef,
     pub class: ClassId,
-    pub code: Arc<Code>,
+    pub code: CodeRef,
     /// The start of the instruction being executed.
     pub pc: usize,
     /// Where to continue after a call made by this frame returns.
@@ -39,7 +36,7 @@ impl Frame {
     /// the common case.
     pub fn new(
         method: MethodRef,
-        code: Arc<Code>,
+        code: CodeRef,
         arg_slots: u16,
         args: &[Value],
         mut locals: Vec<Value>,

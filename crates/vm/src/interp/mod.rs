@@ -4,6 +4,7 @@
 //! depth is bounded by `Options::max_frames` alone. A call into Java from
 //! Rust (`Vm::invoke`) runs a nested loop that stops when its frame returns.
 
+mod code_ref;
 mod fast;
 mod fast_call;
 mod fast_field;
@@ -18,6 +19,7 @@ mod ops_math;
 mod ops_object;
 mod sync;
 
+pub use code_ref::CodeRef;
 pub use frame::Frame;
 pub use lend::with_lent;
 
@@ -38,8 +40,10 @@ const OVERFLOW_HEADROOM: usize = 64;
 /// The same allowance for nested calls from Rust and for frame slots.
 const OVERFLOW_NESTING: usize = 16;
 const OVERFLOW_SLOTS: usize = 64 * 1024;
-/// Locals and stack buffers kept for the next call; deeper recursion allocates.
-const MAX_SPARE_BUFFERS: usize = 4;
+/// Locals and stack buffers kept for the next call; deeper recursion
+/// allocates. Game code calls 8 to 12 deep in a tick, and with 4 kept, a
+/// sixth of `tick`'s time went to the allocator (S11-06).
+const MAX_SPARE_BUFFERS: usize = 64;
 const MAX_SPARE_SLOTS: usize = 32;
 
 impl Vm {
@@ -90,7 +94,7 @@ impl Vm {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let method = self.method(m);
-        let Some(code) = method.code.clone() else {
+        let Some(code) = method.code.as_ref().map(CodeRef::new) else {
             let msg = format!(
                 "{}.{}{}",
                 self.class(m.class).java_name(),
@@ -225,7 +229,7 @@ impl Vm {
         while self.frames.len() > base {
             let (class, mut pc, code) = {
                 let f = self.top()?;
-                (f.class, f.pc, f.code.clone())
+                (f.class, f.pc, f.code)
             };
             // Each failed resolution moves `pc`; a table whose entries keep
             // pointing into each other must not loop forever.

@@ -70,6 +70,8 @@ pub struct Method {
     pub name: Arc<str>,
     pub descriptor: Arc<str>,
     pub access: u16,
+    /// Set when the class is laid out and never replaced: frames point
+    /// into it (`interp::CodeRef`).
     pub code: Option<Arc<Code>>,
     /// Argument slots in the callee's locals, including `this`.
     pub arg_slots: u16,
