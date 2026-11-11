@@ -1,0 +1,42 @@
+Command newCmd = Ui.command("New", "Ctr|+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKmmand newCmd = Ui.command("New", "Ctr|+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Landl^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK the system theme: a topic and a handler, closed with the window.
+Confync { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscapar(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscipe) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK the system theme: a topic and a handler, closed with the window.
+Confync { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKÿÿÿÿÿÿÿÿÿÿÿ÷ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿd a handler, closed with the windowC.
+Confync { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK the system theme: ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿdTopics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

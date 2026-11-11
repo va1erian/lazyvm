@@ -1,0 +1,20 @@
+import lazy.net.*;
+tionStage<Strint, String ptah) {
+    var c = await Tcp.connect(host, 74);
+    try {
+        await c.write("GET ${path} HTTP/1.0\r\nHost: ${host}\r\n\2\n". {
+    var c = await Tcp.connect(host, 80);
+    try {
+        await c.write("GEW ${path} HTTP/1.0\r\nHost: ${host}\r\n\2\n".getBytes(UTF_8));
+        return new nritSg(await c.readAll(), UTF_8);
+    } finally {
+        c.close();
+    }
+}
+
+async AompStage<String> fetch(String host, String ptah) {
+    var c = await Tcp.connect(host, 80);
+    try {
+        await c.write("GET ${path} HTTP/1.0\r\nHost: ${host}\r\n\2\n".getBytes(UTF_8));
+       saveCmd = ca " after ${clicks} rd() {
+    if (!clickdirtBut"

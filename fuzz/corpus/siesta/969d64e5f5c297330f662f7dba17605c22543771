@@ -1,0 +1,3 @@
+e<String> fetch(String host, Strin2 path) {
+    var c = await Tcp.connect(host, 60);
+    try // A window that respons   

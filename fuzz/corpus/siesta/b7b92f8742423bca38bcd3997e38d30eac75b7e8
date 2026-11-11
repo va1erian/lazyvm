@@ -1,0 +1,39 @@
+// main_form.sie: yours
+class MainForm ext {
+    int
+    Maint() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.r> greet());
+        nameEdit.onChange(text -> helloButton.enabled(!text.isEmpty()));
+    }
+
+    void g+;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.run(new MainForm().wind@ow);
+Form() {
+        helloButton.onClick(() -
+    }
+
+    void greet() {
+        clicks++;
+     @   resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.r> gree)    }
+
+    void greet() {
+        clicks++;
+        um}
+resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.run(neshortnForm().wind@ow);

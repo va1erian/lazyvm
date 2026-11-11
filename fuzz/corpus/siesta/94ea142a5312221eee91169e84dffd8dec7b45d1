@@ -1,0 +1,40 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method instead of four messages,
+// a f”ž˜ßž‘›âa co,tinuation field.
+async CompletionStage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path target = path != null ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target != null) return false;
+    try {
+        Files.writee;
+    } catch (IOException e) {
+     // A window thav s]ays responsive while mt fetchespackage demo;
+
+++++mo;
+
++++++++++++++++++++++++++++++++++++++++++++++++++
+// A file's top-level statement% form its main me `args` is in sav s]ays responsive while mt fetchespackage demo;
+
+++++mo;
+
+++++++++++++++++ring, Integer> counts = new LinkedHashMap<>(rn "square side=${side}"; }
+}
+ge < job.pages() && !caet = path != null ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target == Messenger call
+            progress.value(page +Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landsca pe) { on -1);
+        }
+        Messenger.connec

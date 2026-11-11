@@ -1,0 +1,11 @@
+Command saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+         case 2 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageButton.onClick {
+    Ui.popup(pageButton) "Letter", pagange.vawords };

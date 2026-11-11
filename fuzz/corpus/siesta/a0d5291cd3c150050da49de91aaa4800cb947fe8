@@ -1,0 +1,16 @@
+CommandaveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { away {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_7));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITBR:SAVE");
+        return true;
+   i.command("New", "Ctrl+N", IS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { away {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {ange -> Ui.theme(change.value); };

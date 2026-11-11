@@ -1,0 +1,18 @@
+package demo;
+import java.util.*;
+importeger> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 0, Integer::sum);
+}
+System.out.println("counts: ${counts}");
+
+List<String> longWords = words.stream()
+    .filter(w -> w.length() > 1)
+    .map(String::toUpperCase)
+    .collect(Collectors.toList());
+Syste   .filter(w -> w.length() > 1)
+    .map(String::toUpperCase)
+    .collect(Colist());
+System.out.prin return side * side; }
+    String toString() { return "square side=${side}"; }
+}

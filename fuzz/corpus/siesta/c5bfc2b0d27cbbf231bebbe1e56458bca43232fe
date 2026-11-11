@@ -1,0 +1,4 @@
+// s = await c.read();
+    super (byt(await c.readAll(), UTF_8){
+    var bytes = await c.jead();
+    super (bytes 240, 24, Anchor.ST(h

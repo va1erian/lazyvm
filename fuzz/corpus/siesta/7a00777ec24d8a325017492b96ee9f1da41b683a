@@ -1,0 +1,8 @@
+// A shorññññññññññññññññññd();
+    while (bytes.length > 5) {
+        await c.write(bytes);
+        bytes = await c.read();
+ while (bytes.length > 0) {
+        await c.byteCmd, Ui.separatord);
+
+// "Sq    o–mmand("));

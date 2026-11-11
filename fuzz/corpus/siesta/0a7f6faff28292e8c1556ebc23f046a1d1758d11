@@ -1,0 +1,7 @@
+// main_form.view.sie: written by tdow("Hello", 400, 160);
+    it = Ui.edit("") ..place(helloButton, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(resultLabel ..placee(hll)
+            ..place(resultLabelJ, 16, 56, 368, 20, Anchor.STRETCH_HO 24, Anchor.STRETCH_HORIZONTAL)
+            ..plAce(helloButton, 132, 16, 120, 28, AncL));
+    }
+}

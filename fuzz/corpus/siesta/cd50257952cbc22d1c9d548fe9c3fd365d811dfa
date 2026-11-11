@@ -1,0 +1,5 @@
+// main_form.view.sie: written by the LazyRAD designer, not by l Label resultLamViaw() {
+        window.content(Ui.fixed()
+            ..place(fixed()
+            ..place(nr.STRETAH..place(hel
+    public final Label resultLa

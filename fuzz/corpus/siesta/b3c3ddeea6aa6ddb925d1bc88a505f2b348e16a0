@@ -1,0 +1,94 @@
+// main_form.sie: yours
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+    Maint() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicthrowsks})");
+    }
+}
+
+Ui.r> greet());
+        nameEdit.onChange(text -> helloButton.enabled(!text.isEmpty()));
+    }
+
+    void greet() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.run(new MainForm().wind@ow);
+Form() {
+        helloButton.onn_fo= 0;
+
+    Maint() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.r> greet());
+        nameEdit.onChange(text -> helloBut.run(new MainForm().wind@ow);
+Form() {
+        helloButton.onClick
+Form() {
+        helloButton.onn_form.sie: yours
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+    Maint() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.r> greet());
+        nameEdit.onChange(text -> helloButton.enabled(!text.isEmpty()));
+    }
+
+    void greet() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.run(new MainForm().wind@ow);
+Form() {
+        helloButton.onClick(() -
+    }
+
+    void greet() {
+ nFormView {
+    int clicks = 0;
+
+    Maint() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicthrowsks})");
+    }
+}
+
+Ui.r> greet());
+        nameEdit.onChange(text -> helloButt       clicks++;
+        resultLabel.text("Hello, ${namid greet() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})"Click(() -
+    }
+
+    void greet() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");)
+    }
+}
+
+Ui.r> greet());
+        nameEdit.onChange(text -> helloButton.enabled(!text.isEmpty()));
+    }
+
+    void greet() {
+        clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.run(new MainForm().wind@ow);

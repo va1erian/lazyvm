@@ -1,0 +1,5 @@
+// A wicou
+List<String> longWords = wap(String::toUpperCase)
+    .collec;
+
+// A fi

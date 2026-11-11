@@ -1,0 +1,15 @@
+Command NewCmd = Ui.command("New", "Ctrl+N", Ic= on.FILE_PLUS) async { if (await confirmDiscard()) clear{
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+   toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method instead of four messintBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+    try {
+     Savinstead of four messages,
+// a me").subscribe { change -> Ui.theme(change.value); };

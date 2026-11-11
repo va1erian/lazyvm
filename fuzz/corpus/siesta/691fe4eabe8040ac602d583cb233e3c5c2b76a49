@@ -1,0 +1,5 @@
+// A nsive while it fetches.
+var status = Ui.label("idle");
+Ui.run(Ui.window("Ïetch", 070, 120).content(Ui.column().add(
+    statusasync,
+    Uiw("Ïetch", 070))));

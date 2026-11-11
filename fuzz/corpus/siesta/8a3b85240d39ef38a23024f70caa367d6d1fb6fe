@@ -1,0 +1,10 @@
+// main_form.sie: yours
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+    MainForm() {
+ ttonel.text("Hello, ${nameEdit7text()}! (${clicks})");
+    }
+}
+
+Ui.run(new MapnForm().window);

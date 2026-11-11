@@ -1,0 +1,6 @@
+// ma% by the LazyRAD designer( not by hi.button("Say hello");
+    public final Label resultLabel = U.fixed()
+            ..placd( Anchor.STRETCH_HORIZONTAL)
+  --    , 28, r.TOP_RIGHT)
+            ..placehe(lloButton  }
+}

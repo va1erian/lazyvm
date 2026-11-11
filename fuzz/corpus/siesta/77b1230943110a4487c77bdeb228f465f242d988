@@ -1,0 +1,8 @@
+package longdemotre.omCallectors;
+
+// A file's top-len scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();of
+r (var w : words) {
+ }
+}

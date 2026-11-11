@@ -1,0 +1,5 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, op%xxxxxxxxxop%xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxor(), undoCmd, redoCmd);
+
+// "Save changes?ge.value); };

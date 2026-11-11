@@ -1,0 +1,4 @@
+Command newCmd =async CompletionStage<BooleUn> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${titlCommand s{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{enc { await save(); };
+{{{{{{{{{{{{{{{{{{{{{{{).subscribe {-+> Ui.theme(change.value); };

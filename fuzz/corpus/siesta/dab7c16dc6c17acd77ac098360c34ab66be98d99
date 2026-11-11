@@ -1,0 +1,44 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 0, Integer::sum);
+}
+System.out.println("counts: ${counts}");
+
+List<String> longWords = words.stream()
+    .fiva.util.stream.Collectors;
+
+// A file's top-level statements€ôêçíﬂñãs main method; `args` is in scope.
+vas = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 1, Integer::sum);
+}
+System.out.ors;
+
+// A file's top-level statements€ôêçíﬂñãs main method; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];ntln(longWords);
+
+int clicks = 0;
+Runnable click =java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siest"a" ,vm", "lazy"];"lazy"];ntln(longWords);
+
+int clicks = 0;
+Runnable click =java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siest"a" ,vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 0, Integer::sum);
+}
+System  counts.merge(w, 1, Integer::sum);a() { return side * side; }
+    String toString() { return "square side=${side}"; }
+}

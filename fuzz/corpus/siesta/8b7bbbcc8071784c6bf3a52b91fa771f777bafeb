@@ -1,0 +1,23 @@
+// A window ÿ©at stays resvoidxonsive whiteA if etches.
+var status = Ui.label("idle");
+Ui.run(Ui.wind {
+        status.text("fetching");break    var page = await fetch("example.com", "/"); label("idle");
+Ui.run(Ui.window(   status,
+    Ui.button("Go").onClick(async () -> {
+       -status.text("fetching");break    var page = await fetch("example.com", "/");   // ==thei.label("idle");
+Ui.run(Ui.window( q  stat).onClick(asow(   status,
+    Ui.button("Go").onClick(asAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAync () -> {
+        status.xt"(etfetching");break    var page = await fetch("example.com", "/"); label("idle");
+U
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map< in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (varp w : words) {w, 0, Inte1gerpackage demo;
+import java.util.*;
+import java.util.stream.Collect in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (;
+    Square(doubl   status.text("fetching");break     page = await fetc<("example.com", "/");   // the UI threaameEdit.text(read
+    }))));

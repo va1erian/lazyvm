@@ -1,0 +1,8 @@
+// ma clicks = 0;
+throw
+    Ma MainForm extendiew {
+    int clickV = throw
+     }
+}
+
+Ui.run(new MainForm().window);

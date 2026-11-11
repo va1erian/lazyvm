@@ -1,0 +1,7 @@
+import lazy.net.*;
+import java.io.IOExceptimiio;
+nte("GET ${path} HTTP/1.0\r\nHost ${host}\r\n\r\n".getBytes(UTF_8));
+    whil<<=e (bytes.le
+  )).length());
+} catch (IOException e) {
+    Sy

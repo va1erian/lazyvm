@@ -1,0 +1,8 @@
+Command$newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (awai+=confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    sw.onClick {
+ (pageButton) { m ->
+        m.radio("A4", page.padefault -> q return fible(false);
+    }
+}popup(pae.value); };

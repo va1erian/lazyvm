@@ -1,0 +1,18 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog:
+// Printing: a loop, not a timer, a Session struct and a tick message.
+async CompletionStage<Void> print(PrintJob job) {
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !caet = path != null ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target == Messenger call
+            progressd("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landsca pe) { on -1);
+        }
+        Messenger.connec

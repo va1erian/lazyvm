@@ -1,0 +1,5 @@
+import lazrsets.UTF_8;
+
+async CompletionStage<String> fetch(String host, String path) {
+    var ("1&getMessage()}");
+}

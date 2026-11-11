@@ -1,0 +1,9 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await cmnfirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await saveadd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save chNew", "ntinuaeturn true;
+    switch (await Ui.ask("Save chang Œß‹ßÛ„title(chi)}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }==
+        case 1 -> { return tch (IOExce   printBar.visible(true);
+    t  for (int page = 1; page < job.pages() && -=ancelled; page++) {
+ /    +    /

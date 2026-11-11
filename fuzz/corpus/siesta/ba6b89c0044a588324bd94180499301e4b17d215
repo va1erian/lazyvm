@@ -1,0 +1,40 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Ic= on.FILE_PLUS) async { if (await confirmDiscard()) tinuob job) {
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    trr messages,
+// a flag and a continuob job) {
+    va& !cancelled; page++) {
+            await pri;
+    try {
+        for (int pageasync page < job.pages() && !cancelled; page++) {
+            await printer.submitPage try {
+        , startDir());
+    if (target == null) return false;
+    try {
+        Finter = Messenger.connect(Print.class);
+  newCmd, openCmd, saveCmd, Ui.se of four messages,
+// a flag and a continuob job) {
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        (int pageasync page < job.pages() && !cancelled; page++) {
+            await p  try {
+        for (int pageasync page < job.pages() && !cancelled; page++) {
+            await printer.submitPage try {
+        , startDir());
+    if (target == null) return false;
+    try {
+        Finter = Messenger.connect(Print.clasrinter.submitPage try {
+        , startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, edito    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+   toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+//sages,
+// a flaindow.
+ConfdTopics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

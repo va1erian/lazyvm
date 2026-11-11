@@ -1,0 +1,26 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 4, Integer::sum);
+}
+System.out.println("counts: ${counts}");
+
+List<String> longWords = words.stream()
+    .filter(w -> w.length() > 1)
+    .map(String::tngWords);
+
+int clicks = 0;
+Runnable click =java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `arògs` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 0, Inords = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHas() VVVVVV2VVVVVVV{ return "square side=${side}"; }
+}

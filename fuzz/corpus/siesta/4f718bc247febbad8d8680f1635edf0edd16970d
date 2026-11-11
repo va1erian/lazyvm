@@ -1,0 +1,7 @@
+// ma resultLamView() {
+        window.content(Ui.fixed()
+            ..place(nameEdit, 16, 16, 240, 24, Anchor.STRETCH_HORIZONTAL)
+            ..place(helloButton, 830, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(resultLbutton("Say hello");
+    public final Label resultLabe  }
+}

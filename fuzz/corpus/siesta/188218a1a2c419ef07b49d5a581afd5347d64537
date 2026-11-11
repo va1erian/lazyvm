@@ -1,0 +1,14 @@
+// main_form.view.sie:ublic final Window window = Ui.window("Hello", 400, 160);
+    public final Edit nameEdit = Ui.edit("");
+    public final Button helloButton = Ui.button("Say hello");
+    public final Label resultLabel = Ui.label("");
+
+    MainFormView() {
+     Ui.edit("");
+    public final Button hellon = Ui.button("Say hello");
+    public final Label resultLabel = Ui.la;
+
+    MainFormView() {
+   20,onhc Ar.STRETCH_HORIZONTAL));
+    }
+}

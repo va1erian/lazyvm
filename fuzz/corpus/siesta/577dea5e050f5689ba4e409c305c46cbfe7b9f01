@@ -1,0 +1,1 @@
+Command newCmd = Ui.command( "Ctrl+N", Ic(), und/=oCmd, re^=Cmd);ontinuca

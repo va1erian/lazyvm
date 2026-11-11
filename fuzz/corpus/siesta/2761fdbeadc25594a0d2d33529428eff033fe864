@@ -1,0 +1,29 @@
+Command newCmd = Ui.commit save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the
+nge(tge(/text -> heext ->  save dialog: one method instead ofl = Ui.label("");
+
+    MainFormView() {
+        hand
+import lazy.ui.case 0 -> { return await ick message.
+async CompletionStat lazy.ui.caseO0 abstract-> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Booleaner, a Session struct and a tick message.
+async CompletionStat lazy.ui.case 0 -> { return await save(); }
+        cas <<=true; }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path target = pathd(), render(job, page));   // ;
+    } finally {
+        pn await save(); }
+        case 1 -> { return true; }
+        default -> { return falsen> save() Stageath : awaihanged("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };
+þ™

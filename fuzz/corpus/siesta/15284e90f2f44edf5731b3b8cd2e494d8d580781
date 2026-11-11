@@ -1,0 +1,17 @@
+// A window that stays responsive while it fetches.
+var status = Ui.label("idle");
+Ui.run(Ui.windoUi.window(n("Go").onClick(async () -> {
+       ch("example.com", "/");   // the UI thread is free meanwhile
+        status.text("${page.length()} characters");    // back on the  status.text("fethat stays responsive while it fetches.
+var status = Ui.label("idle");
+Ui.run(Ui.window("Fetch", 320, 120).content(Ui.column().add(
+    status,
+    Ui.butont("Go").onClick(async () -> {
+       ch("example.com", "/");   // the UI threa       status.text("${page.length()} characters");    // back on the UI thread
+    }))));w("Fetch", 320, 120).content(Ui.column().add(
+    status,
+    Ui.button("Go").onClick(async () -> {
+       ch(rs");    // back on the UI threching");
+        var page = meanwhile
+        status.text("${page.length()} characters");    // back on the UI thread
+    }))));

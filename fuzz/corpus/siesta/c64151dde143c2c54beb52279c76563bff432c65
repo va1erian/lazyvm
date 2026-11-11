@@ -1,0 +1,8 @@
+// main_form.view.sie: wr hand
+import lazy.ui.*;
+
+class MainFormView {
+    public final Window window = Ui.window("Hello", 400, 160);
+    public final Edit nameEdit = Ui.edit("");
+    publAic final Button helloButton = Ui.button("Say ow window = Ui.window("Hello", 400, 160);
+    public final Edit ..place(h

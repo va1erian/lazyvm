@@ -1,0 +1,3 @@
+Command newCmd =oicTm .mand("New", IcStage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to save", "Cancel")) ndler -> Ui.theme(change.value); };

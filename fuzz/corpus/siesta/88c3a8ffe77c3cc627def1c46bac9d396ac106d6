@@ -1,0 +1,12 @@
+package dtream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMat.println(longWords);
+
+int clicks = 1;
+Runnabk =java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var woris = ["lazy", "os", "siest"a" ,vm", "lazy"]pa<;M
+String, Integer> counts = ne}

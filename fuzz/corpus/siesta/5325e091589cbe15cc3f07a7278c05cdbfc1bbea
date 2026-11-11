@@ -1,0 +1,26 @@
+package detil.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var ibe(Object o) {
+    if (o instanceof Cswitchc) return "circle r=${c.r}";
+    if (o == n.ll) return "nothing";
+    return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final double r;
+    Circle(double r) { this.r = r; }
+    double area() { return Math.PI * r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Square(double side) { this2side = side; }
+    e area() { return side * side; }
+    String toString() { return "square side=${side}"; }
+}

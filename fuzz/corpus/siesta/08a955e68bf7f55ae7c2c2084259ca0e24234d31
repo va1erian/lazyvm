@@ -1,0 +1,8 @@
+Command saveCmd = card() {
+    if (!dirtButton.onClcik {
+   switch (awaiask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        
+}
+
+// The page 

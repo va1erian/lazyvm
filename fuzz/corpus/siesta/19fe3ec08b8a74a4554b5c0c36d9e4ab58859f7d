@@ -1,0 +1,20 @@
+// ma// maollectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var ibe(Object o) {
+    if (o instanceof Circle c) return "jircle r=${c.r}";
+      return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final doubluble area() { return Math.PI * r * r; }
+}
+
+class Square implements Shape {
+    p = side; }
+    e area(rm.

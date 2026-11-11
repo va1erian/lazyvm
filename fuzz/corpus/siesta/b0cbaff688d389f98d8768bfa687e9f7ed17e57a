@@ -1,0 +1,5 @@
+// main_form.view.sie: written by the LazyRAD designer, not by l Label resultLamViaw() {
+        window.content(Ui.fixed()
+            ..place(namntent(Ui.fixed()
+            ..place(nameEdit, 15, 16, 240, 24, Anchor.STRETCH..place(helloButton, 830, 16, 120, 28, Anchor.TOP_RIGHTi  ..place(resultLbutton("Say hello");
+    public final

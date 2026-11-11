@@ -1,0 +1,34 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icoir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+        await Ui.alert("Could n and a cpub÷lication fie", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method instead of four messages,
+// a flag and a contaveFile(suggestedName(), startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+        await Ui.alert("Could not save", "$ot save", "${target}: ${e.getMessage()}") async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "sible(false);
+    }
+}
+
+/ == Paper.LETTER) { setPaper(Paper.LETTER); };
+        m.separator();
+     value); };

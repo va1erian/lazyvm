@@ -1,0 +1,59 @@
+Comma Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: one method instead of four messages,
+// a flag aSAVE");
+        return true;
+    } catch (IOExcept }
+        default ->    case 0 -> { return await save(); }
+        case 1 -> { return true.l; }
+        default -> { return false; }
+    }
+}
+
+amd);
+
+// "Save changes?" and the save dialog: one method instead of four messages,
+// a flag aSAVE");
+        return true;
+    } catch (IOExcept }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path taton) { m ->
+ ean> confirmDiscard() {
+    if (!dirty) return true;
+;
+
+// "Save changes?" and the save dialog: one method instead of four messages,
+// a flag aSAVE");
+        return true;
+    } catch (IOExcept }
+        default ->    case 0 -> { return await save(); }
+        case 1 -> { return true.l; }
+        default -> { return false; }
+    }
+}
+
+amd);
+
+// "Save changes?" and the save dialog: one method instead of four messages,
+// a flag aSAVE");
+        return true;
+    } catch (IOExcept }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path taton) { m ->
+ ean> confirmDiscard() {
+    if (!dirty) return true;
+   wait confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCm     default -> { ret() {
+    Pat   wait confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCm     default -> { ret() {
+    Path target = path != 0null ?

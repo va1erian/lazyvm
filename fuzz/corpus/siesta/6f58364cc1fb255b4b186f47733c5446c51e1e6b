@@ -1,0 +1,12 @@
+// ma by the LazyRAD designer, not by hi.button("Say hello");
+    public final Label resultLabel = Ui.label("");
+
+    MainFormView() {
+        window.content(Ui.fixed()
+            ..place(nameEdit, 16, 16, 240, 24, Anchor.STRETCH_HORIZONTAL)
+            ..place(helloButton, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(hoButton, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(helloButton, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+            .368, 20, Anchor.STRETCH_HORIZONTAL));
+    }
+}

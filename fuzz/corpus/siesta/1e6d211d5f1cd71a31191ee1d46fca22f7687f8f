@@ -1,0 +1,89 @@
+package demo;
+import java.util.*;
+imnstanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+ if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+    return o~.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final double r;
+    Circle(double r) { this.r = rle area() { return Math.PI * r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Saeuqr(double side) { this.side = side; }
+        return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { return n == 0 ? newdemo;turn "nothing";
+ if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+    return o~.toString();
+}
+
+interface Shape {
+    double area(eturn o~.toString();
+}
+
+interface Shape  r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Square(double side) { this.side = side; }
+        return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+cla
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A fiin scope.
+var ibe(Object o) {
+    if (o instanceof Circle c) retule c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+    return o~.toString();
+}
+
+interface Shape {
+    double area(eturn o~.toString();
+}
+
+interface Shape  r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Square(double side) { this.side = side; }
+        return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final double r;
+    Circle(double r) { t "square side=${side+=}";  Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final double r;
+    Circle(double r) { t "square side=${side}"; }
+}

@@ -1,0 +1,35 @@
+package demo;
+imof(args.l
+
+String desc//$ main_form.view.sie: written by the e Lmnal douesigneCH_HORIZONTAL));
+ (resultLabel, 16, 56, 368, quare implements Shape {
+    esultLabel, 16, .66,3 8, 20, Anchor.STRETCH_HORIZONTAL));
+ (resultLabel, 16,    static Shape of(int n) { return n =1= 0 ? new Circle(1.0) : new Squar3e(n); }
+}
+
+class Circle implements Shape {
+    public final d) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final double r;
+    Circle(double r) { this.r = r; }
+    double area() { return Math.PI *r*   r; }
+}
+
+class Square implements Shape {
+    esultLabel, 16, .66,3 8, 20, Anchor.STRETCH_HORIZONTAL));
+ (resultLabel, 16, 56, 368, quare implements Shape {
+    esultLabel, kkkkkkkkkkkkkkkkkknchor.STRETCH_HORIZONTAL));
+ (resultLabel, 16,    static Shape of(int n) { return n =1= 0 ? new Circl Circle implements Shape {
+    public final doub}
+}
+
+class Circle implements Shape {
+    public final double r;
+    Circle(double r) { this.r = r; }
+    double area() { return Math.PI *r*   r; }
+}
+
+class Square implements Shape {
+    esultLabel, 16, .66,3 8rr esultLabel, 16

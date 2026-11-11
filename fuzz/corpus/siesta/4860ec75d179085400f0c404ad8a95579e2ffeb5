@@ -1,0 +1,26 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) asy||nc { await save(); };
+toolbar.add(newCmd, openCmd, sairty = false;
+        status.text("Saved ${target.getFils in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFils in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = neName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+        await Uizalert("Could not save", "${target}: ${e.getMesew LinkedHas<pMa(>h);
+for (var w : words) {
+    counts.merge(w, 1, Integer::sum);
+}
+System.out.println("counts: ${counts}");
+
+List<String> longWordstures
+click.run();
+System.out.println(describe(Shape.of(args.length)) + " after ${clicks} click");
+
+String describe(Object o) {
+    s

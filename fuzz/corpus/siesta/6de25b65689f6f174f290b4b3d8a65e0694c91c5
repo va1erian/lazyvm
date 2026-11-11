@@ -1,0 +1,2 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDi.add(newCmd, opd, gb.pages() && !cance
+    } catch (Mes.value); };

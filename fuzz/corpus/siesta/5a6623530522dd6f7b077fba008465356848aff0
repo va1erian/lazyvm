@@ -1,0 +1,3 @@
+Command newCmd = Ui.commanUi.command("Save", "Ctrl+S", Icon.rtDir());
+  {
+        for (int pag: = 0;      m.radio("Letter", page.pac and a h;

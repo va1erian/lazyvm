@@ -1,0 +1,16 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(),    Files.write(target, editor.document().title("Printed ${job.pa^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^a^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ges()} pages"));
+    } catch (MessengerException e) {
+        await Ui.alert("Printing failed", e.getMessage());
+    } finally {
+        printBar.visible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageButton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.A4); };
+        m.radio("Letter", page.paper == Paper.LETTER)a topic and a handler, closed with the window.
+ConfdTopics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

@@ -1,0 +1,25 @@
+package demo;
+import j.*;
+import java.util.stream.Collectors;am.Collectors;
+
+// A fil { this.side = side; }
+    e area() { return side * side; }
+    String toString() { return "square side=${side}"; }
+
+// A file's top-level statements form its main method; `args` is in scope.
+var ibe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+    return o.toString();
+}
+
+interface Shape {
+e area() { return Math.PI * r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Square(double side) { this.side = side; }
+    e area() { return side * side; }
+    String toString() { return "square side=${side}"; }
+}

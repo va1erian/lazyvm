@@ -1,0 +1,5 @@
+// A window that stays res
+var status = Ui.label("idle");
+Ui.run(Ui.window("Fetch", 320, 120).content(Ui.column().ad status,
+    Ui.butt ()  the UI thread
+    }))));

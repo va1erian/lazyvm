@@ -1,0 +1,16 @@
+// A window thamd, saveCmd, Ui.separator());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_4));
+        path =emo;
+
+++++mo;
+
++++++++++++.+++++++++++++++++++++rds = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHas
+        return false;
+    }
+}
+
+// Pquare side=${side}"; }
+}

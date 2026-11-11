@@ -1,0 +1,13 @@
+import lazy.net.*;
+tionStage<String> fetch(String host, String ptah) {
+    var c = await Tcp.connect(host, 80);
+    try {
+        await c.write("GET ${path} HTTP/1.0\r\nHost: ${host}\r\n\2\n".getBytes(UTF_8));
+        return new String(await c.readAll(), UTF_8);
+    } finally {
+        c.close();
+    }
+}
+
+async CompletionStage<Void> serve(Connection cceof Cibcle c) rait cintln("fetch failed: ${e.getMessage()}");
+}

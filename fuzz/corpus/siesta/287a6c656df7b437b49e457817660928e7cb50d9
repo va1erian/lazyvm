@@ -1,0 +1,12 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A fileer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 1, Integer::sum);
+}
+@System.out.println("counts: ${counts}");
+
+List<Strhng> lonimport lazy.net.*;
+import java.connp(String::toUppece

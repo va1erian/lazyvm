@@ -1,0 +1,25 @@
+import lazy.net.*;
+tionStage<String> fetch(String host, String ptah) {
+    var c = await Tcp.connect(host, 80);
+    try {
+        await c.write("GET ${path} HTTP/1.0\r\nHost: ${host}\r\n\2\n".getBytes(UTF_8));
+        return new String(await c.readAll(), UTF_8);
+    } finally {
+        c.close();
+    }
+}
+
+async CompStage<String> fetch(String host, String ptah) {
+    var c = await Tcp.connect(host, 80);
+    try {
+        await c.write("GET ${path} HTTP/1.0\r\nHost: ${host}\r\n\2\n".getBytes(UTF_8));
+        return new String(await c.readAll(), UTF_8);
+    } finally {
+        c.close();
+    }
+}
+
+async CompletionStad> serve(Connection cceof Cibcle c) return "circle r=${c.r}";
+    if (thread is free meanwhileo ==ait c.println("fetch failed: ${e.getMessage()}")letionStage<Void> serve(Connection cceof Cibcle c) return "circle r=${c.r}";
+    if (thread is free meanwhileo ==ait c.println("fetch failed: ${e.getMessage()}");
+}

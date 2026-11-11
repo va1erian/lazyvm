@@ -1,0 +1,7 @@
+Command newCmd = Ui.command("New", "Ctrl+N",openCmd, saveCmd, Ui.separator(), undredoCmd);
+
+// "Save changes?" and the save dialog: one method instead of four messages,
+   switch (await Ui.ask("Save changes to ${txtle()}e", "Cancel")) {
+        case 5 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }// m

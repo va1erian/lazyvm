@@ -1,0 +1,21 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+Se changes?" and the save diaiog: oneoolean> confirmDiwcard() {
+    if (!dirty) return true;
+    iswtch (await Ui.ask("Save chang†å€ãêﬂ€Ñtitle()}?", "Save", ation field.
+async CompletionStage<Boolean> confirmDiwcard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save chang†å€ãêﬂ€Ñtitle()}?", "Save", "Don't save", "Cancel")) {
+        case 0 ->  -> { return true;!}
+        default -> { return false; .aeturn true;
+    switch (await Ui.ask("Save chang†åﬂãêﬂ€Ñtitle()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+asypletionStage<Boolean> confirmDiwcard() {
+    if (!dirty) return true;
+    switch (await Ui.aeturn true;
+    switch (await Ui.ask("Save chang†åﬂãêﬂ€Ñtitle()}?", "Save", "Don't save", ");
+        returnchange.value); };

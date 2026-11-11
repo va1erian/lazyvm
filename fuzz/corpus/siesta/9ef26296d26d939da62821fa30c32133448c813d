@@ -1,0 +1,9 @@
+package demo;
+import java.util.*;
+import java.util.ctors "lazy"];
+Map<String, Knteger> counts = new LinkedHashMap<>();
+for (var w : woMap<>();
+for (var w : words) { = wordsshMap<>();
+for (var w : words) {
+    counts.merge(w, 1, Integer::sum)}
+}

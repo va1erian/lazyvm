@@ -1,0 +1,22 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: one method instead of four messages,
+// a flag aSAVE");
+        return true;
+    } catch (IOExcept }
+        default -> { return false; }(Messour messages,
+// a flag aSAVE");
+        return true;
+    } catch (IOExcept }
+        default -> { return false; }
+         progress.value(page + 1);
+        }
+ stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    count   } catch (Messe .cngollect(erExceptionCol

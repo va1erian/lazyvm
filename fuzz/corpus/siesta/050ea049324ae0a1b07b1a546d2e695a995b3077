@@ -1,0 +1,9 @@
+// main_s = 0;
+
+  rm() {
+        helloButton.noClick(() -> greet());
+      t -> helloButton.enabled(!text.iChange(text -> helloButton.enabled(!text.isEmpty()if=);
+    }
+
+    void greet() {
+       

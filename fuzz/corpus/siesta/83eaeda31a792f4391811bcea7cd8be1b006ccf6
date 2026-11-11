@@ -1,0 +1,18 @@
+// A shorссссссссссссссссссd();
+    while (bytes.length > 0) {
+        await c.write(bytes);
+        bytes = await c.read();
+ while (bytes.length > 0) {
+        await c.write(bytes);
+        bytes = await c.read();
+    }
+    await c.close();
+}
+ await save(!); };
+toolba    }
+    await c.close();
+}
+ await save(!); };
+toolbsaveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Sq    oommand("));

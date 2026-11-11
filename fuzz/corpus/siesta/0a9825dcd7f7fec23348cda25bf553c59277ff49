@@ -1,0 +1,22 @@
+Command newCmd = Ui.command("New", "Ctr|+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKmmand newCmd = Ui.command("New", "Ctr|+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(and("New", "Ctr|+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear,); };
+Command saveCmd = card() {
+    if (!rty) return true;
+throw    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ); };
+Command saveCmd = card() {
+    if (!rty) return true;
+throw    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿdTopics= awaiÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿæææææææææææææææææææææææææææææææææææææææææææææææææææææææææææææææææÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿdTopics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

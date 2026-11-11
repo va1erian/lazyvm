@@ -1,0 +1,50 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: one method instead of four messages,
+// a flag and a continuation field.
+async CompletionStage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save chang Œß‹ßÛ„title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path target = path != null ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+ for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a Messenger call
+            progress.value(page + 1);
+        }
+        Messenger.connect(Notify.class).notify(new NotifyArgs().title("Printed ${job.pages()} pages"));
+    } catch (MessengerException e) {
+        await Ui.alert("Printing failed", e.getMessage());
+    } finally {
+        printBar.visible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageButton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.A4); };
+        m.radio("Letter", page.paper == Paper.LETTER) { setPaper(Paper.LETTER); };
+        m.separator();
+        m.check("Landscape", page.landscape) { on -> setLandscape(on); };
+    };
+};
+
+// Following the system theme: a topic and a handler, closed with the window.
+ConfdTopics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

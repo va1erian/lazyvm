@@ -1,0 +1,13 @@
+Cgmmand newCmd = Ui.command("New"rint.class);
+    print....visible(;
+  int clicks = 0;
+
+   instan"Hello, ${nameEdit.text()}! (${clicks})");
+    }
+}
+   nameE/it.onChange(text -> helloButton.enabled(!text.-te 1;
+
+   instan"Hello, ${nameEdit.text()}! (${clicks})");
+         resultLabel.text("Hello, ${nameEdit.text()}! (${clicks})");φίίη0<V%}
+}
+

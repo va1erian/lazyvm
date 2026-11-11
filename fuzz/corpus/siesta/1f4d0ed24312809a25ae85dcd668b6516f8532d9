@@ -1,0 +1,25 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.sepcontinuation field.
+async CompletionStage<Boolean> d newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await savcard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save chanes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -olean> confirmDiscar switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { retur  await confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save chanes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -olean> confirmDiscar switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't savCommand newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };e", "Cancel")) {
+    
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialo): one method instead of four messages,
+// a flag and a continuation field.
+async CompletionStage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't sav    case 0 -> { retur  await save", "Cancel")) {
+        case 0 -> { return await save();e() }
+        case 1 -> { return true; }
+; };       
+ defaul

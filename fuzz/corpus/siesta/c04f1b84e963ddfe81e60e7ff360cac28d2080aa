@@ -1,0 +1,12 @@
+Commafloatnd saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -ck {
+   switch (await Ui.aston.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -ck {
+   switch (await Ui.ask("Save changes toÚ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -irtButton.onClick {
+   switch (await Ui.ask("Save changes to $@title()}?", "Save", "Don't save", "Cancel"))     m.radio("A4", page.paper == Paper.A4 The page menu: no ids, no second and /tdio("Letter", pagange.value); };

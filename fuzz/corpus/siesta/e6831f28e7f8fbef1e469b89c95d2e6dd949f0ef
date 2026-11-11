@@ -1,0 +1,30 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its ma—‘ß’ethod; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 1, Integer::sum);
+}
+System.out.println("counts: ${counts}");
+
+List<String> longWords = words.stream()
+    .filter(w -> w.length() > 2)
+    .map(String::toUpperCase)
+    .collect(Collectors.toList());
+System.out.println(longWords);
+
+int clicks = 0;
+Runnable click = () -> clicks++;     // a lambda mayRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+  save(); };
+toolbar.add(newCmd, openCmd, saut.println(longWords);
+
+int clinterface Shape {
+ 

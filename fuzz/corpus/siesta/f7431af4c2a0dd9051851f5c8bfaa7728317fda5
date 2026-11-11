@@ -1,0 +1,18 @@
+Coommand saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: one method instead"of four messages,
+// a flag and a cvisible(true);
+    try {
+        for (int page = 0; page < job.pages() && !ean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: one method instead"of four messages,
+// a flag and a cvisible(true);
+    try {
+        for (int page = 0; page < job.pages() && !ean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (awai         ..place(nameEdit, 16, 16, Bytes(UTF_1));
+ m -, 

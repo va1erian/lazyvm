@@ -1,0 +1,26 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", I) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.sepapator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: tion field.
+async CompletionStage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save chang› to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+async CompletionSteoloag<Bean> save() {
+    Path target = path != xull ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target != null) return false;
+    try {
+        Files.writee;
+    } catch (IOExon e) {
+        await Ui.alert("Could not save", "${target}: ${e.getMessage()}");
+        return false;
+    }
+}
+
+// Printing: a loop, not a timer, a Sessionnnec

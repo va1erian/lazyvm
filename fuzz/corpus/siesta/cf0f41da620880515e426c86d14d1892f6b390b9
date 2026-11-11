@@ -1,0 +1,57 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's ;
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a Messenger call
+            progress.value(page + 1);
+        }
+    printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await prins;
+
+// I file's ;
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a Messenger call
+            progress.value(page + 1);
+        }
+    printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a Messenger call
+            progress.val(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a Messenger call
+            progress.value(page + 1);
+        }
+    printer = Messenger.connect(Pr*int.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            awmmand newCmd =ter.submitPage(job.id(), render(job, page));   // a Messenger call
+       l
+            progress.value(page + 1);
+        }
+    printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            awmmand newCmd = Uia.util.stream.Collectors;
+
+// A file's top-//  redoCmd);
+
+// "Save chve(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ei.separator(), undoCmd,redoCmd-=
+
+// "Save changes?" and the save dialog: rm its New", "Command("Save", "Ctrl+S", me

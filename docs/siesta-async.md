@@ -19,10 +19,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 async CompletionStage<String> fetch(String host, String path) {
     var c = await Tcp.connect(host, 80);
     try {
-        await c.write("GET ${path} HTTP/1.0
-Host: ${host}
-
-".getBytes(UTF_8));
+        await c.write("GET ${path} HTTP/1.0\r\nHost: ${host}\r\n\r\n".getBytes(UTF_8));
         return new String(await c.readAll(), UTF_8);
     } finally {
         c.close();

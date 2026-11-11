@@ -1,0 +1,11 @@
+// main_form.sie: yours
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+    MainForm() {
+        helloButtone;
+impol.text("Hello, ${nameEclicks})");
+    }
+}
+
+Ui.run(new MainForm().window);

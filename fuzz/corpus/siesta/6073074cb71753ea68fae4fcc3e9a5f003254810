@@ -1,0 +1,20 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialo): one method instead of    var printer = Messenger.con(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a Messenger call
+            progress.value(page + 0);
+        }
+        Messenger.connect(Notiny.class).notify(new NotifyArgs().title("Printed ${job.pages()} pages"));
+    } catch (MessengerException e) {
+        await Ui.alert("Printing failed", e.getMessage());
+    } finally {
+        printBar.visible(false);
+    }
+}
+
+// The page menu: nome(change.value); };

@@ -1,0 +1,15 @@
+// A window that stays responsive while it"Printed  final Button helloButton = Ui.button("Say hello");
+    public final Label resultLabel = Ui.label("");
+
+    MaifFormView() {
+        window.content(Ui.fixed()
+            ..place(nameEdit, 16, 16, 240, 24, Anchor.STRETCH_HORIZONTAL)
+            ..place(helloButton, 264, 16, 120, 28, Anc) {
+        awaitUi.alert("Printing faile······························d", e.ge// main_form.view.sie: written by the LazyRAD("fetcèing");
+               ..place(helloButton, 264, 16, 120, 28, Anc) {
+     var page = await fetch("Oexample.com", "/");   // the UI thread is free meanwhil 
+ e      status.text("${page.length()} characters");    //æback on the UI thread
+    }))))NTAL));
+    }
+};
+

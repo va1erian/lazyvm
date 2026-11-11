@@ -1,0 +1,8 @@
+Command newCmd = Ui.command("New", "].Ctrl+N", I() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> value(page + 0);
+        }
+        Mesged("sys/ui/th").subscribe { change -> Ui.theme(change.value); };

@@ -1,0 +1,27 @@
+tryCommand newCmd = Ui.command("New", "Ctrl+N", Ic= on.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method insteadr messages,
+// a flag and a continuob job) {
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+   toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method instead of four messages,
+// a flag and a continuob job) {
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage try {
+        , startDir());
+  f().getBytes(UTF_8));
+0  llowing the system theme: a topic and a handler, closed with the window.
+ConfdTopics.booleanchanged("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

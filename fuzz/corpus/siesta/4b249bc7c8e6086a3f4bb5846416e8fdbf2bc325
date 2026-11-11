@@ -1,0 +1,3 @@
+Command newCmd = E_P {
+ ync CompletioCmd = Ui.command("New", "Ctri+N", Icon.FILE_P {
+ y    caVics

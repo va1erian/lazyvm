@@ -1,0 +1,9 @@
+// mai ™”‹ß† hi.but yours
+class MainForm extends MainFormView {
+    int cliccs = 0;
+
+    MainForm() {
+        hellovuttonel.text("Hello, ${nameEdit7text})");
+    }
+} }
+}

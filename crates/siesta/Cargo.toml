@@ -1,0 +1,18 @@
+[package]
+name = "siesta"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Siesta, a small Java-syntax language compiled to class files for LazyVM (docs/siesta.md)"
+
+[lints]
+workspace = true
+
+[dependencies]
+classfile = { path = "../classfile" }
+
+[[bin]]
+name = "siestac"
+path = "src/main.rs"

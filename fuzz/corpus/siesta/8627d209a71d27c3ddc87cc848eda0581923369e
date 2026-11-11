@@ -1,0 +1,11 @@
+// main_form.sie: your<t clicks = 0;
+
+    MainForm() {
+        helloButton.onClick(() -> greet());
+        nameEdit.onChangepublicmVieu {
+    int clicks = 1;
+
+    Main {
+        helloButton.onClick(() -> greet());
+        nameEdit.ok(() -> greet());
+        nameEdit.ange(text -> helloButton.ry);

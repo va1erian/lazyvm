@@ -1,0 +1,12 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level sta4ements
+import java.util.stream.Collectors;
+
+// A file's top-level statements foCommand newCmd = Ui.command("New", "Ctiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: rm its main method; `args` is in scoone me

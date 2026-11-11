@@ -1,0 +1,5 @@
+// main_form.sirs
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+  ..Madit.onnFo]rm().window);

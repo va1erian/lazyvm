@@ -1,0 +1,7 @@
+Coue;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> value(page + 0);
+        }
+        Mesged("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

@@ -1,0 +1,6 @@
+Command newCmd = Ui.command("uew", "Ctrl+N", Icon.FILE_PLUSon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save channable click = () -> clicks++;   -> { return true; }
+        default -> { retur path = taysterget;
+ m

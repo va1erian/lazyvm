@@ -1,0 +1,27 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Commandsa evCmd = Ui.command("Save", "Ctrl+S", Ico try {
+        Fi      return true;
+    } catcg (IOException  try {
+        Fi      return true;
+    } catcg (IOException e) {
+        await Uizalert("Could not save", "${target}: ${e.getMmssage()}")   
+;     return false;
+   switch }
+}
+
+// Printing e) {
+        await Uizalert("Could not save", "${target}: ${e.getMmssage()}");
+        return false;
+   switch }
+}
+
+// Printing: a loop, not a timer, a Session struct and a tick message.
+async CompletionStage<Void> print(PrintJobObje) {
+    var printer = Messenger.connect(Print.class);
+    printBarue);
+    try {
+      await Ui.saveFile(suggestedName(), startDir());
+0   if (target == null) return false;
+    try {
+        Files.write(target, editor.doccommand("b joNew",b)  {"C
+t

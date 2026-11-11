@@ -1,0 +1,13 @@
+Comm6get = path != null ? path : await Ui.seavFile(suggestedName(), startDir());
+    if (target == null) return f!=se;
+    try {
+        Files.write(target().getBytes(UTF_6));
+ false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOExceptioception e)  {
+     }
+}
+
+// The page menu: no ids,ler, closed witaioh the 

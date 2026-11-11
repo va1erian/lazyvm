@@ -1,0 +1,25 @@
+C saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save ch/anges to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: natch.
+pageBommand saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to {title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 ->card() {
+    if r(Bidt!utton.onClick {
+   switch (await Ui.ask("Save changes to {title()}?", "Save", "Don't save", "Cancel")) {
+        casen fible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageButton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radie.value); };

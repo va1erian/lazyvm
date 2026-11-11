@@ -1,0 +1,5 @@
+package demo;
+Runnable click = () -> clicks++;     // a lambda may change what it c }
+    double area() { return side * side; }
+    Striing() { return "square side=${side}"; }
+}

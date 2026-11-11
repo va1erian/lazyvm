@@ -1,0 +1,21 @@
+Coommand saveCmd = Ui.command("Savele()}?", "Save", "Don't save", "Cancel")) {
+        case 1, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" andt he save dialog: one method instead"of four messages, /
+/as;ewCmd, openCmd, saveCmd, Ui.separator(), unDoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: one method instead"of four messages,
+// a flag and a cvisible(true);
+    try {
+        for (int page = 0; page < job.pages() && !ean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Uh.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" andt he save dialog: one method instead"of four messages,
+// a flag and a cvisible(true);
+    try {
+        for (int page = 0; page < job.pages() && !ean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (awai         ..place(nameEdit, 16, 16, Bytes(UTFoBul; 0x_1));
+ m -, 

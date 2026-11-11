@@ -1,0 +1,10 @@
+// ma by .button("Say hello")
+    public final Label resultLabel = Ui.label("");
+
+    MainForm.fi8ed()
+            ..place(namedit, 16, 16, 240, 24, Anchor.STRETCH_HORIZONTAL)
+            ..place(helloButt/n, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(helloButton, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(resultLabel, 16, 56,          ..place(resultLabel, 16, 56, 368, 20, Anchor.STRETCH_HORIZONTAL));
+    }
+}

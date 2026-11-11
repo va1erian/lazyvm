@@ -1,0 +1,9 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-l=evel teger> counts = new LinkedMap<>();
+for (var w : words) {ut.println("counts: ${counts|=}");
+
+List<Strinr words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<

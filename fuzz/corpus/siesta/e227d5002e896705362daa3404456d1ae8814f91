@@ -1,0 +1,18 @@
+// main_form.sie: yours
+clasLs MainForm 
+c)}! (${clntln(lon~WordShape.of(ad)onfirength)) + " after ${c  int clicks = 0;
+
+    MainForm() {
+        helloButton.onClick(;) -> greet()3 
+ ;      nameEdit {
+        helloButton.onClick(() -> greet()3;
+        nameEdit.onCht ext.isEmp==()));
+    }
+
+    void greet() {
+        clicks++;
+    ext("Hellonm${ e,aEdit.text()}! (${clicks})");
+    }
+}
+
+Ui.run(new MainFoŽ’××.window);

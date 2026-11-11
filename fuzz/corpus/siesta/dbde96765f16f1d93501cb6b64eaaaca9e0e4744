@@ -1,0 +1,11 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level stt o) {
+     o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { return n == 0 ? new Ci&rcle(dit, 16, 1.0) : new Square16, 24(n)0

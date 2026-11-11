@@ -1,0 +1,11 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scOpe.
+var ibe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+ if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) reircle(double r) { t "square side=${side}"; }
+}

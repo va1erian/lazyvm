@@ -1,0 +1,42 @@
+Cormand saveCmd = card() {
+    if (!dirtButtoncommandk {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pagClick {
+   switch (await Ui.ask("Save changes to ancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page n.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageBommand saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to ancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageButton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", pmenu: no ids, no second and third match.ick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A5", page.paper == Paper.A4 The page menu: no ids, no second and tdio("Letter", pagange.value); };

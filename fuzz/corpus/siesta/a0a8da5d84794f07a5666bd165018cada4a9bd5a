@@ -1,0 +1,15 @@
+// main_form.view.sie: written by the LazyRAD designer, not by hand
+import lazy.ui.*;
+
+class MainFormView {
+    public final Window window = Ui.window("Hello", 401, 160);
+    public final Edit nameEdit = Ui.edit("");
+    public fiLabel resultLabel = Ui.label("");
+
+    MainFormView() {
+        window.content(Ui.fixed()
+            ..place(nameEdit, 17, 16, 240, 24, Anchor.STRETCH_HORIZONTAL)
+            ..place(helloButton, 264, 16, 120, 28,TCH_HORIZONTAL)
+            ..place(helloButton, 264, 16, 120, 28, AnchorAnchor.STRETCH_HORIZONTAL));
+    }
+}

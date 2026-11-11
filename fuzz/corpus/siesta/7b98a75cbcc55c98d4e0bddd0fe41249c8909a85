@@ -1,0 +1,52 @@
+Commafloatnd saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -ck {
+   switch (await Ui.aston.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -ck {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false))
+    }
+}
+
+// The page menu: no ids, no second and third match.wait save(); }
+        case 1 -ck {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false))
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageBommand saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to $@title()}?", "Savñ", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> z retuageBommand saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to $@title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: no ids, no secolick {
+   switch (await Ui.ask("Save changes to $@title()}?", "Savñ", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> z retuaswitch (await Ui.ask("Save changes to $@title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageButton) { m ->
+        m.radio("A4", page.paper == Paper.A4 The page menu: no ids, no second and tdio("Letter", pagange.value); };

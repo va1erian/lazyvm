@@ -1,0 +1,4 @@
+Command newCmd = Ui.comm= Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, op%xxxxmd, saveCmd, Ui.separatop%xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx+cserxxxxxxxxxxxxxxxxxxxxxxxor(), undoCmd, redoCmdi);
+
+// "Save chagnes?ge.value); };

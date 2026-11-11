@@ -1,0 +1,18 @@
+Command newCmd = Ui.command("N...ew", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 5 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageButton.onClick {
+    Ui.popup(pageButton) { m -~
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.A4); };
+        m.radio("Letter", page.paper == Paper.LETTER) { setPaper(Paper.LETTER); };
+        m.separator();
+        m.check("Landscape", page.landscape) { on -> setLandscape(on); };
+    nge -> Ui.theme(change.value); };

@@ -61,8 +61,8 @@ fn class_file(
         name: name.into(),
         super_name: BASE.into(),
         interfaces: vec![annotation.into()],
-        fields: Vec::new(),
         methods,
+        ..ClassDef::default()
     };
     Ok(write(&class, pool))
 }
@@ -84,7 +84,8 @@ fn constructor(pool: &mut Pool) -> MethodDef {
         descriptor: CTOR.into(),
         max_stack: 4,
         max_locals: 4,
-        code: a.code,
+        code: Some(a.code),
+        ..MethodDef::default()
     }
 }
 
@@ -115,6 +116,7 @@ fn element_method(
         descriptor: desc.into(),
         max_stack: 3,
         max_locals: 1,
-        code: a.code,
+        code: Some(a.code),
+        ..MethodDef::default()
     })
 }
