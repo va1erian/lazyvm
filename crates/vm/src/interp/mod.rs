@@ -219,9 +219,14 @@ impl Vm {
     fn unwind_rooted(&mut self, mut ex: Ref, base: usize) -> VmResult<()> {
         let slot = self.roots.len() - 1;
         while self.frames.len() > base {
-            let (class, mut pc, code) = {
+            let (class, mut pc, method) = {
                 let f = self.top()?;
-                (f.class, f.pc, f.code)
+                (f.class, f.pc, f.method)
+            };
+            // An owned `Arc`, not the frame's `CodeRef`: resolving a catch
+            // type can run Java, and a native could replace the whole VM.
+            let Some(code) = self.method(method).code.clone() else {
+                return Err(VmError::Internal("unwinding a frame without code".into()));
             };
             // Each failed resolution moves `pc`; a table whose entries keep
             // pointing into each other must not loop forever.
