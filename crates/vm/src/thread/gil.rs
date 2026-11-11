@@ -422,6 +422,14 @@ impl Vm {
     /// VM, and the caller must not rely on any `Ref` it has not rooted: a
     /// collection may run while this thread is outside.
     pub fn blocking<T>(&mut self, f: impl FnOnce() -> T) -> T {
+        let out = self.blocking_unchecked(f);
+        self.hold_if_suspended();
+        out
+    }
+
+    /// `blocking`, without the debugger's check on the way back: for the wait
+    /// a suspended thread makes itself.
+    pub(super) fn blocking_unchecked<T>(&mut self, f: impl FnOnce() -> T) -> T {
         self.hand_over(|gil, vm, me| {
             gil.release(vm);
             let out = f();
@@ -437,6 +445,7 @@ impl Vm {
             std::thread::yield_now();
             (gil.acquire(me, Line::Preempted), ())
         });
+        self.hold_if_suspended();
     }
 
     /// Moves the running thread's state and the VM out, for `exchange` to
@@ -455,21 +464,26 @@ impl Vm {
 
     /// A safepoint: lets a waiting thread run. The interpreter calls this at
     /// backward branches and calls (docs/design/threads.md).
+    ///
+    /// True if the thread gave the VM up and got it back, so what it knew of
+    /// the VM may be stale: the tight loop leaves, for one, because a debugger
+    /// may have set a breakpoint meanwhile (`Vm::slow_interp`).
     #[inline]
-    pub(crate) fn safepoint(&mut self) {
-        if self.gil.wanted() {
-            self.poll_slice();
-        }
+    pub(crate) fn safepoint(&mut self) -> bool {
+        self.gil.wanted() && self.poll_slice()
     }
 
     /// Threads are in line: every so often, or when the watch says so, see
     /// whether the slice is spent. The holder times it itself, as a waiting
     /// thread's OS timer can be late by a lot (15.6 ms on Windows).
     #[cold]
-    fn poll_slice(&mut self) {
+    fn poll_slice(&mut self) -> bool {
         if self.gil.time_to_look(&mut self.polls_to_look) && self.gil.slice_is_over() {
             self.hand_over(|gil, vm, me| (gil.preempt(vm, me), ()));
+            self.hold_if_suspended();
+            return true;
         }
+        false
     }
 }
 

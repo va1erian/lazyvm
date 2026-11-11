@@ -152,7 +152,7 @@ impl Vm {
 
     fn run_loop(&mut self, base: usize) -> VmResult<Option<Value>> {
         loop {
-            if !self.options.trace_interp {
+            if !self.slow_interp {
                 self.run_simple();
             }
             if self.heap.wants_gc() {
@@ -260,8 +260,11 @@ impl Vm {
     /// Executes one instruction of the top frame.
     fn step(&mut self) -> VmResult<Flow> {
         let op = self.top()?.u1(0)?;
-        if self.options.trace_interp {
-            self.trace_instruction(op);
+        if self.slow_interp {
+            if self.options.trace_interp {
+                self.trace_instruction(op);
+            }
+            self.debug_before_instruction();
         }
         match op {
             0x00..=0x11 | 0x15..=0x2d | 0x36..=0x4e | 0x57..=0x5f | 0x84 | 0xc4 => {

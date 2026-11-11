@@ -8,6 +8,7 @@
 
 mod gil;
 mod monitor;
+pub(crate) mod outside;
 mod spawn;
 mod trace;
 

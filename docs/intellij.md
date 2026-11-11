@@ -39,10 +39,27 @@ LazyVM has. Two pieces make that work:
    The launcher accepts and ignores IntelliJ's `-javaagent:...idea_rt.jar`
    and `-Dfile.encoding=...` options.
 
-Debugging with breakpoints needs JDWP, which arrives in S11. Until then
-`System.out` and stack traces are the tools; `-verbose:class` and
-`-Xtrace:interp` (very slow) are available in the run configuration's VM
-options.
+## Debugging
+
+The launcher has a JDWP agent (S11-04, `docs/design/jdwp.md`): line
+breakpoints, step over, into and out, the stack, local variables, fields,
+strings and arrays. Run an **Application** configuration with the `LazyVM 1.8`
+JRE in **Debug** mode: IntelliJ adds
+`-agentlib:jdwp=transport=dt_socket,address=127.0.0.1:<port>,suspend=y,server=n`
+and the VM connects to it. To attach to a running program instead, start it
+with `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005`
+and use a **Remote JVM Debug** configuration.
+
+What is not there: expression evaluation and watches that call methods,
+changing values, method entry and exit and exception breakpoints, field
+watchpoints, monitors in the Threads view, hot swap. A debugger that asks for
+one of them gets a "not implemented" reply. `tools/jdwp_smoke.py` checks the
+agent with a scripted client, not IntelliJ; the IntelliJ steps above follow
+its documented behaviour and have not yet been tried in the IDE by the owner.
+
+While a breakpoint or a step is set, the VM runs the slow instruction-at-a-time
+interpreter; with none it runs as fast as without a debugger. `-verbose:class`
+and `-Xtrace:interp` (very slow) are also available in the VM options.
 
 ## Without IntelliJ
 

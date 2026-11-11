@@ -121,6 +121,8 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
     if launch.verify_check {
         launch.options.verify = VerifyMode::All;
     }
+    // The debugger reads named locals, which are otherwise dropped on load.
+    classfile::keep_local_variables(launch.options.jdwp.is_some());
     let classpath = ClassPath::open(&launch.boot_classpath, &launch.classpath);
     let mut vm = Vm::new(classpath, launch.options.clone());
     natives::register_all(&mut vm);
@@ -146,6 +148,12 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
     if launch.verify_check {
         return verify_check(&mut vm);
     }
+    if let Some(config) = &launch.options.jdwp
+        && let Err(msg) = vm.start_debugger(config)
+    {
+        eprintln!("ERROR: {msg}");
+        return ExitCode::from(1);
+    }
     let main_class = launch.main_class.clone().unwrap_or_default();
     let result = match String::from_utf16(&main_class) {
         Ok(name) => run_main(&mut vm, &name, &launch.args),
@@ -157,10 +165,12 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
             Err(VmError::Exit(1))
         }
     };
-    match finish(&mut vm, result) {
+    let code = match finish(&mut vm, result) {
         Ended::Exit(code) => code,
         Ended::Main(code) => after_main(&mut vm, code),
-    }
+    };
+    vm.debugger_vm_death();
+    code
 }
 
 /// `-Xverify:check`: every class on the class paths, one line per failure.

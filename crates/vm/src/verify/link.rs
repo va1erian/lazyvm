@@ -63,6 +63,7 @@ impl Vm {
             verify_class(&file, host.as_deref(), self)?;
         }
         self.class_mut(class).verified = true;
+        self.debug_class_prepared(class);
         Ok(())
     }
 }

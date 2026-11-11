@@ -131,6 +131,14 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                 options.assertions = true
             }
             "-Xtrace:interp" => options.trace_interp = true,
+            // The old spelling of the debugger flags; the agent has no use for -Xdebug.
+            "-Xdebug" => {}
+            _ if a.starts_with("-agentlib:jdwp=") || a.starts_with("-Xrunjdwp:") => {
+                let text = a
+                    .strip_prefix("-agentlib:jdwp=")
+                    .or(a.strip_prefix("-Xrunjdwp:"));
+                options.jdwp = Some(vm::debug::Config::parse(text.unwrap_or(""))?);
+            }
             "-Xverify" | "-Xverify:all" => options.verify = VerifyMode::All,
             "-Xverify:remote" => options.verify = VerifyMode::Remote,
             "-Xverify:none" | "-noverify" => options.verify = VerifyMode::None,

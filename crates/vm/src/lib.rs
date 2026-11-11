@@ -5,6 +5,7 @@
 //! See `docs/decisions.md` D5 for the design and the rooting rule.
 
 pub mod class;
+pub mod debug;
 mod error;
 mod gc;
 pub mod heap;
@@ -51,6 +52,8 @@ pub struct Options {
     pub max_classes: usize,
     /// Bytes of code one method may have; the class file format stops at 65535.
     pub max_method_code: usize,
+    /// `-agentlib:jdwp=...`: the debugger agent to start.
+    pub jdwp: Option<debug::Config>,
 }
 
 impl Default for Options {
@@ -66,6 +69,7 @@ impl Default for Options {
             verify: verify::VerifyMode::All,
             max_classes: 1 << 20,
             max_method_code: 65535,
+            jdwp: None,
         }
     }
 }
@@ -129,6 +133,11 @@ pub struct Vm {
     /// The index in `threads` of the thread holding the VM.
     pub(crate) current: usize,
     pub(crate) monitors: thread::Monitors,
+    /// The interpreter checks each instruction (`-Xtrace:interp`, or a
+    /// debugger with a breakpoint or step set) instead of using its tight loop.
+    pub(crate) slow_interp: bool,
+    /// The debugger agent's state (`debug`).
+    pub(crate) debug: debug::Debug,
 }
 
 impl Vm {
@@ -137,6 +146,7 @@ impl Vm {
         let heap = heap::Heap::new(options.heap_limit);
         let mut vm = Vm::build(classpath, options, heap, thread::Gil::new());
         vm.threads = thread::Threads::with_main();
+        vm.refresh_slow_interp();
         vm
     }
 
@@ -184,6 +194,8 @@ impl Vm {
             threads: thread::Threads::default(),
             current: 0,
             monitors: thread::Monitors::default(),
+            slow_interp: false,
+            debug: debug::Debug::default(),
         }
     }
 

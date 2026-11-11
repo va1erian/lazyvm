@@ -16,30 +16,39 @@ impl Vm {
     /// initialized by this thread. May run Java code (`<clinit>`).
     pub fn initialize(&mut self, class: ClassId) -> VmResult<()> {
         let me = self.current;
-        loop {
-            match self.class(class).state {
-                // Step 4: a recursive request by the initializing thread.
-                InitState::Initialized => return Ok(()),
-                InitState::Initializing(t) if t == me => return Ok(()),
-                // Step 2: wait for the other thread, then look again. Java 8
-                // reports such a thread as RUNNABLE (observed), hence `No`.
-                InitState::Initializing(_) => {
-                    self.threads.init_waiters.push(me);
-                    self.park(Blocked::No, None);
+        'start: loop {
+            loop {
+                match self.class(class).state {
+                    // Step 4: a recursive request by the initializing thread.
+                    InitState::Initialized => return Ok(()),
+                    InitState::Initializing(t) if t == me => return Ok(()),
+                    // Step 2: wait for the other thread, then look again. Java 8
+                    // reports such a thread as RUNNABLE (observed), hence `No`.
+                    InitState::Initializing(_) => {
+                        self.threads.init_waiters.push(me);
+                        self.park(Blocked::No, None);
+                    }
+                    // Step 5.
+                    InitState::Failed => {
+                        let msg = format!(
+                            "Could not initialize class {}",
+                            self.class(class).java_name()
+                        );
+                        return Err(VmError::exception("java/lang/NoClassDefFoundError", msg));
+                    }
+                    InitState::Linked => break,
                 }
-                // Step 5.
-                InitState::Failed => {
-                    let msg = format!(
-                        "Could not initialize class {}",
-                        self.class(class).java_name()
-                    );
-                    return Err(VmError::exception("java/lang/NoClassDefFoundError", msg));
-                }
-                InitState::Linked => break,
             }
+            // No Java runs while linking, so no other thread can start this class meanwhile.
+            self.link_class(class)?;
+            // A debugger stopped this thread for the class's preparation: it waits
+            // here, before the class is marked, not inside <clinit>. Another thread
+            // may have initialized the class meanwhile, so look again.
+            if self.debug_hold_deferred() {
+                continue 'start;
+            }
+            break;
         }
-        // No Java runs while linking, so no other thread can start this class meanwhile.
-        self.link_class(class)?;
         self.class_mut(class).state = InitState::Initializing(me);
         let from_boot = self.class(class).from_boot;
         let result = self.initialize_steps(class);

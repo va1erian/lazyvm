@@ -1,6 +1,7 @@
 //! The attributes the VM interprets (JVMS 4.7). Everything else is kept raw.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::FormatError;
 use crate::cpool::ConstantPool;
@@ -22,6 +23,26 @@ pub struct Handler {
     pub catch_type: u16,
 }
 
+/// Whether `LocalVariableTable` attributes are kept. Only a debugger reads
+/// them, so they are dropped unless it asked before the classes loaded.
+static KEEP_LOCAL_VARS: AtomicBool = AtomicBool::new(false);
+
+/// Keeps `LocalVariableTable` entries from classes parsed from now on.
+pub fn keep_local_variables(keep: bool) {
+    KEEP_LOCAL_VARS.store(keep, Ordering::Relaxed);
+}
+
+/// One `LocalVariableTable` entry (JVMS 4.7.13): `name` lives in `slot` from
+/// `start_pc` for `length` bytes of code.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LocalVar {
+    pub start_pc: u16,
+    pub length: u16,
+    pub name: Arc<str>,
+    pub descriptor: Arc<str>,
+    pub slot: u16,
+}
+
 #[derive(Clone, Debug)]
 pub struct Code {
     pub max_stack: u16,
@@ -30,6 +51,8 @@ pub struct Code {
     pub handlers: Vec<Handler>,
     /// `(start_pc, line)` pairs from every `LineNumberTable`, sorted by pc.
     pub line_numbers: Vec<(u16, u16)>,
+    /// The named locals, if `keep_local_variables` was on when this was parsed.
+    pub local_vars: Vec<LocalVar>,
     /// The raw `StackMapTable`, read by the verifier.
     pub stack_map: Option<Arc<[u8]>>,
 }
@@ -86,6 +109,7 @@ pub fn parse_code(data: &[u8], pool: &ConstantPool, major: u16) -> Result<Code, 
         bytecode,
         handlers,
         line_numbers: Vec::new(),
+        local_vars: Vec::new(),
         stack_map: None,
     };
     let attrs = r.u2()?;
@@ -94,6 +118,9 @@ pub fn parse_code(data: &[u8], pool: &ConstantPool, major: u16) -> Result<Code, 
         let body = r.sized()?;
         match &*name {
             "LineNumberTable" => parse_lines(body, &mut code.line_numbers)?,
+            "LocalVariableTable" if KEEP_LOCAL_VARS.load(Ordering::Relaxed) => {
+                parse_local_vars(body, pool, &mut code.local_vars)?
+            }
             // The attribute means nothing before version 50 (JVMS 4.7.4).
             "StackMapTable" if major < 50 => {}
             "StackMapTable" if code.stack_map.is_some() => {
@@ -115,6 +142,29 @@ fn parse_lines(data: &[u8], out: &mut Vec<(u16, u16)>) -> Result<(), FormatError
         out.push((r.u2()?, r.u2()?));
     }
     r.expect_end("LineNumberTable")
+}
+
+fn parse_local_vars(
+    data: &[u8],
+    pool: &ConstantPool,
+    out: &mut Vec<LocalVar>,
+) -> Result<(), FormatError> {
+    let mut r = Reader::new(data);
+    let count = r.u2()?;
+    for _ in 0..count {
+        let (start_pc, length) = (r.u2()?, r.u2()?);
+        let name = pool.utf8(r.u2()?).map_err(|e| r.error(e))?.clone();
+        let descriptor = pool.utf8(r.u2()?).map_err(|e| r.error(e))?.clone();
+        let slot = r.u2()?;
+        out.push(LocalVar {
+            start_pc,
+            length,
+            name,
+            descriptor,
+            slot,
+        });
+    }
+    r.expect_end("LocalVariableTable")
 }
 
 pub fn parse_bootstrap_methods(data: &[u8]) -> Result<Vec<BootstrapMethod>, FormatError> {
@@ -157,6 +207,7 @@ mod tests {
             bytecode: Arc::from(&[0u8][..]),
             handlers: vec![],
             line_numbers: vec![(0, 10), (4, 11), (9, 12)],
+            local_vars: vec![],
             stack_map: None,
         };
         assert_eq!(code.line_at(0), Some(10));
