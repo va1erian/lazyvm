@@ -48,7 +48,7 @@ jobs:
         run: python tools/launcher_test.py
       - name: tight loop on malformed bytecode
         run: python tools/fastloop_test.py
-      - name: JDWP smoke (a scripted debugger: breakpoint, steps, locals)
+      - name: JDWP smoke (scripted debugger - breakpoint, steps, locals)
         run: python tools/jdwp_smoke.py
       - name: SDK layout
         run: python tools/sdk.py
