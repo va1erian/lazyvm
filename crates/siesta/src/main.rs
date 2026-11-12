@@ -2,6 +2,7 @@
 //!
 //! ```text
 //! siestac [-cp path] [-d out] files...      compile to a directory
+//! siestac [-cp path] -o app.jar files...     compile to a jar whose Main-Class is the first file's
 //! siestac run [-cp path] file... [-- args]  compile to a temporary directory, then run lazyvm
 //! siestac check [-cp path] files...         diagnostics only
 //! ```
@@ -35,6 +36,7 @@ struct Opts {
     mode: Mode,
     classpath: Vec<PathBuf>,
     out: Option<PathBuf>,
+    jar: Option<PathBuf>,
     files: Vec<String>,
     program_args: Vec<String>,
 }
@@ -47,7 +49,9 @@ enum Mode {
 }
 
 fn usage() -> ExitCode {
-    eprintln!("usage: siestac [run | check] [-cp path] [-d dir] files... [-- program arguments]");
+    eprintln!(
+        "usage: siestac [run | check] [-cp path] [-d dir | -o app.jar] files... [-- program arguments]"
+    );
     ExitCode::from(2)
 }
 
@@ -56,6 +60,7 @@ fn parse_opts(args: Vec<String>) -> Option<Opts> {
         mode: Mode::Build,
         classpath: Vec::new(),
         out: None,
+        jar: None,
         files: Vec::new(),
         program_args: Vec::new(),
     };
@@ -75,6 +80,7 @@ fn parse_opts(args: Vec<String>) -> Option<Opts> {
         match a.as_str() {
             "-cp" | "-classpath" => o.classpath.extend(std::env::split_paths(&it.next()?)),
             "-d" => o.out = Some(PathBuf::from(it.next()?)),
+            "-o" => o.jar = Some(PathBuf::from(it.next()?)),
             "--" => {
                 o.program_args = it.by_ref().collect();
             }
@@ -134,7 +140,10 @@ fn run(args: Vec<String>) -> ExitCode {
     };
     match o.mode {
         Mode::Check => ExitCode::SUCCESS,
-        Mode::Build => write_or_fail(&classes, o.out.as_deref().unwrap_or(Path::new("."))),
+        Mode::Build => match &o.jar {
+            Some(jar) => write_jar(&classes, &sources, jar),
+            None => write_or_fail(&classes, o.out.as_deref().unwrap_or(Path::new("."))),
+        },
         Mode::Run => run_program(&o, &classes, &sources),
     }
 }
@@ -152,6 +161,26 @@ fn write_or_fail(classes: &[ClassOut], dir: &Path) -> ExitCode {
         }
     }
     ExitCode::SUCCESS
+}
+
+/// A stored jar of the classes, runnable with `lazyvm -jar`.
+fn write_jar(classes: &[ClassOut], sources: &[Source], path: &Path) -> ExitCode {
+    let entries: Vec<(String, Vec<u8>)> = classes
+        .iter()
+        .map(|c| (format!("{}.class", c.name), c.bytes.clone()))
+        .collect();
+    let main = main_class(sources, classes);
+    let Some(bytes) = classfile::jar::stored(&entries, Some(&main)) else {
+        eprintln!("{}: too many classes or bytes for a jar", path.display());
+        return ExitCode::from(2);
+    };
+    match std::fs::write(path, bytes) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{}: {e}", path.display());
+            ExitCode::from(2)
+        }
+    }
 }
 
 fn run_program(o: &Opts, classes: &[ClassOut], sources: &[Source]) -> ExitCode {

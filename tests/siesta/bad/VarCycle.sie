@@ -1,0 +1,3 @@
+var a = b;
+var b = a;
+System.out.println(a);

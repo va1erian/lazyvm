@@ -16,6 +16,10 @@ own classes, so `lazy.*` code written in Java (`lazy.async.Loop.home`) is
 there. A test whose first lines say `// NEEDS: lazyvm` uses LazyVM's natives
 (the loop) and runs on LazyVM only, against a reviewed golden.
 
+A program of several files is a folder `tests/siesta/<area>/<Name>/`: its
+`<Name>.sie` holds `main` and is given to siestac first, the other `.sie`
+files in it follow, and its golden is `<Name>/<Name>.out`.
+
 `tests/siesta/bad/<Name>.sie` must fail to compile with the messages in
 `<Name>.err`, one `line:col: message` per line.
 
@@ -66,10 +70,24 @@ def run(cmd: list[str]) -> str:
                       done.returncode)
 
 
+def is_program(src: Path) -> bool:
+    """Whether `src` is the main file of a several-file program."""
+    return src.parent.name == src.stem
+
+
+def program_part(src: Path) -> bool:
+    """Whether `src` is one of a program's other files, compiled with its main file."""
+    main = src.parent / f"{src.parent.name}.sie"
+    return main.exists() and src != main
+
+
 def compile_test(src: Path, out: Path) -> str | None:
     """Compiles one test; the compiler's messages on failure."""
     out.mkdir(parents=True, exist_ok=True)
-    done = subprocess.run([str(siestac()), "-cp", str(DIST / "lazyrt.jar"), "-d", str(out), str(src)],
+    files = [src]
+    if is_program(src):
+        files += sorted(p for p in src.parent.glob("*.sie") if p != src)
+    done = subprocess.run([str(siestac()), "-cp", str(DIST / "lazyrt.jar"), "-d", str(out), *map(str, files)],
                           capture_output=True)
     if done.returncode != 0:
         return done.stderr.decode("utf-8", "replace")
@@ -121,7 +139,8 @@ def main() -> None:
         print("note: no Java 8 oracle; checking LazyVM against the goldens only")
 
     failed = 0
-    tests = sorted(p for p in TESTS.rglob("*.sie") if args.filter in str(p.relative_to(TESTS)))
+    tests = sorted(p for p in TESTS.rglob("*.sie")
+                   if args.filter in str(p.relative_to(TESTS)) and not program_part(p))
     for src in tests:
         name = src.relative_to(TESTS).as_posix()
         if src.parent.name == "bad":

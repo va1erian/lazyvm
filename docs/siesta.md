@@ -180,8 +180,14 @@ method.
 (`hello_world.sie` is `HelloWorld`; if the file declares that class
 itself, the top level joins it). Top-level methods and `var`s are its
 static members, and top-level statements its `main(String[] args)`. An
-unqualified call reaches the class's own methods, then the top-level
-methods of every file compiled with it, then `import static` members.
+unqualified name reaches the class's own members, then the top-level
+methods and variables of every file compiled with it, then `import static`
+members, so an app's files share one set of state without passing an
+`app` object around. A file with top-level statements initialises its
+variables in order as `main` runs; a file without any (shared state and
+helpers) initialises them in its static initialiser, on first use. A
+top-level `var` takes its type from its initialiser whichever file it is
+in; one whose type depends on itself is an error.
 
 ## 6. Types
 
@@ -293,12 +299,13 @@ build goes over, the costliest feature moves to the "no" rows; the budget
 is not raised.
 
 ```bash
-siestac [-cp path] [-d out | -o app.jar] [--main Class] files...
+siestac [-cp path] [-d out | -o app.jar] files...
 siestac run [-cp path] file.sie [args...]   # compile to a temporary directory, then exec lazyvm
 siestac check files...                         # diagnostics only
 ```
 
-`-o` writes a jar with a `Main-Class` manifest that `lazyvm -jar` runs. The
+`-o` writes a jar (stored, since packages are compressed whole) whose
+`Main-Class` is the first file's class, for `lazyvm -jar`. The
 class path defaults to the `lazyrt.jar` next to `lazyvm`. All files of one
 call are compiled together, in any order. On LazyOS, `siestac` is a static
 musl program staged into the image next to `lazyvm` by the LazyOS repo.

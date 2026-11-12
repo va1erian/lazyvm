@@ -1,0 +1,11 @@
+void bump() {
+    count++;
+    names.add("n${count}");
+}
+
+class Tally {
+    void add(String s) {
+        names.add(s);
+        count += 10;
+    }
+}

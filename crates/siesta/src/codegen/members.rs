@@ -239,7 +239,7 @@ impl ClassGen<'_> {
         let inits: Vec<_> = c
             .fields
             .iter()
-            .filter(|f| f.is_static && !f.top && f.decl.init.is_some())
+            .filter(|f| f.is_static && (!f.top || !c.script) && f.decl.init.is_some())
             .collect();
         if inits.is_empty() && c.kind != Kind::Enum {
             return Ok(None);

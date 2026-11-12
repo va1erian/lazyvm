@@ -62,3 +62,36 @@ fn corrupted_archives_are_errors_not_panics() {
         }
     }
 }
+
+#[test]
+fn reads_back_what_stored_writes() {
+    let entries = vec![
+        ("demo/Hello.class".to_string(), CLASS.to_vec()),
+        ("empty.txt".to_string(), Vec::new()),
+        ("caf\u{e9}.txt".to_string(), b"utf-8 name".to_vec()),
+    ];
+    let bytes = stored(&entries, Some("demo.Hello")).unwrap_or_default();
+    let jar = Jar::open(bytes).unwrap_or_else(|e| panic!("written jar should open: {e}"));
+    for (name, data) in &entries {
+        assert_eq!(
+            jar.read(name).ok().flatten().as_deref(),
+            Some(&data[..]),
+            "{name}"
+        );
+    }
+    let manifest = jar
+        .read("META-INF/MANIFEST.MF")
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let attrs = manifest_attributes(&String::from_utf8_lossy(&manifest)).unwrap_or_default();
+    assert!(attrs.contains(&("Main-Class".to_string(), "demo.Hello".to_string())));
+}
+
+#[test]
+fn stored_refuses_too_many_entries() {
+    let entries: Vec<(String, Vec<u8>)> =
+        (0..0xffff).map(|i| (format!("{i}"), Vec::new())).collect();
+    assert!(stored(&entries, None).is_none());
+    assert!(stored(&entries[1..], None).is_some());
+}

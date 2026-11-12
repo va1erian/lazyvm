@@ -1,9 +1,10 @@
 //! A compilation: sources and a class path in, class files or every error
 //! out (siesta.md section 9).
 
+use std::collections::HashSet;
 use std::rc::Rc;
 
-use crate::ast::TypeRef;
+use crate::ast::{LambdaBody, TypeRef};
 use crate::classpath::ClassPath;
 use crate::codegen::{self, Unit};
 use crate::declare::{self, SourceClass, file_class_name};
@@ -96,34 +97,48 @@ fn infer_top_vars(
     lines: &[Vec<u32>],
     file_classes: &[Rc<str>],
 ) -> Result<(), Vec<Diag>> {
-    for c in classes.iter_mut() {
-        for fi in 0..c.fields.len() {
-            let f = &c.fields[fi];
-            if !(f.top && matches!(f.decl.ty, TypeRef::Var(_))) {
-                continue;
+    // Typed in dependency order, so a `var` may use one from a file listed
+    // after its own.
+    let mut pending: Vec<(usize, usize, String, HashSet<String>)> = Vec::new();
+    for (ci, c) in classes.iter().enumerate() {
+        for (fi, f) in c.fields.iter().enumerate() {
+            if let (true, TypeRef::Var(_), Some(init)) = (f.top, &f.decl.ty, &f.decl.init) {
+                let names = codegen::names_in(&LambdaBody::Expr(Box::new(init.clone())));
+                pending.push((ci, fi, f.decl.name.name.clone(), names));
             }
-            let Some(init) = f.decl.init.clone() else {
-                continue;
-            };
-            let t: Type = {
-                let unit = Unit {
-                    world,
-                    scopes,
-                    file_names: names,
-                    line_starts: lines,
-                    file_classes,
-                };
-                codegen::top_var_type(&unit, c, &init).map_err(|d| vec![d])?
-            };
-            c.fields[fi].ty = t.clone();
-            let mut info = (*c.info).clone();
-            let name = c.fields[fi].decl.name.name.clone();
-            if let Some(fd) = info.fields.iter_mut().find(|x| x.name == name) {
-                fd.ty = t;
-            }
-            c.info = Rc::new(info);
-            world.sources.insert(c.name.to_string(), c.info.clone());
         }
+    }
+    while !pending.is_empty() {
+        let blocked = |names: &HashSet<String>| pending.iter().any(|p| names.contains(&p.2));
+        let Some(next) = pending.iter().position(|p| !blocked(&p.3)) else {
+            let (ci, fi, name, _) = &pending[0];
+            let span = classes[*ci].fields[*fi].decl.name.span;
+            let msg = format!("the type of `{name}` depends on itself; write it instead of `var`");
+            return Err(vec![Diag::new(span, msg)]);
+        };
+        let (ci, fi, _, _) = pending.remove(next);
+        let c = &mut classes[ci];
+        let Some(init) = c.fields[fi].decl.init.clone() else {
+            continue;
+        };
+        let t: Type = {
+            let unit = Unit {
+                world,
+                scopes,
+                file_names: names,
+                line_starts: lines,
+                file_classes,
+            };
+            codegen::top_var_type(&unit, c, &init).map_err(|d| vec![d])?
+        };
+        c.fields[fi].ty = t.clone();
+        let mut info = (*c.info).clone();
+        let name = c.fields[fi].decl.name.name.clone();
+        if let Some(fd) = info.fields.iter_mut().find(|x| x.name == name) {
+            fd.ty = t;
+        }
+        c.info = Rc::new(info);
+        world.sources.insert(c.name.to_string(), c.info.clone());
     }
     Ok(())
 }

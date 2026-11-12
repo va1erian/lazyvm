@@ -31,7 +31,8 @@ pub enum Kind {
 }
 
 /// A field, and whether it is a top-level variable, which `main`
-/// initialises in source order (siesta.md section 5).
+/// initialises in source order in a file with statements (siesta.md
+/// section 5), and `<clinit>` otherwise.
 pub struct SourceField {
     pub decl: FieldDecl,
     pub ty: Type,
@@ -58,6 +59,10 @@ pub struct SourceClass {
     pub constants: Vec<EnumConst>,
     /// A file class's top-level statements, in order.
     pub stmts: Vec<Stmt>,
+    /// Whether the file has top-level statements. If not, its top-level
+    /// variables are initialised by `<clinit>`, so a file of shared state
+    /// and helpers works without a `main` to run it.
+    pub script: bool,
     pub info: Rc<ClassInfo>,
     pub span: Span,
 }
@@ -235,6 +240,7 @@ fn build(
         methods: Vec::new(),
         constants: decl.map(|d| d.constants.clone()).unwrap_or_default(),
         stmts: Vec::new(),
+        script: top.iter().any(|i| matches!(i, Item::Stmt(_))),
         info: Rc::new(ClassInfo {
             name: name.clone(),
             access,
@@ -258,7 +264,7 @@ fn build(
             Item::Method(m) => items.push(Member::Method(m.clone())),
             Item::Field(f) => {
                 items.push(Member::Field(f.clone()));
-                if let Some(init) = &f.init {
+                if let Some(init) = f.init.as_ref().filter(|_| c.script) {
                     let target = Box::new(crate::ast::Expr::Name(f.name.clone()));
                     let value = Box::new(init.clone());
                     c.stmts.push(Stmt::Expr(crate::ast::Expr::Assign {
