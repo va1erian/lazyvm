@@ -1,0 +1,43 @@
+// The Table menu: Insert table, the row, column and table commands, and the
+// Header row and Borders switches, enabled while the caret is in a table.
+import lazy.ui.*;
+
+int[] cursor = null;   // where the caret was in a table as the menu opened
+var tableMenu = window.menu()
+    .enabledWhen(() -> cursor == null) { m -> m.submenu("Insert table", "Table") { sizes ->
+        for (var n : [2, 3, 4, 5]) sizes.item("${n} x ${n}") { tableStep { editor.insertTable(n, n); }; };
+    }; }
+    .separator()
+    .enabledWhen(() -> cursor != null) { m -> m
+        .item("Insert row above", "BetweenHorizontalStart") { tableExec(RichText.ROW_ABOVE); }
+        .item("Insert row below", "BetweenHorizontalEnd") { tableExec(RichText.ROW_BELOW); }
+        .item("Insert column left", "BetweenVerticalStart") { tableExec(RichText.COLUMN_LEFT); }
+        .item("Insert column right", "BetweenVerticalEnd") { tableExec(RichText.COLUMN_RIGHT); }
+        .separator()
+        .item("Delete rows") { tableExec(RichText.DELETE_ROWS); }
+        .item("Delete columns") { tableStep { editor.deleteColumns(); }; }
+        .item("Delete table", "Trash2") { tableStep { editor.deleteTable(); }; }
+        .separator()
+        .check("Header row", () -> flag(4)) { on -> tableStep { editor.tableHeader(on); }; }
+        .check("Borders", () -> flag(5)) { on -> tableStep { editor.tableBorders(on); }; }; };
+
+// The caret's table's header (4) or borders (5) switch.
+boolean flag(int i) {
+    return cursor != null && cursor[i] != 0;
+}
+
+void tableExec(int command) {
+    tableStep { editor.exec(command); };
+}
+
+// Runs a table command as one undoable step, then shows where the caret is.
+void tableStep(Runnable command) {
+    command.run();
+    refocus();
+    refresh();
+}
+
+void showTables() {
+    cursor = editor.tableCursor();
+    tableMenu.show(table);
+}

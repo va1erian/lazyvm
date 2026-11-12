@@ -472,8 +472,13 @@ mirrored `.java` tests are blessed on the oracle.
 Status (2026-11-11): S16-01, 02, 03 and 05 done; 04, 06 and 07 built and
 tested, each missing one part of its check: the `Showcase` enum mirror
 (04), the `finally` matrix for `break` and `throw` (06), and the UI-thread
-resumption case, which needs S9-06's `Ui.executor()` (07). The suite has 35
+resumption case, which needs S9-06's `Ui.executor()` (07). The suite has 37
 tests, run on LazyVM and on the Java 8 oracle with `-Xverify:all`.
+S16-08 started (2026-11-12): `samples/siesta/writer` builds with
+`siestac -o writer.jar` against S9's branch; its first frame is
+byte-identical to the Java port's on Windows and `samples/siesta/writer_flow.sie`
+drives its dialogs headless. Not yet checked: LazyOS, and the suite run,
+which waits for S9's merge (siesta-apps.md section 5).
 
 - [x] S16-01 Lexer, parser, AST and diagnostics (siesta.md sections 4 and 8),
       in `crates/siesta`, which depends only on `crates/classfile`.

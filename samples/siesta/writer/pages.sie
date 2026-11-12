@@ -1,0 +1,76 @@
+// The Page setup menu: paper (A4 or Letter), orientation and margins.
+// Pages are in hundredths of a millimetre: width, height, left, top, right,
+// bottom.
+import java.util.function.*;
+import lazy.ui.*;
+
+Choice shown = null;   // the page as the menu opened, or null when no choice gives it
+var pageMenu = window.menu()
+    .submenu("Paper", null) { m -> m
+        .radio("A4 (210 x 297 mm)", () -> is(c -> !c.letter)) { pick(c -> c.letter = false); }
+        .radio("Letter (8.5 x 11 in)", () -> is(c -> c.letter)) { pick(c -> c.letter = true); }; }
+    .submenu("Orientation", null) { m -> m
+        .radio("Portrait", () -> is(c -> !c.landscape)) { pick(c -> c.landscape = false); }
+        .radio("Landscape", () -> is(c -> c.landscape)) { pick(c -> c.landscape = true); }; }
+    .submenu("Margins", null) { m -> m
+        .radio("Normal", () -> is(c -> c.margins == 0)) { pick(c -> c.margins = 0); }
+        .radio("Narrow", () -> is(c -> c.margins == 1)) { pick(c -> c.margins = 1); }
+        .radio("Wide", () -> is(c -> c.margins == 2)) { pick(c -> c.margins = 2); }; };
+
+// One choice per group.
+class Choice {
+    public boolean letter = false;
+    public boolean landscape = false;
+    public int margins = 0;   // Normal, Narrow, Wide
+
+    int[] page() {
+        int w = letter ? 21590 : 21000;
+        int h = letter ? 27940 : 29700;
+        int normal = letter ? 2540 : 2500;
+        int side = margins == 1 ? 1270 : margins == 2 ? 5080 : normal;
+        int ends = margins == 1 ? 1270 : normal;
+        return landscape ? new int[] {h, w, side, ends, side, ends} : new int[] {w, h, side, ends, side, ends};
+    }
+
+    // The choice that gives `page`, or null when none does.
+    static Choice of(int[] page) {
+        for (int i = 0; i < 12; i++) {
+            var c = new Choice();
+            c.letter = i >= 6;
+            c.landscape = i % 6 >= 3;
+            c.margins = i % 3;
+            if (same(c.page(), page)) return c;
+        }
+        return null;
+    }
+
+    static boolean same(int[] a, int[] b) {
+        for (int i = 0; i < 6; i++) if (Math.abs(a[i] - b[i]) > 2) return false;
+        return true;
+    }
+}
+
+// Shows the menu under its button, the document's page checked.
+void showPages() {
+    shown = Choice.of(editor.page());
+    pageMenu.show(pageSetup);
+}
+
+boolean is(Predicate<Choice> test) {
+    return shown != null && test.test(shown);
+}
+
+// Changes one part of the page as one undoable step. A page no choice gives
+// starts from A4 with Normal margins, in its own orientation.
+void pick(Consumer<Choice> change) {
+    var page = editor.page();
+    var c = Choice.of(page);
+    if (c == null) {
+        c = new Choice();
+        c.landscape = page[0] > page[1];
+    }
+    change.accept(c);
+    editor.page(c.page());
+    refresh();
+    editor.focus();
+}

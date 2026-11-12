@@ -1,0 +1,25 @@
+// LazyWriter in Siesta: S9's Java port (samples/writer) written again for
+// the S16-08 comparison, with the same window, commands and evidence lines.
+//
+//   lazyvm-ui -jar writer.jar [--serif=FAMILY] [--mono=FAMILY] [file.lzw]
+//
+// --serif and --mono name the families Serif and Mono stand for here, a `+`
+// for each space. Other `-` options and LazyOS's `attempt=N` are skipped,
+// and the file must be an absolute path.
+//
+// The app itself is app.sie and the files beside it; this is its `main`.
+import lazy.ui.*;
+
+String file = null;
+for (var a : args) {
+    if (a.startsWith("--serif=")) serif = a.substring(8).replace('+', ' ');
+    else if (a.startsWith("--mono=")) mono = a.substring(7).replace('+', ' ');
+    else if (file == null && !a.startsWith("-") && !a.startsWith("attempt=")
+        && new java.io.File(a).isAbsolute()) file = a;
+}
+
+var w = build();
+if (file != null) Ui.executor().execute { openPath(file); };
+Ui.executor().execute { started(); };
+Ui.run(w);
+

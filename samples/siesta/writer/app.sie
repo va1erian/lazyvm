@@ -1,0 +1,97 @@
+// LazyWriter's state, its window and the helpers every file uses. The
+// other files see these top-level names directly.
+import lazy.ui.*;
+
+String serif = "serif";        // the families Serif and Mono stand for
+String mono = "monospace";
+var window = Ui.window("LazyWriter", 960, 600);
+var editor = Ui.richText();
+var status = Ui.statusBar("Untitled", "Saved", "0 words", "Page 1 of 1", "");
+String path = null;              // the document's file, or null
+boolean dirty = false;           // changed since opened, saved or created
+RichText.Style summary = null;   // the last formatting under the selection
+
+// Wires the window: its content, the editor's events and the shortcuts.
+Window build() {
+    editor.onChange { words -> edited(words); };
+    editor.onStyle { s -> selection(s); };
+    editor.onLink { url -> status.text(0, url); };
+    window.content(Ui.column().add(commands().height(36), toolsRow().fixed(34), editor.fill(1), status));
+    window.onClose { quit(); };
+    // Ctrl+N, O, S, Shift+S, E and Q; the editor handles the rest.
+    window.shortcut('n', Window.CTRL) { newDocument(); };
+    window.shortcut('o', Window.CTRL) { open(); };
+    window.shortcut('s', Window.CTRL) { save(); };
+    window.shortcut('s', Window.CTRL | Window.SHIFT) { saveAs(); };
+    window.shortcut('e', Window.CTRL) { export(); };
+    window.shortcut('q', Window.CTRL) { quit(); };
+    return window;
+}
+
+// Once the window is up: the title, the focus, and the line LazyOS sessions look for.
+void started() {
+    refresh();
+    editor.focus();
+    System.out.println("WRITER:UP:PASS");
+}
+
+Toolbar commands() {
+    return Ui.toolbar()
+        .item("FilePlus", "New (Ctrl+N)", "New") { newDocument(); }
+        .item("FolderOpen", "Open (Ctrl+O)", "Open") { open(); }
+        .item("Save", "Save (Ctrl+S)", "Save") { save(); }
+        .item("Download", "Export as Markdown (Ctrl+E)", "Export") { export(); }
+        .separator()
+        .item("Undo2", "Undo (Ctrl+Z)", "Undo") { format(RichText.UNDO); }
+        .item("Redo2", "Redo (Ctrl+Y)", "Redo") { format(RichText.REDO); }
+        .separator()
+        .item("Scissors", "Cut (Ctrl+X)", "Cut") { format(RichText.CUT); }
+        .item("Copy", "Copy (Ctrl+C)", "Copy") { format(RichText.COPY); }
+        .item("ClipboardPaste", "Paste (Ctrl+V)", "Paste") { format(RichText.PASTE); }
+        .separator()
+        .item("Image", "Insert image", "Image") { insertImage(); }
+        .item("Link", "Link the selection", "Link") { link(); }
+        .item("SeparatorHorizontal", "Page break (Ctrl+Enter)", "Page break") { format(RichText.PAGE_BREAK); };
+}
+
+// The title, `LazyWriter: <name>` with `*` when modified, and the status bar.
+void refresh() {
+    var name = displayName(path);
+    window.title("LazyWriter: ${dirty ? "*" : ""}${name}");
+    status.text(0, name).text(1, dirty ? "Modified" : "Saved");
+    var p = editor.pageInfo();
+    status.text(3, "Page ${p[0]} of ${p[1]}");
+    var c = editor.tableCursor();
+    status.text(4, c == null ? "" : "Table: row ${c[0] + 1}, column ${c[1] + 1}");
+}
+
+String wordsLabel(int words) {
+    return words == 1 ? "1 word" : "${words} words";
+}
+
+void edited(int words) {
+    dirty = true;
+    status.text(2, wordsLabel(words));
+    refresh();
+}
+
+// The selection or its formatting changed: the formatting row follows it.
+void selection(RichText.Style style) {
+    sync(style);
+    summary = style;
+    syncWrap(editor.wrap());
+    refresh();
+}
+
+// Runs an editor command and gives the text the focus back.
+void format(int command) {
+    editor.exec(command);
+    refocus();
+}
+
+// Clicking a checked alignment unchecks its button without changing the
+// document, so the last formatting is shown again.
+void refocus() {
+    editor.focus();
+    if (summary != null) sync(summary);
+}

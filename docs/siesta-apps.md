@@ -189,8 +189,56 @@ needs Messenger, and a light theme only):
 | Start to first frame on LazyOS (median of 7 QEMU boots) | 1,204 ms (981 to 2,247) | 1,425 ms (943 to 3,608) |
 
 So the app itself is about 70 times smaller once the runtime is on the
-machine, at a start-up cost of about a fifth of a second; the Siesta port
-is measured against the 823 Java lines.
+machine, at a start-up cost of about a fifth of a second.
+
+The second is measured too, on Windows (2026-11-12, S9 at `0b547b8`, where
+the Java port is 797 lines): [`samples/siesta/writer`](../samples/siesta/writer)
+is the same app, file for file, built with `siestac -o writer.jar`.
+`lazyvm-ui -jar writer.jar` gives a first frame byte-identical to the Java
+port's (`tools/ui_shot.py`), and `samples/siesta/writer_flow.sie` drives it
+headless through typing, the "Save changes?" question, Save leading to Save
+As, Save then New, a missing file and the link prompt.
+
+| | Java | Siesta |
+|---|---|---|
+| Code lines (no blanks, comments or imports) | 592 | 456 (-23 %) |
+| Source bytes | 31,250 | 22,449 (-28 %) |
+| Classes | 8, 44,553 B | 17, 64,289 B |
+| Jar | 25,174 B deflated (24,696 B gzipped) | 66,464 B stored (22,182 B gzipped) |
+| First frame, Windows | reference | identical |
+
+Where the lines went, by cause:
+
+- **Shared top level** (siesta.md section 5): app state is `app.sie`'s
+  variables, and the other files use `editor`, `status` and `refresh()`
+  by name. The four helper classes, their constructors and every `app.`
+  go (about 60 lines).
+- **`async` dialogs**: New, Open and Quit await "Save changes?" and the
+  picker in one method each, where the Java port keeps a pending step, a
+  `guard`/`proceed`/`finish` triple and a callback per dialog (Documents:
+  203 to 166 lines, with 15 lines of adapters, below).
+- **No checked exceptions**: a plain `Runnable` lambda may do file I/O, so
+  one `attempt("SAVE", p, "Could not save") { ... }` replaces four
+  try/catch blocks that print and report (Java would need its own
+  throwing interface).
+- **Trailing lambdas, cascades and interpolation**: toolbar, menus and
+  shortcuts lose `() ->`; `..tooltip(tip)` removes a temporary per button;
+  `"Page ${p[0]} of ${p[1]}"`.
+
+Classes are larger before compression (nine async frame classes, full
+stack-map frames) and smaller after: what a package ships is the gzipped
+size.
+
+What is left is API, for S9:
+
+- **Dialogs that complete a stage.** Each dialog kind needs a five-line
+  adapter (`onChoose { p -> f.complete(p); }.show()`) before it can be
+  awaited; `show()` returning `CompletionStage` (section 3) would remove
+  them, for Java too.
+- **`Ui.later` before `Ui.run`** waits for the first event rather than
+  running once the window is up, unlike `Ui.executor().execute`; the port
+  first used `later` and its start-up ran only as the window closed. Either
+  should run it at start, or the Javadoc should say which to use.
 
 ## 6. Open questions for the owner
 
