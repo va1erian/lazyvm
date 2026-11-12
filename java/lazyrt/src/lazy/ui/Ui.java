@@ -236,10 +236,16 @@ public final class Ui {
         if (running) quit0();
     }
 
-    /** Runs {@code task} on the UI thread after the current callback returns. */
+    /**
+     * Runs {@code task} on the UI thread after the current callback returns. Queued before
+     * {@link #run}, it runs once the window is open.
+     */
     public static void later(Runnable task) {
         check();
-        later.add(nonNull(task, "task"));
+        nonNull(task, "task");
+        // Before the loop there is no callback to follow: the wake runs it once the window is up.
+        if (!running) submit(task);
+        else later.add(task);
     }
 
     /** Runs {@code task} once, {@code millis} milliseconds from now, on the UI thread. */

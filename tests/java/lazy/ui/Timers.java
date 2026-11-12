@@ -9,8 +9,8 @@ import lazy.internal.ui.Headless;
 /**
  * Timers run on the headless driver's clock, in time order: a repeating one every 100 ms, a
  * one-shot at 250 ms that cancels the repeating one, and Ui.later work that runs after the
- * callback that queued it. A second window opens from a callback, takes clicks, and closes
- * without ending the loop.
+ * callback that queued it, or once the window is up when queued before Ui.run. A second window
+ * opens from a callback, takes clicks, and closes without ending the loop.
  */
 public class Timers {
     public static void main(String[] args) throws IOException {
@@ -21,7 +21,9 @@ public class Timers {
         final Window other = Ui.window("Second", 240, 120).content(Ui.column().padding(8).add(second));
         final Button open = Ui.button("Open").onClick(() -> other.open());
         Window w = Ui.window("Timers", 320, 160).content(Ui.column().padding(8).gap(8).add(label, open));
+        Ui.later(() -> System.out.println("queued before run: " + Headless.frame()[0] + " wide"));
         Headless.run(w, () -> {
+            System.out.println("script starts");
             final Timer every = Ui.every(100, () -> {
                 label.text("ticks: " + ++ticks[0]);
                 Ui.later(() -> System.out.println("later after tick " + ticks[0]));
