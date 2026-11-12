@@ -240,6 +240,13 @@ impl Parser {
     /// `class_name` is `None` at the top level, where there are no
     /// constructors.
     fn member_after_mods(&mut self, mods: Modifiers, class_name: Option<&str>) -> Result<Member> {
+        if self.is_op("{") {
+            return self.fail(if mods.bits & mods::STATIC != 0 {
+                "`static` initialisers are not supported; initialise each field where it is declared"
+            } else {
+                "initialiser blocks are not supported; initialise in the constructor"
+            });
+        }
         if self.at_type_keyword() {
             return Ok(Member::Type(self.type_decl(mods)?));
         }

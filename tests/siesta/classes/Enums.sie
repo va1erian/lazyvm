@@ -1,0 +1,67 @@
+// Enums: fields and constructors, methods, static members, an interface,
+// switch, values/valueOf/ordinal/compareTo, EnumSet and EnumMap, and the
+// error valueOf gives for an unknown name. Enums.java is its Java mirror.
+import java.util.*;
+
+interface Priced {
+    int price();
+}
+
+enum Coin implements Priced {
+    PENNY(1), NICKEL(5), DIME(10), QUARTER(25);
+    private final int cents;
+    Coin(int cents) { this.cents = cents; }
+    int price() { return cents; }
+    boolean silver() { return this != PENNY; }
+    static Coin largestUnder(int amount) {
+        Coin best = null;
+        for (var c : values()) if (c.cents <= amount) best = c;
+        return best;
+    }
+}
+
+enum Planet {
+    MERCURY(3.303e+23, 2.4397e6), EARTH(5.976e+24, 6.37814e6);
+    final double mass;
+    final double radius;
+    Planet(double mass, double radius) { this.mass = mass; this.radius = radius; }
+    double gravity() { return 6.67300E-11 * mass / (radius * radius); }
+}
+
+enum Day { MON, TUE, WED, THU, FRI, SAT, SUN }
+
+String kind(Day d) {
+    switch (d) {
+        case SAT, SUN -> { return "weekend"; }
+        case FRI -> { return "almost"; }
+        default -> { return "work"; }
+    }
+}
+
+int change = 68;
+var used = new ArrayList<Coin>();
+while (change > 0) {
+    var c = Coin.largestUnder(change);
+    used.add(c);
+    change -= c.price();
+}
+System.out.println(used);
+int silver = 0;
+for (var c : used) if (c.silver()) silver++;
+System.out.println("silver " + silver + " of " + used.size());
+for (var p : Planet.values()) System.out.println(p + " " + String.format(Locale.ROOT, "%.2f", p.gravity()));
+for (var d : Day.values()) System.out.print(d.ordinal() + ":" + kind(d) + " ");
+System.out.println();
+System.out.println(Day.valueOf("WED").compareTo(Day.MON) + " " + Day.SUN.name() + " " + Day.FRI.equals(Day.valueOf("FRI")));
+var weekend = EnumSet.of(Day.SAT, Day.SUN);
+System.out.println(weekend + " " + EnumSet.complementOf(weekend).size());
+var counts = new EnumMap<Coin, Integer>(Coin.class);
+for (var c : used) counts.merge(c, 1, Integer::sum);
+System.out.println(counts);
+Priced priced = Coin.DIME;
+System.out.println(priced.price() + " " + (priced instanceof Coin) + " " + Coin.DIME.getDeclaringClass().getSimpleName());
+try {
+    Day.valueOf("FUNDAY");
+} catch (IllegalArgumentException e) {
+    System.out.println("valueOf: " + e.getClass().getSimpleName());
+}

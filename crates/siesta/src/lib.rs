@@ -12,6 +12,7 @@ pub mod diag;
 pub mod lex;
 pub mod parse;
 pub mod resolve;
+pub mod script_locals;
 pub mod sig;
 pub mod signatures;
 pub mod types;

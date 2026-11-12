@@ -8,7 +8,7 @@ use super::asm::VType;
 use super::body::{Body, Local};
 use crate::ast::{Expr, Ident};
 use crate::classpath::ClassInfo;
-use crate::diag::Result;
+use crate::diag::{Result, Span};
 use crate::types::Type;
 
 /// What the left side of a `.` is.
@@ -62,7 +62,7 @@ impl Place {
 
 impl Body<'_> {
     /// The field `name` of the class being compiled or one around it.
-    fn own_field(&self, name: &str) -> Option<(Rc<ClassInfo>, Type, bool)> {
+    pub(super) fn own_field(&self, name: &str) -> Option<(Rc<ClassInfo>, Type, bool)> {
         for outer in self.cls.enclosing.iter().rev() {
             let t = Type::class(outer);
             if let Some((owner, i, ty)) = self.w.field(&t, name) {
@@ -102,6 +102,13 @@ impl Body<'_> {
             }
         }
         None
+    }
+
+    /// The value of static field `owner.name` if it is a source constant.
+    fn constant(&self, owner: &str, name: &str) -> Option<crate::classpath::Constant> {
+        let c = self.w.class(owner)?;
+        let f = c.fields.iter().find(|f| f.name == name)?;
+        f.constant.clone()
     }
 
     /// The file classes this code sees top-level members of: its own file's.
@@ -241,6 +248,11 @@ impl Body<'_> {
                 ty,
                 desc,
             } => {
+                if let Some(k) = self.constant(owner, name) {
+                    // Out-of-range literals are reported where the field is initialised.
+                    let _ = self.literal(&k.lit, Span::default(), Some(ty), k.negate);
+                    return;
+                }
                 let f = self.pool.field_ref(owner, name, desc);
                 self.asm
                     .emit_u2(0xb2, f, 0, Some(VType::of(&erased_from(desc))));

@@ -239,7 +239,9 @@ in; one whose type depends on itself is an error.
 
 | Siesta | Class file |
 |---|---|
-| top level of `foo.sie` | static fields, static methods and `main(String[])` of class `Foo` |
+| top level of `foo.sie` | static fields, static methods and `main(String[])` of class `Foo`; a variable only the file's statements use is a local of `main` |
+| `final` static field with a literal of its type | a constant: reads load the value, so they do not initialise the class (JLS 12.4.1) |
+| constant `int` expression (`TILE - 1`) | its value (JLS 15.29); an `int` constant an operator widens is loaded as `long`, `float` or `double` |
 | lambda | a private synthetic `lambda$<method>$<n>` (static unless it uses `this`) and `invokedynamic` to `LambdaMetafactory.metafactory` |
 | method reference | the same `invokedynamic` with the referenced method's handle, no synthetic method |
 | captured local changed by a lambda or after capture | lives in a one-element array shared with the lambda |
@@ -331,6 +333,32 @@ there, and most Siesta programs are one edit away from Java:
   panic.
 - **LazyOS.** `tools/lazyos_test.py --siesta` runs `siestac` inside LazyOS
   on the same tests.
+- **Speed.** `bench/siesta` is the benchmark suite (`bench/bench`) written
+  again in Siesta with the same class names; `tools/bench.py run --siesta`
+  times it and `bench.py compare` sets it against javac's build, checksums
+  included.
+
+**Measured against javac** (Windows, 2026-11-12, medians of 7 runs, the
+same checksums everywhere). The suite is 403 code lines in Siesta against
+538 in Java (-25 %), and its jar gzips to 9.6 KB against 17.1 KB. siestac
+compiles it in 15 ms, javac in 280 ms (each with its start-up).
+
+| benchmark | LazyVM, interpreter | LazyVM, JIT | HotSpot 8 |
+|---|---|---|---|
+| blit | -1.4 % | +0.7 % | -1.3 % |
+| calls | -0.6 % | -4.8 % | +1.5 % |
+| casemap | -1.1 % | -0.6 % | +5.7 % |
+| maps | -1.4 % | -2.1 % | +4.1 % |
+| noise | +0.1 % | +1.5 % | -1.1 % |
+| numeric | 0.0 % | +2.6 % | -3.0 % |
+| tick | -1.1 % | +3.3 % | +1.2 % |
+| worldgen | -0.7 % | +0.3 % | +0.5 % |
+
+Each figure is Siesta's time against javac's; the JIT and HotSpot runs vary
+by up to 7 % between runs (HotSpot's take 3 to 14 ms), so all of them are
+within noise. Before the three code-generation changes in the table above
+(constants, script locals and folding), Blit was 11.5 % slower on the
+interpreter: it read `TILE` with `getstatic` where javac had `bipush`.
 
 **Clean room.** `siestac` is written from the JVMS (chapters 4 and 6) and
 the JLS sections cited above. `javap` of class files we compiled ourselves,

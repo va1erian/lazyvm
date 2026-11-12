@@ -80,6 +80,8 @@ pub struct Asm {
     pub lines: Vec<(u16, u16)>,
     /// Set when the method outgrows what a class file can hold.
     pub too_large: bool,
+    /// Where the last instruction starts when it is a `checkcast`.
+    pub last_cast: Option<usize>,
 }
 
 impl Asm {
@@ -144,6 +146,7 @@ impl Asm {
         if !self.reachable {
             return;
         }
+        self.last_cast = None;
         self.code.extend_from_slice(bytes);
         if self.code.len() > 65535 {
             self.too_large = true;
@@ -165,6 +168,16 @@ impl Asm {
             if let Some(t) = self.stack.pop() {
                 self.depth -= if t.wide() { 2 } else { 1 };
             }
+        }
+    }
+
+    /// Removes a `checkcast` that ends the code, for a value about to be
+    /// popped: the cast after a generic call whose result is thrown away.
+    pub fn drop_trailing_cast(&mut self) {
+        if let Some(at) = self.last_cast.take()
+            && at + 3 == self.code.len()
+        {
+            self.code.truncate(at);
         }
     }
 

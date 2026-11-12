@@ -469,11 +469,13 @@ through `tools/siesta_test.py` (siesta.md section 9): the classes run on the
 oracle with `-Xverify:all` and on LazyVM, both matching the `.out`, and
 mirrored `.java` tests are blessed on the oracle.
 
-Status (2026-11-11): S16-01, 02, 03 and 05 done; 04, 06 and 07 built and
-tested, each missing one part of its check: the `Showcase` enum mirror
-(04), the `finally` matrix for `break` and `throw` (06), and the UI-thread
-resumption case, which needs S9-06's `Ui.executor()` (07). The suite has 37
-tests, run on LazyVM and on the Java 8 oracle with `-Xverify:all`.
+Status (2026-11-12): S16-01 to 06 done. S16-04's enum mirror is
+`tests/siesta/classes/Enums` (`tests/java/s4/Showcase` does not exist yet), and
+S16-06's `finally` matrix is `tests/siesta/flow/Finally`, both with Java
+mirrors. S16-07 lacks only the UI-thread resumption case, which needs
+S9-06's `Ui.executor()`. The suite has 43 tests, run on LazyVM and on the
+Java 8 oracle with `-Xverify:all`; `bench/siesta` measures Siesta's code
+against javac's (siesta.md section 10).
 S16-08 started (2026-11-12): `samples/siesta/writer` builds with
 `siestac -o writer.jar` against S9's branch; its first frame is
 byte-identical to the Java port's on Windows and `samples/siesta/writer_flow.sie`
@@ -507,7 +509,7 @@ which waits for S9's merge (siesta-apps.md section 5).
       `python tools/size.py --siestac` passes for the stripped musl build
       (under 2,000,000 bytes, uncompressed).
       Needs: S16-02.
-- [ ] S16-04 Classes and interfaces: fields, constructors, default and
+- [x] S16-04 Classes and interfaces: fields, constructors, default and
       static interface methods, static nested classes, generic classes and
       methods, extending Java classes, bridge methods, `enum`, annotations.
       Files: `crates/siesta/src/{check,gen}/`,
@@ -525,7 +527,7 @@ which waits for S9's merge (siesta-apps.md section 5).
       stream pipeline ending in `collect(Collectors.toList())` that needs no cast,
       and a `lazy.async` program.
       Needs: S16-04.
-- [ ] S16-06 Casts, `instanceof` with a binding, arrow `switch`, cascades,
+- [x] S16-06 Casts, `instanceof` with a binding, arrow `switch`, cascades,
       collection literals, `try`/`catch`/`finally` and `throw`.
       Files: `crates/siesta/src/{check,gen}/`,
       `tests/siesta/flow/`.

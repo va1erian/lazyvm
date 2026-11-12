@@ -32,6 +32,7 @@ pub fn compile(sources: &[Source], classpath: ClassPath) -> Result<Vec<ClassOut>
     }
     let names: Vec<String> = sources.iter().map(|s| s.name.clone()).collect();
     let mut world = World::new(classpath);
+    let files = crate::script_locals::rewrite(files);
     let (mut classes, scopes) =
         declare::declare(&mut world, &files, &names).map_err(|d| vec![d])?;
     let line_starts: Vec<Vec<u32>> = sources.iter().map(|s| line_starts(&s.text)).collect();

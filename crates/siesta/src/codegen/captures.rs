@@ -11,6 +11,10 @@ use crate::ast::{Expr, LambdaBody, Stmt, TemplatePart};
 struct Walk {
     assigned: HashSet<String>,
     captured: HashSet<String>,
+    /// Locals, loop variables, catch and lambda parameters declared.
+    declared: HashSet<String>,
+    /// Names after a dot (`Writer.count`), which may be top-level variables.
+    members: HashSet<String>,
     /// Lambda nesting depth at the current point.
     depth: usize,
 }
@@ -27,7 +31,10 @@ pub fn boxed_locals(body: &[Stmt]) -> HashSet<String> {
 impl Walk {
     fn stmt(&mut self, s: &Stmt) {
         match s {
-            Stmt::Local { init, .. } => self.expr(init),
+            Stmt::Local { name, init, .. } => {
+                self.declared.insert(name.name.clone());
+                self.expr(init);
+            }
             Stmt::Expr(e) | Stmt::Throw(e, _) => self.expr(e),
             Stmt::Return(e, _) => e.iter().for_each(|e| self.expr(e)),
             Stmt::Block(b, _) => b.iter().for_each(|s| self.stmt(s)),
@@ -51,7 +58,10 @@ impl Walk {
                 update.iter().for_each(|e| self.expr(e));
                 self.stmt(body);
             }
-            Stmt::ForEach { iter, body, .. } => {
+            Stmt::ForEach {
+                name, iter, body, ..
+            } => {
+                self.declared.insert(name.name.clone());
                 self.expr(iter);
                 self.stmt(body);
             }
@@ -70,6 +80,7 @@ impl Walk {
             } => {
                 body.iter().for_each(|s| self.stmt(s));
                 for c in catches {
+                    self.declared.insert(c.name.name.clone());
                     c.body.iter().for_each(|s| self.stmt(s));
                 }
                 finally.iter().flatten().for_each(|s| self.stmt(s));
@@ -99,7 +110,9 @@ impl Walk {
                 self.expr(value);
             }
             Expr::Step { target, .. } => self.target(target),
-            Expr::Lambda { body, .. } => {
+            Expr::Lambda { params, body, .. } => {
+                self.declared
+                    .extend(params.iter().map(|p| p.name.name.clone()));
                 self.depth += 1;
                 match body {
                     LambdaBody::Expr(e) => self.expr(e),
@@ -114,7 +127,11 @@ impl Walk {
                     }
                 }
             }
-            Expr::Field { target, .. } | Expr::MethodRef { target, .. } => self.expr(target),
+            Expr::Field { target, name } => {
+                self.members.insert(name.name.clone());
+                self.expr(target);
+            }
+            Expr::MethodRef { target, .. } => self.expr(target),
             Expr::Call { target, args, .. } => {
                 target.iter().for_each(|t| self.expr(t));
                 args.iter().for_each(|a| self.expr(a));
@@ -170,6 +187,38 @@ pub fn names_in(body: &LambdaBody) -> HashSet<String> {
         LambdaBody::Block(b) => b.iter().for_each(|s| w.stmt(s)),
     }
     w.0
+}
+
+/// The simple names statements use, and the names they declare.
+#[derive(Default)]
+pub struct Usage {
+    pub used: HashSet<String>,
+    pub declared: HashSet<String>,
+}
+
+impl Usage {
+    pub fn stmts(&mut self, body: &[Stmt]) {
+        body.iter().for_each(|s| self.stmt(s));
+    }
+
+    pub fn stmt(&mut self, s: &Stmt) {
+        self.with(|w| w.stmt(s));
+    }
+
+    pub fn expr(&mut self, e: &Expr) {
+        self.with(|w| w.expr(e));
+    }
+
+    fn with(&mut self, f: impl FnOnce(&mut Walk)) {
+        let mut walk = Walk {
+            depth: 1,
+            ..Walk::default()
+        };
+        f(&mut walk);
+        self.used.extend(walk.captured);
+        self.used.extend(walk.members);
+        self.declared.extend(walk.declared);
+    }
 }
 
 #[derive(Default)]

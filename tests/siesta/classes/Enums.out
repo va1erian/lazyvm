@@ -1,0 +1,10 @@
+[QUARTER, QUARTER, DIME, NICKEL, PENNY, PENNY, PENNY]
+silver 4 of 7
+MERCURY 3.70
+EARTH 9.80
+0:work 1:work 2:work 3:work 4:almost 5:weekend 6:weekend 
+2 SUN true
+[SAT, SUN] 5
+{PENNY=3, NICKEL=1, DIME=1, QUARTER=2}
+10 true Coin
+valueOf: IllegalArgumentException

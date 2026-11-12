@@ -1,0 +1,27 @@
+// `final` static fields initialised with a literal are constants (JLS
+// 4.12.4): reads use the value, so reading one does not initialise its class
+// (JLS 12.4.1). Constants.java is its Java mirror.
+class Config {
+    public static final int SIZE = 128;
+    public static final long LOW = -9223372036854775808L;
+    public static final double HALF = 0.5;
+    public static final float THIRD = -0.25f;
+    public static final char MARK = 'x';
+    public static final boolean ON = true;
+    public static final String NAME = "cfg";
+    public static final Integer BOXED = 7;   // not a constant: a box
+    public static int touched = touch();
+    static int touch() {
+        System.out.println("Config initialised");
+        return 1;
+    }
+}
+
+final int TILE = 16;
+final int[] NOT_CONSTANT = {1, 2};
+
+System.out.println(Config.SIZE + " " + Config.LOW + " " + Config.HALF + " " + Config.THIRD);
+System.out.println(Config.MARK + " " + Config.ON + " " + Config.NAME + " " + Config.NAME.length());
+System.out.println("before the box");
+System.out.println(Config.BOXED);
+System.out.println(TILE * TILE + " " + NOT_CONSTANT.length);

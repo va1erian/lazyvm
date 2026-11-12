@@ -150,6 +150,9 @@ impl Parser {
     /// True when the tokens ahead read as a type followed by a name, as at
     /// the start of a declaration: `List<String> x`, `int[] a`, `var v`.
     pub(super) fn at_declaration(&mut self) -> bool {
+        if matches!(self.tok(0), Tok::Ident(n) if n == "assert") {
+            return false; // Java's `assert x;`, refused as a statement
+        }
         let start = self.pos;
         let ok = self.ty().is_ok() && matches!(self.tok(0), Tok::Ident(_));
         self.pos = start;

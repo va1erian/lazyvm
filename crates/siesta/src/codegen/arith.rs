@@ -99,6 +99,9 @@ impl Body<'_> {
 
     /// Emits `e` converted to `p` for an operator.
     fn operand(&mut self, e: &Expr, p: Prim) -> Result<()> {
+        if self.widened_const(e, p) {
+            return Ok(());
+        }
         let t = self.expr(e, None)?;
         let Some(q) = self.to_prim(&t) else {
             return self.err(e.span(), format!("a {t} is not a number"));

@@ -12,6 +12,7 @@ mod call;
 mod captures;
 mod cond;
 mod expr;
+mod fold;
 mod frame_class;
 mod hoist;
 mod infer;
@@ -38,7 +39,7 @@ use crate::types::Type;
 use crate::world::World;
 
 pub use body::Body;
-pub use captures::names_in;
+pub use captures::{Usage, names_in};
 
 /// What a class's methods add to it besides themselves.
 #[derive(Default)]

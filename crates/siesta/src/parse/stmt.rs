@@ -79,6 +79,10 @@ impl Parser {
                 self.expect_op(";")?;
                 return Ok(Stmt::Throw(value, lo.to(self.prev_span())));
             }
+            // `assert` is a name in Siesta; used as Java's statement, it is refused.
+            Tok::Ident(n) if n == "assert" && !self.is_name_use_at(1) => {
+                return self.fail("`assert` is not supported; throw an exception instead");
+            }
             Tok::Kw(Kw::Synchronized) => {
                 return self.fail("`synchronized` blocks are not supported");
             }

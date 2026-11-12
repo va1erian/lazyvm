@@ -87,6 +87,14 @@ impl Parser {
         matches!(self.tok(ahead), Tok::Op(o) if *o == op)
     }
 
+    /// Whether the token `ahead` continues a use of the name before it (a
+    /// call, a member, an assignment), not a Java statement keyword's operand.
+    fn is_name_use_at(&self, ahead: usize) -> bool {
+        matches!(self.tok(ahead), Tok::Op(o) if matches!(*o,
+            "(" | "." | "[" | "::" | "->" | ";" | "=" | "++" | "--" | "+=" | "-=" | "*=" | "/="
+                | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>="))
+    }
+
     fn is_kw(&self, kw: Kw) -> bool {
         *self.tok(0) == Tok::Kw(kw)
     }

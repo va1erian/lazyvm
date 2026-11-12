@@ -305,6 +305,7 @@ fn build(
                 info.fields.push(FieldInfo {
                     name: f.name.name.clone(),
                     access,
+                    constant: constant_of(f, &ty, is_static),
                     ty,
                 });
             }
@@ -355,6 +356,43 @@ fn build(
     }
     c.info = Rc::new(info);
     Ok(c)
+}
+
+/// The constant a `final` static field holds: a literal that already has
+/// the field's type, so a read needs no conversion. A `var` takes the
+/// literal's type.
+fn constant_of(f: &FieldDecl, ty: &Type, is_static: bool) -> Option<crate::classpath::Constant> {
+    use crate::ast::{Expr, Lit, Prim};
+    use crate::lex::NumKind;
+    if !is_static || f.mods.bits & mods::FINAL == 0 {
+        return None;
+    }
+    let (lit, negate) = match f.init.as_ref()? {
+        Expr::Lit(l, _) => (l, false),
+        Expr::Unary { op: "-", expr, .. } => match &**expr {
+            Expr::Lit(l @ Lit::Num(_), _) => (l, true),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let fits = match (lit, ty) {
+        (Lit::Null, _) => false,
+        (_, Type::Null) => true,
+        (Lit::Num(n), Type::Prim(p)) => matches!(
+            (n.kind, p),
+            (NumKind::Int, Prim::Int)
+                | (NumKind::Long, Prim::Long)
+                | (NumKind::Float, Prim::Float)
+                | (NumKind::Double, Prim::Double)
+        ),
+        (Lit::Char(_), Type::Prim(Prim::Char)) | (Lit::Bool(_), Type::Prim(Prim::Boolean)) => true,
+        (Lit::Str(_), t) => *t == Type::string(),
+        _ => false,
+    };
+    fits.then(|| crate::classpath::Constant {
+        lit: lit.clone(),
+        negate,
+    })
 }
 
 fn top_level_field(top: &[&Item], f: &FieldDecl) -> bool {

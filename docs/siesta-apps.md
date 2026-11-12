@@ -195,7 +195,8 @@ The second is measured too, on Windows (2026-11-12, S9 at `0b547b8`, where
 the Java port is 797 lines): [`samples/siesta/writer`](../samples/siesta/writer)
 is the same app, file for file, built with `siestac -o writer.jar`.
 `lazyvm-ui -jar writer.jar` gives a first frame byte-identical to the Java
-port's (`tools/ui_shot.py`), and `samples/siesta/writer_flow.sie` drives it
+port's (`tools/ui_shot.py`); rendered headless after typing a line,
+the two give byte-identical frames (`Headless.dump`); and `samples/siesta/writer_flow.sie` drives it
 headless through typing, the "Save changes?" question, Save leading to Save
 As, Save then New, a missing file and the link prompt.
 

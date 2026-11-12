@@ -121,12 +121,19 @@ impl Body<'_> {
                 promote(lp.unwrap_or(Prim::Int), rp.unwrap_or(Prim::Int)),
                 Prim::Int,
             );
-            for e in [left, right] {
+            // `x == 0`: javac's `ifeq` family, with no constant to push.
+            let zero = p == Prim::Int && self.const_int(right) == Some(0);
+            let operands = [left, right];
+            for e in &operands[..if zero { 1 } else { 2 }] {
+                if self.widened_const(e, p) {
+                    continue;
+                }
                 let t = self.expr(e, None)?;
                 let q = self.to_prim(&t).unwrap_or(p);
                 self.prim_convert(q, p);
             }
             match p {
+                Prim::Int if zero => self.asm.jump(0x99 + idx, 1, to),
                 Prim::Int => self.asm.jump(0x9f + idx, 2, to),
                 Prim::Long => {
                     self.asm.emit(&[0x94], 2, Some(VType::Int));

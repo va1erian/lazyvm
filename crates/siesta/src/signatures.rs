@@ -167,6 +167,7 @@ pub fn enum_members(info: &mut ClassInfo, name: &str, constants: &[EnumConst]) {
             name: k.name.name.clone(),
             access,
             ty: this.clone(),
+            constant: None,
         });
     }
     info.methods.push(Rc::new(MethodInfo {

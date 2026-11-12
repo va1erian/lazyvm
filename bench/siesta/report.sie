@@ -1,0 +1,11 @@
+// The result line tools/bench.py parses, and the scale argument, shared by
+// every benchmark (bench/bench/Report.java in Java).
+package bench;
+
+int scale(String[] args) {
+    return args.length > 0 ? Integer.parseInt(args[0]) : 1;
+}
+
+void report(String name, long checksum, long startNanos) {
+    System.out.println("BENCH ${name} checksum=${checksum} ns=${System.nanoTime() - startNanos}");
+}

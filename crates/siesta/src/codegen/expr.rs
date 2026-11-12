@@ -88,6 +88,10 @@ impl Body<'_> {
             {
                 self.bool_value(e)
             }
+            Expr::Binary { .. } if let Some(v) = self.const_int(e) => {
+                self.int_const(v);
+                Ok(Type::Prim(crate::ast::Prim::Int))
+            }
             Expr::Binary { op, left, right } => self.binary(op, left, right, e),
             Expr::Assign { op, target, value } => self.assign(*op, target, value, true),
             Expr::Cond { cond, then, els } => self.conditional(cond, then, els, want),
@@ -132,6 +136,9 @@ impl Body<'_> {
             }
             Expr::Call { .. } | Expr::New { .. } | Expr::Cascade { .. } | Expr::Await(..) => {
                 let t = self.expr(e, None)?;
+                if matches!(e, Expr::Call { .. }) {
+                    self.asm.drop_trailing_cast();
+                }
                 self.pop_value(&t);
             }
             other => {

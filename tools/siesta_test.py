@@ -77,8 +77,9 @@ def is_program(src: Path) -> bool:
 
 def program_part(src: Path) -> bool:
     """Whether `src` is one of a program's other files, compiled with its main file."""
-    main = src.parent / f"{src.parent.name}.sie"
-    return main.exists() and src != main
+    # Compared by name, not exists(): Windows would find `Classes.sie` for `classes/classes.sie`.
+    main = f"{src.parent.name}.sie"
+    return src.name != main and any(p.name == main for p in src.parent.iterdir())
 
 
 def compile_test(src: Path, out: Path) -> str | None:

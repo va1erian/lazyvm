@@ -107,6 +107,16 @@ impl Body<'_> {
     }
 
     fn local_op(&mut self, op: u8, slot: u16, pops: usize, push: Option<VType>) {
+        // Slots 0 to 3 have one-byte forms (`iload_0` is 0x1a, `istore_0` 0x3b).
+        let short = match op {
+            0x15..=0x19 => Some(0x1a + (op - 0x15) * 4),
+            0x36..=0x3a => Some(0x3b + (op - 0x36) * 4),
+            _ => None,
+        };
+        if let (Some(base), Ok(s @ 0..=3)) = (short, u8::try_from(slot)) {
+            self.asm.emit(&[base + s], pops, push);
+            return;
+        }
         match u8::try_from(slot) {
             Ok(s) => self.asm.emit(&[op, s], pops, push),
             Err(_) => {
@@ -204,7 +214,9 @@ impl Body<'_> {
             return;
         }
         let c = self.pool.class(&t.internal());
+        let at = self.asm.code.len();
         self.asm.emit_u2(0xc0, c, 1, Some(VType::of(t)));
+        self.asm.last_cast = Some(at);
     }
 
     /// Whether a value of type `from` may be assigned to `to` (JLS 5.2),

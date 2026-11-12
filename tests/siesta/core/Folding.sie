@@ -1,0 +1,42 @@
+// Constant int expressions are computed by siestac (JLS 15.29) with Java's
+// int rules: overflow wraps, shift counts use 5 bits, MIN_VALUE / -1 wraps,
+// and a division by zero still throws when it runs. Compares against 0 use
+// the one-operand branches. Folding.java is its Java mirror.
+final int TILE = 16;
+final int NEG = -7;
+
+void show(int v) { System.out.print(v + " "); }
+
+show(TILE - 1);
+show(TILE * TILE * TILE * TILE * TILE * TILE * TILE * TILE);
+show(1 << 33);
+show(-1 >>> 28);
+show(-16 >> 2);
+show(-2147483648 / -1);
+show(-2147483648 % -1);
+show(NEG % 3);
+show(NEG / 2);
+show(~TILE ^ 0x0F0F | 3 & 12);
+show(0x7fffffff + 1);
+System.out.println();
+try {
+    show(TILE / (TILE - 16));
+} catch (ArithmeticException e) {
+    System.out.println("divided by zero");
+}
+int n = 0;
+for (int x = -2; x <= 2; x++) {
+    if (x == 0) n += 1;
+    if (x != 0) n += 10;
+    if (x < 0) n += 100;
+    if (x >= 0) n += 1000;
+    if (x > 0) n += 10000;
+    if (x <= 0) n += 100000;
+}
+System.out.println(n);
+float t = 0.25f;
+long big = 3000000000L;
+double d = 0.1;
+System.out.println(t * (t * 6 - 15) + 10 + " " + big * 3 + " " + (2 / d) + " " + (big > 2147483647) + " " + (t < 1));
+char c = 'a';
+System.out.println(c != 0);

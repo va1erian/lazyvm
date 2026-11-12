@@ -18,6 +18,16 @@ pub struct FieldInfo {
     pub name: String,
     pub access: u16,
     pub ty: Type,
+    /// A source constant (JLS 4.12.4): a `final` static field initialised
+    /// with a literal of its own type, which reads use in place of the field.
+    pub constant: Option<Constant>,
+}
+
+/// A literal, and whether a minus sign comes before it.
+#[derive(Clone, Debug)]
+pub struct Constant {
+    pub lit: crate::ast::Lit,
+    pub negate: bool,
 }
 
 #[derive(Debug)]
@@ -106,6 +116,7 @@ impl ClassInfo {
                 name: f.name.to_string(),
                 access: f.access,
                 ty,
+                constant: None,
             });
         }
         for m in &cf.methods {
