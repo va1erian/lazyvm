@@ -132,7 +132,9 @@ public final class Menu extends Free {
         boolean enabled = e.enabledOn == null || e.enabledOn.getAsBoolean();
         boolean checked = e.checkedOn != null && e.checkedOn.getAsBoolean();
         if (made && enabled != e.enabled) call(Op.ITEM_ENABLED, i, enabled ? 1 : 0, null);
-        if (made && checked != e.checked) call(Op.ITEM_CHECKED, i, checked ? 1 : 0, null);
+        // A radio is always sent: picking one clears its neighbours in xui without a message,
+        // so the copy here can be stale.
+        if (made && (checked != e.checked || e.type == RADIO)) call(Op.ITEM_CHECKED, i, checked ? 1 : 0, null);
         e.enabled = enabled;
         e.checked = checked;
     }

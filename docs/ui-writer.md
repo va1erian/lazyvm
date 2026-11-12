@@ -51,9 +51,11 @@ and 4,627,932 B on Windows, over the VM's 4,000,000 B. The owner gave it its
 own budget of 6,000,000 B (D14), and third-party crates are now built for
 size (`opt-level = "z"`, except the few the VM leans on and the
 rasteriser): 4,673,720 B on
-LazyOS (78 %) and 4,318,751 B on Windows (72 %); the LazyOS binary, stripped,
-went from 7,444,560 to 7,417,528 bytes. The table above has the earlier
-figures.
+LazyOS (78 %) and 4,318,751 B on Windows (72 %). On LazyOS, the same code
+with every crate at full speed measures 4,898,317 B; stripped, the binary
+goes from 7,467,960 to 7,417,528 bytes, so the size build saves far more
+once compressed (6.7 % of the gzipped binary) than uncompressed (0.7 %).
+The table above has the earlier figures.
 
 ## Speed
 
