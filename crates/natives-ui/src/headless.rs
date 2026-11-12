@@ -73,7 +73,7 @@ fn step0(vm: &mut Vm, a: &[Value]) -> VmResult<Option<Value>> {
         step::KEY => drive::key(id, i),
         step::TYPE => drive::type_text(&s()?),
         step::ADVANCE => drive::advance(u64::try_from(i).unwrap_or(0)),
-        step::CLOSE => drive::close(),
+        step::CLOSE => drive::close(id),
         step::FRAME | step::DUMP => drive::frame().and_then(|(w, h, px)| {
             out = vec![w as i32, h as i32, checksum(&px)];
             if op != step::DUMP {

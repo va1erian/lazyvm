@@ -45,6 +45,27 @@ panic = "unwind"
 # every frame: built for size it made a repaint 2.3 times slower.
 [profile.release.package."*"]
 opt-level = "z"
+# Here, unlike in LazyVM's workspace, our crates are path dependencies rather
+# than members, so "*" covers them: they go back to full speed by name, with
+# LazyOS's `xui-app`, which hands every frame to xuid.
+[profile.release.package.xui-app]
+opt-level = 3
+[profile.release.package.launcher]
+opt-level = 3
+[profile.release.package.vm]
+opt-level = 3
+[profile.release.package.classfile]
+opt-level = 3
+[profile.release.package.natives]
+opt-level = 3
+[profile.release.package.natives-ui]
+opt-level = 3
+[profile.release.package.platform]
+opt-level = 3
+[profile.release.package.gfx]
+opt-level = 3
+[profile.release.package.xui-bind]
+opt-level = 3
 [profile.release.package.flate2]
 opt-level = 3
 [profile.release.package.miniz_oxide]

@@ -56,7 +56,8 @@ public final class Window extends Node {
 
     /**
      * Runs {@code action} when the user asks to close the window, instead of closing it: the
-     * action decides, and calls {@link #close} to go on.
+     * action decides, and calls {@link #close} to go on. While a dialog is open over the window,
+     * the request is ignored.
      */
     public Window onClose(Runnable action) {
         this.onClose = Ui.nonNull(action, "action");
@@ -173,6 +174,7 @@ public final class Window extends Node {
             Ui.free(n);
         }
         owned.clear();
+        modal = null;
         if (ids.length > 0) Ui.forget0(ids);
         Ui.free(this);
     }
@@ -180,6 +182,8 @@ public final class Window extends Node {
     @Override
     void fire(int kind, int i, double d, String s) {
         if (kind == Ui.CLOSE) {
+            // The dialog over the window answers first, as for its other input.
+            if (modal != null) return;
             if (onClose != null) onClose.run();
             else close();
         } else if (kind == Ui.KEY && modal == null && i >= 0 && i < actions.size()) {

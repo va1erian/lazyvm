@@ -10,8 +10,8 @@ import lazy.internal.ui.Headless;
  * Dialogs, menus and shortcuts, driven by keys: a message accepted with Enter, a prompt answered
  * by typing, a question cancelled with Escape, a task dialog's commands, a context menu walked
  * with the arrow keys, and window shortcuts that run whatever has the focus. While a dialog is
- * open, a second one does not show and shortcuts wait. A menu asks for its switches' states
- * each time it shows.
+ * open, a second one does not show, and shortcuts and the close button wait. A menu asks for
+ * its switches' states each time it shows.
  */
 public class Dialogs {
     static final char DOWN = 0x28;
@@ -28,6 +28,7 @@ public class Dialogs {
         final Window w = Ui.window("Dialogs", 480, 320).content(Ui.column().padding(8).gap(8).add(anchor, field));
         w.shortcut('s', Window.CTRL, () -> System.out.println("shortcut Ctrl+S"));
         w.shortcut('s', Window.CTRL | Window.SHIFT, () -> System.out.println("shortcut Ctrl+Shift+S"));
+        w.onClose(() -> System.out.println("close asked"));
         final Dialog message = w.message("Note", "Something happened.")
             .onClose(s -> System.out.println("message closed: " + s));
         final Dialog prompt = w.prompt("Link", "The address:", "https://")
@@ -55,9 +56,11 @@ public class Dialogs {
             System.out.println("message shown: " + frame());
             question.show();
             Headless.key('s', Window.CTRL);
+            Headless.close();
             System.out.println("over the message: " + frame());
             Headless.key(Window.ENTER, 0);
             Headless.key('s', Window.CTRL);
+            Headless.close();
             prompt.show();
             Headless.type("lazy.test");
             Headless.key(Window.ENTER, 0);

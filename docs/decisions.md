@@ -314,7 +314,7 @@ at the end of S5).
 `lazyvm-ui`, which adds `lazy.ui` and xui (docs/ui.md, "Size"), has its own
 budget of 6,000,000 bytes, measured the same way: the VM's 4 MB plus 2 MB for
 the UI stack. The owner set it apart in November 2026, when the UI binary
-measured 4.32 MB on Windows and 4.50 MB on LazyOS, with third-party crates
+measured 4.32 MB on Windows and 4.67 MB on LazyOS, with third-party crates
 built for size. `lazyvm` stays held to 4,000,000.
 
 - **Over budget** is a failing gate like any other: shrink something (dead

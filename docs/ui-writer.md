@@ -50,9 +50,9 @@ does (binary gzipped + `lazyrt.jar`), `lazyvm-ui` was 4,883,373 B on LazyOS
 and 4,627,932 B on Windows, over the VM's 4,000,000 B. The owner gave it its
 own budget of 6,000,000 B (D14), and third-party crates are now built for
 size (`opt-level = "z"`, except the few the VM leans on and the
-rasteriser): 4,495,902 B on
-LazyOS (75 %) and 4,318,541 B on Windows (72 %); the LazyOS binary, stripped,
-went from 7,444,560 to 7,159,544 bytes. The table above has the earlier
+rasteriser): 4,673,720 B on
+LazyOS (78 %) and 4,318,751 B on Windows (72 %); the LazyOS binary, stripped,
+went from 7,444,560 to 7,417,528 bytes. The table above has the earlier
 figures.
 
 ## Speed

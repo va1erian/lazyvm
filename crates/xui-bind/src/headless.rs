@@ -245,10 +245,12 @@ pub fn advance(ms: u64) -> Result<(), String> {
     Ok(())
 }
 
-/// The main window's close button.
-pub fn close() -> Result<(), String> {
+/// The close button of the main window, Java id `id`. The offscreen backend
+/// hands an injected close to the focused widget, not to the window as a real
+/// one does, so the window's message is sent as its close handler would.
+pub fn close(id: i32) -> Result<(), String> {
     let (b, window) = active()?;
-    b.inject(window, Event::Close);
+    table::window(id)?.ui.emit(Msg::new(id, ev::CLOSE));
     pump(&b, window);
     Ok(())
 }

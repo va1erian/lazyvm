@@ -4,6 +4,7 @@ message shown: 480x320 a153788e
 over the message: 480x320 a153788e
 message closed: 
 shortcut Ctrl+S
+close asked
 prompt closed: https://lazy.test
 question closed: null
 task shown: 480x320 666a9029

@@ -16,6 +16,7 @@ public final class Headless {
     private static final int CLOSE = 7, FRAME = 8, DUMP = 9, UPCALLS = 10, CLICK_AT = 11;
 
     private static Runnable script;
+    private static Window main;
 
     private Headless() {}
 
@@ -23,6 +24,7 @@ public final class Headless {
     public static void run(Window window, Runnable steps) {
         if (script != null) throw new IllegalStateException("one script per run");
         script = steps;
+        main = window;
         Ui.run(window);
     }
 
@@ -107,7 +109,7 @@ public final class Headless {
 
     /** Presses the main window's close button. */
     public static void close() {
-        step(CLOSE, 0, 0, null);
+        step(CLOSE, UiAccess.ops().id(main), 0, null);
     }
 
     /** The main window's pixels: {@code {width, height, checksum}}. */

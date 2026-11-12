@@ -205,7 +205,7 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       Done with S9-03 to S9-06 ([`ui.md`](ui.md), "As built"): the goldens of
       `tests/java/lazy/ui` (`NEEDS: ui`, run on `lazyvm-ui`) pass unchanged on
       Windows and inside LazyOS. `lazyvm-ui` has its own 6,000,000 B budget
-      (D14): 72 % on Windows, 75 % on LazyOS ([`ui-writer.md`](ui-writer.md),
+      (D14): 72 % on Windows, 78 % on LazyOS ([`ui-writer.md`](ui-writer.md),
       "Size").
 - [x] S9-03 Windows window host via the xui `winit-backend` in
       `crates/lazyvm-win` (from the spike, which also moved the VM to the

@@ -354,11 +354,11 @@ So:
 - `tools/size.py` checks both, on Windows and musl, in CI: `lazyvm`
   against D14's 4,000,000 B and `lazyvm-ui` against its own 6,000,000 B.
   Third-party crates (xui and its text stack, mostly) are built with
-  `opt-level = "z"`, which took 7 to 8 % off `lazyvm-ui`; the VM's own
-  crates, the few it leans on and the rasteriser stay at full speed
-  (`Cargo.toml`; [`ui-writer.md`](ui-writer.md), "Speed"). A PR that adds
-  widgets says what `lazyvm-ui` costs, and stops for the owner past 80 % of
-  the budget.
+  `opt-level = "z"`, which took 7 % off `lazyvm-ui` on Windows and 4 % on
+  LazyOS; the VM's own crates, the few it leans on and the rasteriser stay
+  at full speed (`Cargo.toml`; [`ui-writer.md`](ui-writer.md), "Speed").
+  A PR that adds widgets says what `lazyvm-ui` costs, and stops for the
+  owner past 80 % of the budget.
 - Only the widgets apps use are bound. xui's optional crates (rich text, the
   code editor, web views, forms, scripts) stay out.
 
@@ -485,9 +485,10 @@ What it says:
   ~470 KB gzipped of `lazyvm-ui`.
 - **No dialog or menu bookkeeping in apps** (two of the Siesta session's
   proposals, `docs/siesta-apps.md` on its branch). A window knows which of
-  its dialogs is open: `show()` of another does nothing and the window's
-  shortcuts wait until it closes. A menu's switches take a `BooleanSupplier`
-  and `enabledWhen(condition, entries)` scopes a condition; both are asked
+  its dialogs is open: `show()` of another does nothing, and the window's
+  shortcuts and close button wait until it closes. A menu's switches take a
+  `BooleanSupplier` and `enabledWhen(condition, entries)` scopes a
+  condition; both are asked
   each time the menu shows, so apps hold no entry numbers. LazyWriter lost
   its `dialogOpen` flag and its menu index tables (35 lines). Commands, value
   cells, timers as stages and groups were not taken: each would add more to
