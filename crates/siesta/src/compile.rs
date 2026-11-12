@@ -99,27 +99,21 @@ fn infer_top_vars(
     file_classes: &[Rc<str>],
 ) -> Result<(), Vec<Diag>> {
     // Typed in dependency order, so a `var` may use one from a file listed
-    // after its own. Each entry has every name its initialiser mentions,
-    // and those names less the ones it declares (lambda parameters, locals):
-    // the second only orders variables the first finds on a cycle.
+    // after its own. A lambda parameter is no dependency where it hides a
+    // top-level variable of its name.
     let mut pending: Vec<Pending> = Vec::new();
     for (ci, c) in classes.iter().enumerate() {
         for (fi, f) in c.fields.iter().enumerate() {
             if let (true, TypeRef::Var(_), Some(init)) = (f.top, &f.decl.ty, &f.decl.init) {
                 let mut u = codegen::Usage::default();
                 u.expr(init);
-                let free = &u.used - &u.declared;
-                pending.push((ci, fi, f.decl.name.name.clone(), u.used, free));
+                pending.push((ci, fi, f.decl.name.name.clone(), u.free));
             }
         }
     }
     while !pending.is_empty() {
         let blocked = |names: &HashSet<String>| pending.iter().any(|p| names.contains(&p.2));
-        let next = pending
-            .iter()
-            .position(|p| !blocked(&p.3))
-            .or_else(|| pending.iter().position(|p| !blocked(&p.4)));
-        let Some(next) = next else {
+        let Some(next) = pending.iter().position(|p| !blocked(&p.3)) else {
             let (ci, fi, name, ..) = &pending[in_cycle(&pending)];
             let span = classes[*ci].fields[*fi].decl.name.span;
             let msg = format!("the type of `{name}` depends on itself; write it instead of `var`");
@@ -152,9 +146,9 @@ fn infer_top_vars(
     Ok(())
 }
 
-/// A top-level `var` to type: class and field index, name, every name its
-/// initialiser mentions, and those it does not declare itself.
-type Pending = (usize, usize, String, HashSet<String>, HashSet<String>);
+/// A top-level `var` to type: class and field index, name, and the names
+/// its initialiser may use as top-level variables.
+type Pending = (usize, usize, String, HashSet<String>);
 
 /// A pending variable on a dependency cycle, found by following what
 /// blocks each from the first: every one is blocked, so the walk repeats.
@@ -163,7 +157,7 @@ fn in_cycle(pending: &[Pending]) -> usize {
     let mut at = 0;
     while !seen[at] {
         seen[at] = true;
-        let Some(next) = pending.iter().position(|p| pending[at].4.contains(&p.2)) else {
+        let Some(next) = pending.iter().position(|p| pending[at].3.contains(&p.2)) else {
             break;
         };
         at = next;

@@ -17,6 +17,11 @@ struct Walk {
     members: HashSet<String>,
     /// Lambda nesting depth at the current point.
     depth: usize,
+    /// Per enclosing lambda: its parameters and the locals declared in it
+    /// so far, which hide a top-level variable of the same name there.
+    bound: Vec<HashSet<String>>,
+    /// Names used where no enclosing lambda binds them.
+    free: HashSet<String>,
 }
 
 /// The names to box in a method body (or a lambda body being compiled).
@@ -32,8 +37,8 @@ impl Walk {
     fn stmt(&mut self, s: &Stmt) {
         match s {
             Stmt::Local { name, init, .. } => {
-                self.declared.insert(name.name.clone());
                 self.expr(init);
+                self.declare(&name.name);
             }
             Stmt::Expr(e) | Stmt::Throw(e, _) => self.expr(e),
             Stmt::Return(e, _) => e.iter().for_each(|e| self.expr(e)),
@@ -61,8 +66,8 @@ impl Walk {
             Stmt::ForEach {
                 name, iter, body, ..
             } => {
-                self.declared.insert(name.name.clone());
                 self.expr(iter);
+                self.declare(&name.name);
                 self.stmt(body);
             }
             Stmt::Switch { scrut, cases, .. } => {
@@ -80,7 +85,7 @@ impl Walk {
             } => {
                 body.iter().for_each(|s| self.stmt(s));
                 for c in catches {
-                    self.declared.insert(c.name.name.clone());
+                    self.declare(&c.name.name);
                     c.body.iter().for_each(|s| self.stmt(s));
                 }
                 finally.iter().flatten().for_each(|s| self.stmt(s));
@@ -90,8 +95,22 @@ impl Walk {
         }
     }
 
+    fn declare(&mut self, name: &str) {
+        self.declared.insert(name.to_string());
+        if let Some(frame) = self.bound.last_mut() {
+            frame.insert(name.to_string());
+        }
+    }
+
+    fn use_name(&mut self, name: &str) {
+        if !self.bound.iter().any(|f| f.contains(name)) {
+            self.free.insert(name.to_string());
+        }
+    }
+
     fn target(&mut self, e: &Expr) {
         if let Expr::Name(n) = e {
+            self.use_name(&n.name);
             self.assigned.insert(n.name.clone());
             if self.depth > 0 {
                 self.captured.insert(n.name.clone());
@@ -102,8 +121,11 @@ impl Walk {
 
     fn expr(&mut self, e: &Expr) {
         match e {
-            Expr::Name(n) if self.depth > 0 => {
-                self.captured.insert(n.name.clone());
+            Expr::Name(n) => {
+                self.use_name(&n.name);
+                if self.depth > 0 {
+                    self.captured.insert(n.name.clone());
+                }
             }
             Expr::Assign { target, value, .. } => {
                 self.target(target);
@@ -113,12 +135,15 @@ impl Walk {
             Expr::Lambda { params, body, .. } => {
                 self.declared
                     .extend(params.iter().map(|p| p.name.name.clone()));
+                self.bound
+                    .push(params.iter().map(|p| p.name.name.clone()).collect());
                 self.depth += 1;
                 match body {
                     LambdaBody::Expr(e) => self.expr(e),
                     LambdaBody::Block(b) => b.iter().for_each(|s| self.stmt(s)),
                 }
                 self.depth -= 1;
+                self.bound.pop();
             }
             Expr::Template(parts, _) => {
                 for p in parts {
@@ -170,11 +195,7 @@ impl Walk {
                     self.expr(v);
                 }
             }
-            Expr::Lit(..)
-            | Expr::Name(_)
-            | Expr::This(_)
-            | Expr::ClassLit(..)
-            | Expr::TypeExpr(_) => {}
+            Expr::Lit(..) | Expr::This(_) | Expr::ClassLit(..) | Expr::TypeExpr(_) => {}
         }
     }
 }
@@ -194,6 +215,9 @@ pub fn names_in(body: &LambdaBody) -> HashSet<String> {
 pub struct Usage {
     pub used: HashSet<String>,
     pub declared: HashSet<String>,
+    /// The used names no enclosing lambda binds where they are used, and
+    /// qualified ones (`Writer.count`): what may be top-level variables.
+    pub free: HashSet<String>,
 }
 
 impl Usage {
@@ -216,6 +240,8 @@ impl Usage {
         };
         f(&mut walk);
         self.used.extend(walk.captured);
+        self.free.extend(walk.free);
+        self.free.extend(walk.members.iter().cloned());
         self.used.extend(walk.members);
         self.declared.extend(walk.declared);
     }
