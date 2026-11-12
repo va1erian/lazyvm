@@ -87,7 +87,7 @@ jobs:
         run: cargo check --locked --manifest-path fuzz/Cargo.toml
       - name: musl build
         run: cargo build --release --locked -p launcher --target x86_64-unknown-linux-musl
-      - name: lazyvm-ui build (musl, for the NEEDS: ui tests and the LazyOS budget)
+      - name: lazyvm-ui build (musl, for the UI tests and the LazyOS budget)
         run: cargo build --release --locked -p launcher-ui --target x86_64-unknown-linux-musl
       - name: differential suite (musl binaries)
         run: >-
