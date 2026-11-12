@@ -1,11 +1,13 @@
 package lazy.ui;
 
 import java.util.ArrayList;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 /**
  * A picker for a file to open or save to, made by {@link Window#openFile} and {@link
- * Window#saveFile}. {@link #show} returns at once; the path comes to {@link #onChoose}.
+ * Window#saveFile}. {@link #show} returns at once, and the path comes to {@link #onChoose} and to
+ * the stage {@code show} returns.
  */
 public final class FileDialog extends Popup {
     private final boolean save;
@@ -64,14 +66,19 @@ public final class FileDialog extends Popup {
         return this;
     }
 
-    /** Shows the dialog; does nothing while another dialog of the window is open. */
-    public void show() {
-        showModal();
+    /**
+     * Shows the picker. The stage completes with the path {@link #onChoose} gets, after it; it is
+     * cancelled if the window closes first. While another dialog of the window is open, this
+     * shows nothing and the stage is cancelled.
+     */
+    public CompletionStage<String> show() {
+        return showModal();
     }
 
+    /** Closes the picker, if open, as if cancelled: {@link #onChoose} and the stage get null. */
     public void close() {
         if (mounted()) call(Op.CLOSE, null);
-        closed();
+        closed(onChoose, null);
     }
 
     @Override
@@ -92,7 +99,6 @@ public final class FileDialog extends Popup {
     @Override
     void fire(int kind, int i, double d, String s) {
         if (kind != Ui.DIALOG) return;
-        closed();
-        if (onChoose != null) onChoose.accept(i == -1 ? null : s);
+        closed(onChoose, i == -1 ? null : s);
     }
 }

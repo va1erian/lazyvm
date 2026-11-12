@@ -10,7 +10,7 @@ LazyOS at the S9 branch, xui `832c61f`, release builds, stripped.
 
 | | LazyWriter (Rust) | `samples/writer` (Java) |
 |---|---|---|
-| Code | 3,224 lines in `src/` (with its inline tests) + 96 in the binary | 823 lines in 6 files |
+| Code | 3,224 lines in `src/` (with its inline tests) + 96 in the binary | 787 lines in 6 files |
 | Editor | `xui-rich-text`, linked into the app | the same widget, in `lazyvm-ui`, as `lazy.ui.RichText` |
 | Kept | window, toolbar, formatting row and its sync with the selection, page view, page setup, tables, pictures with wrap, links, `.lzw` open and save, `.txt` open, Markdown export with its pictures, shortcuts, unsaved-changes guard | all of it |
 | Left out | | printing (the print spooler is a Messenger service: S10), the desktop theme (light only) |

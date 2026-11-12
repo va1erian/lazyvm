@@ -1,11 +1,17 @@
 package lazy.ui;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
+
 /**
  * A dialog, file picker or menu: it belongs to a window but not to its layout. It is made in the
  * window on its first {@code open} and lives until the window closes (docs/ui.md).
  */
 abstract class Popup extends Node {
     final Window window;
+    /** The stage the open dialog's {@code show} returned, completed when it closes. */
+    private CompletableFuture<Object> answer;
 
     Popup(Window window) {
         this.window = window;
@@ -45,17 +51,45 @@ abstract class Popup extends Node {
     }
 
     /**
-     * Shows a modal dialog, unless another dialog of its window is open: then it does nothing,
-     * so an app keeps no flag of its own. The window's shortcuts wait while one is open.
+     * Shows a modal dialog and returns the stage of its answer, unless another dialog of its
+     * window is open: then it shows nothing, so an app keeps no flag of its own, and the stage
+     * is cancelled. The window's shortcuts wait while one is open.
      */
-    final void showModal() {
-        if (window.modal != null) return;
-        open();
-        window.modal = this;
+    @SuppressWarnings("unchecked")
+    final <T> CompletionStage<T> showModal() {
+        CompletableFuture<Object> stage = new CompletableFuture<Object>();
+        if (window.modal != null) {
+            // Cancelled, not failed: an app that reports failures need not tell this apart.
+            stage.cancel(false);
+        } else {
+            open();
+            window.modal = this;
+            answer = stage;
+        }
+        return (CompletionStage<T>) (CompletionStage<?>) stage;
     }
 
-    /** The dialog closed, answered or cancelled. */
-    final void closed() {
-        if (window.modal == this) window.modal = null;
+    /**
+     * The dialog closed, answered or cancelled: the window takes input again, {@code callback}
+     * runs, then the stage completes with {@code value}. Either may show the next dialog. Does
+     * nothing unless this is the window's open dialog: closing a closed one answers nothing.
+     */
+    final <T> void closed(Consumer<T> callback, T value) {
+        if (window.modal != this) return;
+        window.modal = null;
+        CompletableFuture<Object> stage = answer;
+        answer = null;
+        try {
+            if (callback != null) callback.accept(value);
+        } finally {
+            if (stage != null) stage.complete(value);
+        }
+    }
+
+    /** Its window closed while it was open: the stage is cancelled. */
+    final void abandon() {
+        CompletableFuture<Object> stage = answer;
+        answer = null;
+        if (stage != null) stage.cancel(false);
     }
 }

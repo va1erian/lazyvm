@@ -11,7 +11,9 @@ import lazy.internal.ui.Headless;
  * by typing, a question cancelled with Escape, a task dialog's commands, a context menu walked
  * with the arrow keys, and window shortcuts that run whatever has the focus. While a dialog is
  * open, a second one does not show, and shortcuts and the close button wait. A menu asks for
- * its switches' states each time it shows.
+ * its switches' states each time it shows. Each show returns the stage of the answer, completed
+ * after the callback; a show over an open dialog cancels its stage, as closing the window
+ * cancels the open one.
  */
 public class Dialogs {
     static final char DOWN = 0x28;
@@ -78,6 +80,19 @@ public class Dialogs {
             menu.show(anchor);
             System.out.println("menu shown again: " + frame());
             Headless.key(Window.ESCAPE, 0);
+            message.show().thenAccept(s -> {
+                System.out.println("message stage: " + s);
+                prompt.show().thenAccept(p -> System.out.println("prompt stage: " + p));
+            });
+            question.show().whenComplete((s, t) -> System.out.println("second show: " + t));
+            Headless.key(Window.ENTER, 0);
+            System.out.println("prompt from a stage: " + frame());
+            Headless.key(Window.ESCAPE, 0);
+            task.show().thenAccept(c -> System.out.println("task stage: " + c));
+            task.close();
+            task.close();
+            question.show().whenComplete((s, t) -> System.out.println("window closed: " + t));
+            w.close();
         });
     }
 }

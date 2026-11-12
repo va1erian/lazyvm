@@ -493,6 +493,18 @@ What it says:
   its `dialogOpen` flag and its menu index tables (35 lines). Commands, value
   cells, timers as stages and groups were not taken: each would add more to
   `lazy.ui` than it removes from LazyWriter.
+- **Dialogs return stages** (the same document's "dialogs that return
+  stages", asked for again by the Siesta port of LazyWriter). `show()` of a
+  `Dialog`, `FileDialog` or `TaskDialog` returns the stage of its answer,
+  completed after the callback; a show while another dialog is open cancels
+  its stage, and so does closing the window with the dialog open.
+  LazyWriter's unsaved-changes flow became one chain (Save, maybe Save As,
+  then New, Open or Quit) instead of a pending-step field and four helpers.
+  An exception thrown in a stage's action stays in that stage, as
+  `CompletableFuture` does, where one from a callback stops the program with
+  the error dialog. LazyWriter keeps the second behaviour with a
+  `whenComplete` that hands the failure to `Ui.later`; cancellations are not
+  failures. Net, LazyWriter is 10 lines shorter.
 - New xui findings: toolbar items expose no bounds (tests click at an
   offset); programmatic setters raise no messages, by design; LazyOS's
   backend bundled its font unconditionally (fixed there by a constructor that

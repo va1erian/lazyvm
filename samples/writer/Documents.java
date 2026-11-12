@@ -9,98 +9,89 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 
 import lazy.ui.Dialog;
 import lazy.ui.FileDialog;
 import lazy.ui.TaskDialog;
+import lazy.ui.Ui;
 
 /** New, Open, Save, Save As, Export and Insert image, with their pickers and prompts. */
 final class Documents {
-    /** What runs once unsaved changes are saved or discarded. */
-    static final int NEW = 0, OPEN = 1, QUIT = 2;
-
     private final Writer app;
     private final FileDialog open, save, export, image;
     private final TaskDialog unsaved;
     private final Dialog message;
     final Dialog link;
-    /** The step that waits on the unsaved-changes question, or -1. */
-    private int after = -1;
 
     Documents(final Writer app) {
         this.app = app;
         open = app.window.openFile("Open").existing()
             .filter("LazyWriter documents (.lzw)", Names.EXTENSION).filter("Text (.txt)", Names.TEXT)
-            .filter("All files").onChoose(p -> chosen(p, this::openPath));
-        save = app.window.saveFile("Save As").filter("LazyWriter documents (.lzw)", Names.EXTENSION)
-            .onChoose(p -> chosen(p, this::saveChosen));
-        export = app.window.saveFile("Export as Markdown").filter("Markdown (.md)", Names.MARKDOWN)
-            .onChoose(p -> chosen(p, this::exportTo));
+            .filter("All files");
+        save = app.window.saveFile("Save As").filter("LazyWriter documents (.lzw)", Names.EXTENSION);
+        export = app.window.saveFile("Export as Markdown").filter("Markdown (.md)", Names.MARKDOWN);
         image = app.window.openFile("Insert image").existing()
-            .filter("Images (.png, .jpg, .jpeg)", Names.IMAGES).onChoose(p -> chosen(p, this::imageChosen));
+            .filter("Images (.png, .jpg, .jpeg)", Names.IMAGES);
         unsaved = app.window.task("Save changes?",
                 "This document has unsaved changes. Save them before you go on?")
-            .icon(TaskDialog.WARNING).command("Save").command("Discard").onChoice(this::unsaved);
-        message = app.window.message("LazyWriter", "").onClose(s -> closed());
+            .icon(TaskDialog.WARNING).command("Save").command("Discard");
+        message = app.window.message("LazyWriter", "").onClose(s -> app.editor.focus());
         link = app.window.prompt("Link",
                 "The address the selected text links to. Leave it empty to remove the link.", "https://")
             .acceptLabel("Link").onClose(app::linkChosen);
     }
 
-    private interface PathStep {
-        void run(String path);
+    /**
+     * Hands a failure of {@code stage} to the UI loop, which stops the program with the error
+     * dialog, as it does for a callback's: a stage would keep it to itself. A cancelled stage
+     * (a dialog that did not show, or a closed window) is no failure.
+     */
+    private static <T> CompletionStage<T> surface(CompletionStage<T> stage) {
+        stage.whenComplete((v, t) -> {
+            Throwable c = t instanceof CompletionException && t.getCause() != null ? t.getCause() : t;
+            if (c == null || c instanceof CancellationException) return;
+            Ui.later(() -> {
+                if (c instanceof Error) throw (Error) c;
+                throw c instanceof RuntimeException ? (RuntimeException) c : new RuntimeException(c);
+            });
+        });
+        return stage;
     }
 
-    /** A picker closed: run {@code step} with the path, or just return to the text. */
-    private void chosen(String path, PathStep step) {
-        if (path == null) closed();
-        else step.run(path);
+    /** Shows {@code picker} and runs {@code step} with the path, or returns to the text. */
+    private void pick(FileDialog picker, Consumer<String> step) {
+        surface(picker.folder(startDir()).show().thenAccept(p -> {
+            if (p == null) app.editor.focus();
+            else step.accept(p);
+        }));
     }
 
-    private void closed() {
-        after = -1;
-        app.editor.focus();
-    }
-
-    /** New, Open or Quit: ask about unsaved changes first. */
-    void guard(int next) {
-        if (app.dirty) {
-            after = next;
-            unsaved.show();
-        } else {
-            proceed(next);
+    /** New, Open or Quit: runs {@code next} once unsaved changes are saved or discarded. */
+    void guard(Runnable next) {
+        if (!app.dirty) {
+            next.run();
+            return;
         }
+        surface(unsaved.show().thenAccept(choice -> {
+            if (choice == 0) surface(save().thenAccept(saved -> {
+                if (saved) next.run();
+            }));
+            else if (choice == 1) next.run();
+            else app.editor.focus();
+        }));
     }
 
-    private void proceed(int next) {
-        if (next == NEW) {
-            load("", true, null);
-        } else if (next == OPEN) {
-            open.folder(startDir());
-            open.show();
-        } else {
-            app.window.close();
-        }
+    void newDocument() {
+        load("", true, null);
     }
 
-    private void unsaved(int choice) {
-        if (choice == 0) {
-            String path = savedPath();
-            if (path == null) saveAs();
-            else if (saveTo(path)) finish();
-        } else if (choice == 1) {
-            finish();
-        } else {
-            after = -1;
-            app.editor.focus();
-        }
-    }
-
-    private void finish() {
-        int next = after;
-        after = -1;
-        if (next >= 0) proceed(next);
-        else app.editor.focus();
+    void open() {
+        pick(open, this::openPath);
     }
 
     /** Where pickers start: the document's folder, or the home folder. */
@@ -155,20 +146,21 @@ final class Documents {
         }
     }
 
-    void save() {
+    /** Saves to the document's file, or asks for one; the stage says whether it saved. */
+    CompletionStage<Boolean> save() {
         String path = savedPath();
-        if (path == null) saveAs();
-        else saveTo(path);
+        return path == null ? saveAs() : CompletableFuture.completedFuture(saveTo(path));
     }
 
-    void saveAs() {
-        save.name(Names.stem(app.path) + "." + Names.EXTENSION).folder(startDir());
-        save.show();
+    CompletionStage<Boolean> saveAs() {
+        return surface(save.name(Names.stem(app.path) + "." + Names.EXTENSION).folder(startDir()).show()
+            .thenApply(p -> p != null ? saveTo(Names.withExtension(p, Names.EXTENSION)) : refocus()));
     }
 
-    private void saveChosen(String path) {
-        if (saveTo(Names.withExtension(path, Names.EXTENSION))) finish();
-        else after = -1;
+    /** Back to the text, having saved nothing. */
+    private boolean refocus() {
+        app.editor.focus();
+        return false;
     }
 
     private boolean saveTo(String path) {
@@ -210,8 +202,7 @@ final class Documents {
     }
 
     void export() {
-        export.name(Names.stem(app.path) + "." + Names.MARKDOWN).folder(startDir());
-        export.show();
+        pick(export.name(Names.stem(app.path) + "." + Names.MARKDOWN), this::exportTo);
     }
 
     /**
@@ -243,8 +234,7 @@ final class Documents {
     }
 
     void insertImage() {
-        image.folder(startDir());
-        image.show();
+        pick(image, this::imageChosen);
     }
 
     private void imageChosen(String path) {

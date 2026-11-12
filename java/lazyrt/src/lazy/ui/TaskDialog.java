@@ -1,11 +1,14 @@
 package lazy.ui;
 
 import java.util.ArrayList;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
 /**
  * A dialog with a row of command buttons and Cancel, made by {@link Window#task}: "Save changes?"
- * with Save and Discard. {@link #show} returns at once; the choice comes to {@link #onChoice}.
+ * with Save and Discard. {@link #show} returns at once, and the choice comes to {@link #onChoice}
+ * and to the stage {@code show} returns.
  */
 public final class TaskDialog extends Popup {
     /** Icons for {@link #icon}. */
@@ -56,14 +59,24 @@ public final class TaskDialog extends Popup {
         return this;
     }
 
-    /** Shows the dialog; does nothing while another dialog of the window is open. */
-    public void show() {
-        showModal();
+    /**
+     * Shows the dialog. The stage completes with the choice {@link #onChoice} gets, after it; it
+     * is cancelled if the window closes first. While another dialog of the window is open, this
+     * shows nothing and the stage is cancelled.
+     */
+    public CompletionStage<Integer> show() {
+        return showModal();
     }
 
+    /** Closes the dialog, if open, as if cancelled: {@link #onChoice} and the stage get -1. */
     public void close() {
         if (mounted()) call(Op.CLOSE, null);
-        closed();
+        closed(choice(), -1);
+    }
+
+    private Consumer<Integer> choice() {
+        final IntConsumer action = onChoice;
+        return action == null ? null : action::accept;
     }
 
     @Override
@@ -79,7 +92,6 @@ public final class TaskDialog extends Popup {
     @Override
     void fire(int kind, int i, double d, String s) {
         if (kind != Ui.DIALOG) return;
-        closed();
-        if (onChoice != null) onChoice.accept(i);
+        closed(choice(), i);
     }
 }

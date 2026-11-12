@@ -174,6 +174,7 @@ public final class Window extends Node {
             Ui.free(n);
         }
         owned.clear();
+        if (modal != null) modal.abandon();
         modal = null;
         if (ids.length > 0) Ui.forget0(ids);
         Ui.free(this);

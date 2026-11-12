@@ -1,11 +1,13 @@
 package lazy.ui;
 
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 /**
  * A message box, a question, or a prompt for a line of text, made by {@link Window#message},
  * {@link Window#confirm} and {@link Window#prompt}. It shows over its window, which takes no
- * input meanwhile; {@link #show} returns at once and the answer comes to {@link #onClose}.
+ * input meanwhile; {@link #show} returns at once, and the answer comes to {@link #onClose} and to
+ * the stage {@code show} returns.
  */
 public final class Dialog extends Popup {
     private final int style;
@@ -61,15 +63,19 @@ public final class Dialog extends Popup {
         return this;
     }
 
-    /** Shows the dialog; does nothing while another dialog of the window is open. */
-    public void show() {
-        showModal();
+    /**
+     * Shows the dialog. The stage completes with the answer {@link #onClose} gets, after it; it
+     * is cancelled if the window closes first. While another dialog of the window is open, this
+     * shows nothing and the stage is cancelled.
+     */
+    public CompletionStage<String> show() {
+        return showModal();
     }
 
-    /** Closes the dialog as if cancelled. */
+    /** Closes the dialog, if open, as if cancelled: {@link #onClose} and the stage get null. */
     public void close() {
         if (mounted()) call(Op.CLOSE, null);
-        closed();
+        closed(onClose, null);
     }
 
     @Override
@@ -86,7 +92,6 @@ public final class Dialog extends Popup {
     @Override
     void fire(int kind, int i, double d, String s) {
         if (kind != Ui.DIALOG) return;
-        closed();
-        if (onClose != null) onClose.accept(i == -1 ? null : s == null ? "" : s);
+        closed(onClose, i == -1 ? null : s == null ? "" : s);
     }
 }

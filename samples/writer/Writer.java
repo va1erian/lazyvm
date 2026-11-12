@@ -49,7 +49,7 @@ public final class Writer {
         tables = new Tables(this);
         editor.onChange(this::edited).onStyle(this::selection).onLink(url -> status.text(0, url));
         Layout content = Ui.column().add(commands().height(36), tools.row().fixed(34), editor.fill(1), status);
-        window.content(content).onClose(() -> documents.guard(Documents.QUIT));
+        window.content(content).onClose(() -> documents.guard(window::close));
         shortcuts();
     }
 
@@ -79,8 +79,8 @@ public final class Writer {
 
     private Toolbar commands() {
         return Ui.toolbar()
-            .item("FilePlus", "New (Ctrl+N)", "New", () -> documents.guard(Documents.NEW))
-            .item("FolderOpen", "Open (Ctrl+O)", "Open", () -> documents.guard(Documents.OPEN))
+            .item("FilePlus", "New (Ctrl+N)", "New", () -> documents.guard(documents::newDocument))
+            .item("FolderOpen", "Open (Ctrl+O)", "Open", () -> documents.guard(documents::open))
             .item("Save", "Save (Ctrl+S)", "Save", documents::save)
             .item("Download", "Export as Markdown (Ctrl+E)", "Export", documents::export)
             .separator()
@@ -102,12 +102,12 @@ public final class Writer {
      * while a dialog is open.
      */
     private void shortcuts() {
-        window.shortcut('n', Window.CTRL, () -> documents.guard(Documents.NEW));
-        window.shortcut('o', Window.CTRL, () -> documents.guard(Documents.OPEN));
+        window.shortcut('n', Window.CTRL, () -> documents.guard(documents::newDocument));
+        window.shortcut('o', Window.CTRL, () -> documents.guard(documents::open));
         window.shortcut('s', Window.CTRL, documents::save);
         window.shortcut('s', Window.CTRL | Window.SHIFT, documents::saveAs);
         window.shortcut('e', Window.CTRL, documents::export);
-        window.shortcut('q', Window.CTRL, () -> documents.guard(Documents.QUIT));
+        window.shortcut('q', Window.CTRL, () -> documents.guard(window::close));
     }
 
     /** The window title: {@code LazyWriter: <name>}, with {@code *} when modified. */
