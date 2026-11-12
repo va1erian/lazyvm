@@ -7,7 +7,8 @@
 //
 // The Siesta Writer driven headless: typing, the unsaved-changes question
 // cancelled, Save leading to a cancelled Save As, Save then New, open by
-// path (and a missing file), and the link prompt.
+// path (and a missing file), a command whose dialog cannot show, and the
+// link prompt.
 import java.nio.file.*;
 import lazy.internal.ui.Headless;
 import lazy.ui.*;
@@ -45,6 +46,10 @@ Headless.run(build()) {
     show("new, saved first");
     var saved = new String(Files.readAllBytes(dir.resolve("doc.lzw")), UTF_8);
     System.out.println("saved JSON mentions More: ${saved.contains("More")}");
+    message.text("busy").show();
+    surface(open());                     // its picker cannot show: cancelled, no failure
+    Headless.key(Window.ENTER, 0);
+    show("open while a message was up");
     link();
     Headless.type("lazy.test");
     Headless.key(Window.ENTER, 0);

@@ -191,22 +191,22 @@ needs Messenger, and a light theme only):
 So the app itself is about 70 times smaller once the runtime is on the
 machine, at a start-up cost of about a fifth of a second.
 
-The second is measured too, on Windows (2026-11-12, S9 at `0b547b8`, where
-the Java port is 797 lines): [`samples/siesta/writer`](../samples/siesta/writer)
-is the same app, file for file, built with `siestac -o writer.jar`.
-`lazyvm-ui -jar writer.jar` gives a first frame byte-identical to the Java
-port's (`tools/ui_shot.py`); rendered headless after typing a line,
-the two give byte-identical frames (`Headless.dump`); and `samples/siesta/writer_flow.sie` drives it
-headless through typing, the "Save changes?" question, Save leading to Save
-As, Save then New, a missing file and the link prompt.
+The second is measured too, on Windows (2026-11-12, S9 at `3fba70c`, where
+a dialog's `show()` returns the stage of its answer and the Java port is
+787 lines): [`samples/siesta/writer`](../samples/siesta/writer) is the same
+app, file for file, built with `siestac -o writer.jar`. Rendered headless
+after typing a line, the two ports give byte-identical frames
+(`Headless.dump`), and `samples/siesta/writer_flow.sie` drives the Siesta
+one through typing, the "Save changes?" question, Save leading to Save As,
+Save then New, a missing file, a command whose dialog cannot show, and the
+link prompt.
 
 | | Java | Siesta |
 |---|---|---|
-| Code lines (no blanks, comments or imports) | 592 | 456 (-23 %) |
-| Source bytes | 31,250 | 22,449 (-28 %) |
-| Classes | 8, 44,553 B | 17, 64,289 B |
-| Jar | 25,174 B deflated (24,696 B gzipped) | 66,464 B stored (22,182 B gzipped) |
-| First frame, Windows | reference | identical |
+| Code lines (no blanks, comments or imports) | 574 | 447 (-22 %) |
+| Source bytes | 31,707 | 22,532 (-29 %) |
+| Class bytes | 46,372 (20,107 compressed together) | 63,479 (22,170) |
+| Frame after typing, headless | reference | identical |
 
 Where the lines went, by cause:
 
@@ -215,9 +215,9 @@ Where the lines went, by cause:
   by name. The four helper classes, their constructors and every `app.`
   go (about 60 lines).
 - **`async` dialogs**: New, Open and Quit await "Save changes?" and the
-  picker in one method each, where the Java port keeps a pending step, a
-  `guard`/`proceed`/`finish` triple and a callback per dialog (Documents:
-  203 to 166 lines, with 15 lines of adapters, below).
+  picker in one method each. With stages from `show()`, the Java port
+  chains `thenAccept` and `thenApply`, nested one level for "save, then
+  go on"; Siesta reads top to bottom (Documents: 185 to 157 lines).
 - **No checked exceptions**: a plain `Runnable` lambda may do file I/O, so
   one `attempt("SAVE", p, "Could not save") { ... }` replaces four
   try/catch blocks that print and report (Java would need its own
@@ -226,21 +226,16 @@ Where the lines went, by cause:
   shortcuts lose `() ->`; `..tooltip(tip)` removes a temporary per button;
   `"Page ${p[0]} of ${p[1]}"`.
 
-Classes are larger before compression (nine async frame classes, full
-stack-map frames) and smaller after: what a package ships is the gzipped
-size.
+Siesta's classes are larger, mostly its nine async frame classes; javac's
+port has none because it chains lambdas.
 
-What is left is API, for S9:
-
-- **Dialogs that complete a stage.** Each dialog kind needs a five-line
-  adapter (`onChoose { p -> f.complete(p); }.show()`) before it can be
-  awaited; `show()` returning `CompletionStage` (section 3) would remove
-  them, for Java too.
-- **`Ui.later` before `Ui.run`** waits for the first event rather than
-  running once the window is up, unlike `Ui.executor().execute`; the port
-  first used `later` and its start-up ran only as the window closed. Fixed
-  on S9's branch (`adce0a3`): a task queued before `Ui.run` now runs once
-  the window is up. Dialogs returning stages wait for the owner.
+Both ports need the same `surface` helper (eight lines): a stage keeps its
+failure to itself, so each command hands a failure that is not a cancelled
+dialog to `Ui.later`, which stops the program with the error dialog. Once
+`lazy.ui` registers its executor as the UI thread's home (siesta-async.md
+section 4), Siesta can drop it: a fire-and-forget `async` lambda already
+rethrows its failure on its home, and leaving out `CancellationException`
+there would make `save.onClick async { await save(); }` enough.
 
 ## 6. Open questions for the owner
 

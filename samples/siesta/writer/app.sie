@@ -17,14 +17,14 @@ Window build() {
     editor.onStyle { s -> selection(s); };
     editor.onLink { url -> status.text(0, url); };
     window.content(Ui.column().add(commands().height(36), toolsRow().fixed(34), editor.fill(1), status));
-    window.onClose { quit(); };
+    window.onClose { surface(quit()); };
     // Ctrl+N, O, S, Shift+S, E and Q; the editor handles the rest.
-    window.shortcut('n', Window.CTRL) { newDocument(); };
-    window.shortcut('o', Window.CTRL) { open(); };
-    window.shortcut('s', Window.CTRL) { save(); };
-    window.shortcut('s', Window.CTRL | Window.SHIFT) { saveAs(); };
-    window.shortcut('e', Window.CTRL) { export(); };
-    window.shortcut('q', Window.CTRL) { quit(); };
+    window.shortcut('n', Window.CTRL) { surface(newDocument()); };
+    window.shortcut('o', Window.CTRL) { surface(open()); };
+    window.shortcut('s', Window.CTRL) { surface(save()); };
+    window.shortcut('s', Window.CTRL | Window.SHIFT) { surface(saveAs()); };
+    window.shortcut('e', Window.CTRL) { surface(export()); };
+    window.shortcut('q', Window.CTRL) { surface(quit()); };
     return window;
 }
 
@@ -37,10 +37,10 @@ void started() {
 
 Toolbar commands() {
     return Ui.toolbar()
-        .item("FilePlus", "New (Ctrl+N)", "New") { newDocument(); }
-        .item("FolderOpen", "Open (Ctrl+O)", "Open") { open(); }
-        .item("Save", "Save (Ctrl+S)", "Save") { save(); }
-        .item("Download", "Export as Markdown (Ctrl+E)", "Export") { export(); }
+        .item("FilePlus", "New (Ctrl+N)", "New") { surface(newDocument()); }
+        .item("FolderOpen", "Open (Ctrl+O)", "Open") { surface(open()); }
+        .item("Save", "Save (Ctrl+S)", "Save") { surface(save()); }
+        .item("Download", "Export as Markdown (Ctrl+E)", "Export") { surface(export()); }
         .separator()
         .item("Undo2", "Undo (Ctrl+Z)", "Undo") { format(RichText.UNDO); }
         .item("Redo2", "Redo (Ctrl+Y)", "Redo") { format(RichText.REDO); }
@@ -49,8 +49,8 @@ Toolbar commands() {
         .item("Copy", "Copy (Ctrl+C)", "Copy") { format(RichText.COPY); }
         .item("ClipboardPaste", "Paste (Ctrl+V)", "Paste") { format(RichText.PASTE); }
         .separator()
-        .item("Image", "Insert image", "Image") { insertImage(); }
-        .item("Link", "Link the selection", "Link") { link(); }
+        .item("Image", "Insert image", "Image") { surface(insertImage()); }
+        .item("Link", "Link the selection", "Link") { surface(link()); }
         .item("SeparatorHorizontal", "Page break (Ctrl+Enter)", "Page break") { format(RichText.PAGE_BREAK); };
 }
 

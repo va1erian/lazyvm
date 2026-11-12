@@ -1,6 +1,6 @@
 // New, Open, Save, Save As, Export and Insert image. Each command is one
-// async method that awaits its picker or question where the Java port keeps
-// a pending step and a callback per dialog.
+// async method that awaits its picker or question: a dialog's show()
+// returns the stage of its answer.
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.*;
@@ -22,30 +22,21 @@ var linkPrompt = window.prompt("Link",
     "The address the selected text links to. Leave it empty to remove the link.", "https://")
     .acceptLabel("Link");
 
-// A dialog as a stage: the path, choice or text it closed with.
-CompletionStage<String> chosen(FileDialog d) {
-    var f = new CompletableFuture<String>();
-    d.onChoose { p -> f.complete(p); }.show();
-    return f;
-}
-
-CompletionStage<Integer> chosen(TaskDialog d) {
-    var f = new CompletableFuture<Integer>();
-    d.onChoice { i -> f.complete(i); }.show();
-    return f;
-}
-
-CompletionStage<String> chosen(Dialog d) {
-    var f = new CompletableFuture<String>();
-    d.onClose { s -> f.complete(s); }.show();
-    return f;
+// Hands a command's failure to the UI loop, which stops the program with the
+// error dialog as it does for a callback's; a stage would keep it to itself.
+// A cancelled dialog (another was open, or the window closed) is no failure.
+void surface(CompletionStage<?> command) {
+    command.whenComplete { v, e ->
+        var cause = e instanceof CompletionException && e.getCause() != null ? e.getCause() : e;
+        if (cause != null && !(cause instanceof CancellationException)) Ui.later { throw cause; };
+    };
 }
 
 // Whether the document may go: it has no unsaved changes, or the user saved
 // or discarded them.
 async CompletionStage<Boolean> discarded() {
     if (!dirty) return true;
-    int choice = await chosen(unsaved);
+    int choice = await unsaved.show();
     if (choice == 0) return await save();
     if (choice != 1) editor.focus();
     return choice == 1;
@@ -57,7 +48,7 @@ async CompletionStage<Void> newDocument() {
 
 async CompletionStage<Void> open() {
     if (!await discarded()) return;
-    var p = await chosen(openPicker.folder(startDir()));
+    var p = await openPicker.folder(startDir()).show();
     if (p == null) editor.focus();
     else openPath(p);
 }
@@ -73,7 +64,7 @@ async CompletionStage<Boolean> save() {
 }
 
 async CompletionStage<Boolean> saveAs() {
-    var p = await chosen(savePicker.name("${stem(path)}.${EXTENSION}").folder(startDir()));
+    var p = await savePicker.name("${stem(path)}.${EXTENSION}").folder(startDir()).show();
     if (p == null) {
         editor.focus();
         return false;
@@ -82,7 +73,7 @@ async CompletionStage<Boolean> saveAs() {
 }
 
 async CompletionStage<Void> link() {
-    var url = await chosen(linkPrompt);
+    var url = await linkPrompt.show();
     if (url != null) editor.link(url);
     refocus();
 }
@@ -176,7 +167,7 @@ void write(String p, byte[] bytes) {
 // Writes the document as Markdown, its pictures as PNGs in `<stem>_images/`
 // beside it (made only when there is one), linked relatively.
 async CompletionStage<Void> export() {
-    var chosen = await chosen(exportPicker.name("${stem(path)}.${MARKDOWN}").folder(startDir()));
+    var chosen = await exportPicker.name("${stem(path)}.${MARKDOWN}").folder(startDir()).show();
     if (chosen == null) {
         editor.focus();
         return;
@@ -200,7 +191,7 @@ async CompletionStage<Void> export() {
 }
 
 async CompletionStage<Void> insertImage() {
-    var p = await chosen(imagePicker.folder(startDir()));
+    var p = await imagePicker.folder(startDir()).show();
     if (p == null) {
         editor.focus();
         return;
