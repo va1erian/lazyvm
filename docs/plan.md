@@ -44,7 +44,7 @@ follows [`../AGENTS.md`](../AGENTS.md).
 | S7 | `lazy.net` async TCP | done |
 | S8 | Verifier and hardening | done |
 | S11 | Streams, `java.time`, logging, JDWP | in progress (S11-01, S11-02, S11-03, S11-05 and S11-06 done) |
-| S9 | `lazy.ui` on xui | done (the gate passed; `lazyvm-ui` is over the D14 budget, for the owner) |
+| S9 | `lazy.ui` on xui | done (`lazyvm-ui` has its own 6 MB budget, D14) |
 | S10 | Messenger and LazyOS integration | not started |
 | S12 | Explore: AWT on xui | not started |
 | S13 | Explore: Swing and media | not started |

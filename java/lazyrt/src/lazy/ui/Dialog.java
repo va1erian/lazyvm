@@ -61,14 +61,15 @@ public final class Dialog extends Free {
         return this;
     }
 
-    /** Shows the dialog. */
+    /** Shows the dialog; does nothing while another dialog of the window is open. */
     public void show() {
-        open();
+        showModal();
     }
 
     /** Closes the dialog as if cancelled. */
     public void close() {
         if (mounted()) call(Op.CLOSE, null);
+        closed();
     }
 
     @Override
@@ -84,6 +85,8 @@ public final class Dialog extends Free {
 
     @Override
     void fire(int kind, int i, double d, String s) {
-        if (kind == Ui.DIALOG && onClose != null) onClose.accept(i == -1 ? null : s == null ? "" : s);
+        if (kind != Ui.DIALOG) return;
+        closed();
+        if (onClose != null) onClose.accept(i == -1 ? null : s == null ? "" : s);
     }
 }

@@ -308,9 +308,14 @@ The VM stays small: on every platform, the release binary with its debug info
 stripped and gzipped (-9), plus `lazyrt.jar` as built (already deflated), is
 under 4,000,000 bytes. `tools/size.py` measures it and fails above the budget,
 and CI runs it for the Windows binary and for the static musl binary LazyOS
-runs. Both launchers are held to it: `lazyvm`, and `lazyvm-ui`, which adds
-`lazy.ui` and xui (docs/ui.md, "Size"). The budget is the owner's choice (October 2026, with the sum near 1.4 MB
+runs. The budget is the owner's choice (October 2026, with the sum near 1.4 MB
 at the end of S5).
+
+`lazyvm-ui`, which adds `lazy.ui` and xui (docs/ui.md, "Size"), has its own
+budget of 6,000,000 bytes, measured the same way: the VM's 4 MB plus 2 MB for
+the UI stack. The owner set it apart in November 2026, when the UI binary
+measured 4.32 MB on Windows and 4.50 MB on LazyOS, with third-party crates
+built for size. `lazyvm` stays held to 4,000,000.
 
 - **Over budget** is a failing gate like any other: shrink something (dead
   code, tables, a dependency) rather than raise the number. Raising it is the

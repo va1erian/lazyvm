@@ -38,8 +38,6 @@ public final class Writer {
     boolean dirty;
     /** The last formatting under the selection, shown again after commands. */
     RichText.Style summary;
-    /** Whether a dialog or picker is open, so shortcuts leave it alone. */
-    boolean dialogOpen;
 
     Writer(int width, int height, String serif, String mono) {
         this.serif = serif;
@@ -94,26 +92,22 @@ public final class Writer {
             .item("ClipboardPaste", "Paste (Ctrl+V)", "Paste", () -> format(RichText.PASTE))
             .separator()
             .item("Image", "Insert image", "Image", documents::insertImage)
-            .item("Link", "Link the selection", "Link", this::link)
+            .item("Link", "Link the selection", "Link", documents.link::show)
             .item("SeparatorHorizontal", "Page break (Ctrl+Enter)", "Page break",
                 () -> format(RichText.PAGE_BREAK));
     }
 
-    /** Ctrl+N, O, S, Shift+S, E and Q; the editor handles B, I, U, Z, Y, X, C, V and A. */
+    /**
+     * Ctrl+N, O, S, Shift+S, E and Q; the editor handles B, I, U, Z, Y, X, C, V and A. They wait
+     * while a dialog is open.
+     */
     private void shortcuts() {
-        window.shortcut('n', Window.CTRL, unlessDialog(() -> documents.guard(Documents.NEW)));
-        window.shortcut('o', Window.CTRL, unlessDialog(() -> documents.guard(Documents.OPEN)));
-        window.shortcut('s', Window.CTRL, unlessDialog(documents::save));
-        window.shortcut('s', Window.CTRL | Window.SHIFT, unlessDialog(documents::saveAs));
-        window.shortcut('e', Window.CTRL, unlessDialog(documents::export));
-        window.shortcut('q', Window.CTRL, unlessDialog(() -> documents.guard(Documents.QUIT)));
-    }
-
-    /** While a dialog is open, Enter and Escape belong to it, not to the document. */
-    private Runnable unlessDialog(final Runnable action) {
-        return () -> {
-            if (!dialogOpen) action.run();
-        };
+        window.shortcut('n', Window.CTRL, () -> documents.guard(Documents.NEW));
+        window.shortcut('o', Window.CTRL, () -> documents.guard(Documents.OPEN));
+        window.shortcut('s', Window.CTRL, documents::save);
+        window.shortcut('s', Window.CTRL | Window.SHIFT, documents::saveAs);
+        window.shortcut('e', Window.CTRL, documents::export);
+        window.shortcut('q', Window.CTRL, () -> documents.guard(Documents.QUIT));
     }
 
     /** The window title: {@code LazyWriter: <name>}, with {@code *} when modified. */
@@ -174,15 +168,8 @@ public final class Writer {
         if (summary != null) tools.sync(summary);
     }
 
-    private void link() {
-        if (dialogOpen) return;
-        dialogOpen = true;
-        documents.link.show();
-    }
-
     /** The link prompt closed: link the selection, unlink it when blank, or do nothing. */
     void linkChosen(String url) {
-        dialogOpen = false;
         if (url != null) editor.link(url);
         refocus();
     }

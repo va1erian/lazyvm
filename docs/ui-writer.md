@@ -45,12 +45,15 @@ LazyOS desktop already ships ~34 such apps.
 
 What the runtime costs is mostly xui, not the VM: `lazyvm` without UI is
 2,020,840 bytes; `lazyvm-ui` adds every bound widget, the rich-text editor
-(~470 KB gzipped), the LazyOS backend and the text stack. Against D14's
-budget (binary gzipped + `lazyrt.jar` under 4,000,000 B), `lazyvm-ui` is at
-4,883,373 B on LazyOS (122 %) and 4,627,932 B on Windows (116 %); without the
-rich-text editor, 104 %. `lazyrt.jar` alone grew to 1.55 MB since the S9
-spike. Whether `lazyvm-ui` gets its own budget, the editor its own binary, or
-xui a smaller build (gap 2) is the owner's decision.
+(~470 KB gzipped), the LazyOS backend and the text stack. Measured as D14
+does (binary gzipped + `lazyrt.jar`), `lazyvm-ui` was 4,883,373 B on LazyOS
+and 4,627,932 B on Windows, over the VM's 4,000,000 B. The owner gave it its
+own budget of 6,000,000 B (D14), and third-party crates are now built for
+size (`opt-level = "z"`, except the few the VM leans on and the
+rasteriser): 4,495,902 B on
+LazyOS (75 %) and 4,318,541 B on Windows (72 %); the LazyOS binary, stripped,
+went from 7,444,560 to 7,159,544 bytes. The table above has the earlier
+figures.
 
 ## Speed
 
@@ -77,6 +80,15 @@ upcalls and 544 native calls, with 2.7 ms of Java in total (13 µs a message,
 67 µs at most). On Windows a real window is built 61 ms after `Ui.run`
 (Counter: 46 ms), and 100 resizes from outside cost zero upcalls
 (`tools/ui_shot.py --resize 100`).
+
+**Built for size.** Headless on Windows, typing 7,200 characters into the
+Writer and then repainting it 100 times took 0.50 s and 0.50 s with every
+crate at full speed. With third-party crates built for size it took 0.75 s
+and 1.17 s; keeping the rasteriser (tiny-skia, zeno, swash) at full speed
+brings the repaints back to 0.56 s (5.6 ms a frame) for 77 KB, and typing
+stays at 0.70 s (0.1 ms a character). Keeping shaping and the rich-text
+layout fast too would cost another 168 KB for 0.03 ms a character, so they
+stay built for size. The LazyOS start-up above was measured before this.
 
 ## How to reproduce
 

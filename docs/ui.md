@@ -351,9 +351,14 @@ So:
   `lazyvm`. Under `lazyvm`, `Ui.run` throws `IllegalStateException` naming
   `lazyvm-ui`. Both binaries share `lazyrt.jar` (the `lazy.ui` classes cost
   it a few KB).
-- `tools/size.py` checks both against D14, on Windows and musl, in CI. A
-  PR that adds widgets says what `lazyvm-ui` costs, and stops for the owner
-  past 80 % of the budget.
+- `tools/size.py` checks both, on Windows and musl, in CI: `lazyvm`
+  against D14's 4,000,000 B and `lazyvm-ui` against its own 6,000,000 B.
+  Third-party crates (xui and its text stack, mostly) are built with
+  `opt-level = "z"`, which took 7 to 8 % off `lazyvm-ui`; the VM's own
+  crates, the few it leans on and the rasteriser stay at full speed
+  (`Cargo.toml`; [`ui-writer.md`](ui-writer.md), "Speed"). A PR that adds
+  widgets says what `lazyvm-ui` costs, and stops for the owner past 80 % of
+  the budget.
 - Only the widgets apps use are bound. xui's optional crates (rich text, the
   code editor, web views, forms, scripts) stay out.
 
@@ -370,6 +375,15 @@ confirmed 2 (the size), 5, 6, 7 and 8; the others wait for the item named.
 2. **Size controls.** A way to build `winit-backend` without the OpenGL
    stack, and `xui-canvas` with a smaller text stack or with system font
    discovery off, if the measurements show they dominate.
+   Measured in November 2026 on LazyOS's `lazyvm-ui`: the text stack
+   (harfrust, skrifa, read-fonts, zeno, swash, cosmic-text) is ~1.4 MB of
+   code, `xui-rich-text` 0.33 MB, the JPEG and PNG decoders 0.2 MB.
+   `xui-canvas` takes cosmic-text with its default features, which pull in
+   fontconfig parsing that LazyOS never uses; off, it saves 48,507 B (1 %) of
+   the D14 measure. The OpenGL stack on Windows is woven through
+   `xui-canvas`'s compositor and backend, so cutting it is xui work, not a
+   feature switch. Building third-party crates with `opt-level = "z"`
+   (`Cargo.toml`) saved more than either.
 3. **Panics on caller input.** The binding validates what Java passes, but
    xui's own panics on odd values (huge sizes, empty lists, out-of-range
    selections) should become errors; the binding cannot catch them all
@@ -469,6 +483,15 @@ What it says:
 - **RichText** (`xui-rich-text`, feature `rich-text` of `xui-bind`) is the one
   heavy widget bound, for LazyWriter ([`ui-writer.md`](ui-writer.md)); it costs
   ~470 KB gzipped of `lazyvm-ui`.
+- **No dialog or menu bookkeeping in apps** (two of the Siesta session's
+  proposals, `docs/siesta-apps.md` on its branch). A window knows which of
+  its dialogs is open: `show()` of another does nothing and the window's
+  shortcuts wait until it closes. A menu's switches take a `BooleanSupplier`
+  and `enabledWhen(condition, entries)` scopes a condition; both are asked
+  each time the menu shows, so apps hold no entry numbers. LazyWriter lost
+  its `dialogOpen` flag and its menu index tables (35 lines). Commands, value
+  cells, timers as stages and groups were not taken: each would add more to
+  `lazy.ui` than it removes from LazyWriter.
 - New xui findings: toolbar items expose no bounds (tests click at an
   offset); programmatic setters raise no messages, by design; LazyOS's
   backend bundled its font unconditionally (fixed there by a constructor that

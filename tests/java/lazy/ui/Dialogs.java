@@ -9,7 +9,9 @@ import lazy.internal.ui.Headless;
 /**
  * Dialogs, menus and shortcuts, driven by keys: a message accepted with Enter, a prompt answered
  * by typing, a question cancelled with Escape, a task dialog's commands, a context menu walked
- * with the arrow keys, and window shortcuts that run whatever has the focus.
+ * with the arrow keys, and window shortcuts that run whatever has the focus. While a dialog is
+ * open, a second one does not show and shortcuts wait. A menu asks for its switches' states
+ * each time it shows.
  */
 public class Dialogs {
     static final char DOWN = 0x28;
@@ -35,20 +37,27 @@ public class Dialogs {
         final TaskDialog task = w.task("Save changes?", "This document has unsaved changes.")
             .icon(TaskDialog.WARNING).command("Save").command("Discard")
             .onChoice(i -> System.out.println("task choice: " + i));
+        final boolean[] wrap = {false};
         final Menu menu = w.menu()
-            .item("Cut", "Scissors", () -> System.out.println("menu: cut"))
+            .enabledWhen(() -> false, m -> m.item("Cut", "Scissors", () -> System.out.println("menu: cut")))
             .item("Copy", () -> System.out.println("menu: copy"))
             .separator()
-            .check("Wrap", false, on -> System.out.println("menu: wrap " + on))
+            .check("Wrap", () -> wrap[0], on -> {
+                wrap[0] = on;
+                System.out.println("menu: wrap " + on);
+            })
             .submenu("More", null, m -> m.item("Deep", () -> System.out.println("menu: deep")));
-        menu.enabled(0, false);
         Headless.run(w, () -> {
             Headless.click(field);
             Headless.key('s', Window.CTRL);
             Headless.key('s', Window.CTRL | Window.SHIFT);
             message.show();
             System.out.println("message shown: " + frame());
+            question.show();
+            Headless.key('s', Window.CTRL);
+            System.out.println("over the message: " + frame());
             Headless.key(Window.ENTER, 0);
+            Headless.key('s', Window.CTRL);
             prompt.show();
             Headless.type("lazy.test");
             Headless.key(Window.ENTER, 0);
@@ -61,8 +70,11 @@ public class Dialogs {
             System.out.println("menu shown: " + frame());
             Headless.key(DOWN, 0);
             Headless.key(Window.ENTER, 0);
-            menu.checked(3, true);
             System.out.println("closed: " + frame());
+            wrap[0] = false;
+            menu.show(anchor);
+            System.out.println("menu shown again: " + frame());
+            Headless.key(Window.ESCAPE, 0);
         });
     }
 }

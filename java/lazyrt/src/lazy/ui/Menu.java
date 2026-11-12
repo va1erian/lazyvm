@@ -1,33 +1,40 @@
 package lazy.ui;
 
 import java.util.ArrayList;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 /**
- * A context menu, made by {@link Window#menu} and shown under a widget with {@link #show}.
- * Entries are numbered in the order they are added, from 0, submenus and their entries included;
- * {@link #enabled} and {@link #checked} take that number.
+ * A context menu, made by {@link Window#menu} and shown under a widget with {@link #show}. Each
+ * entry carries its own action; whether a switch is checked, and whether entries are enabled
+ * ({@link #enabledWhen}), are asked of the app each time the menu shows, so it keeps no entry
+ * numbers.
  */
 public final class Menu extends Free {
     private static final int ITEM = 0, CHECK = 1, SEPARATOR = 2, SUBMENU = 3, RADIO = 4;
 
-    /** Per entry: type, text, icon, checked, and the entry's action. */
     private final ArrayList<Entry> entries = new ArrayList<Entry>();
     private int depth;
+    /** The condition entries added now are enabled on, or null for always. */
+    private BooleanSupplier scope;
 
     private static final class Entry {
         final int type, depth;
         final String text, icon;
+        final BooleanSupplier enabledOn;
+        BooleanSupplier checkedOn;
+        /** The state last shown. */
         boolean checked, enabled = true;
         Runnable click;
         Consumer<Boolean> toggle;
         int children;
 
-        Entry(int type, int depth, String text, String icon) {
+        Entry(int type, int depth, String text, String icon, BooleanSupplier enabledOn) {
             this.type = type;
             this.depth = depth;
             this.text = text;
             this.icon = icon;
+            this.enabledOn = enabledOn;
         }
     }
 
@@ -37,7 +44,7 @@ public final class Menu extends Free {
 
     private Entry add(int type, String text, String icon) {
         fixed();
-        Entry e = new Entry(type, depth, text, icon);
+        Entry e = new Entry(type, depth, text, icon, scope);
         entries.add(e);
         return e;
     }
@@ -53,22 +60,25 @@ public final class Menu extends Free {
         return this;
     }
 
-    /** Adds a switch, running {@code action} with its new state. */
-    public Menu check(String text, boolean checked, Consumer<Boolean> action) {
+    /** Adds a switch, checked while {@code checked} says so; {@code action} gets its new state. */
+    public Menu check(String text, BooleanSupplier checked, Consumer<Boolean> action) {
         Entry e = add(CHECK, Ui.nonNull(text, "text"), null);
-        e.checked = checked;
+        e.checkedOn = Ui.nonNull(checked, "checked");
         e.toggle = Ui.nonNull(action, "action");
         return this;
     }
 
     /**
-     * Adds a choice among the radio entries next to it: picking it checks it and clears the
-     * others, and runs {@code action} with true.
+     * Adds a choice among the radio entries next to it, checked while {@code checked} says so:
+     * picking it checks it, clears the others and runs {@code action}.
      */
-    public Menu radio(String text, boolean checked, Consumer<Boolean> action) {
+    public Menu radio(String text, BooleanSupplier checked, final Runnable action) {
+        Ui.nonNull(action, "action");
         Entry e = add(RADIO, Ui.nonNull(text, "text"), null);
-        e.checked = checked;
-        e.toggle = Ui.nonNull(action, "action");
+        e.checkedOn = Ui.nonNull(checked, "checked");
+        e.toggle = on -> {
+            if (on) action.run();
+        };
         return this;
     }
 
@@ -91,33 +101,40 @@ public final class Menu extends Free {
         return this;
     }
 
-    /** Enables or greys out entry {@code index}. */
-    public Menu enabled(int index, boolean on) {
-        Entry e = entry(index);
-        if (mounted()) call(Op.ITEM_ENABLED, index, on ? 1 : 0, null);
-        e.enabled = on;
+    /**
+     * Adds entries with {@code fill} that are enabled only while {@code enabled} says so, and
+     * greyed out otherwise. Nested, both conditions must hold.
+     */
+    public Menu enabledWhen(final BooleanSupplier enabled, Consumer<Menu> fill) {
+        Ui.nonNull(enabled, "enabled");
+        final BooleanSupplier outer = scope;
+        scope = outer == null ? enabled : () -> outer.getAsBoolean() && enabled.getAsBoolean();
+        try {
+            fill.accept(this);
+        } finally {
+            scope = outer;
+        }
         return this;
-    }
-
-    /** Checks or clears the switch at {@code index}, without running its action. */
-    public Menu checked(int index, boolean on) {
-        Entry e = entry(index);
-        if (e.type != CHECK && e.type != RADIO) throw new IllegalArgumentException("entry " + index + " is not a switch");
-        if (mounted()) call(Op.ITEM_CHECKED, index, on ? 1 : 0, null);
-        e.checked = on;
-        return this;
-    }
-
-    private Entry entry(int index) {
-        if (index < 0 || index >= entries.size()) throw new IndexOutOfBoundsException("entry " + index);
-        return entries.get(index);
     }
 
     /** Shows the menu under {@code anchor}, which must be in the menu's window. */
     public void show(Widget anchor) {
+        boolean made = mounted();
+        for (int i = 0; i < entries.size(); i++) refresh(i, made);
         make();
         int[] r = (int[]) anchor.call(Op.BOUNDS, null);
         call(Op.OPEN, r[0], r[3], null);
+    }
+
+    /** Asks the app for entry {@code i}'s state, and tells a made menu what changed. */
+    private void refresh(int i, boolean made) {
+        Entry e = entries.get(i);
+        boolean enabled = e.enabledOn == null || e.enabledOn.getAsBoolean();
+        boolean checked = e.checkedOn != null && e.checkedOn.getAsBoolean();
+        if (made && enabled != e.enabled) call(Op.ITEM_ENABLED, i, enabled ? 1 : 0, null);
+        if (made && checked != e.checked) call(Op.ITEM_CHECKED, i, checked ? 1 : 0, null);
+        e.enabled = enabled;
+        e.checked = checked;
     }
 
     public void close() {
@@ -140,7 +157,7 @@ public final class Menu extends Free {
         }
     }
 
-    /** Applies the enabled states set before the menu was made. */
+    /** Applies the enabled states asked for before the menu was made. */
     @Override
     void made() {
         for (int i = 0; i < entries.size(); i++)

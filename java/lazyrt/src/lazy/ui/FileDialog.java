@@ -64,12 +64,14 @@ public final class FileDialog extends Free {
         return this;
     }
 
+    /** Shows the dialog; does nothing while another dialog of the window is open. */
     public void show() {
-        open();
+        showModal();
     }
 
     public void close() {
         if (mounted()) call(Op.CLOSE, null);
+        closed();
     }
 
     @Override
@@ -89,6 +91,8 @@ public final class FileDialog extends Free {
 
     @Override
     void fire(int kind, int i, double d, String s) {
-        if (kind == Ui.DIALOG && onChoose != null) onChoose.accept(i == -1 ? null : s);
+        if (kind != Ui.DIALOG) return;
+        closed();
+        if (onChoose != null) onChoose.accept(i == -1 ? null : s);
     }
 }

@@ -53,26 +53,19 @@ final class Documents {
 
     /** A picker closed: run {@code step} with the path, or just return to the text. */
     private void chosen(String path, PathStep step) {
-        app.dialogOpen = false;
-        if (path == null) {
-            closed();
-        } else {
-            step.run(path);
-        }
+        if (path == null) closed();
+        else step.run(path);
     }
 
     private void closed() {
-        app.dialogOpen = false;
         after = -1;
         app.editor.focus();
     }
 
     /** New, Open or Quit: ask about unsaved changes first. */
     void guard(int next) {
-        if (app.dialogOpen) return;
         if (app.dirty) {
             after = next;
-            app.dialogOpen = true;
             unsaved.show();
         } else {
             proceed(next);
@@ -84,7 +77,6 @@ final class Documents {
             load("", true, null);
         } else if (next == OPEN) {
             open.folder(startDir());
-            app.dialogOpen = true;
             open.show();
         } else {
             app.window.close();
@@ -92,7 +84,6 @@ final class Documents {
     }
 
     private void unsaved(int choice) {
-        app.dialogOpen = false;
         if (choice == 0) {
             String path = savedPath();
             if (path == null) saveAs();
@@ -140,7 +131,6 @@ final class Documents {
 
     private void fail(String what, String path, String error) {
         message.text(what + " " + path + ": " + error);
-        app.dialogOpen = true;
         message.show();
     }
 
@@ -166,16 +156,13 @@ final class Documents {
     }
 
     void save() {
-        if (app.dialogOpen) return;
         String path = savedPath();
         if (path == null) saveAs();
         else saveTo(path);
     }
 
     void saveAs() {
-        if (app.dialogOpen) return;
         save.name(Names.stem(app.path) + "." + Names.EXTENSION).folder(startDir());
-        app.dialogOpen = true;
         save.show();
     }
 
@@ -223,9 +210,7 @@ final class Documents {
     }
 
     void export() {
-        if (app.dialogOpen) return;
         export.name(Names.stem(app.path) + "." + Names.MARKDOWN).folder(startDir());
-        app.dialogOpen = true;
         export.show();
     }
 
@@ -258,9 +243,7 @@ final class Documents {
     }
 
     void insertImage() {
-        if (app.dialogOpen) return;
         image.folder(startDir());
-        app.dialogOpen = true;
         image.show();
     }
 

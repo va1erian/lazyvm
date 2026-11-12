@@ -21,6 +21,8 @@ public final class Window extends Node {
     private final ArrayList<Runnable> actions = new ArrayList<Runnable>();
     /** Dialogs, menus and timers made in this window, forgotten when it closes. */
     final ArrayList<Node> owned = new ArrayList<Node>();
+    /** The dialog open over the window, or null. */
+    Free modal;
 
     Window(String title, int width, int height) {
         this.title = Ui.nonNull(title, "title");
@@ -63,9 +65,9 @@ public final class Window extends Node {
 
     /**
      * Runs {@code action} when {@code key} is pressed with exactly {@code modifiers} ({@link
-     * #CTRL}, {@link #SHIFT}, {@link #ALT}), whatever has the focus. The focused widget still sees
-     * the key. {@code key} is a letter, a digit or one of this class's key codes. Set shortcuts
-     * before the window opens.
+     * #CTRL}, {@link #SHIFT}, {@link #ALT}), whatever has the focus, unless a dialog is open. The
+     * focused widget still sees the key. {@code key} is a letter, a digit or one of this class's
+     * key codes. Set shortcuts before the window opens.
      */
     public Window shortcut(char key, int modifiers, Runnable action) {
         if (mounted()) throw new IllegalStateException("set shortcuts before the window opens");
@@ -180,7 +182,7 @@ public final class Window extends Node {
         if (kind == Ui.CLOSE) {
             if (onClose != null) onClose.run();
             else close();
-        } else if (kind == Ui.KEY && i >= 0 && i < actions.size()) {
+        } else if (kind == Ui.KEY && modal == null && i >= 0 && i < actions.size()) {
             actions.get(i).run();
         }
     }

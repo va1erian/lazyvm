@@ -56,12 +56,14 @@ public final class TaskDialog extends Free {
         return this;
     }
 
+    /** Shows the dialog; does nothing while another dialog of the window is open. */
     public void show() {
-        open();
+        showModal();
     }
 
     public void close() {
         if (mounted()) call(Op.CLOSE, null);
+        closed();
     }
 
     @Override
@@ -76,6 +78,8 @@ public final class TaskDialog extends Free {
 
     @Override
     void fire(int kind, int i, double d, String s) {
-        if (kind == Ui.DIALOG && onChoice != null) onChoice.accept(i);
+        if (kind != Ui.DIALOG) return;
+        closed();
+        if (onChoice != null) onChoice.accept(i);
     }
 }

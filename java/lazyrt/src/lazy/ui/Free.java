@@ -43,4 +43,19 @@ abstract class Free extends Node {
         make();
         call(Op.OPEN, null);
     }
+
+    /**
+     * Shows a modal dialog, unless another dialog of its window is open: then it does nothing,
+     * so an app keeps no flag of its own. The window's shortcuts wait while one is open.
+     */
+    final void showModal() {
+        if (window.modal != null) return;
+        open();
+        window.modal = this;
+    }
+
+    /** The dialog closed, answered or cancelled. */
+    final void closed() {
+        if (window.modal == this) window.modal = null;
+    }
 }
