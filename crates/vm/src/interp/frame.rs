@@ -27,6 +27,10 @@ pub struct Frame {
     pub monitors: Vec<Ref>,
     /// The monitor of a `synchronized` method, released on return.
     pub method_lock: Option<Ref>,
+    /// Compiled code to go on in when the call made at `jit_ret_pc`
+    /// returns to this frame there (`jit::run::transfer`); 0 for none.
+    pub(crate) jit_ret: usize,
+    pub(crate) jit_ret_pc: usize,
 }
 
 impl Frame {
@@ -42,6 +46,8 @@ impl Frame {
             stack: Vec::new(),
             monitors: Vec::new(),
             method_lock: None,
+            jit_ret: 0,
+            jit_ret_pc: 0,
         }
     }
 
@@ -77,6 +83,7 @@ impl Frame {
         self.next_pc = 0;
         self.monitors.clear();
         self.method_lock = None;
+        self.jit_ret = 0;
         Ok(())
     }
 

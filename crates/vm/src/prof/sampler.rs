@@ -48,8 +48,14 @@ pub(super) fn enter(m: MethodRef) {
     CURRENT.store(id(m), Relaxed);
 }
 
-pub(super) fn count_call() {
+/// Calls by callee method id, for the report's list of hot callees.
+pub(super) static CALLEES: Mutex<Option<HashMap<u64, u64>>> = Mutex::new(None);
+
+pub(super) fn count_call(m: MethodRef) {
     bump(&CALLS, 1);
+    if let Ok(mut c) = CALLEES.lock() {
+        *c.get_or_insert_with(HashMap::new).entry(id(m)).or_default() += 1;
+    }
 }
 
 #[inline(always)]

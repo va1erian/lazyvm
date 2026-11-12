@@ -61,9 +61,10 @@ def command_line(main_class: str, args: list[str], vm_args: list[str], exe: str 
     return " ".join(shlex.quote(a) for a in argv)
 
 
-def command(test: testlib.Test) -> str:
+def command(test: testlib.Test, extra: list[str]) -> str:
+    """The shell line for `test`, with `extra` VM options before its own."""
     exe = "lazyvm-ui" if test.needs == "ui" else "lazyvm"
-    return command_line(test.main_class, test.args, test.vm_args, exe)
+    return command_line(test.main_class, test.args, extra + test.vm_args, exe)
 
 
 def run_commands(lazyos: Path, lines: list[str], timeout: int, no_build: bool, work: Path = WORK,
@@ -106,6 +107,8 @@ def main() -> None:
     parser.add_argument("--filter", nargs="*", help="substrings of test class names")
     parser.add_argument("--no-build", action="store_true", help="reuse the last image (same tests)")
     parser.add_argument("--timeout", type=int, default=120, help="seconds per test inside LazyOS")
+    parser.add_argument("--jit-all", action="store_true",
+                        help="compile every verified method at its first run (-Xjit:all)")
     parser.add_argument("--net", action="store_true",
                         help="only the tests that need the network, on an image with netd and a card")
     args = parser.parse_args()
@@ -117,7 +120,9 @@ def main() -> None:
         testlib.build(tests)
         ui = build_musl("launcher-ui") if any(t.needs == "ui" for t in tests) else None
         stage(build_musl(), ui_exe=ui)
-    out = run_commands(args.lazyos, [command(t) for t in tests], args.timeout, args.no_build, net=args.net)
+    jit = ["-Xjit:all"] if args.jit_all else []
+    out = run_commands(args.lazyos, [command(t, jit) for t in tests], args.timeout, args.no_build,
+                       net=args.net)
     failed = 0
     for n, test in enumerate(tests, start=1):
         actual = read_result(out, n)

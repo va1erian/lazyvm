@@ -7,7 +7,10 @@ use crate::VmError;
 /// A reference to a heap object: a slot index plus the slot's generation.
 /// The generation catches a stale reference to a slot the collector has
 /// reused, which would otherwise alias a different object.
+/// `repr(C)`: compiled code reads the slot index at offset 0 and the
+/// generation at 4 (`jit/layout.rs`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(C)]
 pub struct Ref {
     pub(crate) index: NonZeroU32,
     pub(crate) generation: u32,
@@ -22,14 +25,20 @@ impl Ref {
 /// One JVM value. A `long` or `double` is one `Value` on the operand stack
 /// and in a field; in local variables it takes its slot and the slot after,
 /// which holds `Top` (JVMS 2.6.1).
+///
+/// `repr(u32)` fixes the layout compiled code reads and writes
+/// (`jit/layout.rs`): a `u32` tag, the 32-bit payloads (`int`, `float`, a
+/// reference) at 4, the 64-bit ones at 8, 16 bytes in all. It is the layout
+/// Rust picks anyway; `repr(u8)` cost the interpreter up to a tenth.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(u32)]
 pub enum Value {
-    Int(i32),
-    Long(i64),
-    Float(f32),
-    Double(f64),
-    Ref(Option<Ref>),
-    Top,
+    Int(i32) = 0,
+    Long(i64) = 1,
+    Float(f32) = 2,
+    Double(f64) = 3,
+    Ref(Option<Ref>) = 4,
+    Top = 5,
 }
 
 impl Value {

@@ -12,18 +12,24 @@ const REFERENCE: &str = "java/lang/ref/Reference";
 const SOFT: &str = "java/lang/ref/SoftReference";
 
 impl Vm {
-    /// A normal collection: soft references keep their referents.
+    /// A normal collection, minor unless a major one is due: soft
+    /// references keep their referents.
     pub fn collect_garbage(&mut self) {
-        self.collect(false);
+        self.collect(false, false);
     }
 
-    /// The collection before giving up with `OutOfMemoryError`: soft
-    /// references are cleared too, as the `SoftReference` Javadoc promises.
+    /// A full collection (`System.gc`): every unreachable object goes.
+    pub fn collect_garbage_full(&mut self) {
+        self.collect(false, true);
+    }
+
+    /// The collection before giving up with `OutOfMemoryError`: full, and
+    /// soft references are cleared too, as the `SoftReference` Javadoc promises.
     pub fn collect_garbage_all(&mut self) {
-        self.collect(true);
+        self.collect(true, true);
     }
 
-    fn collect(&mut self, clear_soft: bool) {
+    fn collect(&mut self, clear_soft: bool, full: bool) {
         let timer = crate::prof::gc_started();
         let roots = self.roots_now();
         let classes = self.reference_classes();
@@ -31,7 +37,13 @@ impl Vm {
             classes: &classes,
             clear_soft,
         };
-        let (_, cleared) = self.heap.collect_weak(roots, Some(&weak));
+        // Minor unless asked for a full one or the old objects have grown to
+        // a planned one (`heap/gen.rs`).
+        let (_, cleared) = if full || self.heap.major_due() {
+            self.heap.collect_weak(roots, Some(&weak))
+        } else {
+            self.heap.collect_minor(roots, Some(&weak))
+        };
         for r in cleared {
             self.enqueue_cleared(r);
         }

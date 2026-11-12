@@ -197,3 +197,69 @@ fn weak_referents_are_cleared_and_soft_ones_kept_until_asked() {
     assert_eq!(cleared, vec![soft]);
     assert!(heap.get(soft_target).is_err());
 }
+
+#[test]
+fn minor_collections_free_young_garbage_and_promote_the_rest() {
+    let mut heap = Heap::new(64 << 20);
+    let kept = alloc(&mut heap, vec![Value::Int(1)]);
+    let garbage = alloc(&mut heap, vec![]);
+    let (freed, _) = heap.collect_minor([kept], None);
+    assert_eq!(freed, 1);
+    assert!(heap.get(garbage).is_err());
+    // `kept` is old now: a minor collection leaves it even unreachable.
+    let (freed, _) = heap.collect_minor([], None);
+    assert_eq!(freed, 0);
+    assert!(heap.get(kept).is_ok());
+    // A major one frees it.
+    assert_eq!(heap.collect([]), 1);
+    assert!(heap.get(kept).is_err());
+}
+
+#[test]
+fn a_young_object_stored_into_an_old_one_survives_minor_collections() {
+    let mut heap = Heap::new(64 << 20);
+    let old = alloc(&mut heap, vec![Value::NULL]);
+    heap.collect_minor([old], None);
+    let young = alloc(&mut heap, vec![Value::Int(2)]);
+    // The store goes through `fields_mut`, the write barrier.
+    if let Ok(f) = heap.fields_mut(old) {
+        f[0] = Value::Ref(Some(young));
+    }
+    // `old` is no root here: only the remembered set reaches `young`.
+    let (freed, _) = heap.collect_minor([], None);
+    assert_eq!(freed, 0);
+    assert!(heap.get(young).is_ok());
+    // Promoted with it, `young` stays through the next minor collection too.
+    heap.collect_minor([], None);
+    assert!(heap.get(young).is_ok());
+    assert_eq!(heap.collect([old]), 0);
+}
+
+#[test]
+fn minor_collections_clear_young_weak_referents_and_keep_old_ones() {
+    let mut heap = Heap::new(64 << 20);
+    let classes = [None, Some((0u32, false))];
+    let info = WeakInfo {
+        classes: &classes,
+        clear_soft: false,
+    };
+    let old_target = alloc(&mut heap, vec![]);
+    heap.collect_minor([old_target], Some(&info));
+    let young_target = alloc(&mut heap, vec![]);
+    let weak = |heap: &mut Heap, t: Ref| {
+        heap.alloc(Object {
+            class: ClassId(1),
+            body: Body::Fields(vec![Value::Ref(Some(t))].into()),
+        })
+        .unwrap_or_else(|e| panic!("{e:?}"))
+    };
+    let to_young = weak(&mut heap, young_target);
+    let to_old = weak(&mut heap, old_target);
+    let (_, cleared) = heap.collect_minor([to_young, to_old], Some(&info));
+    assert_eq!(cleared, vec![to_young]);
+    assert!(heap.get(young_target).is_err());
+    assert_eq!(
+        heap.fields(to_old).ok().map(|f| f[0]),
+        Some(Value::Ref(Some(old_target)))
+    );
+}

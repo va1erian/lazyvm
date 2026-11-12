@@ -23,6 +23,7 @@ pub const USAGE: &str = "usage: lazyvm [options] <main class> [args...]
   -Xmaxcode:<bytes>        most bytes of code one method may have, up to 65535
   -verbose:class           print each class as it loads
   -Xtrace:interp           print every instruction (slow)
+  -Xjit:<policy>           off, all (compile at the first run) or runs before compiling (default 200; LAZYVM_JIT)
   -version                 print the version";
 
 /// Options that only make sense for HotSpot or the IDE; accepted and ignored.
@@ -90,6 +91,13 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
     let mut boot: Option<Vec<PathBuf>> = None;
     let mut properties = Vec::new();
     let mut options = Options::default();
+    // The JIT's policy may come from the environment (tests); -Xjit: wins.
+    if let Some(p) = std::env::var("LAZYVM_JIT")
+        .ok()
+        .and_then(|t| vm::jit::parse_policy(&t))
+    {
+        options.jit = p;
+    }
     let mut show_version = false;
     let mut verify_check = false;
     let mut i = 0;
@@ -131,6 +139,10 @@ pub fn parse(args: &[Arg]) -> Result<Command, String> {
                 options.assertions = true
             }
             "-Xtrace:interp" => options.trace_interp = true,
+            _ if a.starts_with("-Xjit:") => {
+                options.jit = vm::jit::parse_policy(&a[6..])
+                    .ok_or_else(|| format!("bad -Xjit policy {}", &a[6..]))?;
+            }
             // The old spelling of the debugger flags; the agent has no use for -Xdebug.
             "-Xdebug" => {}
             _ if a.starts_with("-agentlib:jdwp=") || a.starts_with("-Xrunjdwp:") => {

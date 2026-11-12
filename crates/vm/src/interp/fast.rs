@@ -22,11 +22,11 @@ use super::fast_field::{get_field, get_static, put_field, put_static};
 use super::fast_wide::{self as wide, load as wload, store as wstore};
 use super::ops_array::kind_matches;
 use super::ops_branch::cond;
-use crate::Vm;
 use crate::class::Class;
 use crate::heap::Heap;
 use crate::prof::FastCount;
 use crate::value::{Ref, Value};
+use crate::{Vm, jit};
 
 impl Vm {
     /// Executes simple instructions of the top frame until one needs the full
@@ -40,14 +40,28 @@ impl Vm {
     #[inline]
     pub(super) fn run_simple(&mut self, base: usize) {
         loop {
-            let Vm {
-                frames,
-                heap,
-                classes,
-                ..
-            } = self;
-            let Some(f) = frames.last_mut() else { return };
-            match run(f, heap, classes) {
+            self.jit_tick();
+            let stop = match self.jit_enter(base) {
+                // Frames changed in compiled code, or a loop's safepoint is
+                // due: go round (after the safepoint below).
+                Some(jit::BACKWARD | jit::CONTINUE) => Stop::Backward,
+                // Where compiled code stopped; past the end, `step` reports it.
+                Some(_) => match self.frames.last() {
+                    Some(f) => Stop::At(f.code.bytecode.get(f.pc).copied().unwrap_or(0xff)),
+                    None => return,
+                },
+                None => {
+                    let Vm {
+                        frames,
+                        heap,
+                        classes,
+                        ..
+                    } = self;
+                    let Some(f) = frames.last_mut() else { return };
+                    run(f, heap, classes)
+                }
+            };
+            match stop {
                 Stop::Backward => {}
                 Stop::At(op) => {
                     if !self.fast_transfer(op, base) {

@@ -1,0 +1,10 @@
+cast and kinds 12644
+3 7 0 120 16 48 56 
+ClassCastException cast
+null cast true
+stored null 298 299
+ArrayStoreException put 296
+ArrayIndexOutOfBoundsException put
+NullPointerException put
+generic 300
+ClassCastException first

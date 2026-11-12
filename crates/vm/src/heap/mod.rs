@@ -1,5 +1,6 @@
 //! The heap: a slot table of objects and a precise, non-moving mark-sweep
-//! collector (docs/decisions.md D5).
+//! collector (docs/decisions.md D5), generational since S11-07: most
+//! collections are minor ones over the young objects (`gen.rs`).
 //!
 //! Allocation never collects. The interpreter collects at instruction
 //! boundaries, where every live reference is in a frame, a static, the intern
@@ -7,6 +8,7 @@
 //! across allocations, but not across a call into Java code.
 
 pub mod array;
+mod r#gen;
 mod weak;
 
 use std::num::NonZeroU32;
@@ -52,6 +54,10 @@ impl Object {
 struct Slot {
     generation: u32,
     marked: bool,
+    /// Survived a collection (`gen.rs`).
+    old: bool,
+    /// Old, and in `Heap::remembered`.
+    remembered: bool,
     lock: LockWord,
     object: Option<Object>,
 }
@@ -75,6 +81,12 @@ pub struct Heap {
     /// `OutOfMemoryError`, past what a collection finds live, down to the limit again.
     room: usize,
     next_gc: usize,
+    /// Objects allocated since the last collection, and their bytes.
+    young: Vec<u32>,
+    young_bytes: usize,
+    /// Old objects opened for writing since the last collection: they may
+    /// reference young ones (`gen.rs`).
+    remembered: Vec<u32>,
     /// The running thread is making a shared `OutOfMemoryError` (`Vm::vm_oom`),
     /// a fixed amount, and has no limit. This moves with the thread's state.
     pub(crate) unlimited: bool,
@@ -87,6 +99,8 @@ impl Heap {
         let dummy = Slot {
             generation: 0,
             marked: false,
+            old: true,
+            remembered: false,
             lock: LockWord::default(),
             object: None,
         };
@@ -97,6 +111,9 @@ impl Heap {
             limit,
             room: limit,
             next_gc: MIN_GC_BYTES.min(limit),
+            young: Vec::new(),
+            young_bytes: 0,
+            remembered: Vec::new(),
             unlimited: false,
             collections: 0,
         }
@@ -110,9 +127,10 @@ impl Heap {
         self.live_bytes
     }
 
-    /// Whether the interpreter should collect at the next safe point.
+    /// Whether the interpreter should collect at the next safe point: enough
+    /// young bytes for a minor collection, or a major one is due.
     pub fn wants_gc(&self) -> bool {
-        self.live_bytes >= self.next_gc
+        self.young_bytes >= r#gen::YOUNG_BYTES.min(self.next_gc) || self.major_due()
     }
 
     /// Whether allocating `bytes` more would pass the limit.
@@ -142,18 +160,25 @@ impl Heap {
             return Err(VmError::OutOfMemory);
         }
         self.live_bytes += bytes;
+        self.young_bytes += bytes;
         if let Some(index) = self.free.pop() {
             let slot = &mut self.slots[index as usize];
             slot.object = Some(object);
+            slot.old = false;
+            slot.remembered = false;
+            self.young.push(index);
             return Ok(make_ref(index, slot.generation));
         }
         let index = u32::try_from(self.slots.len()).map_err(|_| VmError::OutOfMemory)?;
         self.slots.push(Slot {
             generation: 0,
             marked: false,
+            old: false,
+            remembered: false,
             lock: LockWord::default(),
             object: Some(object),
         });
+        self.young.push(index);
         Ok(make_ref(index, 0))
     }
 
@@ -168,13 +193,23 @@ impl Heap {
         }
     }
 
+    /// The object, to change. Every store into an object comes here, which
+    /// makes it the generational write barrier: an old object is remembered.
     pub fn get_mut(&mut self, r: Ref) -> Result<&mut Object, VmError> {
         match self.slots.get_mut(r.index() as usize) {
             Some(Slot {
                 generation,
+                old,
+                remembered,
                 object: Some(o),
                 ..
-            }) if *generation == r.generation => Ok(o),
+            }) if *generation == r.generation => {
+                if *old && !*remembered {
+                    *remembered = true;
+                    self.remembered.push(r.index());
+                }
+                Ok(o)
+            }
             _ => Err(VmError::Internal(format!("stale reference {r:?}"))),
         }
     }
@@ -257,12 +292,14 @@ impl Heap {
                 trace(object, &mut work, skip);
             }
         }
-        let cleared = self.clear_dead_referents(&discovered, weak);
+        let cleared = self.clear_dead_referents(&discovered, weak, false);
         let mut freed = 0;
         let mut live = 0;
         for (index, slot) in self.slots.iter_mut().enumerate().skip(1) {
+            slot.remembered = false;
             if slot.marked {
                 slot.marked = false;
+                slot.old = true;
                 live += slot.object.as_ref().map_or(0, Object::bytes);
             } else if slot.object.take().is_some() {
                 slot.generation = slot.generation.wrapping_add(1);
@@ -272,6 +309,9 @@ impl Heap {
             }
         }
         self.live_bytes = live;
+        self.young.clear();
+        self.young_bytes = 0;
+        self.remembered.clear();
         // Room taken at a native's peak must not outlast that peak: bytecode
         // could then fill the heap back up to it.
         self.room = self
@@ -294,6 +334,7 @@ impl Heap {
         &mut self,
         discovered: &[Ref],
         weak: Option<&WeakInfo<'_>>,
+        minor: bool,
     ) -> Vec<Ref> {
         let Some(weak) = weak else { return Vec::new() };
         let mut cleared = Vec::new();
@@ -309,10 +350,10 @@ impl Heap {
             let Some(Value::Ref(Some(x))) = referent else {
                 continue;
             };
-            let alive = self
-                .slots
-                .get(x.index() as usize)
-                .is_some_and(|s| s.marked && s.generation == x.generation && s.object.is_some());
+            let alive = self.slots.get(x.index() as usize).is_some_and(|s| {
+                // A minor collection does not mark old objects: they live.
+                (s.marked || (minor && s.old)) && s.generation == x.generation && s.object.is_some()
+            });
             if !alive {
                 if let Ok(Body::Fields(f)) = self.get_mut(d).map(|o| &mut o.body)
                     && let Some(v) = f.get_mut(slot as usize)
