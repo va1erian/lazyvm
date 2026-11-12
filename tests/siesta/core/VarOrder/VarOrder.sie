@@ -1,0 +1,9 @@
+// A top-level `var` is typed after the ones it uses, even from a file listed
+// later and even when a lambda parameter shares a used variable's name;
+// a lambda parameter alone is no dependency, so `inc` and `count` are no cycle.
+import java.util.function.IntUnaryOperator;
+
+var doubled = ((IntUnaryOperator) (n -> n * 2)).applyAsInt(n);
+var inc = (IntUnaryOperator) (count -> count + 1);
+var count = inc.applyAsInt(doubled);
+System.out.println(doubled + " " + count);

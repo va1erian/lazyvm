@@ -25,10 +25,12 @@ public class Home {
             final CompletableFuture<String> later = new CompletableFuture<>();
             final java.util.concurrent.Executor home = Loop.home();
             later.thenAcceptAsync(s -> label.text(s), home);
-            new Thread(() -> later.complete("resumed on the UI thread")).start();
+            Thread completer = new Thread(() -> later.complete("resumed on the UI thread"));
+            completer.start();
             try {
                 System.out.println("worker: " + off.get());
-                later.get();
+                // complete() has returned, so the dependent task is queued for the UI thread.
+                completer.join();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

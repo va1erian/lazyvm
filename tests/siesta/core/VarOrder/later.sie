@@ -1,0 +1,2 @@
+// The variable VarOrder.sie uses before this file is read.
+var n = 3;

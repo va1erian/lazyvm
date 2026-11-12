@@ -474,7 +474,7 @@ Status (2026-11-13): S16-01 to 07 done. S16-04's enum mirror is
 S16-06's `finally` matrix is `tests/siesta/flow/Finally`, both with Java
 mirrors. S16-07's UI case is `tests/siesta/async/UiResume`, run headless on
 `lazyvm-ui` now that `Ui.run` registers `Ui.executor()` as the UI thread's
-`Loop.home()` (`tests/java/lazy/ui/Home`). The suite has 46 tests, run on
+`Loop.home()` (`tests/java/lazy/ui/Home`). The suite has 47 tests, run on
 LazyVM and, except the `NEEDS:` ones, on the Java 8 oracle with
 `-Xverify:all`; `bench/siesta` measures Siesta's code
 against javac's (siesta.md section 10).
