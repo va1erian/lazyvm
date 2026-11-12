@@ -231,11 +231,11 @@ port has none because it chains lambdas.
 
 Both ports need the same `surface` helper (eight lines): a stage keeps its
 failure to itself, so each command hands a failure that is not a cancelled
-dialog to `Ui.later`, which stops the program with the error dialog. Once
-`lazy.ui` registers its executor as the UI thread's home (siesta-async.md
-section 4), Siesta can drop it: a fire-and-forget `async` lambda already
-rethrows its failure on its home, and leaving out `CancellationException`
-there would make `save.onClick async { await save(); }` enough.
+dialog to `Ui.later`, which stops the program with the error dialog.
+`lazy.ui` now registers its executor as the UI thread's home (siesta-async.md
+section 4), so a fire-and-forget `async` lambda already rethrows its failure
+on the UI thread; leaving out `CancellationException` there would let Siesta
+drop the helper and make `save.onClick async { await save(); }` enough.
 
 ## 6. Open questions for the owner
 

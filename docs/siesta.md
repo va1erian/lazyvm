@@ -187,7 +187,10 @@ members, so an app's files share one set of state without passing an
 variables in order as `main` runs; a file without any (shared state and
 helpers) initialises them in its static initialiser, on first use. A
 top-level `var` takes its type from its initialiser whichever file it is
-in; one whose type depends on itself is an error.
+in; one whose type depends on itself is an error. A `final` field or
+top-level variable is assigned only where it is declared, and a `final`
+instance field also in its class's constructors (JLS 8.3.1.2), not in
+their lambdas.
 
 ## 6. Types
 
@@ -239,7 +242,7 @@ in; one whose type depends on itself is an error.
 
 | Siesta | Class file |
 |---|---|
-| top level of `foo.sie` | static fields, static methods and `main(String[])` of class `Foo`; a variable only the file's statements use is a local of `main` |
+| top level of `foo.sie` | static fields, static methods and `main(String[])` of class `Foo`; a variable without modifiers that only the file's statements use is a local of `main` |
 | `final` static field with a literal of its type | a constant: reads load the value, so they do not initialise the class (JLS 12.4.1) |
 | constant `int` expression (`TILE - 1`) | its value (JLS 15.29); an `int` constant an operator widens is loaded as `long`, `float` or `double` |
 | lambda | a private synthetic `lambda$<method>$<n>` (static unless it uses `this`) and `invokedynamic` to `LambdaMetafactory.metafactory` |

@@ -14,7 +14,8 @@ to Java's. `--bless` writes `.out` from the oracle run, for review.
 The oracle runs with `dist/lazyrt.jar` on its class path, after the JDK's
 own classes, so `lazy.*` code written in Java (`lazy.async.Loop.home`) is
 there. A test whose first lines say `// NEEDS: lazyvm` uses LazyVM's natives
-(the loop) and runs on LazyVM only, against a reviewed golden.
+(the loop) and runs on LazyVM only, against a reviewed golden; one saying
+`// NEEDS: ui` drives `lazy.ui` headless and runs on `lazyvm-ui` only.
 
 A program of several files is a folder `tests/siesta/<area>/<Name>/`: its
 `<Name>.sie` holds `main` and is given to siestac first, the other `.sie`
@@ -30,6 +31,7 @@ The Rust tests that need `dist/lazyrt.jar` (`cargo test -p siesta --
 from __future__ import annotations
 
 import argparse
+import functools
 import os
 import subprocess
 import sys
@@ -38,12 +40,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import javac  # noqa: E402
 import lazyrt  # noqa: E402
-from common import BUILD, DIST, EXE, ROOT, die, lazyvm_exe  # noqa: E402
+from common import BUILD, DIST, EXE, ROOT, cargo_build_launcher, die, lazyvm_exe  # noqa: E402
 from testlib import transcript  # noqa: E402
 
 TESTS = ROOT / "tests" / "siesta"
 OUT = BUILD / "siesta"
 TIMEOUT = 60
+# `// NEEDS: ui` tests drive lazy.ui headless on lazyvm-ui, with the font the
+# lazy.ui tests use, so they run on LazyVM only.
+UI_FLAGS = ["-Dlazy.ui=headless", f"-Dsiesta.font={ROOT / 'tests' / 'java' / 'lazy' / 'ui' / 'DroidSans.ttf'}"]
 ORACLE_FLAGS = ["-Xmx256m", "-Xverify:all", "-XX:+IgnoreUnrecognizedVMOptions",
                 "-XX:-ShowCodeDetailsInExceptionMessages"]
 
@@ -59,6 +64,12 @@ def oracle_java() -> str | None:
         return golden.oracle(False)
     except SystemExit:
         return None
+
+
+@functools.cache
+def ui_vm() -> Path:
+    """lazyvm-ui, built the first time a `// NEEDS: ui` test runs."""
+    return cargo_build_launcher(ui=True)
 
 
 def run(cmd: list[str]) -> str:
@@ -163,7 +174,9 @@ def run_test(src: Path, vm: Path, java: str | None, bless: bool) -> str | None:
     if err:
         return "compile error\n" + err
     golden = src.with_suffix(".out")
-    lazyvm_only = "// NEEDS: lazyvm" in src.read_text(encoding="utf-8")[:400]
+    head = src.read_text(encoding="utf-8")[:400]
+    ui = "// NEEDS: ui" in head
+    lazyvm_only = ui or "// NEEDS: lazyvm" in head
     cp = str(out) + os.pathsep + str(DIST / "lazyrt.jar")
     oracle = run([java, *ORACLE_FLAGS, "-cp", cp, src.stem]) if java and not lazyvm_only else None
     if bless and not lazyvm_only:
@@ -179,7 +192,10 @@ def run_test(src: Path, vm: Path, java: str | None, bless: bool) -> str | None:
         m = mirror(src, java)
         if m is not None and m != want:
             return f"the Java mirror prints something else:\n{m}"
-    got = run([str(vm), f"-Xbootclasspath:{DIST / 'lazyrt.jar'}", "-cp", str(out), src.stem])
+    flags = UI_FLAGS if ui else []
+    if ui:
+        vm = ui_vm()
+    got = run([str(vm), f"-Xbootclasspath:{DIST / 'lazyrt.jar'}", *flags, "-cp", str(out), src.stem])
     if got != want:
         return f"LazyVM differs from the golden:\n{got}"
     return None

@@ -1,0 +1,12 @@
+// A final field or top-level variable is assigned only where it is declared,
+// and a final instance field also in its class's constructors (not their lambdas).
+final int LIMIT = 5;
+final int count = 1;
+count = 2;
+void raise() { LIMIT = 6; }
+class Box {
+    final int size;
+    final int max = 3;
+    Box(int s) { size = s; Runnable r = () -> { size = 0; }; }
+    void grow() { size++; }
+}

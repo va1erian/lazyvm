@@ -394,6 +394,7 @@ impl Body<'_> {
             name: self.name.clone(),
             ret_seen: None,
             async_cx: None,
+            final_fields: false,
         })
     }
 }

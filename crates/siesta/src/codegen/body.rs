@@ -61,6 +61,9 @@ pub struct Body<'a> {
     pub ret_seen: Option<Type>,
     /// Set while compiling an `async` body's resume method.
     pub async_cx: Option<super::async_body::AsyncCx>,
+    /// A constructor's own code, which may assign the class's `final`
+    /// instance fields (JLS 8.3.1.2); its lambdas may not.
+    pub final_fields: bool,
 }
 
 impl Body<'_> {

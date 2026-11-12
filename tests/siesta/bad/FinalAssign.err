@@ -1,0 +1,4 @@
+10:49: `size` is final: it is assigned only where it is declared or in a constructor
+11:19: `size` is final: it is assigned only where it is declared or in a constructor
+6:16: `LIMIT` is final: it is assigned only where it is declared
+5:1: `count` is final: it is assigned only where it is declared

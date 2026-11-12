@@ -30,7 +30,8 @@ pub fn rewrite(mut files: Vec<File>) -> Vec<File> {
 }
 
 /// The top-level variables of a script that can be locals: initialised,
-/// unused outside its statements, declared once, used by no statement
+/// without modifiers (`public` exposes one to other code, `final` must
+/// stay checked), unused outside its statements, declared once, used by no statement
 /// before their declaration, and used by no variable that stays a field
 /// (which is typed and initialised where `main`'s locals are not in scope).
 fn locals(items: &[Item], mut blocked: HashSet<String>) -> HashSet<String> {
@@ -41,6 +42,7 @@ fn locals(items: &[Item], mut blocked: HashSet<String>) -> HashSet<String> {
             Item::Stmt(s) => own.stmt(s),
             Item::Field(fd) => {
                 if fd.init.is_none()
+                    || fd.mods.bits != 0
                     || !fd.mods.annotations.is_empty()
                     || !seen.insert(&fd.name.name)
                 {

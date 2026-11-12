@@ -1,0 +1,24 @@
+// What may assign a `final` (JLS 4.12.4, 8.3.1.2): its declaration, and a
+// constructor for an instance field. A top-level `var` whose initialiser
+// names a lambda parameter after another top-level variable does not
+// depend on it. Finals.java is its Java mirror.
+import java.util.function.IntUnaryOperator;
+
+class Box {
+    final int size;
+    final int max = 3;
+    Box(int s) { size = s; }
+    Box() { this(1); }
+    int room() { return max - size; }
+}
+
+final int LIMIT = 5;
+final String NAME = "box";
+public int shown = 0;
+
+static int twice() { return LIMIT * 2; }
+
+var inc = (IntUnaryOperator) (count -> count + 1);
+var count = inc.applyAsInt(LIMIT);
+shown = new Box(2).room() + new Box().room();
+System.out.println(NAME + " " + twice() + " " + count + " " + shown);

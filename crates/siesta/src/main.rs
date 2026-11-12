@@ -88,7 +88,8 @@ fn parse_opts(args: Vec<String>) -> Option<Opts> {
             f => o.files.push(f.to_string()),
         }
     }
-    (!o.files.is_empty()).then_some(o)
+    let jar_conflict = o.jar.is_some() && (o.mode != Mode::Build || o.out.is_some());
+    (!o.files.is_empty() && !jar_conflict).then_some(o)
 }
 
 fn run(args: Vec<String>) -> ExitCode {
@@ -185,24 +186,29 @@ fn write_jar(classes: &[ClassOut], sources: &[Source], path: &Path) -> ExitCode 
 
 fn run_program(o: &Opts, classes: &[ClassOut], sources: &[Source]) -> ExitCode {
     let dir = std::env::temp_dir().join(format!("siesta-{}", std::process::id()));
+    // A run killed earlier under the same process id may have left classes.
+    let _ = std::fs::remove_dir_all(&dir);
     let code = write_or_fail(classes, &dir);
     if code != ExitCode::SUCCESS {
         return code;
     }
     let main_class = main_class(sources, classes);
     let vm = sibling("lazyvm");
-    let mut cp = std::env::join_paths(
+    let cp = match std::env::join_paths(
         std::iter::once(dir.clone()).chain(
             o.classpath
                 .iter()
                 .filter(|p| !p.ends_with("lazyrt.jar"))
                 .cloned(),
         ),
-    )
-    .unwrap_or_default();
-    if cp.is_empty() {
-        cp = dir.clone().into_os_string();
-    }
+    ) {
+        Ok(cp) => cp,
+        Err(e) => {
+            let _ = std::fs::remove_dir_all(&dir);
+            eprintln!("siestac: bad class path: {e}");
+            return ExitCode::from(2);
+        }
+    };
     let status = std::process::Command::new(&vm)
         .arg("-cp")
         .arg(&cp)

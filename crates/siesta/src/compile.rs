@@ -4,7 +4,7 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use crate::ast::{LambdaBody, TypeRef};
+use crate::ast::TypeRef;
 use crate::classpath::ClassPath;
 use crate::codegen::{self, Unit};
 use crate::declare::{self, SourceClass, file_class_name};
@@ -104,7 +104,11 @@ fn infer_top_vars(
     for (ci, c) in classes.iter().enumerate() {
         for (fi, f) in c.fields.iter().enumerate() {
             if let (true, TypeRef::Var(_), Some(init)) = (f.top, &f.decl.ty, &f.decl.init) {
-                let names = codegen::names_in(&LambdaBody::Expr(Box::new(init.clone())));
+                // Lambda parameters and locals of the initialiser are not the
+                // top-level variables they may be named after.
+                let mut u = codegen::Usage::default();
+                u.expr(init);
+                let names = &u.used - &u.declared;
                 pending.push((ci, fi, f.decl.name.name.clone(), names));
             }
         }
@@ -112,7 +116,7 @@ fn infer_top_vars(
     while !pending.is_empty() {
         let blocked = |names: &HashSet<String>| pending.iter().any(|p| names.contains(&p.2));
         let Some(next) = pending.iter().position(|p| !blocked(&p.3)) else {
-            let (ci, fi, name, _) = &pending[0];
+            let (ci, fi, name, _) = &pending[in_cycle(&pending)];
             let span = classes[*ci].fields[*fi].decl.name.span;
             let msg = format!("the type of `{name}` depends on itself; write it instead of `var`");
             return Err(vec![Diag::new(span, msg)]);
@@ -142,6 +146,21 @@ fn infer_top_vars(
         world.sources.insert(c.name.to_string(), c.info.clone());
     }
     Ok(())
+}
+
+/// A pending variable on a dependency cycle, found by following what
+/// blocks each from the first: every one is blocked, so the walk repeats.
+fn in_cycle(pending: &[(usize, usize, String, HashSet<String>)]) -> usize {
+    let mut seen = vec![false; pending.len()];
+    let mut at = 0;
+    while !seen[at] {
+        seen[at] = true;
+        let Some(next) = pending.iter().position(|p| pending[at].3.contains(&p.2)) else {
+            break;
+        };
+        at = next;
+    }
+    at
 }
 
 fn line_starts(text: &str) -> Vec<u32> {

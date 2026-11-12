@@ -51,6 +51,7 @@ impl ClassGen<'_> {
             name: name.to_string(),
             ret_seen: None,
             async_cx: None,
+            final_fields: false,
         }
     }
 
@@ -174,6 +175,7 @@ impl ClassGen<'_> {
             None => (ACC_PUBLIC, "()V".to_string()),
         };
         let mut b = self.body(false, Type::Void, "new", locals);
+        b.final_fields = true;
         b.boxed = super::captures::boxed_locals(stmts);
         if let Some(m) = sm {
             b.vars = m.vars.clone();

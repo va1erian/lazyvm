@@ -469,18 +469,20 @@ through `tools/siesta_test.py` (siesta.md section 9): the classes run on the
 oracle with `-Xverify:all` and on LazyVM, both matching the `.out`, and
 mirrored `.java` tests are blessed on the oracle.
 
-Status (2026-11-12): S16-01 to 06 done. S16-04's enum mirror is
+Status (2026-11-13): S16-01 to 07 done. S16-04's enum mirror is
 `tests/siesta/classes/Enums` (`tests/java/s4/Showcase` does not exist yet), and
 S16-06's `finally` matrix is `tests/siesta/flow/Finally`, both with Java
-mirrors. S16-07 lacks only the UI-thread resumption case, which needs
-S9-06's `Ui.executor()`. The suite has 43 tests, run on LazyVM and on the
-Java 8 oracle with `-Xverify:all`; `bench/siesta` measures Siesta's code
+mirrors. S16-07's UI case is `tests/siesta/async/UiResume`, run headless on
+`lazyvm-ui` now that `Ui.run` registers `Ui.executor()` as the UI thread's
+`Loop.home()` (`tests/java/lazy/ui/Home`). The suite has 46 tests, run on
+LazyVM and, except the `NEEDS:` ones, on the Java 8 oracle with
+`-Xverify:all`; `bench/siesta` measures Siesta's code
 against javac's (siesta.md section 10).
 S16-08 started (2026-11-12): `samples/siesta/writer` builds with
 `siestac -o writer.jar` against S9's branch; its first frame is
 byte-identical to the Java port's on Windows and `samples/siesta/writer_flow.sie`
 drives its dialogs headless. Not yet checked: LazyOS, and the suite run,
-which waits for S9's merge (siesta-apps.md section 5).
+now possible with S9 on main (siesta-apps.md section 5).
 
 - [x] S16-01 Lexer, parser, AST and diagnostics (siesta.md sections 4 and 8),
       in `crates/siesta`, which depends only on `crates/classfile`.
@@ -536,7 +538,7 @@ which waits for S9's merge (siesta-apps.md section 5).
       each branch; each cut feature of siesta.md section 3 is refused with
       its message.
       Needs: S16-05.
-- [ ] S16-07 `async` and `await` (siesta-async.md): linearisation in
+- [x] S16-07 `async` and `await` (siesta-async.md): linearisation in
       the checker, frame classes and resumption in the generator, and
       `lazy.async.Loop.home()` with `lazy.ui`'s registration.
       Files: `crates/siesta/src/{anf.rs,gen/}`,

@@ -212,6 +212,8 @@ public final class Ui {
         main = window;
         Encoder out = window.encode();
         running = true;
+        // An await begun on this thread resumes here (lazy.async.Loop.home).
+        lazy.internal.Homes.register(uiThread, EXECUTOR);
         try {
             run0(window.id, window.title, window.width, window.height, out.ops(), out.objects(), window.keys());
         } catch (UnsatisfiedLinkError e) {
@@ -219,6 +221,7 @@ public final class Ui {
             throw new IllegalStateException("lazy.ui needs the lazyvm-ui launcher", e);
         } finally {
             running = false;
+            lazy.internal.Homes.register(uiThread, null);
         }
         Throwable t = failure;
         failure = null;

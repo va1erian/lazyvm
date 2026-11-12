@@ -104,6 +104,42 @@ impl Body<'_> {
         None
     }
 
+    /// Refuses a store to a `final` field (JLS 4.12.4) except a
+    /// constructor's to its class's instance field, and a script's
+    /// initialisation of its own top-level variable (declare.rs), which
+    /// keeps the declaration's span.
+    fn check_store(&self, owner: &str, name: &Ident) -> Result<()> {
+        let Some((decl, i, _)) = self.w.field(&Type::class(owner), &name.name) else {
+            return Ok(());
+        };
+        let access = decl.fields[i].access;
+        if access & classfile::ACC_FINAL == 0 {
+            return Ok(());
+        }
+        let own = *decl.name == *self.cls.name;
+        let allowed = own
+            && if access & classfile::ACC_STATIC != 0 {
+                self.cls
+                    .fields
+                    .iter()
+                    .any(|f| f.decl.name.span == name.span)
+            } else {
+                self.final_fields
+            };
+        if allowed {
+            return Ok(());
+        }
+        let where_ = if access & classfile::ACC_STATIC != 0 {
+            "where it is declared"
+        } else {
+            "where it is declared or in a constructor"
+        };
+        self.err(
+            name.span,
+            format!("`{}` is final: it is assigned only {where_}", name.name),
+        )
+    }
+
     /// The value of static field `owner.name` if it is a source constant.
     fn constant(&self, owner: &str, name: &str) -> Option<crate::classpath::Constant> {
         let c = self.w.class(owner)?;
@@ -169,6 +205,9 @@ impl Body<'_> {
                 let Some(p) = self.place_of_name(n)? else {
                     return self.err(n.span, format!("no variable `{}`", n.name));
                 };
+                if let Place::Static { owner, .. } | Place::Field { owner, .. } = &p {
+                    self.check_store(owner, n)?;
+                }
                 self.place_operands(&p);
                 Ok(p)
             }
@@ -178,6 +217,7 @@ impl Body<'_> {
                         return self.err(name.span, format!("{t} has no field `{}`", name.name));
                     };
                     self.check_access(&owner, owner.fields[i].access, name)?;
+                    self.check_store(&owner.name, name)?;
                     let desc = owner.fields[i].ty.descriptor();
                     if owner.fields[i].access & classfile::ACC_STATIC != 0 {
                         self.pop_value(&t);
@@ -203,6 +243,7 @@ impl Body<'_> {
                         );
                     };
                     self.check_access(&owner, owner.fields[i].access, name)?;
+                    self.check_store(&owner.name, name)?;
                     let desc = owner.fields[i].ty.descriptor();
                     Ok(Place::Static {
                         owner: owner.name.clone(),

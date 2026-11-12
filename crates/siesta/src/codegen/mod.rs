@@ -39,7 +39,7 @@ use crate::types::Type;
 use crate::world::World;
 
 pub use body::Body;
-pub use captures::{Usage, names_in};
+pub use captures::Usage;
 
 /// What a class's methods add to it besides themselves.
 #[derive(Default)]

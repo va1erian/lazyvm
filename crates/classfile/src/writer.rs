@@ -11,7 +11,9 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct Pool {
     bytes: Vec<u8>,
-    count: u16,
+    /// Slots used; may pass 65535, which [`Pool::len`] reports so the
+    /// caller refuses the class (indices past it are meaningless).
+    count: usize,
     index: HashMap<Vec<u8>, u16>,
 }
 
@@ -21,7 +23,7 @@ impl Pool {
             return i;
         }
         self.count += 1;
-        let i = self.count;
+        let i = self.count as u16;
         self.bytes.extend_from_slice(&entry);
         self.index.insert(entry, i);
         i
@@ -30,7 +32,7 @@ impl Pool {
     /// The slots used so far, counting the two of a `long` or `double`; a
     /// class file holds at most 65534, which callers check.
     pub fn len(&self) -> usize {
-        usize::from(self.count)
+        self.count
     }
 
     pub fn is_empty(&self) -> bool {
@@ -42,7 +44,12 @@ impl Pool {
     pub fn utf8(&mut self, s: &str) -> u16 {
         let units: Vec<u16> = s.encode_utf16().collect();
         let mut bytes = crate::encode_mutf8(&units);
-        bytes.truncate(usize::from(u16::MAX));
+        let mut keep = bytes.len().min(usize::from(u16::MAX));
+        // Cut before a character, never inside one (continuation bytes are 10xxxxxx).
+        while keep < bytes.len() && keep > 0 && bytes[keep] & 0xc0 == 0x80 {
+            keep -= 1;
+        }
+        bytes.truncate(keep);
         let mut e = vec![1];
         e.extend_from_slice(&(bytes.len() as u16).to_be_bytes());
         e.extend_from_slice(&bytes);
@@ -228,7 +235,7 @@ pub fn write(class: &ClassDef, mut pool: Pool) -> Vec<u8> {
     }
     attributes(&mut body, &mut pool, &class.attributes);
     let mut out = vec![0xCA, 0xFE, 0xBA, 0xBE, 0, 0, 0, 52];
-    out.extend_from_slice(&(pool.count + 1).to_be_bytes());
+    out.extend_from_slice(&((pool.count + 1) as u16).to_be_bytes());
     out.extend_from_slice(&pool.bytes);
     out.extend_from_slice(&body);
     out
@@ -335,5 +342,23 @@ mod tests {
         let s = pool.string("\0é𝄞");
         assert_eq!(s, 5);
         assert_eq!(mutf8_len("\0é𝄞"), 2 + 2 + 6);
+    }
+
+    #[test]
+    fn an_overfull_pool_says_so() {
+        let mut pool = Pool::default();
+        for v in 0..70_000 {
+            pool.int(v);
+        }
+        assert_eq!(pool.len(), 70_000);
+    }
+
+    #[test]
+    fn long_text_is_cut_between_characters() {
+        let mut pool = Pool::default();
+        let text = "é".repeat(40_000); // 80,000 bytes, two per character
+        pool.utf8(&text);
+        let len = u16::from_be_bytes([pool.bytes[1], pool.bytes[2]]);
+        assert_eq!(len, 65_534);
     }
 }
