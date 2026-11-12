@@ -238,8 +238,9 @@ What is left is API, for S9:
   them, for Java too.
 - **`Ui.later` before `Ui.run`** waits for the first event rather than
   running once the window is up, unlike `Ui.executor().execute`; the port
-  first used `later` and its start-up ran only as the window closed. Either
-  should run it at start, or the Javadoc should say which to use.
+  first used `later` and its start-up ran only as the window closed. Fixed
+  on S9's branch (`adce0a3`): a task queued before `Ui.run` now runs once
+  the window is up. Dialogs returning stages wait for the owner.
 
 ## 6. Open questions for the owner
 
