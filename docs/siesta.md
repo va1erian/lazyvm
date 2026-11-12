@@ -340,7 +340,9 @@ there, and most Siesta programs are one edit away from Java:
 
 **Measured against javac** (Windows, 2026-11-12, medians of 7 runs, the
 same checksums everywhere). The suite is 403 code lines in Siesta against
-538 in Java (-25 %), and its jar gzips to 9.6 KB against 17.1 KB. siestac
+538 in Java (-25 %), and its classes are 20,474 bytes against 26,046
+(9.8 KB against 12.5 KB compressed together; javac's nested classes and
+private constructors are the difference). siestac
 compiles it in 15 ms, javac in 280 ms (each with its start-up).
 
 | benchmark | LazyVM, interpreter | LazyVM, JIT | HotSpot 8 |
