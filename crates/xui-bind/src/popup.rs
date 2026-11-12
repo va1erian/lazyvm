@@ -32,7 +32,7 @@ fn xe(e: impl std::fmt::Debug) -> String {
     format!("{e:?}")
 }
 
-/// Decodes one free widget into window `window`.
+/// Decodes one popup into window `window`.
 pub fn make(tree: &crate::Tree, window: i32) -> Result<(), String> {
     let ui = table::window(window)?.ui.clone();
     let mut r = Reader::new(tree);

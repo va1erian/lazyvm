@@ -4,10 +4,10 @@ package lazy.ui;
  * A dialog, file picker or menu: it belongs to a window but not to its layout. It is made in the
  * window on its first {@code open} and lives until the window closes (docs/ui.md).
  */
-abstract class Free extends Node {
+abstract class Popup extends Node {
     final Window window;
 
-    Free(Window window) {
+    Popup(Window window) {
         this.window = window;
     }
 

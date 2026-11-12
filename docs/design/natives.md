@@ -253,7 +253,7 @@ a negative timer period is `IllegalArgumentException`.
   `crates/xui-bind/src/props.rs` and `rich.rs`).
 - The op lists are pre-order trees: each node `kind id sizing a b flags
   [tooltip]` and then its fields, as `lazy.ui.Encoder` writes them and
-  `crates/xui-bind/src/build.rs`, `widgets.rs` and `free.rs` read them;
+  `crates/xui-bind/src/build.rs`, `widgets.rs` and `popup.rs` read them;
   `objects` holds the strings and `int[]`s nodes index. Counts are bounded by
   what is left of the list, lengths are 0 to 32768, trees nest at most 16
   deep and menus 4.

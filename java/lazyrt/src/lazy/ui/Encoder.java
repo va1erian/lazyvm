@@ -14,7 +14,7 @@ final class Encoder {
     static final int COMBO = 16, LIST = 17, SLIDER = 18, PROGRESS = 19, STATUS = 20, TOOLBAR = 21;
     static final int SEPARATOR = 22, SPACER = 23;
     static final int PANEL = 30, SCROLL = 31, TABS = 32, GROUP = 33, CANVAS = 40, RICH = 50;
-    // Dialogs and menus (free.rs).
+    // Dialogs and menus (popup.rs).
     static final int DIALOG = 60, TASK = 61, FILE = 62, MENU = 63;
 
     private int[] ops = new int[64];

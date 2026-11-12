@@ -451,7 +451,7 @@ What it says:
 
 - **Op lists everywhere.** Windows, panels' new content, dialogs and menus
   are encoded by `lazy.ui.Encoder` and decoded by `crates/xui-bind`
-  (`build.rs`, `widgets.rs`, `free.rs`); every node starts `kind id sizing a b
+  (`build.rs`, `widgets.rs`, `popup.rs`); every node starts `kind id sizing a b
   flags [tooltip]`. Changes go through one `call0(id, op, i, d, o)`
   (`props.rs`, `rich.rs`). Setters skip the native call when the value shown
   is already the one asked for, which cut LazyWriter's calls by five.

@@ -10,7 +10,7 @@ import java.util.function.Consumer;
  * ({@link #enabledWhen}), are asked of the app each time the menu shows, so it keeps no entry
  * numbers.
  */
-public final class Menu extends Free {
+public final class Menu extends Popup {
     private static final int ITEM = 0, CHECK = 1, SEPARATOR = 2, SUBMENU = 3, RADIO = 4;
 
     private final ArrayList<Entry> entries = new ArrayList<Entry>();

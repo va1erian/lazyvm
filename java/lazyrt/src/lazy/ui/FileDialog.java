@@ -7,7 +7,7 @@ import java.util.function.Consumer;
  * A picker for a file to open or save to, made by {@link Window#openFile} and {@link
  * Window#saveFile}. {@link #show} returns at once; the path comes to {@link #onChoose}.
  */
-public final class FileDialog extends Free {
+public final class FileDialog extends Popup {
     private final boolean save;
     private final String title;
     private String dir, name;

@@ -22,7 +22,7 @@ public final class Window extends Node {
     /** Dialogs, menus and timers made in this window, forgotten when it closes. */
     final ArrayList<Node> owned = new ArrayList<Node>();
     /** The dialog open over the window, or null. */
-    Free modal;
+    Popup modal;
 
     Window(String title, int width, int height) {
         this.title = Ui.nonNull(title, "title");

@@ -7,7 +7,7 @@ import java.util.function.Consumer;
  * {@link Window#confirm} and {@link Window#prompt}. It shows over its window, which takes no
  * input meanwhile; {@link #show} returns at once and the answer comes to {@link #onClose}.
  */
-public final class Dialog extends Free {
+public final class Dialog extends Popup {
     private final int style;
     private String title, text;
     private final String initial;

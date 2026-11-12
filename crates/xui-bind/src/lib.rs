@@ -6,10 +6,10 @@
 mod app;
 mod build;
 mod canvas;
-mod free;
 mod headless;
 mod host;
 mod msg;
+mod popup;
 #[cfg(feature = "rich-text")]
 mod probe;
 mod props;
@@ -128,7 +128,7 @@ pub fn set_clipboard(id: i32, text: &str) -> Result<(), String> {
 
 /// Makes a dialog, file picker or menu in window `window` (docs/ui.md).
 pub fn make(tree: &Tree, window: i32) -> Result<(), String> {
-    free::make(tree, window)
+    popup::make(tree, window)
 }
 
 /// Replaces panel `panel`'s content with `tree`'s layout. The widgets it

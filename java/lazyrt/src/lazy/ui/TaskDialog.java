@@ -7,7 +7,7 @@ import java.util.function.IntConsumer;
  * A dialog with a row of command buttons and Cancel, made by {@link Window#task}: "Save changes?"
  * with Save and Discard. {@link #show} returns at once; the choice comes to {@link #onChoice}.
  */
-public final class TaskDialog extends Free {
+public final class TaskDialog extends Popup {
     /** Icons for {@link #icon}. */
     public static final int NONE = 0, INFO = 1, WARNING = 2, ERROR = 3;
 
