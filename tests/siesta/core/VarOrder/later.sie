@@ -4,3 +4,4 @@ import java.util.function.IntUnaryOperator;
 var n = 3;
 var bump = (IntUnaryOperator) (k -> k + 1);
 var k = bump.applyAsInt(4);
+var word = "four";

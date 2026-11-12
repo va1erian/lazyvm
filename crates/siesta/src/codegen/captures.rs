@@ -42,39 +42,41 @@ impl Walk {
             }
             Stmt::Expr(e) | Stmt::Throw(e, _) => self.expr(e),
             Stmt::Return(e, _) => e.iter().for_each(|e| self.expr(e)),
-            Stmt::Block(b, _) => b.iter().for_each(|s| self.stmt(s)),
+            Stmt::Block(b, _) => self.scoped(|w| b.iter().for_each(|s| w.stmt(s))),
             Stmt::If { cond, then, els } => {
                 self.expr(cond);
-                self.stmt(then);
-                els.iter().for_each(|s| self.stmt(s));
+                self.scoped(|w| w.stmt(then));
+                els.iter().for_each(|s| self.scoped(|w| w.stmt(s)));
             }
             Stmt::While { cond, body } | Stmt::DoWhile { body, cond } => {
                 self.expr(cond);
-                self.stmt(body);
+                self.scoped(|w| w.stmt(body));
             }
             Stmt::For {
                 init,
                 cond,
                 update,
                 body,
-            } => {
-                init.iter().for_each(|s| self.stmt(s));
-                cond.iter().for_each(|e| self.expr(e));
-                update.iter().for_each(|e| self.expr(e));
-                self.stmt(body);
-            }
+            } => self.scoped(|w| {
+                init.iter().for_each(|s| w.stmt(s));
+                cond.iter().for_each(|e| w.expr(e));
+                update.iter().for_each(|e| w.expr(e));
+                w.scoped(|w| w.stmt(body));
+            }),
             Stmt::ForEach {
                 name, iter, body, ..
             } => {
                 self.expr(iter);
-                self.declare(&name.name);
-                self.stmt(body);
+                self.scoped(|w| {
+                    w.declare(&name.name);
+                    w.stmt(body);
+                });
             }
             Stmt::Switch { scrut, cases, .. } => {
                 self.expr(scrut);
                 for c in cases {
                     c.labels.iter().for_each(|e| self.expr(e));
-                    self.stmt(&c.body);
+                    self.scoped(|w| w.stmt(&c.body));
                 }
             }
             Stmt::Try {
@@ -83,15 +85,29 @@ impl Walk {
                 finally,
                 ..
             } => {
-                body.iter().for_each(|s| self.stmt(s));
+                self.scoped(|w| body.iter().for_each(|s| w.stmt(s)));
                 for c in catches {
-                    self.declare(&c.name.name);
-                    c.body.iter().for_each(|s| self.stmt(s));
+                    self.scoped(|w| {
+                        w.declare(&c.name.name);
+                        c.body.iter().for_each(|s| w.stmt(s));
+                    });
                 }
-                finally.iter().flatten().for_each(|s| self.stmt(s));
+                if let Some(f) = finally {
+                    self.scoped(|w| f.iter().for_each(|s| w.stmt(s)));
+                }
             }
             Stmt::CtorCall { args, .. } => args.iter().for_each(|e| self.expr(e)),
             Stmt::Break(_) | Stmt::Continue(_) => {}
+        }
+    }
+
+    /// Runs `f` in a nested scope: names it declares stop hiding top-level
+    /// variables when it ends.
+    fn scoped(&mut self, f: impl FnOnce(&mut Self)) {
+        let saved = self.bound.last().cloned();
+        f(self);
+        if let (Some(saved), Some(frame)) = (saved, self.bound.last_mut()) {
+            *frame = saved;
         }
     }
 
