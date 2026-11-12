@@ -87,13 +87,15 @@ jobs:
         run: cargo check --locked --manifest-path fuzz/Cargo.toml
       - name: musl build
         run: cargo build --release --locked -p launcher --target x86_64-unknown-linux-musl
-      - name: differential suite (musl binary)
-        run: python tools/test.py --exe target/x86_64-unknown-linux-musl/release/lazyvm --build-java-only
+      - name: lazyvm-ui build (musl, for the UI tests and the LazyOS budget)
+        run: cargo build --release --locked -p launcher-ui --target x86_64-unknown-linux-musl
+      - name: differential suite (musl binaries)
+        run: >-
+          python tools/test.py --exe target/x86_64-unknown-linux-musl/release/lazyvm
+          --ui-exe target/x86_64-unknown-linux-musl/release/lazyvm-ui --build-java-only
       - name: JDWP smoke (musl binary)
         run: python tools/jdwp_smoke.py --exe target/x86_64-unknown-linux-musl/release/lazyvm --no-build
       - name: size budget (LazyOS binary)
         run: python tools/size.py --exe target/x86_64-unknown-linux-musl/release/lazyvm
-      - name: lazyvm-ui build (LazyOS, headless until S9-04)
-        run: cargo build --release --locked -p launcher-ui --target x86_64-unknown-linux-musl
       - name: size budget (LazyOS lazyvm-ui)
         run: python tools/size.py --exe target/x86_64-unknown-linux-musl/release/lazyvm-ui

@@ -13,7 +13,8 @@ Optional header lines in the source, before `package`:
     // ORACLE: modern       bless on JDK 19+ (docs/decisions.md D9: float printing)
     // NEEDS: net           sockets: inside LazyOS, only under `lazyos_test.py --net`
                             `not-lazyos` never inside LazyOS; `windows` needs Windows;
-                            `lazyos-net` only under `lazyos_test.py --net`
+                            `lazyos-net` only under `lazyos_test.py --net`;
+                            `ui` runs on `lazyvm-ui` (lazy.ui, docs/ui.md)
 """
 
 from __future__ import annotations

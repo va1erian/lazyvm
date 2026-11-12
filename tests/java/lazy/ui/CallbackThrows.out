@@ -1,0 +1,4 @@
+clicks that ran: 1
+--- stderr ---
+uncaught in main: java.lang.IllegalArgumentException: boom from a callback at lazy.ui.CallbackThrows.lambda$main$1(CallbackThrows.java:23)
+--- exit 1 ---

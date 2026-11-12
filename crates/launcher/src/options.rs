@@ -256,7 +256,7 @@ fn default_boot() -> Option<Vec<PathBuf>> {
     if let Some(p) = std::env::var_os("LAZYVM_BOOTCLASSPATH") {
         return Some(std::env::split_paths(&p).collect());
     }
-    let exe = std::env::current_exe().ok()?;
+    let exe = binary_path()?;
     let dir = exe.parent()?;
     // Beside the binary, an install's lib/, or the fake JDK home's jre/lib.
     let candidates = [
@@ -267,6 +267,17 @@ fn default_boot() -> Option<Vec<PathBuf>> {
         dir.join("../lib/lazyrt"),
     ];
     candidates.into_iter().find(|p| p.exists()).map(|p| vec![p])
+}
+
+/// The running binary's path: the system's answer, else an absolute
+/// `argv[0]` (LazyOS's Linux ABI has no `/proc/self/exe`, and `init` starts
+/// programs by absolute path).
+fn binary_path() -> Option<PathBuf> {
+    if let Ok(exe) = std::env::current_exe() {
+        return Some(exe);
+    }
+    let first = PathBuf::from(std::env::args_os().next()?);
+    first.is_absolute().then_some(first)
 }
 
 /// `256m`, `1g`, `65536`, `512k`.

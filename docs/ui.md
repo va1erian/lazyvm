@@ -2,8 +2,10 @@
 
 Status: S9-01 in [`plan-2.md`](plan-2.md), reviewed by the owner (decisions
 at the end). The S9-02 spike built the core of it for `samples/counter`
-("Spike results"); S9-02 to S9-06 build the rest. It was written against xui at
-`71dc3b5903ac94dba00466a6d6a00d69251beeab`, the revision LazyOS's `xui-app`
+("Spike results"); S9-02 to S9-06 built the rest ("As built"), and LazyWriter
+was ported onto it ("Writer on LazyVM"). It was written against xui at
+`71dc3b5903ac94dba00466a6d6a00d69251beeab` and now builds against
+`832c61f29419bf31a0518a47e050b15c97b316e3`, the revision LazyOS's `xui-app`
 pins, after reading its README, `docs/architecture.md`, `docs/widgets.md`,
 `docs/forms.md`, `docs/headless-screenshots.md`, `xui-core`'s `Backend`, `Ui`
 and `Canvas`, and `xui-canvas`'s `WinitBackend` and `OffscreenBackend`.
@@ -349,9 +351,14 @@ So:
   `lazyvm`. Under `lazyvm`, `Ui.run` throws `IllegalStateException` naming
   `lazyvm-ui`. Both binaries share `lazyrt.jar` (the `lazy.ui` classes cost
   it a few KB).
-- `tools/size.py` checks both against D14, on Windows and musl, in CI. A
-  PR that adds widgets says what `lazyvm-ui` costs, and stops for the owner
-  past 80 % of the budget.
+- `tools/size.py` checks both, on Windows and musl, in CI: `lazyvm`
+  against D14's 4,000,000 B and `lazyvm-ui` against its own 6,000,000 B.
+  Third-party crates (xui and its text stack, mostly) are built with
+  `opt-level = "z"`, which took 7 % off `lazyvm-ui` on Windows and 4 % on
+  LazyOS; the VM's own crates, the few it leans on and the rasteriser stay
+  at full speed (`Cargo.toml`; [`ui-writer.md`](ui-writer.md), "Speed").
+  A PR that adds widgets says what `lazyvm-ui` costs, and stops for the
+  owner past 80 % of the budget.
 - Only the widgets apps use are bound. xui's optional crates (rich text, the
   code editor, web views, forms, scripts) stay out.
 
@@ -368,6 +375,15 @@ confirmed 2 (the size), 5, 6, 7 and 8; the others wait for the item named.
 2. **Size controls.** A way to build `winit-backend` without the OpenGL
    stack, and `xui-canvas` with a smaller text stack or with system font
    discovery off, if the measurements show they dominate.
+   Measured in November 2026 on LazyOS's `lazyvm-ui`: the text stack
+   (harfrust, skrifa, read-fonts, zeno, swash, cosmic-text) is ~1.4 MB of
+   code, `xui-rich-text` 0.33 MB, the JPEG and PNG decoders 0.2 MB.
+   `xui-canvas` takes cosmic-text with its default features, which pull in
+   fontconfig parsing that LazyOS never uses; off, it saves 48,507 B (1 %) of
+   the D14 measure. The OpenGL stack on Windows is woven through
+   `xui-canvas`'s compositor and backend, so cutting it is xui work, not a
+   feature switch. Building third-party crates with `opt-level = "z"`
+   (`Cargo.toml`) saved more than either.
 3. **Panics on caller input.** The binding validates what Java passes, but
    xui's own panics on odd values (huge sizes, empty lists, out-of-range
    selections) should become errors; the binding cannot catch them all
@@ -430,6 +446,69 @@ What it says:
 - Not covered by the spike: LazyOS, the error message box, `Panel.set` and
   id generations, the `lazy.gfx` exclusivity check, and pixel goldens. The
   `THIRD_PARTY.md` rows for xui's tree are generated and need curating.
+
+## As built (S9-02 to S9-06)
+
+- **Op lists everywhere.** Windows, panels' new content, dialogs and menus
+  are encoded by `lazy.ui.Encoder` and decoded by `crates/xui-bind`
+  (`build.rs`, `widgets.rs`, `popup.rs`); every node starts `kind id sizing a b
+  flags [tooltip]`. Changes go through one `call0(id, op, i, d, o)`
+  (`props.rs`, `rich.rs`). Setters skip the native call when the value shown
+  is already the one asked for, which cut LazyWriter's calls by five.
+- **Ids** are a 16-bit slot and a 15-bit generation; a panel's old content
+  is freed children first, so new content reuses the same slots and a stale
+  message is dropped by its generation (`tests/java/lazy/ui/StaleId`).
+- **The lend moves the VM through the thread lock** (`vm::thread::lend`): the
+  UI loop gives the VM up while it waits, as `blocking` does, and each upcall
+  takes it back in turn with other threads. `Ui.executor()` needs that, and
+  it removed the VM's raw-pointer `unsafe`. A step of the headless driver
+  lends again, since the callbacks it causes run nested in the script's.
+- **Failures** are kept by `Ui.dispatch` itself (no `Ref` crosses the lend);
+  the first one wins and `Ui.run` rethrows it. Once a window opened on a
+  window system, `VM.uncaught` also hands the report to the host
+  (`lazy.internal.ui.ErrorReport`): `MessageBoxW` on Windows, a serial line on
+  LazyOS until a notification can be sent (S10).
+- **Hosts** are a `UiHost { desktop, error_box }` the binary passes in:
+  `crates/launcher-ui` (winit on Windows), and on LazyOS the GPL
+  `crates/lazyvm-lazyos`, its own workspace built by `tools/lazyos_ui.py`
+  with LazyOS's toolchain against a LazyOS checkout. It reads its fonts from
+  `/system/share/fonts/xui` (`LazyOSBackend::connect_with_font`, added on the
+  LazyOS side), so they are not in the binary, and prints
+  `LAZYVM:UI:UP:PASS` on the first frame.
+- **Headless:** `lazy.internal.ui.Headless` runs a script once the window is
+  built: clicks (centre or offset), hovers, wheel, keys, typed text, a
+  manual clock for timers, executor draining, frame checksums and PPM dumps;
+  `Headless.font` makes pixels the same on Windows and LazyOS (the goldens of
+  `tests/java/lazy/ui` pass unchanged on both).
+- **RichText** (`xui-rich-text`, feature `rich-text` of `xui-bind`) is the one
+  heavy widget bound, for LazyWriter ([`ui-writer.md`](ui-writer.md)); it costs
+  ~470 KB gzipped of `lazyvm-ui`.
+- **No dialog or menu bookkeeping in apps** (two of the Siesta session's
+  proposals, `docs/siesta-apps.md` on its branch). A window knows which of
+  its dialogs is open: `show()` of another does nothing, and the window's
+  shortcuts and close button wait until it closes. A menu's switches take a
+  `BooleanSupplier` and `enabledWhen(condition, entries)` scopes a
+  condition; both are asked
+  each time the menu shows, so apps hold no entry numbers. LazyWriter lost
+  its `dialogOpen` flag and its menu index tables (35 lines). Commands, value
+  cells, timers as stages and groups were not taken: each would add more to
+  `lazy.ui` than it removes from LazyWriter.
+- **Dialogs return stages** (the same document's "dialogs that return
+  stages", asked for again by the Siesta port of LazyWriter). `show()` of a
+  `Dialog`, `FileDialog` or `TaskDialog` returns the stage of its answer,
+  completed after the callback; a show while another dialog is open cancels
+  its stage, and so does closing the window with the dialog open.
+  LazyWriter's unsaved-changes flow became one chain (Save, maybe Save As,
+  then New, Open or Quit) instead of a pending-step field and four helpers.
+  An exception thrown in a stage's action stays in that stage, as
+  `CompletableFuture` does, where one from a callback stops the program with
+  the error dialog. LazyWriter keeps the second behaviour with a
+  `whenComplete` that hands the failure to `Ui.later`; cancellations are not
+  failures. Net, LazyWriter is 10 lines shorter.
+- New xui findings: toolbar items expose no bounds (tests click at an
+  offset); programmatic setters raise no messages, by design; LazyOS's
+  backend bundled its font unconditionally (fixed there by a constructor that
+  takes one).
 
 ## Not in the first version
 

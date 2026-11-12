@@ -34,7 +34,8 @@ The VM calls these Java methods from natives, by name and descriptor.
 
 | Class | Method | Use |
 |---|---|---|
-| `lazy.ui.Ui` | `private static void dispatch(int id, int kind)` | The one upcall per widget message, from inside `run0`'s loop (docs/ui.md) |
+| `lazy.ui.Ui` | `private static boolean dispatch(int id, int kind, int i, double d, String s)` | The one upcall per widget message, from inside `run0`'s loop (docs/ui.md) |
+| `lazy.internal.ui.Headless` | `private static void script()` | The headless host's run hook: the test's script (docs/ui.md) |
 
 ## Natives
 
@@ -233,30 +234,36 @@ Handles name entries in a table owned by the VM thread. Except where noted
 above, an unknown handle is `IllegalStateException`. Sizes are checked in Java
 and again in Rust.
 
-### `lazy.ui.Ui` (docs/ui.md; S9-02 spike)
-These live in `crates/natives-ui` and are registered only by `lazyvm-ui`;
-under `lazyvm` they are missing, and `Ui.run` turns the
-`UnsatisfiedLinkError` into `IllegalStateException`.
-- `private static native void run0(String title, int width, int height, int[] ops, Object[] strings)`:
-  builds the window from the op list (`crates/xui-bind/src/tree.rs`; every
-  `strings` element a `String`) and runs it until it closes, calling
-  `Ui.dispatch` for each message with the VM lent to the loop
-  (`vm::interp::with_lent`). Sizes are 1 to 8192. A malformed op list, a
-  second call in the process, or no window host is `IllegalStateException`;
-  an exception thrown by `dispatch` stops the loop, and `run0` rethrows it.
-  `-Dlazy.ui=headless` uses xui's offscreen backend; with it,
-  `-Dlazy.ui.clicks=<n>` clicks the first listened-to button `n` times and
-  `-Dlazy.ui.dump=<file>` writes the last frame as a binary PPM.
-  `-Dlazy.ui.stats=true` prints the build time, upcalls and changes on stderr.
-- The op list is the tree in pre-order; every node starts with its opcode
-  and the registry id Java gave it (ids are unique; `strings` indexes are
-  into the `strings` array; lengths are 0 to 32768; layouts nest at most 16 deep):
-  `1 id padding gap n` (column) or `2 id padding gap n` (row), then its `n`
-  children; `3 id text` (label); `4 id text click` (button, `click` 1 when
-  Java listens). The root is a column or row, and nothing may follow it.
-  `Ui.dispatch` receives event kind 1 for a click.
-- `static native void setText0(int id, String text)`: a label's or button's
-  text; `IllegalStateException` for an id that names no mounted widget.
+### `lazy.ui` (docs/ui.md, "As built")
+These live in `crates/natives-ui` and are registered only by `lazyvm-ui`
+(`natives_ui::register(vm, UiHost)`); under `lazyvm` they are missing, and
+`Ui.run` turns the `UnsatisfiedLinkError` into `IllegalStateException`. A
+refusal from `crates/xui-bind` (a malformed op list, a bad index, a widget
+that is gone) is `IllegalStateException`; a window size outside 1 to 8192 or
+a negative timer period is `IllegalArgumentException`.
+- `Ui.run0(window, title, w, h, int[] ops, Object[] objects, int[] keys)`
+  builds the main window and runs the loop, the VM lent to it
+  (`vm::thread::lend`): each message is one call of `Ui.dispatch(int id, int
+  kind, int i, double d, String s)`, which returns false once a callback
+  threw. `open0` (a second window, from a callback), `close0`, `quit0`,
+  `title0`, `make0` (a dialog, picker or menu), `mount0` (a panel's new
+  content), `forget0` (ids Java let go of), `timer0`, `clipboard0`, `wake0`
+  (any thread: drain `Ui.executor()`), and `call0(id, op, i, d, o)` for
+  every change or read (ops in `lazy.ui.Op` and `RichText`;
+  `crates/xui-bind/src/props.rs` and `rich.rs`).
+- The op lists are pre-order trees: each node `kind id sizing a b flags
+  [tooltip]` and then its fields, as `lazy.ui.Encoder` writes them and
+  `crates/xui-bind/src/build.rs`, `widgets.rs` and `popup.rs` read them;
+  `objects` holds the strings and `int[]`s nodes index. Counts are bounded by
+  what is left of the list, lengths are 0 to 32768, trees nest at most 16
+  deep and menus 4.
+- `lazy.internal.ui.Headless.step0(op, id, i, s)` and `font0(byte[])` drive
+  the headless host (`-Dlazy.ui=headless`); the VM calls
+  `Headless.script()` once the window is built. A step lends the VM again,
+  as the callbacks it causes run nested in the script's.
+- `lazy.internal.ui.ErrorReport.show0(title, text)`: the host's report of an
+  uncaught exception (`MessageBoxW` on Windows). `-Dlazy.ui.stats=true`
+  prints the build time, upcalls and changes on stderr at the end.
 
 ### `lazy.gfx.Surface` (docs/gfx.md)
 Every native gets the surface as its first seven arguments: its `int[]`, its

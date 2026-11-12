@@ -225,7 +225,7 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       from outside (clicks, hovers, resizes, zero upcalls for the last two),
       with screenshots; `tools/size.py` for both binaries on Windows and
       musl; all figures reproduced by an independent run (PR #27).
-- [ ] S9-02 Finish the binding on the spike: `set0`/`get0`, `Panel` and
+- [x] S9-02 Finish the binding on the spike: `set0`/`get0`, `Panel` and
       `Panel.set` with generation-tagged ids, the `lazy.gfx` exclusivity
       check, `lazy.internal.ui.Headless` (scripted input and a manual clock)
       in place of the spike's `-Dlazy.ui.clicks`, and the `THIRD_PARTY.md`
@@ -236,7 +236,12 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       for a widget a `Panel.set` destroyed does not fire its successor); `tests/java/lazy/ui/CallbackThrows`
       (`Ui.run` rethrows, the program exits nonzero, no dialog headless);
       `tools/size.py` for `lazyvm` and `lazyvm-ui`, in the PR.
-- [ ] S9-03 Windows window host via the xui `winit-backend` in
+      Done with S9-03 to S9-06 ([`ui.md`](ui.md), "As built"): the goldens of
+      `tests/java/lazy/ui` (`NEEDS: ui`, run on `lazyvm-ui`) pass unchanged on
+      Windows and inside LazyOS. `lazyvm-ui` has its own 6,000,000 B budget
+      (D14): 72 % on Windows, 78 % on LazyOS ([`ui-writer.md`](ui-writer.md),
+      "Size").
+- [x] S9-03 Windows window host via the xui `winit-backend` in
       `crates/lazyvm-win` (from the spike, which also moved the VM to the
       main thread and delay-loads `opengl32.dll`): DPI, resize, close, the
       clipboard and the uncaught-exception message box ([`ui.md`](ui.md),
@@ -248,14 +253,21 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       message box (screenshot in the PR), and one that catches it shows none;
       `tools/ui_shot.py --resize 100` resizes the window from outside and the
       `-Dlazy.ui.stats=true` line shows zero upcalls; `tools/size.py --exe` on `lazyvm-ui`, in the PR.
-- [ ] S9-04 LazyOS window host for the musl `lazyvm-ui`, via xuid
+      Done: `samples/gallery throw` shows the box, `catch` exits 0 with none;
+      100 resizes made no upcall (the one upcall is the close button).
+- [x] S9-04 LazyOS window host for the musl `lazyvm-ui`, via xuid
       (`xui-app`'s `LazyOSBackend`, from `crates/lazyvm-lazyos`, the font
       registered from a system file: [`ui.md`](ui.md), "Size"), with input
       routing and the trace markers
       `LAZYVM:UI:UP:PASS`.
       Needs: LOS-02.
       Check: LazyOS `tools/screenshot/qemu_shot.py` on the `--lazyvm-ui` demo plus `pngstats.py --min-nonblack 0.01`.
-- [ ] S9-05 Widget coverage: the xui widgets apps need (labels, buttons, text
+      Done as `crates/lazyvm-lazyos` (`tools/lazyos_ui.py`) with LOS-02's
+      `abi = "lazyvm"` packages: LazyOS's `xui_writerj.json` and
+      `xui_notesj.json` sessions (`qemu_session.py`, `pngstats.py`) stand in
+      for a `--lazyvm-ui` demo switch. The uncaught-exception report is a
+      serial line there until S10 can send a notification.
+- [x] S9-05 Widget coverage: the xui widgets apps need (labels, buttons, text
       fields, lists, scroll, tabs, menus, dialogs, `Canvas` with a recorded
       `Drawing`, timers, secondary windows), each with a headless golden;
       timers run on the headless driver's clock. Modal dialogs and secondary
@@ -263,7 +275,7 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
       can run them ([`ui.md`](ui.md), gap 5).
       Check: `tests/java/lazy/ui/*` headless goldens; dialog and secondary-window
       screenshots on Windows, in the PR.
-- [ ] S9-06 `Ui.executor()`: other threads hand work to the UI thread
+- [x] S9-06 `Ui.executor()`: other threads hand work to the UI thread
       (a Java-side queue; only a payload-free wake crosses xui's `Proxy`), and
       every other `lazy.ui` call off the UI thread
       throws `IllegalStateException` ([`ui.md`](ui.md), "Threads").
@@ -274,7 +286,9 @@ Goal: a Java app with a real window on Windows, then on LazyOS, with no AWT or S
 
 Gate: `samples/notes` (a small notes app with a list, an editor and file
 save, using `lazy.async` for I/O) runs on Windows and LazyOS with screenshots
-in the PR.
+in the PR. Passed: the I/O runs on a worker executor and comes back through
+`Ui.executor()` (`CompletableFuture`; `lazy.async.Loop` has no file I/O of its
+own). LazyWriter was ported too ([`ui-writer.md`](ui-writer.md)).
 
 ## S10. Messenger and LazyOS integration
 
@@ -448,7 +462,7 @@ These land in the LazyOS repo. Read its `AGENTS.md` and
 - [ ] LOS-01 Test hook: a `LAZYOS_LAZYVM` build switch that embeds a staged
       directory (the musl `lazyvm`, `lazyrt.jar`, the tests) and a `run_demo.py
       --lazyvm-test` mode that runs the suite and prints `LAZYVM:TEST:<name>:PASS|FAIL`.
-- [ ] LOS-02 The musl `lazyvm-ui` binary staged beside `lazyvm`, a display
+- [x] LOS-02 The musl `lazyvm-ui` binary staged beside `lazyvm`, a display
       grant and launcher entry for `lazyvm-ui` apps (like any xui app), plus
       a `--lazyvm-ui` demo.
 - [ ] LOS-03 The `midlc` Java backend (S10-01).

@@ -7,10 +7,13 @@
 //! its `ThreadEntry` first, where the collector still sees them.
 
 mod gil;
+mod lend;
 mod monitor;
 pub(crate) mod outside;
 mod spawn;
 mod trace;
+
+pub use lend::with_lent;
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};

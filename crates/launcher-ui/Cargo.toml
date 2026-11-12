@@ -20,9 +20,14 @@ path = "src/main.rs"
 
 [dependencies]
 launcher = { path = "../launcher", default-features = false }
-natives-ui = { path = "../natives-ui", default-features = false }
+natives-ui = { path = "../natives-ui" }
+
+# The `lazy.ui` window host; Windows only. On LazyOS the GPL
+# `lazyvm-lazyos` crate builds its own `lazyvm-ui` with xuid's host.
+[target.'cfg(windows)'.dependencies]
+lazyvm-win = { path = "../lazyvm-win", optional = true }
 
 [features]
 default = ["desktop"]
 # Real windows: `lazy.gfx` and, on Windows, `lazy.ui`.
-desktop = ["launcher/desktop", "natives-ui/desktop"]
+desktop = ["launcher/desktop", "dep:lazyvm-win"]

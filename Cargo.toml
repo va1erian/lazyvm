@@ -2,7 +2,8 @@
 resolver = "3"
 members = ["crates/classfile", "crates/platform", "crates/vm", "crates/natives", "crates/gfx", "crates/xui-bind", "crates/lazyvm-win", "crates/natives-ui", "crates/launcher", "crates/launcher-ui"]
 
-exclude = ["fuzz"]
+# `lazyvm-lazyos` is its own workspace: musl only, and it needs a LazyOS checkout.
+exclude = ["fuzz", "crates/lazyvm-lazyos"]
 
 [workspace.package]
 version = "0.1.0"
@@ -24,3 +25,33 @@ debug = 1
 # with unrelated changes, and timing with it (docs/design/threads.md).
 codegen-units = 1
 panic = "unwind"
+
+# Third-party crates are built for size: in `lazyvm-ui` they are xui and its
+# text stack, most of the binary (docs/ui.md, "Size"). At full speed stay our
+# own crates, the ones the VM leans on (inflate for jars and java.util.zip,
+# CRCs, libm for StrictMath, mio for sockets) and the rasteriser, which paints
+# every frame: built for size it made a repaint 2.3 times slower.
+[profile.release.package."*"]
+opt-level = "z"
+[profile.release.package.flate2]
+opt-level = 3
+[profile.release.package.miniz_oxide]
+opt-level = 3
+[profile.release.package.adler2]
+opt-level = 3
+[profile.release.package.simd-adler32]
+opt-level = 3
+[profile.release.package.crc32fast]
+opt-level = 3
+[profile.release.package.libm]
+opt-level = 3
+[profile.release.package.mio]
+opt-level = 3
+[profile.release.package.tiny-skia]
+opt-level = 3
+[profile.release.package.tiny-skia-path]
+opt-level = 3
+[profile.release.package.zeno]
+opt-level = 3
+[profile.release.package.swash]
+opt-level = 3

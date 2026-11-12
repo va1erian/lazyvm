@@ -1,0 +1,24 @@
+shortcut Ctrl+S
+shortcut Ctrl+Shift+S
+message shown: 480x320 a153788e
+over the message: 480x320 a153788e
+message closed: 
+shortcut Ctrl+S
+close asked
+prompt closed: https://lazy.test
+question closed: null
+task shown: 480x320 666a9029
+task choice: -1
+menu shown: 480x320 92a0b168
+menu: wrap true
+closed: 480x320 ad1bab9f
+menu shown again: 480x320 92a0b168
+second show: java.util.concurrent.CancellationException
+message closed: 
+message stage: 
+prompt from a stage: 480x320 a781c9fa
+prompt closed: null
+prompt stage: null
+task choice: -1
+task stage: -1
+window closed: java.util.concurrent.CancellationException

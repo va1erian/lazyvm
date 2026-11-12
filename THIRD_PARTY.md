@@ -29,7 +29,7 @@ license outside the allowed list (`docs/decisions.md` D2).
 | `pin-project-lite` | Apache-2.0 OR MIT | gfx, Windows only (through tracing) | The same |
 | `mio` | MIT | platform | The reactor's poll and waker (docs/async.md) |
 | `libc` | MIT OR Apache-2.0 | platform (through mio); xui-bind (through winit) | Raw FFI bindings to platform libraries like libc |
-| `windows-sys` | MIT OR Apache-2.0 | gfx, platform, Windows only (through winit, softbuffer, mio) | Win32 bindings |
+| `windows-sys` | MIT OR Apache-2.0 | gfx, platform, lazyvm-win (directly, for `MessageBoxW`), Windows only (through winit, softbuffer, mio) | Win32 bindings |
 | `windows-targets` | MIT OR Apache-2.0 | gfx, Windows only (through windows-sys) | Win32 import libraries |
 | `windows_x86_64_msvc` | MIT OR Apache-2.0 | gfx, Windows only (through windows-targets) | The same, for x86_64 MSVC |
 | `windows-link` | MIT OR Apache-2.0 | gfx, Windows only (through windows-sys) | Win32 linking |
@@ -84,6 +84,14 @@ and is to be curated, and the list trimmed, before S9-02 merges.
 | `syn` | MIT OR Apache-2.0 | xui-bind (through windows-implement) | Parser for Rust source code |
 | `syn` | MIT OR Apache-2.0 | xui-bind (through windows-implement) | Parser for Rust source code |
 | `sys-locale` | MIT OR Apache-2.0 | xui-bind (through cosmic-text) | Small and lightweight library to obtain the active system locale |
+| `xui-rich-text` | MIT | xui-bind (feature `rich-text`) | `lazy.ui.RichText`: xui's rich-text editor, the widget a word processor is built on (docs/ui.md) |
+| `serde` | MIT OR Apache-2.0 | xui-bind (through xui-rich-text) | The rich-text document's JSON format |
+| `serde_core` | MIT OR Apache-2.0 | xui-bind (through serde) | serde's traits |
+| `serde_derive` | MIT OR Apache-2.0 | xui-bind (through serde), build time | Derives the format's (de)serializers |
+| `serde_json` | MIT OR Apache-2.0 | xui-bind (through xui-rich-text) | Reading and writing the rich-text document's JSON |
+| `itoa` | MIT OR Apache-2.0 | xui-bind (through serde_json) | Integers to text in JSON |
+| `zmij` | MIT | xui-bind (through serde_json) | Doubles to text in JSON |
+| `memchr` | Unlicense OR MIT | xui-bind (through serde_json) | Byte search while parsing JSON |
 | `tiny-skia` | BSD-3-Clause | xui-bind (through xui-canvas) | A tiny Skia subset ported to Rust |
 | `tiny-skia-path` | BSD-3-Clause | xui-bind (through tiny-skia) | A tiny-skia Bezier path implementation |
 | `tinyvec` | Zlib OR Apache-2.0 OR MIT | xui-bind (through fontdb) | `tinyvec` provides 100% safe vec-like data structures |

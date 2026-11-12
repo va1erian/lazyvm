@@ -29,11 +29,14 @@ def build() -> Path:
     return write_jar(LAZYRT_CLASSES, DIST / "lazyrt.jar")
 
 
-def write_jar(classes: Path, jar: Path) -> Path:
-    """Zip `classes` into `jar` with fixed timestamps, so the jar is reproducible."""
+def write_jar(classes: Path, jar: Path, main_class: str | None = None) -> Path:
+    """Zip `classes` into `jar` with fixed timestamps, so the jar is reproducible; `main_class`
+    makes it runnable with `-jar`."""
     jar.parent.mkdir(parents=True, exist_ok=True)
+    # The manifest ends with a blank line: the new header goes before it.
+    manifest = MANIFEST if main_class is None else MANIFEST[:-2] + f"Main-Class: {main_class}" + MANIFEST[-4:]
     with zipfile.ZipFile(jar, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(zipfile.ZipInfo("META-INF/MANIFEST.MF", (1980, 1, 1, 0, 0, 0)), MANIFEST)
+        z.writestr(zipfile.ZipInfo("META-INF/MANIFEST.MF", (1980, 1, 1, 0, 0, 0)), manifest)
         for path in sorted(classes.rglob("*")):
             if path.is_file():
                 info = zipfile.ZipInfo(path.relative_to(classes).as_posix(), (1980, 1, 1, 0, 0, 0))

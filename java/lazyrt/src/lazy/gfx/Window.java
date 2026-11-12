@@ -32,6 +32,7 @@ public final class Window implements AutoCloseable {
         long w = (long) width * scale, h = (long) height * scale;
         if (w > Integer.MAX_VALUE || h > Integer.MAX_VALUE || w * h > MAX_PIXELS)
             throw new IllegalArgumentException("window too large");
+        lazy.internal.Windowing.claim("lazy.gfx");
         return new Window(open0(title, (int) w, (int) h));
     }
 

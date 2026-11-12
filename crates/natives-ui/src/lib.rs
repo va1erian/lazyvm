@@ -1,131 +1,219 @@
 //! `lazy.ui`: Java widget trees on xui (docs/ui.md), registered only by the
-//! `lazyvm-ui` launcher (`crates/launcher-ui`). The `xui-bind` crate
-//! builds and runs the window; this module moves the op list off the heap
-//! and turns each widget message into one upcall to `Ui.dispatch`, through
-//! the VM lent for the length of the loop.
+//! `lazyvm-ui` launcher (`crates/launcher-ui`). The `xui-bind` crate builds
+//! and runs the windows; this crate moves op lists off the heap and turns
+//! each widget message into one upcall to `Ui.dispatch`, through the VM lent
+//! for the length of the loop (`vm::thread::with_lent`).
+
+mod convert;
+mod headless;
 
 use std::cell::RefCell;
-use std::path::PathBuf;
 use std::rc::Rc;
 
-use vm::heap::Array;
-use vm::interp::with_lent;
+use vm::thread::with_lent;
 use vm::{MethodRef, Value, Vm, VmError, VmResult};
-use xui_bind::{Headless, Host, Stats, Tree};
+pub use xui_bind::Host;
+use xui_bind::{Headless, Msg, Stats, WindowSpec};
 
-use natives::{arg, int, obj, ret_void};
+use natives::{arg, int, ret_void};
 
 const UI: &str = "lazy/ui/Ui";
+const ERROR_REPORT: &str = "lazy/internal/ui/ErrorReport";
 
-/// Registers the `lazy.ui` natives; `launcher-ui` calls it after `natives::register_all`.
-pub fn register(vm: &mut Vm) {
+/// What the platform's binary provides: its window host, and how it shows
+/// the report of an uncaught exception once a window was open.
+#[derive(Clone, Copy)]
+pub struct UiHost {
+    pub desktop: fn() -> Result<Host, String>,
+    /// Shows `(title, text)`; on Windows a system message box.
+    pub error_box: fn(&str, &str),
+}
+
+/// Registers the `lazy.ui` natives; `launcher-ui` calls it after
+/// `natives::register_all`.
+pub fn register(vm: &mut Vm, host: UiHost) {
+    DESKTOP.with(|d| d.set(Some(host)));
     vm.register_native(
-        UI,
-        "run0",
-        "(Ljava/lang/String;II[I[Ljava/lang/Object;)V",
-        run0,
+        ERROR_REPORT,
+        "show0",
+        "(Ljava/lang/String;Ljava/lang/String;)V",
+        |vm, a| {
+            let (title, text) = (vm.string_arg(arg(a, 0)?)?, vm.string_arg(arg(a, 1)?)?);
+            if let Some(host) = DESKTOP.with(std::cell::Cell::get) {
+                (host.error_box)(&title, &text);
+            }
+            ret_void()
+        },
     );
-    vm.register_native(UI, "setText0", "(ILjava/lang/String;)V", |vm, a| {
-        let text = vm.string_arg(arg(a, 1)?)?;
-        xui_bind::set_text(int(a, 0)?, &text).map_err(state)?;
+    let window = "(ILjava/lang/String;II[I[Ljava/lang/Object;[I)V";
+    vm.register_native(UI, "run0", window, run0);
+    let open = "(IILjava/lang/String;II[I[Ljava/lang/Object;[I)V";
+    vm.register_native(UI, "open0", open, |vm, a| {
+        let spec = spec(vm, &a[1..])?;
+        xui_bind::open(int(a, 0)?, spec).map_err(state)?;
         ret_void()
     });
+    vm.register_native(UI, "close0", "(I)V", |_, a| {
+        xui_bind::close(int(a, 0)?).map_err(state)?;
+        ret_void()
+    });
+    vm.register_native(UI, "quit0", "()V", |_, _| {
+        xui_bind::quit();
+        ret_void()
+    });
+    vm.register_native(UI, "title0", "(ILjava/lang/String;)V", |vm, a| {
+        let title = vm.string_arg(arg(a, 1)?)?;
+        xui_bind::set_title(int(a, 0)?, &title).map_err(state)?;
+        ret_void()
+    });
+    let make = "(I[I[Ljava/lang/Object;)V";
+    vm.register_native(UI, "make0", make, |vm, a| {
+        let tree = convert::tree(vm, arg(a, 1)?, arg(a, 2)?)?;
+        xui_bind::make(&tree, int(a, 0)?).map_err(state)?;
+        ret_void()
+    });
+    vm.register_native(UI, "mount0", "(I[I[Ljava/lang/Object;)V", |vm, a| {
+        let tree = convert::tree(vm, arg(a, 1)?, arg(a, 2)?)?;
+        xui_bind::mount(int(a, 0)?, &tree).map_err(state)?;
+        ret_void()
+    });
+    vm.register_native(UI, "forget0", "([I)V", |vm, a| {
+        xui_bind::forget(&convert::ints(vm, arg(a, 0)?)?);
+        ret_void()
+    });
+    vm.register_native(UI, "timer0", "(III)V", |_, a| {
+        let ms = u32::try_from(int(a, 2)?).map_err(|_| illegal("negative period"))?;
+        xui_bind::timer(int(a, 0)?, int(a, 1)?, ms).map_err(state)?;
+        ret_void()
+    });
+    let call = "(IIIDLjava/lang/Object;)Ljava/lang/Object;";
+    vm.register_native(UI, "call0", call, |vm, a| {
+        let Value::Double(d) = arg(a, 3)? else {
+            return Err(VmError::verify("call0 needs a double"));
+        };
+        let o = convert::arg(vm, arg(a, 4)?)?;
+        let r = xui_bind::call(int(a, 0)?, int(a, 1)?, int(a, 2)?, d, o).map_err(state)?;
+        convert::ret(vm, r)
+    });
+    let clip = "(ILjava/lang/String;)Ljava/lang/String;";
+    vm.register_native(UI, "clipboard0", clip, |vm, a| {
+        let window = int(a, 0)?;
+        if let Value::Ref(Some(_)) = arg(a, 1)? {
+            let text = vm.string_arg(arg(a, 1)?)?;
+            xui_bind::set_clipboard(window, &text).map_err(state)?;
+            return Ok(Some(Value::Ref(None)));
+        }
+        let text = xui_bind::clipboard(window).map_err(state)?;
+        let r = text.map(|t| vm.new_string(&t)).transpose()?;
+        Ok(Some(Value::Ref(r)))
+    });
+    vm.register_native(UI, "wake0", "()Z", |_, _| {
+        Ok(Some(Value::Int(xui_bind::wake() as i32)))
+    });
+    headless::register(vm);
+}
+
+thread_local! {
+    static DESKTOP: std::cell::Cell<Option<UiHost>> = const { std::cell::Cell::new(None) };
 }
 
 fn state(msg: String) -> VmError {
     VmError::exception("java/lang/IllegalStateException", msg)
 }
 
-fn prop(vm: &Vm, key: &str) -> Option<String> {
-    vm.property_text(key)
+fn illegal(msg: &str) -> VmError {
+    VmError::exception("java/lang/IllegalArgumentException", msg.to_string())
 }
 
-/// `-Dlazy.ui=headless` hides the window; `lazy.ui.dump` and `lazy.ui.clicks`
-/// script it (prototype; S9-02 moves the script to `lazy.internal.ui.Headless`).
-/// A window host is made later, by `xui_bind::run`, through `desktop`.
-fn headless(vm: &Vm) -> Option<Headless> {
-    if prop(vm, "lazy.ui").as_deref() != Some("headless") {
-        return None;
-    }
-    let clicks = prop(vm, "lazy.ui.clicks").and_then(|c| c.parse().ok());
-    let dump = prop(vm, "lazy.ui.dump").map(PathBuf::from);
-    Some(Headless {
-        dump,
-        clicks: clicks.unwrap_or(0),
+/// A window's spec from `(id, title, width, height, ops, objects, keys)`.
+fn spec(vm: &Vm, a: &[Value]) -> VmResult<WindowSpec> {
+    let title = vm.string_arg(arg(a, 1)?)?;
+    let (w, h) = (int(a, 2)?, int(a, 3)?);
+    let size = match (u32::try_from(w), u32::try_from(h)) {
+        (Ok(w @ 1..=8192), Ok(h @ 1..=8192)) => (w, h),
+        _ => return Err(illegal(&format!("window size {w}x{h}"))),
+    };
+    Ok(WindowSpec {
+        id: int(a, 0)?,
+        title,
+        size,
+        tree: convert::tree(vm, arg(a, 4)?, arg(a, 5)?)?,
+        keys: convert::ints(vm, arg(a, 6)?)?,
     })
 }
 
-#[cfg(all(windows, feature = "desktop"))]
-fn desktop() -> Result<Host, String> {
-    Ok(Host::Desktop(lazyvm_win::ui_backend()))
+fn method(vm: &mut Vm, class: &str, name: &str, desc: &str) -> VmResult<MethodRef> {
+    let c = vm.load_class(class)?;
+    let index = vm.class(c).find_method(name, desc);
+    let index = index.ok_or_else(|| VmError::Internal(format!("no {class}.{name}")))?;
+    Ok(MethodRef { class: c, index })
 }
 
-#[cfg(not(all(windows, feature = "desktop")))]
-fn desktop() -> Result<Host, String> {
-    Err("no window host in this build; use -Dlazy.ui=headless".into())
-}
-
-/// The op list and its strings, copied off the heap before the loop runs.
-fn tree(vm: &Vm, ops: Value, strings: Value) -> VmResult<Tree> {
-    let Array::Int(ops) = vm.heap.array(obj(&[ops], 0)?)? else {
-        return Err(VmError::verify("run0 needs an int[]"));
-    };
-    let ops = ops.to_vec();
-    let Array::Ref(refs) = vm.heap.array(obj(&[strings], 0)?)? else {
-        return Err(VmError::verify("run0 needs an Object[]"));
-    };
-    let mut out = Vec::with_capacity(refs.len());
-    for r in refs.iter() {
-        out.push(vm.string_arg(Value::Ref(*r))?);
+/// The one upcall: `Ui.dispatch` catches what a callback throws and keeps
+/// it for `Ui.run`, so a VM error here is the VM's own and stops the loop.
+fn upcall(dispatch: MethodRef, failed: &RefCell<Option<VmError>>, m: &Msg) -> bool {
+    let r = with_lent(|vm| {
+        let s = match &m.s {
+            Some(s) => Some(vm.new_string(s)?),
+            None => None,
+        };
+        let args = [
+            Value::Int(m.id),
+            Value::Int(m.kind),
+            Value::Int(m.i),
+            Value::Double(m.d),
+            Value::Ref(s),
+        ];
+        vm.invoke(dispatch, &args)
+    });
+    match r {
+        Some(Ok(Some(Value::Int(ok)))) => ok != 0,
+        Some(Err(e)) => {
+            // A `Ref` must not outlive the lend: another thread may collect.
+            let e = match e {
+                VmError::Throw(_) => VmError::Internal("lazy.ui: an upcall threw".into()),
+                e => e,
+            };
+            *failed.borrow_mut() = Some(e);
+            false
+        }
+        Some(Ok(_)) => false,
+        None => {
+            // A nested pump that did not lend the VM again: say so, rather
+            // than stop the loop with nothing to show for it.
+            let msg = "lazy.ui: a message came with no VM lent (a nested loop)";
+            *failed.borrow_mut() = Some(VmError::Internal(msg.into()));
+            false
+        }
     }
-    Ok(Tree { ops, strings: out })
 }
 
 fn run0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let title = vm.string_arg(arg(args, 0)?)?;
-    let (w, h) = (int(args, 1)?, int(args, 2)?);
-    let size = match (u32::try_from(w), u32::try_from(h)) {
-        (Ok(w @ 1..=8192), Ok(h @ 1..=8192)) => (w, h),
-        _ => {
-            return Err(VmError::exception(
-                "java/lang/IllegalArgumentException",
-                format!("window size {w}x{h}"),
-            ));
-        }
-    };
-    let tree = tree(vm, arg(args, 3)?, arg(args, 4)?)?;
-    let headless = headless(vm);
-    let ui = vm.load_class(UI)?;
-    let index = vm.class(ui).find_method("dispatch", "(II)V");
-    let dispatch = MethodRef {
-        class: ui,
-        index: index.ok_or_else(|| VmError::Internal("no Ui.dispatch".into()))?,
-    };
-    let thrown = Rc::new(RefCell::new(None));
-    let caught = Rc::clone(&thrown);
-    let upcall = Box::new(move |id, kind| {
-        let r = with_lent(|vm| vm.invoke(dispatch, &[Value::Int(id), Value::Int(kind)]));
-        match r {
-            Some(Ok(_)) => true,
-            Some(Err(e)) => {
-                *caught.borrow_mut() = Some(e);
-                false
-            }
-            None => false,
-        }
-    });
+    let spec = spec(vm, args)?;
+    let headless = vm.property_text("lazy.ui").as_deref() == Some("headless");
+    let dispatch = method(vm, UI, "dispatch", "(IIIDLjava/lang/String;)Z")?;
+    let script = method(vm, headless::HEADLESS, "script", "()V")?;
+    let failed = Rc::new(RefCell::new(None));
+    let seen = Rc::clone(&failed);
+    let up: xui_bind::Dispatch = Rc::new(move |m: &Msg| upcall(dispatch, &seen, m));
     let host = move || match headless {
-        Some(script) => Ok(Host::Headless(script)),
-        None => desktop(),
+        true => {
+            let h = Headless::default();
+            *h.script.borrow_mut() = Some(Box::new(move || {
+                with_lent(|vm| vm.invoke(script, &[]).map(|_| ()));
+            }) as xui_bind::Script);
+            Ok(Host::Headless(h))
+        }
+        false => DESKTOP.with(std::cell::Cell::get).map_or_else(
+            || Err("no window host in this build; use -Dlazy.ui=headless".into()),
+            |host| (host.desktop)(),
+        ),
     };
-    let stats = vm
-        .lend(|| xui_bind::run(host, &title, size, tree, upcall))
-        .map_err(state)?;
-    if prop(vm, "lazy.ui.stats").as_deref() == Some("true") {
+    let stats = vm.lend(|| xui_bind::run(host, spec, up)).map_err(state)?;
+    if vm.property_text("lazy.ui.stats").as_deref() == Some("true") {
         print_stats(&stats);
     }
-    // No Java ran after the throw, so the exception's `Ref` is still live.
-    match thrown.borrow_mut().take() {
+    match failed.borrow_mut().take() {
         Some(e) => Err(e),
         None => ret_void(),
     }
@@ -133,7 +221,7 @@ fn run0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
 
 fn print_stats(s: &Stats) {
     eprintln!(
-        "lazy.ui stats: build {} us, {} upcalls ({} us total, {} us max), {} sets, clicks {} us",
-        s.build_us, s.upcalls, s.upcall_us, s.upcall_max_us, s.sets, s.clicks_us
+        "lazy.ui stats: build {} us, {} upcalls ({} us total, {} us max), {} sets",
+        s.build_us, s.upcalls, s.upcall_us, s.upcall_max_us, s.sets
     );
 }

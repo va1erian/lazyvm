@@ -39,6 +39,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--filter", nargs="*", help="substrings of test class names")
     parser.add_argument("--exe", type=Path, help="a prebuilt lazyvm binary")
+    parser.add_argument("--ui-exe", type=Path, help="a prebuilt lazyvm-ui binary, for NEEDS: ui tests")
     parser.add_argument("--no-build", action="store_true", help="skip cargo and javac")
     parser.add_argument("--build-java-only", action="store_true",
                         help="build lazyrt and the tests but not the launcher (use with --exe)")
@@ -56,9 +57,15 @@ def main() -> None:
     exe = args.exe or (None if skip_cargo else cargo_build_launcher())
     if exe is None:
         die("--no-build and --build-java-only need --exe")
+    # `lazy.ui` tests run on lazyvm-ui, the binary that links xui (docs/ui.md, "Size").
+    ui_exe = args.ui_exe
+    if ui_exe is None and any(t.needs == "ui" for t in tests):
+        ui_exe = None if skip_cargo else cargo_build_launcher(ui=True)
+        if ui_exe is None:
+            die("NEEDS: ui tests with --no-build need --ui-exe")
     failed = 0
     for test in tests:
-        ok, detail = check(exe, test, classpath, boot)
+        ok, detail = check(ui_exe if test.needs == "ui" else exe, test, classpath, boot)
         print(f"{'PASS' if ok else 'FAIL'} {test.name}")
         if not ok:
             failed += 1
