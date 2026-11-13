@@ -40,7 +40,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import javac  # noqa: E402
 import lazyrt  # noqa: E402
-from common import BUILD, DIST, EXE, ROOT, cargo_build_launcher, die, lazyvm_exe  # noqa: E402
+from common import BUILD, DIST, EXE, LAZYRT_CLASSES, MSG_GEN, ROOT, cargo_build_launcher, die, java_sources, lazyvm_exe  # noqa: E402
 from testlib import transcript  # noqa: E402
 
 TESTS = ROOT / "tests" / "siesta"
@@ -72,6 +72,19 @@ def ui_vm() -> Path:
     return cargo_build_launcher(ui=True)
 
 
+@functools.cache
+def msg_classes() -> Path:
+    """The generated Messenger classes the msg tests use (tests/msg/gen), compiled once."""
+    out = OUT / "msg-gen"
+    javac.compile(java_sources(MSG_GEN), out, bootclasspath=LAZYRT_CLASSES)
+    return out
+
+
+def compile_path() -> str:
+    """What siestac compiles against: the class library and the generated Messenger classes."""
+    return os.pathsep.join([str(DIST / "lazyrt.jar"), str(msg_classes())])
+
+
 def run(cmd: list[str]) -> str:
     try:
         done = subprocess.run(cmd, capture_output=True, timeout=TIMEOUT)
@@ -99,7 +112,7 @@ def compile_test(src: Path, out: Path) -> str | None:
     files = [src]
     if is_program(src):
         files += sorted(p for p in src.parent.glob("*.sie") if p != src)
-    done = subprocess.run([str(siestac()), "-cp", str(DIST / "lazyrt.jar"), "-d", str(out), *map(str, files)],
+    done = subprocess.run([str(siestac()), "-cp", compile_path(), "-d", str(out), *map(str, files)],
                           capture_output=True)
     if done.returncode != 0:
         return done.stderr.decode("utf-8", "replace")
@@ -113,7 +126,7 @@ def messages(stderr: str, src: Path) -> list[str]:
 
 
 def check_bad(src: Path) -> str | None:
-    done = subprocess.run([str(siestac()), "check", "-cp", str(DIST / "lazyrt.jar"), str(src)],
+    done = subprocess.run([str(siestac()), "check", "-cp", compile_path(), str(src)],
                           capture_output=True)
     if done.returncode == 0:
         return "compiled, but should not"
@@ -177,7 +190,7 @@ def run_test(src: Path, vm: Path, java: str | None, bless: bool) -> str | None:
     head = src.read_text(encoding="utf-8")[:400]
     ui = "// NEEDS: ui" in head
     lazyvm_only = ui or "// NEEDS: lazyvm" in head
-    cp = str(out) + os.pathsep + str(DIST / "lazyrt.jar")
+    cp = os.pathsep.join([str(out), compile_path()])
     oracle = run([java, *ORACLE_FLAGS, "-cp", cp, src.stem]) if java and not lazyvm_only else None
     if bless and not lazyvm_only:
         if oracle is None:
@@ -195,7 +208,8 @@ def run_test(src: Path, vm: Path, java: str | None, bless: bool) -> str | None:
     flags = UI_FLAGS if ui else []
     if ui:
         vm = ui_vm()
-    got = run([str(vm), f"-Xbootclasspath:{DIST / 'lazyrt.jar'}", *flags, "-cp", str(out), src.stem])
+    got = run([str(vm), f"-Xbootclasspath:{DIST / 'lazyrt.jar'}", *flags,
+               "-cp", os.pathsep.join([str(out), str(msg_classes())]), src.stem])
     if got != want:
         return f"LazyVM differs from the golden:\n{got}"
     return None

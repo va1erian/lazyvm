@@ -1,0 +1,52 @@
+// The lazy.msg tests' own interfaces (docs/msg.md): a small store with every
+// shape the Java backend generates. tools/msg_gen.py compiles it with LazyOS's
+// midlc --java into tests/msg/gen beside the LazyOS interfaces.
+
+service "app.test.demo" implements app.test.demo.v1;
+
+/// A key-value store for the tests.
+interface app.test.demo.v1 {
+    default deadline=2s;
+    /// What the store refuses.
+    errors {
+        /// No value under that key.
+        NotFound = 1001,
+        /// The store is busy; try again.
+        Busy = 1002
+    }
+
+    /// The value under `key`.
+    method Get(key: String = 1) -> (value: String = 1) retry=safe;
+    /// Stores `value` under `key`.
+    method Put(key: String = 1, value: String = 2) -> ();
+    /// Facts about `key`: several reply fields.
+    method Stat(key: String = 1) -> (size: U64 = 1, kind: Kind = 2, tags: Array<String> = 3, note: Option<String> = 4);
+    /// Answers after `millis`; no deadline of its own.
+    method Wait(millis: U32 = 1) -> (waited: U32 = 1) deadline=never;
+    /// Sends `events` a `Changed` for each later `Put` under `prefix`.
+    method Watch(prefix: String = 1, events: Channel<app.test.watch.v1> = 2) -> ();
+    /// A message without a reply.
+    method Poke(text: String = 1) -> () oneway;
+    /// Five arguments: an arguments record.
+    method Sum(a: I32 = 1, b: I32 = 2, c: I32 = 3, d: I32 = 4, e: Option<I64> = 5) -> (sum: I64 = 1);
+    /// The caller's uid, as the kernel stamped it.
+    method Whoami() -> (uid: U64 = 1);
+
+    /// What a key holds.
+    enum Kind { File, Dir }
+    /// One change of a key.
+    struct Change { key: String = 1, value: Option<String> = 2 }
+
+    /// A key changed; `value` is absent when it was removed.
+    topic "app/test/changed/{key}" : Change qos=buffered;
+    /// The store's state, kept for late subscribers.
+    topic "app/test/state" : Kind retained qos=latest;
+}
+
+/// What a watcher of app.test.demo.v1 receives.
+interface app.test.watch.v1 {
+    /// `key` now holds `value`.
+    method Changed(key: String = 1, value: String = 2) -> () event;
+    /// The store stopped watching.
+    method Gone() -> () event;
+}

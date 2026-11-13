@@ -1,0 +1,7 @@
+changed a = 1 (on the loop)
+changed b = 2 (on the loop)
+gone
+store: a watcher went away
+closed; a later put sends nothing
+watch with no service: app.test.demo.v1.Watch: no such service or name (ENOENT)
+its channel was closed

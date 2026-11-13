@@ -292,43 +292,95 @@ own). LazyWriter was ported too ([`ui-writer.md`](ui-writer.md)).
 
 ## S10. Messenger and LazyOS integration
 
-Goal: Java apps are first-class LazyOS apps. They talk Messenger with
-`CompletionStage`, are packaged as `.lzp`, and can be launched from the GUI.
-A proposed API with generated types and no reflection, in place of D8's
-annotation sketch, is [`msg.md`](msg.md); the owner has not confirmed it.
+Goal: Java and Siesta apps are first-class LazyOS apps. They consume and
+publish Messenger services and topics through types generated from the IDL,
+with `CompletionStage` replies that Siesta `await`s, are packaged as `.lzp`,
+and can be launched from the GUI. The design is [`msg.md`](msg.md) (second
+draft, after LazyOS's client API plan), accepted by the owner on 2026-11-13
+in place of D8's annotation sketch. Every `lazy.msg` test has a Java and a Siesta
+form (`tests/java/lazy/msg/`, `tests/siesta/msg/`), and "both" is Windows
+against the loopback broker and LazyOS against real services.
 
-- [ ] S10-01 midlc Java backend (LazyOS repo, LOS-03): it generates, per
-      interface, a Java interface whose methods return `CompletionStage<…>`,
-      records for the structs, enums, and codecs over the `libmessenger` TLV
-      wire, and puts them in `lazy-api-generated.jar`.
-      Check: LazyOS `midlc` tests; `tests/java/lazy/msg/CodecRoundTrip` against fixtures encoded by the Rust codecs.
-- [ ] S10-02 `lazy.msg` runtime: `Messenger.connect(Class<I>)` resolves and
-      binds through the registry, calls go through the begin-call / completion
-      path (no thread parked per call) on the S6-06 loop: the reactor thread
-      owns every Messenger handle and begins, drains and cancels every call,
-      and its LazyOS park becomes the one `wait` over `WAIT_CALLS`, endpoints
-      and `mio`'s epoll descriptor as `WAIT_FD`, through the park trait
-      `crates/platform` defines and `crates/lazyvm-lazyos` implements
-      ([`async.md`](async.md)), `@Deadline`, and errors as
-      `MessengerException` with the friendly error text.
-      Check: on LazyOS `tests/java/lazy/msg/EchoCall` against `os.lazy.echo` (both deadline and peer-death cases).
-- [ ] S10-03 Topics and services: `@Subscribe` handlers discovered by
-      reflection at `Messenger.register(obj)`, QoS, retained values, and
-      `@Service` implementations served from the loop with replies from
-      completed stages.
-      Check: `tests/java/lazy/msg/Topics`, `ServeEcho` on LazyOS; the same tests on Windows against the loopback broker.
-- [ ] S10-04 `lazy.os`: well-known paths, notifications (`os.lazy.notify.v1`),
-      the clipboard, `mimed` open-with, and `Trace.pass`.
+Status (2026-11-13): S10-01's generator is built in the LazyOS worktree
+(`midlc.py --java`, `conformance_java.py`, `test_midlc_java.py`); every LazyOS
+`.midl` generates classes that javac compiles against `lazyrt`, and the
+corpus test passes on LazyVM (two object samples skipped). `lazy-api.jar` and
+the `siestac check` of it are not done. The runtime of S10-02, S10-03 and
+S10-06 is built over the loopback broker only: `tests/java/lazy/msg`
+(`EchoCall`, `Errors`, `Shapes`, `Events`, `Topics`) and
+`tests/siesta/msg/MsgDemo` pass on Windows. Not done: the LazyOS transport and
+the label spike, the cross-language `ServeEcho`, `LateReply`, closing with
+`Ui.run`, and every LazyOS check. The generated test classes live in
+`tests/msg/gen` (with the tests' own `tests/msg/demo.midl`), refreshed by
+`tools/msg_gen.py --lazyos <checkout>`.
+
+- [ ] S10-01 `midlc --java` (LazyOS repo, LOS-03): per interface, the client
+      interface with `connect()` and `within(ms)`, `XxxServer`, the events
+      type, `XxxError` and `XxxException`, structs, enums, argument and
+      reply classes, topic accessors and the codec, from `service`,
+      `errors`, `deadline`, `retry`, `scope` and `event` (msg.md section 3);
+      `lazy-api.jar` built from `idl/`. Generated sources for the test IDLs
+      are checked in under `tests/msg/gen/` with a `--check` gate, so CI
+      needs no LazyOS checkout.
+      Check: LazyOS `tools/midlc/test_midlc_java.py`; `tests/java/lazy/msg/Conformance`
+      encodes and decodes every vector of LazyOS `idl/conformance/valid` to the
+      corpus bytes; `siestac check` compiles a file importing every generated
+      package of `lazy-api.jar` with no diagnostic.
+- [ ] S10-02 Calling (msg.md sections 2, 4 and 7): first the label spike
+      (the reactor thread resolves, calls and subscribes from a labelled app
+      on LazyOS); then the transport seam in `crates/platform`, its LazyOS
+      implementation in `crates/lazyvm-lazyos` with the park as LazyOS's one
+      `wait` ([`async.md`](async.md)), the loopback broker, `connect`,
+      deadlines from the IDL, `within`, the resend and reconnect policy,
+      cancellation, and `MessengerException` with the generated subclasses.
+      Check: `EchoCall` (reply, deadline, peer death then reconnect, a
+      `retry=safe` resend, cancel), `Errors` (a declared code caught by its
+      subclass, an errno, a bad reply), both; `EchoCall` against
+      `os.lazy.echo` on LazyOS.
+      Needs: S10-01.
+- [ ] S10-03 Serving and callbacks (msg.md section 5): `serve`, `Caller`,
+      dispatch with LazyOS's errnos, faults, replies that come later,
+      `Channel<I>` as events objects on both sides, `Peer`, and closing
+      registrations with `Ui.run` and the program.
+      Check: `ServeEcho` (a Siesta client of a Java service and a Java client
+      of a Siesta service), `LateReply`, `Events` (a listener, a peer that
+      goes away), `Faults`, both; on LazyOS a second process calls an
+      `app.test.echo` the first serves.
+      Needs: S10-02.
+- [ ] S10-04 `lazy.os`: well-known paths, notifications (`os.lazy.notify.v1`
+      through the generated client), the clipboard, `mimed` open-with, and
+      `Trace.pass`.
       Check: `tests/java/lazy/os/*` on LazyOS.
+      Needs: S10-02 (S10-03 for notification events).
 - [ ] S10-05 Packaging (LazyOS repo, LOS-04): the `LAZYOS_LAZYVM` build
-      switch, a core package carrying `lazyvm` and `lazyrt.jar`, a `.jar`
-      MIME type that opens with LazyVM, and `tools/lazyvm/package.py --jar app.jar
-      --out app.lzp` for app packages. The app is launchable from `run_demo.py`
-      and from the GUI launcher, as LazyOS's AGENTS.md requires.
-      Check: LazyOS `run_demo.py --lazyvm` boots and launches `samples/notes` from the launcher, with a screenshot.
+      switch, a core package carrying `lazyvm`, `lazyrt.jar` and
+      `lazy-api.jar`, a `.jar` MIME type that opens with LazyVM, and
+      `tools/lazyvm/package.py --jar app.jar --out app.lzp`, which writes the
+      manifest's service and topic grants from the jar's references to
+      generated classes (msg.md section 8). The app is launchable from
+      `run_demo.py` and from the GUI launcher, as LazyOS's AGENTS.md requires.
+      Check: LazyOS `run_demo.py --lazyvm` boots and launches `samples/notes`
+      from the launcher, with a screenshot; a `package.py` test finds the grants
+      of a Java and a Siesta jar; the PR reports `lazy-api.jar`'s size.
+- [ ] S10-06 Topics (msg.md section 6): `Topic`, `TopicFilter`, `subscribe`
+      on the broker's doorbell, `publish`, retained values, QoS, decode
+      failures skipped, closing with `Ui.run`.
+      Check: `Topics` (retained first, `latest` against `buffered`, a filter
+      with `null` placeholders, a bad payload), `UiTopics` (a handler on the UI
+      thread, closed by `Ui.run`), both.
+      Needs: S10-02.
+- [ ] S10-07 Siesta apps on Messenger: `siestac` and `lazyvm` put
+      `lazy-api.jar` on the class path where it is installed;
+      `samples/siesta/echo` (a service and its client) and the Messenger
+      parts of S16-08's Writer (printing, the theme topic).
+      Check: `tools/siesta_test.py --filter msg` on Windows and LazyOS; the
+      Writer prints to `os.lazy.print` on LazyOS, with a screenshot.
+      Needs: S10-03, S10-06, S16-08.
 
-Gate: `samples/healthwatch` subscribes to `system/health/*`, shows it in a
-`lazy.ui` list and posts a notification on errors, on LazyOS.
+Gate: `samples/siesta/healthwatch`, written in Siesta, subscribes to
+`system/health/+`, shows it in a `lazy.ui` list, posts a notification on
+errors and serves `app.healthwatch.status`, which a Java client queries, on
+LazyOS.
 
 ## S12. Explore: AWT on xui
 
@@ -593,5 +645,5 @@ These land in the LazyOS repo. Read its `AGENTS.md` and
 - [x] LOS-02 The musl `lazyvm-ui` binary staged beside `lazyvm`, a display
       grant and launcher entry for `lazyvm-ui` apps (like any xui app), plus
       a `--lazyvm-ui` demo.
-- [ ] LOS-03 The `midlc` Java backend (S10-01).
+- [ ] LOS-03 `midlc --java` and `lazy-api.jar` (S10-01).
 - [ ] LOS-04 The core package, MIME type and app packaging (S10-05).

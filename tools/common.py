@@ -19,6 +19,8 @@ LAZYRT_SRC = ROOT / "java" / "lazyrt" / "src"
 LAZYRT_CLASSES = BUILD / "lazyrt" / "classes"
 TESTS_SRC = ROOT / "tests" / "java"
 TESTS_CLASSES = BUILD / "tests" / "classes"
+# Classes LazyOS's midlc generates for the lazy.msg tests (tools/msg_gen.py, docs/msg.md).
+MSG_GEN = ROOT / "tests" / "msg" / "gen"
 
 EXE = ".exe" if os.name == "nt" else ""
 

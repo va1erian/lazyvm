@@ -1,0 +1,102 @@
+// NEEDS: lazyvm
+// Messenger in Siesta (docs/msg.md): a service that implements the generated
+// server with async methods, and a client that awaits its calls, catches the
+// interface's own exception, passes a listener and subscribes with a trailing
+// lambda. Served and called in one process through the loopback broker.
+import app.test.demo.v1.*;
+import app.test.watch.v1.WatchListener;
+import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
+import lazy.async.Loop;
+import lazy.msg.*;
+
+class NoteStore implements DemoServer {
+    HashMap<String, String> data = new HashMap<>();
+
+    async CompletionStage<String> get(String key) {
+        var who = Caller.current();
+        await Loop.delay(1, TimeUnit.MILLISECONDS);
+        if (!data.containsKey(key)) throw new DemoException(DemoError.NOT_FOUND);
+        return "${data.get(key)} (caller uid ${who.uid()}, still set after await: ${Caller.current() != null})";
+    }
+
+    async CompletionStage<Void> put(String key, String value) {
+        data.put(key, value);
+    }
+
+    async CompletionStage<StatReply> stat(String key) {
+        return new StatReply().size(data.size()).kind(Kind.DIR).tags(["a", "b"]);
+    }
+
+    async CompletionStage<Long> wait_(long millis) {
+        await Loop.delay(millis, TimeUnit.MILLISECONDS);
+        return millis;
+    }
+
+    async CompletionStage<Void> watch(String prefix, WatchListener events) {
+        events.changed(prefix, "watched");
+    }
+
+    async CompletionStage<Void> poke(String text) {
+        System.out.println("poked ${text}");
+    }
+
+    async CompletionStage<Long> sum(SumArgs a) {
+        return (long) (a.a + a.b + a.c + a.d);
+    }
+
+    async CompletionStage<Long> whoami() {
+        return 7L;
+    }
+}
+
+class Seen implements WatchListener {
+    CompletableFuture<String> first;
+
+    Seen(CompletableFuture<String> first) {
+        this.first = first;
+    }
+
+    void changed(String key, String value) {
+        first.complete("${key} = ${value}");
+    }
+}
+
+var reg = Demo.serve(new NoteStore());
+var demo = Demo.connect();
+await demo.put("greeting", "hello");
+System.out.println(await demo.get("greeting"));
+try {
+    await demo.get("missing");
+} catch (DemoException e) {
+    switch (e.error()) {
+        case NOT_FOUND -> System.out.println("not found: ${e.getMessage()}");
+        default -> System.out.println("another error");
+    }
+}
+var stat = await demo.stat("x");
+System.out.println("${stat.kind} ${stat.size} ${stat.tags}");
+System.out.println("sum ${await demo.sum(new SumArgs().a(1).b(2).c(3).d(4))}");
+try {
+    await demo.within(10).wait_(1000);
+} catch (MessengerException e) {
+    System.out.println("${e.getMessage()} errno ${e.errno()}");
+}
+
+var first = new CompletableFuture<String>();
+await demo.watch("k", new Seen(first));
+System.out.println("listener: ${await first}");
+
+var got = new CompletableFuture<String>();
+var sub = DemoTopics.appTestChangedFilter(null).subscribe { e -> got.complete("${e.topic()} ${e.value().value}"); };
+await DemoTopics.appTestChanged("k").publish(new Change().key("k").value("v"));
+System.out.println("topic: ${await got}");
+sub.close();
+reg.close();
+try {
+    await demo.whoami();
+} catch (MessengerException e) {
+    System.out.println("after close: errno ${e.errno()}");
+}

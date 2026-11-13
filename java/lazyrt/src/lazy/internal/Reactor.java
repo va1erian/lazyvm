@@ -5,6 +5,7 @@ import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The Java side of the event loop (docs/async.md, "Inside"): the table of operations, the count
@@ -121,6 +122,18 @@ public final class Reactor {
             throw t;
         }
         return stage;
+    }
+
+    /**
+     * Keeps the VM running until the returned action runs (it acts once): an open Messenger
+     * registration or subscription is work the program is waiting for, like a pending socket.
+     */
+    public static Runnable hold() {
+        enter(() -> {});
+        AtomicBoolean released = new AtomicBoolean();
+        return () -> {
+            if (released.compareAndSet(false, true)) finished();
+        };
     }
 
     /** Operations and tasks not yet finished, handlers included. For tests. */

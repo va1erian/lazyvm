@@ -1,0 +1,8 @@
+hello (caller uid 0, still set after await: false)
+not found: app.test.demo.v1.Get: No value under that key. (NotFound)
+DIR 1 [a, b]
+sum 10
+app.test.demo.v1.Wait: timed out (ETIMEDOUT) errno 110
+listener: k = watched
+topic: app/test/changed/k v
+after close: errno 2

@@ -175,15 +175,13 @@ an unknown `native` method throws `UnsatisfiedLinkError` naming the method.
   Callbacks run on the UI thread, and I/O is never done on it. An exception
   from a callback ends `Ui.run` and is rethrown; if uncaught, it stops the
   program, and a window host first shows an error dialog.
-- `lazy.msg`: Messenger. The source of truth is the `.midl` file: LazyOS's
-  `midlc` gains a Java backend that generates the interface types and codecs,
-  with no reflection on the wire path. Annotations keep the hand-written side
-  short:
-  `@Service("os.lazy.example.v1")` on an implementation,
-  `@Subscribe(topic = "system/health/*", qos = Qos.LATEST)` on a handler,
-  `@Deadline(millis = 500)` on a call site's interface method. Calls return
-  `CompletionStage<Reply>`; topics deliver to a handler method or a
-  `lazy.async.Subscription`.
+- `lazy.msg`: Messenger, designed in [`msg.md`](msg.md) (accepted
+  2026-11-13, written for Siesta first). The source of truth is the `.midl`
+  file: LazyOS's `midlc --java` generates, per interface, a client interface
+  (`Echo.connect()`, calls returning `CompletionStage`), a server interface
+  the program implements, events, errors, structs, enums, topic accessors
+  and the codec, with no reflection and no annotations. Deadlines and the
+  resend policy come from the IDL.
   - On Windows, a loopback in-process broker implements the same API for tests
     and demos (default). Real LazyOS services are only reachable on LazyOS.
 - `lazy.os`: well-known paths (`libs/fhs`), notifications, the clipboard,

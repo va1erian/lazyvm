@@ -1,0 +1,11 @@
+state app/test/state (retained): DIR
+change app/test/changed/a Change[key=a, value=1]
+b only null
+state app/test/state: DIR
+change app/test/changed/a Change[key=a, value=2]
+change app/test/changed/a Change[key=a, value=3]
+change app/test/changed/b Change[key=b, value=null]
+filter of key "x/y": not a topic segment: "x/y"
+filter of null: app/test/changed/+
+--- stderr ---
+lazy.msg: app/test/changed/x: payload does not decode: truncated field header

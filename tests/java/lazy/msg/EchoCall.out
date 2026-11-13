@@ -1,0 +1,10 @@
+served os.lazy.echo
+echo: ok one:ababab
+notify: ok null
+received: Event[topic=saved, at=7]
+ping within 100 ms: MessengerException: os.lazy.echo.v1.Ping: timed out (ETIMEDOUT)
+held, then a new service: ok two:hang
+cancelled: cancelled
+nobody: MessengerException: os.lazy.echo.v1.Ping: no such service or name (ENOENT)
+served twice: os.lazy.echo: os.lazy.echo is already served (EEXIST)
+after close: MessengerException: os.lazy.echo.v1.Echo: no such service or name (ENOENT)

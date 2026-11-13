@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import javac  # noqa: E402
 import lazyrt  # noqa: E402
-from common import LAZYRT_CLASSES, TESTS_CLASSES, TESTS_SRC, die, java_sources  # noqa: E402
+from common import LAZYRT_CLASSES, MSG_GEN, TESTS_CLASSES, TESTS_SRC, die, java_sources  # noqa: E402
 
 DEFAULT_TIMEOUT = 60
 TIMEOUT_MARK = "--- timeout"
@@ -101,7 +101,7 @@ def build(tests: list[Test], rebuild_lazyrt: bool = True) -> None:
     if rebuild_lazyrt or not LAZYRT_CLASSES.is_dir():
         lazyrt.build()
     javac.compile([t.source for t in tests], TESTS_CLASSES,
-                  bootclasspath=LAZYRT_CLASSES, sourcepath=TESTS_SRC)
+                  bootclasspath=LAZYRT_CLASSES, sourcepath=[TESTS_SRC, MSG_GEN])
     copy_resources()
 
 

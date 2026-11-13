@@ -1,0 +1,9 @@
+missing: DemoException app.test.demo.v1.Get: No value under that key. (NotFound) [NOT_FOUND] code=1001 errno=0
+busy: DemoException app.test.demo.v1.Get: busy compacting (Busy) [BUSY] code=1002 errno=0
+locked: MessengerException app.test.demo.v1.Get: store locked (EACCES) code=13 errno=13
+boom: MessengerException app.test.demo.v1.Get: boom (EIO) code=5 errno=5
+null: MessengerException app.test.demo.v1.Get: the reply does not encode: value is null (EIO) code=5 errno=5
+null key: MessengerException app.test.demo.v1.Get: key is null (EINVAL) code=22 errno=22
+unknown method: 38 no method 999999
+wrong interface: 22 wrong interface for method 915881719
+bad body: 22 truncated field header
