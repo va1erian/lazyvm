@@ -2,12 +2,13 @@ package lazy.internal.msg;
 
 import java.util.List;
 import java.util.function.Consumer;
+import lazy.internal.Reactor;
 import lazy.msg.Caller;
 
 /**
  * What the Messenger runtime needs from a transport: calls, served names and topics. The
- * loopback broker implements it in-process (Windows, and anywhere LazyOS's is absent); LazyOS's
- * kernel and {@code messengerd} will implement it through {@code crates/lazyvm-lazyos} (S10-02).
+ * loopback broker implements it in-process (Windows, and anywhere LazyOS's is absent); on LazyOS
+ * {@link NativeBroker} reaches the kernel through {@code crates/lazyvm-lazyos}.
  * Every method may be called from any thread and answers through the callbacks it is given.
  */
 public interface Broker {
@@ -17,8 +18,12 @@ public interface Broker {
     /** Withdraws {@code call}: its answer, if one comes, is dropped. */
     void cancel(Outgoing call);
 
-    /** Serves {@code name}; fails with EEXIST when it is taken. Returns the token to unregister with. */
-    Object register(String name, Consumer<Incoming> inbox);
+    /**
+     * Serves {@code name} as the interface {@code iface} ({@code ifaceName}, which LazyOS checks
+     * against an app's domain); fails with EEXIST when it is taken. Returns the token to
+     * unregister with.
+     */
+    Object register(String name, long iface, String ifaceName, Consumer<Incoming> inbox);
 
     /** Withdraws a name; its calls in flight fail with EPIPE. */
     void unregister(Object token);
@@ -33,7 +38,7 @@ public interface Broker {
 
     /** The broker this process uses. */
     static Broker get() {
-        return Loopback.INSTANCE;
+        return Reactor.messenger() ? NativeBroker.INSTANCE : Loopback.INSTANCE;
     }
 
     /** A request on its way: where it goes, its body and objects, and how it ends. */
@@ -44,8 +49,16 @@ public interface Broker {
         public final byte[] body;
         public final List<Object> objects;
         public final boolean oneway;
+        /** The call's bound in milliseconds, 0 for none: a transport may hand it to the kernel. */
+        public final long deadlineMillis;
 
         protected Outgoing(String service, long headerId, int method, byte[] body, List<Object> objects, boolean oneway) {
+            this(service, headerId, method, body, objects, oneway, 0);
+        }
+
+        protected Outgoing(String service, long headerId, int method, byte[] body, List<Object> objects, boolean oneway,
+                           long deadlineMillis) {
+            this.deadlineMillis = deadlineMillis;
             this.service = service;
             this.headerId = headerId;
             this.method = method;

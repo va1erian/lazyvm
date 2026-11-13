@@ -29,7 +29,8 @@ public final class Types {
     /** Serves {@code server} under {@code name}; a name already served fails with EEXIST. */
     public static lazy.msg.Registration serve(String name, TypesServer server) {
         Wire.need(server, "server");
-        return lazy.internal.msg.Server.serve(name, call -> TypesCodec.dispatch(server, call));
+        return lazy.internal.msg.Server.serve(name, INTERFACE, TypesCodec.INTERFACE_ID,
+                call -> TypesCodec.dispatch(server, call));
     }
 
     /**

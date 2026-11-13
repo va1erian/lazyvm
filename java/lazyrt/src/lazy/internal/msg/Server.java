@@ -45,13 +45,13 @@ public final class Server {
 
     private Server() {}
 
-    /** Serves {@code name}; a name already served fails with EEXIST. */
-    public static Registration serve(String name, Dispatch dispatch) {
+    /** Serves {@code name} as {@code iface}; a name already served fails with EEXIST. */
+    public static Registration serve(String name, String iface, long ifaceId, Dispatch dispatch) {
         if (name == null || name.isEmpty()) throw new IllegalArgumentException("no service name");
         Executor home = Calls.home();
         Object token;
         try {
-            token = Broker.get().register(name, in -> home.execute(() -> run(dispatch, in)));
+            token = Broker.get().register(name, ifaceId, iface, in -> home.execute(() -> run(dispatch, in)));
         } catch (Wire.Failure f) {
             throw new UncheckedIOException(new MessengerException(name, f.errno, f.getMessage(), "", null, null));
         }

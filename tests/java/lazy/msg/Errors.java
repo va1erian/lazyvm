@@ -1,3 +1,4 @@
+// NEEDS: msg
 package lazy.msg;
 
 import app.test.demo.v1.Demo;

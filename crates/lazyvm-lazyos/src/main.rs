@@ -20,9 +20,13 @@ use xui_app::backend::LazyOSBackend;
 const FONT_DIR: &str = "/system/share/fonts/xui";
 const UI_FONT: &str = "DroidSans.ttf";
 
+mod messenger;
+mod serve;
+
 const HOST: UiHost = UiHost { desktop, error_box };
 
 fn main() -> ExitCode {
+    platform::messenger::install(messenger::factory);
     launcher::main(&[|vm| natives_ui::register(vm, HOST)])
 }
 

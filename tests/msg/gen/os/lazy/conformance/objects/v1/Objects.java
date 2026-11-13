@@ -29,7 +29,8 @@ public final class Objects {
     /** Serves {@code server} under {@code name}; a name already served fails with EEXIST. */
     public static lazy.msg.Registration serve(String name, ObjectsServer server) {
         Wire.need(server, "server");
-        return lazy.internal.msg.Server.serve(name, call -> ObjectsCodec.dispatch(server, call));
+        return lazy.internal.msg.Server.serve(name, INTERFACE, ObjectsCodec.INTERFACE_ID,
+                call -> ObjectsCodec.dispatch(server, call));
     }
 
     /**

@@ -8,6 +8,9 @@ against the same goldens as `tools/test.py`.
 
     python tools/lazyos_test.py --lazyos <LazyOS checkout> [--filter s1 lang] [--no-build]
 
+`--net` runs only the tests marked `NEEDS: net` or `lazyos-net`; `--msg` only those marked
+`NEEDS: msg`, on the `lazyvm-ui` of `crates/lazyvm-lazyos`, which carries LazyOS's Messenger.
+
 The checkout comes from `--lazyos` or `LAZYOS_DIR`.
 """
 
@@ -23,6 +26,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import lazyos_ui  # noqa: E402
 import testlib  # noqa: E402
 from common import BUILD, DIST, ROOT, die  # noqa: E402
 
@@ -63,7 +67,7 @@ def command_line(main_class: str, args: list[str], vm_args: list[str], exe: str 
 
 def command(test: testlib.Test, extra: list[str]) -> str:
     """The shell line for `test`, with `extra` VM options before its own."""
-    exe = "lazyvm-ui" if test.needs == "ui" else "lazyvm"
+    exe = "lazyvm-ui" if test.needs in ("ui", "msg") else "lazyvm"
     return command_line(test.main_class, test.args, extra + test.vm_args, exe)
 
 
@@ -111,14 +115,19 @@ def main() -> None:
                         help="compile every verified method at its first run (-Xjit:all)")
     parser.add_argument("--net", action="store_true",
                         help="only the tests that need the network, on an image with netd and a card")
+    parser.add_argument("--msg", action="store_true",
+                        help="only the Messenger tests, on the lazyvm-ui of crates/lazyvm-lazyos")
     args = parser.parse_args()
     if args.lazyos is None or not (args.lazyos / "tools" / "lazyvm" / "run.py").is_file():
         die("pass --lazyos <LazyOS checkout with tools/lazyvm/run.py> or set LAZYOS_DIR")
-    wanted = ("net", "lazyos-net") if args.net else ("", "ui")
+    wanted = ("net", "lazyos-net") if args.net else ("msg",) if args.msg else ("", "ui")
     tests = [t for t in testlib.discover(args.filter) if t.golden.is_file() and t.needs in wanted]
     if not args.no_build:
         testlib.build(tests)
-        ui = build_musl("launcher-ui") if any(t.needs == "ui" for t in tests) else None
+        if args.msg:
+            ui = lazyos_ui.build(args.lazyos)  # the one with LazyOS's Messenger transport
+        else:
+            ui = build_musl("launcher-ui") if any(t.needs == "ui" for t in tests) else None
         stage(build_musl(), ui_exe=ui)
     jit = ["-Xjit:all"] if args.jit_all else []
     out = run_commands(args.lazyos, [command(t, jit) for t in tests], args.timeout, args.no_build,

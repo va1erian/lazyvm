@@ -92,6 +92,45 @@ public final class Reactor {
         return operation((handle, payload) -> null, null, id -> closeListener0(id, listener));
     }
 
+    /** Whether a Messenger transport is installed (LazyOS); without one, lazy.msg uses its loopback. */
+    public static boolean messenger() {
+        return msgAvailable0();
+    }
+
+    /**
+     * One Messenger call (docs/msg.md section 7). The stage completes with the answer as {@code
+     * platform::messenger} encodes it: {@code 0} and the reply body, or {@code 1}, the errno
+     * (little-endian) and whether the request was queued.
+     */
+    public static CompletionStage<byte[]> call(String service, long iface, int method, byte[] body, boolean oneway,
+                                               long deadlineMillis) {
+        return operation((handle, payload) -> payload, null,
+                id -> msgCall0(id, service, iface, method, body, oneway, deadlineMillis));
+    }
+
+    /**
+     * Serves {@code name} as {@code iface} through the Messenger transport, synchronously: the
+     * registration's handle, or a negative errno.
+     */
+    public static long serve(String name, long iface, String ifaceName) throws IOException {
+        return msgServe0(name, iface, ifaceName);
+    }
+
+    /** The next request to registration {@code served}, as {@code platform::messenger::Incoming} encodes it. */
+    public static CompletionStage<byte[]> receive(long served) {
+        return operation((handle, payload) -> payload, null, id -> msgReceive0(id, served));
+    }
+
+    /** Answers the received transaction {@code txn}. */
+    public static void reply(long txn, byte[] body) throws IOException {
+        msgReply0(txn, body);
+    }
+
+    /** Withdraws registration {@code served}; its receive fails. */
+    public static void unserve(long served) throws IOException {
+        msgUnserve0(served);
+    }
+
     /** A stage that fails with {@code cause} on the loop, as a real operation would. */
     public static <T> CompletionStage<T> failed(IOException cause) {
         LoopFuture<T> stage = begin(null, null);
@@ -339,4 +378,11 @@ public final class Reactor {
     private static native void close0(long id, long connection) throws IOException;
     private static native void closeListener0(long id, long listener) throws IOException;
     private static native void abort0(long handle);
+    private static native void msgCall0(long id, String service, long iface, int method, byte[] body, boolean oneway,
+                                        long deadlineMillis) throws IOException;
+    private static native boolean msgAvailable0();
+    private static native long msgServe0(String name, long iface, String ifaceName) throws IOException;
+    private static native void msgReceive0(long id, long served) throws IOException;
+    private static native void msgReply0(long txn, byte[] body) throws IOException;
+    private static native void msgUnserve0(long served) throws IOException;
 }

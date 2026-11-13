@@ -374,9 +374,13 @@ call requests to it like socket requests. Its `Poll::poll` becomes that
 `wait`, naming `mio`'s epoll descriptor (`Poll` is `AsRawFd`) as the
 `WAIT_FD` and the next timer as the deadline, then drains `mio` with a zero
 timeout. Because that code is GPL and lives in `crates/lazyvm-lazyos`,
-`crates/platform` defines the park as a trait the reactor calls, its `mio`
-implementation is the default, and the launcher installs
-`lazyvm-lazyos`'s on LazyOS. It stays one reactor and one park.
+`crates/platform` defines the seam (`platform::messenger::Transport`: park,
+requests, cancel, finished calls), parks in `mio` alone when none is
+installed, and LazyOS's `lazyvm-ui` installs `lazyvm-lazyos`'s before the VM
+starts. It stays one reactor and one park. As built (S10-02): a served name's
+receiving endpoint joins the wait's items while Java waits for its next
+request; one `wait` names at most eight, so a process serves at most eight
+names there (a ninth is refused with `ENOSPC`).
 
 ## Dependencies and size
 

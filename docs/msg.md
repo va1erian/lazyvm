@@ -16,10 +16,12 @@ shows that Java reads the same.
 **Built (2026-11-13), on Windows:** `midlc --java` in LazyOS (S10-01's
 generator, and its corpus test), and the runtime of sections 2 to 6 over the
 loopback broker: calling, serving, callbacks and topics, checked by
-`tests/java/lazy/msg` and `tests/siesta/msg`. **Not built:** the LazyOS
-transport (`crates/lazyvm-lazyos`, the park, the label spike of section 7),
-closing with `Ui.run`, `lazy-api.jar` and packaging (section 8), and every
-check that runs inside LazyOS.
+`tests/java/lazy/msg` and `tests/siesta/msg`. **Built (2026-11-14), on
+LazyOS:** the label spike of section 7, and the transport for calling and
+serving (`crates/lazyvm-lazyos`, the park), checked by `EchoCall` and
+`Errors` under `tools/lazyos_test.py --msg`. **Not built:** topics and
+channel objects on LazyOS, closing with `Ui.run`, `lazy-api.jar` and
+packaging (section 8).
 
 ## 1. Goals
 
@@ -278,11 +280,19 @@ the resend rule, cancelling), serving (`Server`), callback channels
 (`Listeners`), topics (`Topics`, `TopicNames`) and the transport seam
 (`Broker`). A `Broker` has two implementations:
 
-- **LazyOS** (not built): `crates/lazyvm-lazyos`, over `libmessenger` and
-  `lazyos-sys` (GPL, so it stays in that crate, D2), reached through a
-  native seam in `crates/platform`. The reactor's park becomes LazyOS's one
-  `wait` over `WAIT_CALLS`, the endpoints, the bells and `mio`'s epoll
-  descriptor as `WAIT_FD` ([`async.md`](async.md)).
+- **LazyOS** (`NativeBroker.java`; calling and serving built, topics and
+  channel objects not yet): `crates/lazyvm-lazyos`, over `libmessenger` and
+  `lazyos-sys` (GPL, so it stays in that crate, D2), reached through
+  `platform::messenger`, which LazyOS's `lazyvm-ui` installs. The reactor
+  thread resolves, begins calls with `CALL_BEGIN`, and parks in LazyOS's one
+  `wait` over `WAIT_CALLS`, the served endpoints waiting for a request and
+  `mio`'s epoll descriptor as `WAIT_FD` ([`async.md`](async.md)); it reads a
+  finished call with `CALL_CHECK`. Serving registers a pair's first end and
+  receives on the second, as LazyOS's own servers do, one request asked for
+  at a time per name. `serve` is synchronous, answered by the reactor thread
+  itself, so it may be called from the loop. The plain `lazyvm` installs no
+  transport and keeps the loopback broker, on LazyOS too; apps run on
+  `lazyvm-ui`.
 - **Loopback** (built, `Loopback.java`; the broker on Windows and wherever
   LazyOS's is absent): an in-process registry, calls in flight, topics and
   retained values in Java, with the rules a program can observe: an unknown
@@ -298,14 +308,22 @@ queued (`EPIPE`, not delivered) is sent once more; one a peer took and then
 died with is sent again only when the IDL marks it `retry=safe`, resolving
 the name again, so a restarted service is reached.
 
-**A risk to settle first.** LazyOS found that Messenger handles and an app's
-label belong to the thread that made them (`client-api-plan.md` 3.5: a
-worker thread's `subscribe` failed with `EACCES`). Our reactor is a thread
-the VM starts, so S10-02 begins with a spike: from a labelled app, the
-reactor thread resolves, calls, serves and subscribes. If the label does not
-reach it, the fix is LazyOS's (stamp the label per process) or ours (make
-the reactor the thread `exec` started); that is decided before the rest of
-S10-02 is built.
+**The label spike (settled 2026-11-14).** LazyOS found that Messenger handles
+and an app's label belong to the thread that made them (`client-api-plan.md`
+3.5: a worker thread's `subscribe` failed with `EACCES`), and our reactor is
+a thread the VM starts. A throwaway build of `lazyvm-ui`, launched by `init`
+as `app:os.lazy.writerj` on the desktop image, ran the same steps on the
+process's main thread and on a thread two spawns below it (as the reactor
+is): create a pair, register `app.<id>.<name>`, resolve it, `CALL_BEGIN`,
+park on `WAIT_CALLS` and the served endpoint, receive, reply, `CALL_DRAIN`
+and `CALL_CHECK` the reply, then subscribe to `app/<id>/...`, publish and
+take the event. Both threads gave the same results. Without grants every
+refusal was the label's policy (`LABEL:DENY` for calling the app's own
+interface, and for resolving the topics broker with no `topics`
+permission); with the interface and `publish:`/`subscribe:app/<id>/#`
+granted, every step passed on both. So the label reaches the VM's threads,
+and nothing needs changing in LazyOS: an app needs the grants its manifest
+gives it (section 8).
 
 ## 8. Packaging and permissions (planned, S10-05)
 
