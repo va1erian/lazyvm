@@ -1,4 +1,4 @@
-# LazyVM plan, part 2: S8-S15 and LazyOS items
+# LazyVM plan, part 2: S8-S16 and LazyOS items
 
 Continues [`plan.md`](plan.md), which has the work-item format, the status
 table and S0-S7. The same rules apply ([`../AGENTS.md`](../AGENTS.md)).
@@ -294,6 +294,8 @@ own). LazyWriter was ported too ([`ui-writer.md`](ui-writer.md)).
 
 Goal: Java apps are first-class LazyOS apps. They talk Messenger with
 `CompletionStage`, are packaged as `.lzp`, and can be launched from the GUI.
+A proposed API with generated types and no reflection, in place of D8's
+annotation sketch, is [`msg.md`](msg.md); the owner has not confirmed it.
 
 - [ ] S10-01 midlc Java backend (LazyOS repo, LOS-03): it generates, per
       interface, a Java interface whose methods return `CompletionStage<…>`,
@@ -453,6 +455,132 @@ S7, which ships only the `lazy.net` async TCP API.
 
 Gate: `samples/fetch` downloads a page over HTTPS with `lazy.net.Http` and
 prints its status and size on both platforms (manual live run, recorded in the PR).
+
+## S16. Proposed: the Siesta language
+
+Goal: a LazyOS machine compiles programs for LazyVM with `siestac`, a native
+compiler for Siesta, a small language with Java's syntax and a reduced
+rule set, LazyRAD builds its forms in it, `async`/`await` make
+LazyOS's asynchronous APIs read like blocking code, and `lazy.ui` and
+Messenger apps need little plumbing. Proposed in [`siesta.md`](siesta.md),
+[`siesta-async.md`](siesta-async.md) and [`siesta-apps.md`](siesta-apps.md);
+the owner has not confirmed it. Every item's tests run
+through `tools/siesta_test.py` (siesta.md section 9): the classes run on the
+oracle with `-Xverify:all` and on LazyVM, both matching the `.out`, and
+mirrored `.java` tests are blessed on the oracle.
+
+Status (2026-11-13): S16-01 to 07 done. S16-04's enum mirror is
+`tests/siesta/classes/Enums` (`tests/java/s4/Showcase` does not exist yet), and
+S16-06's `finally` matrix is `tests/siesta/flow/Finally`, both with Java
+mirrors. S16-07's UI case is `tests/siesta/async/UiResume`, run headless on
+`lazyvm-ui` now that `Ui.run` registers `Ui.executor()` as the UI thread's
+`Loop.home()` (`tests/java/lazy/ui/Home`). The suite has 47 tests, run on
+LazyVM and, except the `NEEDS:` ones, on the Java 8 oracle with
+`-Xverify:all`; `bench/siesta` measures Siesta's code
+against javac's (siesta.md section 10).
+S16-08 started (2026-11-12): `samples/siesta/writer` builds with
+`siestac -o writer.jar` against S9's branch; its first frame is
+byte-identical to the Java port's on Windows and `samples/siesta/writer_flow.sie`
+drives its dialogs headless. Not yet checked: LazyOS, and the suite run,
+now possible with S9 on main (siesta-apps.md section 5).
+
+- [x] S16-01 Lexer, parser, AST and diagnostics (siesta.md sections 4 and 8),
+      in `crates/siesta`, which depends only on `crates/classfile`.
+      Files: `crates/siesta/src/{lex,parse,ast,diag}*`,
+      `fuzz/fuzz_targets/siesta.rs`, `tests/siesta/bad/`.
+      Check: `cargo test -p siesta` parses every `tests/siesta/**/*.sie`; each
+      `tests/siesta/bad` file gives its `.err` diagnostic; the fuzz target runs
+      10 minutes without a panic.
+      Needs: the owner's confirmation of S16.
+- [x] S16-02 Types, the class path and `Signature` parsing.
+      Files: `crates/siesta/src/{types,classpath,sig}.rs`.
+      Check: a unit test loads every class of `dist/lazyrt.jar`, parses every
+      `Signature` attribute and finds the functional interfaces of
+      `java.util.function` and `lazy.async` with their single methods.
+      Needs: S16-01.
+- [x] S16-03 Scripts and expressions: top-level statements, locals,
+      primitives, strings and interpolation, `if`, `while`, `do`, both
+      `for`s, `break`, `continue`, calls, fields and constructors of the
+      Java API with overloads, boxing and varargs, the missing-`return`
+      check, stack maps, `classfile::writer`
+      extensions, `siestac`, `siestac run`, and the size gate.
+      Files: `crates/siesta/src/{infer,overload,check,gen,emit,main}*`,
+      `crates/classfile/src/writer.rs`, `tools/siesta_test.py`,
+      `tools/size.py`, `tests/siesta/core/`.
+      Check: `tools/siesta_test.py --filter core` passes on Windows;
+      `python tools/size.py --siestac` passes for the stripped musl build
+      (under 2,000,000 bytes, uncompressed).
+      Needs: S16-02.
+- [x] S16-04 Classes and interfaces: fields, constructors, default and
+      static interface methods, static nested classes, generic classes and
+      methods, extending Java classes, bridge methods, `enum`, annotations.
+      Files: `crates/siesta/src/{check,gen}/`,
+      `tests/siesta/classes/`.
+      Check: `tools/siesta_test.py --filter classes` passes on Windows,
+      including a `Comparable<Point>` sorted by `Collections.sort` and a
+      mirror of `tests/java/s4/Showcase`'s enums.
+      Needs: S16-03.
+- [x] S16-05 Lambdas and method references through `LambdaMetafactory`,
+      captures (changed ones in a shared array), trailing lambdas, method
+      type inference.
+      Files: `crates/siesta/src/{infer,check,gen}*`,
+      `tests/siesta/blocks/`.
+      Check: `tools/siesta_test.py --filter blocks` passes on Windows, with a
+      stream pipeline ending in `collect(Collectors.toList())` that needs no cast,
+      and a `lazy.async` program.
+      Needs: S16-04.
+- [x] S16-06 Casts, `instanceof` with a binding, arrow `switch`, cascades,
+      collection literals, `try`/`catch`/`finally` and `throw`.
+      Files: `crates/siesta/src/{check,gen}/`,
+      `tests/siesta/flow/`.
+      Check: `tools/siesta_test.py --filter flow` passes on Windows; a
+      `finally` test covers `return`, `break`, `continue` and a throw out of
+      each branch; each cut feature of siesta.md section 3 is refused with
+      its message.
+      Needs: S16-05.
+- [x] S16-07 `async` and `await` (siesta-async.md): linearisation in
+      the checker, frame classes and resumption in the generator, and
+      `lazy.async.Loop.home()` with `lazy.ui`'s registration.
+      Files: `crates/siesta/src/{anf.rs,gen/}`,
+      `java/lazyrt/src/lazy/async/Loop.java`, `java/lazyrt/src/lazy/internal/`,
+      `tests/siesta/async/`, `tests/lazy/async/`.
+      Check: `tools/siesta_test.py --filter async` passes on Windows with the
+      cases of siesta-async.md section 5 (a million completed awaits without
+      `StackOverflowError`, await in `try` in a loop, cancellation removing
+      the timer, a UI handler resuming on the UI thread, fire-and-forget
+      failures, top-level `await`); `Loop.home()` has its own `lazy.*` test.
+      Needs: S16-06; S9's `Ui.executor()` for the UI case.
+- [ ] S16-08 A LazyOS app in Siesta (siesta-apps.md section 5): the Writer
+      port S9 makes in Java, written again in Siesta on the same `lazy.ui`
+      and `lazy.msg`.
+      Files: `samples/siesta/writer/`.
+      Check: headless, both ports give the same screenshots for the same
+      scripted session on Windows and LazyOS; the PR records both line
+      counts (without tests) and both jars' sizes.
+      Needs: S16-07; the S9 Writer port; S10-02 for its Messenger calls.
+- [ ] S16-09 LazyRAD forms (siesta.md section 11): the view-file shape, a
+      `siesta` library API that reads and rewrites a view file for the
+      designer, and form tests on `lazy.ui`.
+      Files: `crates/siesta/src/view.rs`, `tests/siesta/forms/`.
+      Check: `cargo test -p siesta` round-trips every `tests/siesta/forms`
+      view file byte for byte and refuses the hand-edited ones in
+      `tests/siesta/forms/bad`; `tools/siesta_test.py --filter forms` runs each
+      form headless with a click script and matches its screenshots and
+      `.out`.
+      Needs: S16-06; `Ui.fixed()` and the LazyRAD widgets in `lazy.ui`
+      (S9 items the owner has to accept first). The LazyRAD IDE side is a
+      LazyRAD and LazyOS plan item.
+- [ ] S16-10 `siestac` on LazyOS: the static musl build, staged into the image
+      by the LazyOS repo (a `LOS-` item), and measured.
+      Files: `tools/lazyos_test.py`, `tools/siesta_test.py`.
+      Check: `tools/lazyos_test.py --siesta` compiles every `tests/siesta` test
+      with `siestac` inside LazyOS and runs it there against its `.out`; a
+      1,000-line test program compiles in under 200 ms there.
+      Needs: S16-07 (S16-09 for the form tests).
+
+Gate: `samples/siesta/hello_form`, the LazyRAD hello form of siesta.md section
+11, is compiled by `siestac` and run by `lazyvm` inside LazyOS with no other
+toolchain, and matches its screenshot on Windows and LazyOS.
 
 ## LazyOS-side work items
 

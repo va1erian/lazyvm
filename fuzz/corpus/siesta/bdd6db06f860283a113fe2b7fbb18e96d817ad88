@@ -1,0 +1,13 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;sShape of(int n) { return n == 5 ? new Circle(1.0) : new Square(n); }
+}
+
+class Ci${sds = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : worDs) {
+    countsShape of(int n) { return n == 5 ? new Circle(1.0) : new Square(n); }
+}
+
+class Ci${side}"; }
+}

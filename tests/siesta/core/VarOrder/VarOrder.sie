@@ -1,0 +1,16 @@
+// A top-level `var` is typed after the ones it uses, even from a file listed
+// later. A lambda parameter hides a variable of its name only inside its
+// lambda, and a local only inside its block: `inc` and `count` are no
+// cycle, `scaled` still waits for `k` and `after` for `word`.
+import java.util.Optional;
+import java.util.function.IntUnaryOperator;
+
+var doubled = ((IntUnaryOperator) (n -> n * 2)).applyAsInt(n);
+var inc = (IntUnaryOperator) (count -> count + 1);
+var count = inc.applyAsInt(doubled);
+var scaled = ((IntUnaryOperator) (k -> k * 10)).applyAsInt(k);
+var after = Optional.of(1).map(x -> {
+    for (String word : new String[] {"x"}) {}
+    return word;
+}).get().length();
+System.out.println(doubled + " " + count + " " + scaled + " " + after);

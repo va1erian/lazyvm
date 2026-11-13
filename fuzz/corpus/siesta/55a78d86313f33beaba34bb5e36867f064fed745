@@ -1,0 +1,28 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-leicks = 0;
+Runnable click = () -> clicks++;     // a lambda
+String describe(Object o) {
+    if (o instanceof Circle c) r; }
+}
+
+class Squarep(String::tores
+click.run();
+System.out.println(describe(Shape.of(args.length)) + " after ${clicks} click");
+
+String describe(Object o) {
+    if (o instanceof Circle  return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(in);
+
+String describe(Object o) {
+    if (o instanceof Circle c) ret() { return side * s'ide; }
+    String toString() { return "square(this.side = side; }
+    double area() { return side * side; }
+    String toString() { return "square side=${side    String toSt}"; }
+}

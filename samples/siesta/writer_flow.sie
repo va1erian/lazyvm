@@ -1,0 +1,58 @@
+// Compiled with samples/siesta/writer/*.sie except writer.sie, whose main
+// it replaces, and run headless:
+//   siestac -o flow.jar writer_flow.sie writer/app.sie writer/tools.sie
+//       writer/documents.sie writer/pages.sie writer/tables.sie writer/names.sie
+//   lazyvm-ui -Dlazy.ui=headless -jar flow.jar
+// It moves to tests/siesta once lazy.ui's widgets are on main (S9).
+//
+// The Siesta Writer driven headless: typing, the unsaved-changes question
+// cancelled, Save leading to a cancelled Save As, Save then New, open by
+// path (and a missing file), a command whose dialog cannot show, and the
+// link prompt.
+import java.nio.file.*;
+import lazy.internal.ui.Headless;
+import lazy.ui.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+var dir = Files.createTempDirectory("writer");
+var doc = dir.resolve("doc.txt").toAbsolutePath();
+Files.write(doc, "Plain words here".getBytes(UTF_8));
+
+void show(String what) {
+    System.out.println("${what}: ${window.title()} | ${status.text(1)} | ${status.text(2)}");
+}
+
+Headless.run(build()) {
+    started();
+    Headless.type("Hello world");
+    show("typed");
+    Headless.key('n', Window.CTRL);      // "Save changes?"
+    Headless.key(Window.ESCAPE, 0);      // Cancel
+    show("new, cancelled");
+    Headless.key('n', Window.CTRL);
+    Headless.key(Window.ENTER, 0);       // Save: no file yet, so Save As
+    Headless.key(Window.ESCAPE, 0);      // the picker cancelled
+    show("new, save as cancelled");
+    openPath(dir.resolve("missing.lzw").toString());   // FAIL, and a message box
+    Headless.key(Window.ENTER, 0);
+    show("missing file");
+    openPath(doc.toString());
+    show("opened");
+    path = dir.resolve("doc.lzw").toString();
+    Headless.type("More ");
+    show("edited");
+    Headless.key('n', Window.CTRL);
+    Headless.key(Window.ENTER, 0);       // Save, to doc.lzw, then New
+    show("new, saved first");
+    var saved = new String(Files.readAllBytes(dir.resolve("doc.lzw")), UTF_8);
+    System.out.println("saved JSON mentions More: ${saved.contains("More")}");
+    message.text("busy").show();
+    surface(open());                     // its picker cannot show: cancelled, no failure
+    Headless.key(Window.ENTER, 0);
+    show("open while a message was up");
+    link();
+    Headless.type("lazy.test");
+    Headless.key(Window.ENTER, 0);
+    show("link prompt answered");
+    Headless.key('q', Window.CTRL);      // nothing unsaved: the window closes
+};

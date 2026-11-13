@@ -1,0 +1,10 @@
+Command newCmd = Ui.command("New", "Ctrl+N", IS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrptays respoSl+S", Icon.SAVE) async{  away {
+        Files.write(target,es(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved $quare implements , UT   +{target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } epti/n e) {
+   1

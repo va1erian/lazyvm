@@ -1,0 +1,4 @@
+// main_"Hello", 400, 160);
+    public final Edit nameEdit = Ui.edit("") ..place(helloButton, 264, 16, 120, 28, A       ..pla.STRETCH_HORIZONT|=AL));
+    }
+}

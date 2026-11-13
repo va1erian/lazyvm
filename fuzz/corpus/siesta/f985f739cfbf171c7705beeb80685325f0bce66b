@@ -1,0 +1,5 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -"Save", "Ctrl+S", IcoSnV. if (target == null) return false;
+   theme(change.value); };

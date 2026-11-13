@@ -1,0 +1,203 @@
+// New, Open, Save, Save As, Export and Insert image. Each command is one
+// async method that awaits its picker or question: a dialog's show()
+// returns the stage of its answer.
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.*;
+import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.concurrent.*;
+import lazy.ui.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+var openPicker = window.openFile("Open").existing().filter("LazyWriter documents (.lzw)", EXTENSION)
+    .filter("Text (.txt)", TEXT).filter("All files");
+var savePicker = window.saveFile("Save As").filter("LazyWriter documents (.lzw)", EXTENSION);
+var exportPicker = window.saveFile("Export as Markdown").filter("Markdown (.md)", MARKDOWN);
+var imagePicker = window.openFile("Insert image").existing().filter("Images (.png, .jpg, .jpeg)", IMAGES);
+var unsaved = window.task("Save changes?", "This document has unsaved changes. Save them before you go on?")
+    .icon(TaskDialog.WARNING).command("Save").command("Discard");
+var message = window.message("LazyWriter", "").onClose { s -> editor.focus(); };
+var linkPrompt = window.prompt("Link",
+    "The address the selected text links to. Leave it empty to remove the link.", "https://")
+    .acceptLabel("Link");
+
+// Hands a command's failure to the UI loop, which stops the program with the
+// error dialog as it does for a callback's; a stage would keep it to itself.
+// A cancelled dialog (another was open, or the window closed) is no failure.
+void surface(CompletionStage<?> command) {
+    command.whenComplete { v, e ->
+        var cause = e instanceof CompletionException && e.getCause() != null ? e.getCause() : e;
+        if (cause != null && !(cause instanceof CancellationException)) Ui.later { throw cause; };
+    };
+}
+
+// Whether the document may go: it has no unsaved changes, or the user saved
+// or discarded them.
+async CompletionStage<Boolean> discarded() {
+    if (!dirty) return true;
+    int choice = await unsaved.show();
+    if (choice == 0) return await save();
+    if (choice != 1) editor.focus();
+    return choice == 1;
+}
+
+async CompletionStage<Void> newDocument() {
+    if (await discarded()) load("", true, null);
+}
+
+async CompletionStage<Void> open() {
+    if (!await discarded()) return;
+    var p = await openPicker.folder(startDir()).show();
+    if (p == null) editor.focus();
+    else openPath(p);
+}
+
+async CompletionStage<Void> quit() {
+    if (await discarded()) window.close();
+}
+
+async CompletionStage<Boolean> save() {
+    var p = savedPath();
+    if (p != null) return saveTo(p);
+    return await saveAs();
+}
+
+async CompletionStage<Boolean> saveAs() {
+    var p = await savePicker.name("${stem(path)}.${EXTENSION}").folder(startDir()).show();
+    if (p == null) {
+        editor.focus();
+        return false;
+    }
+    return saveTo(withExtension(p, EXTENSION));
+}
+
+async CompletionStage<Void> link() {
+    var url = await linkPrompt.show();
+    if (url != null) editor.link(url);
+    refocus();
+}
+
+// Where pickers start: the document's folder, or the home folder.
+String startDir() {
+    var parent = path == null ? null : new File(path).getAbsoluteFile().getParentFile();
+    return parent != null ? parent.getPath() : System.getProperty("user.home", ".");
+}
+
+// The file Save writes to: none for a new document or a .txt one.
+String savedPath() {
+    return path != null && !isPlainText(path) ? path : null;
+}
+
+// Shows `text`, plain text or the native JSON, as the document.
+void load(String text, boolean plain, String from) {
+    if (plain) editor.plainText(text);
+    else editor.json(text);
+    path = from;
+    dirty = false;
+    summary = null;
+    status.text(2, wordsLabel(editor.words()));
+    refresh();
+    editor.focus();
+    selection(editor.startStyle());
+}
+
+// Runs `step` on file `p` and prints the evidence line LazyOS sessions look
+// for (`WRITER:OPEN:PASS:<path>`); a failure is shown in the message box. A
+// lambda may throw anything, so `step` does its I/O directly.
+boolean attempt(String what, String p, String failure, Runnable step) {
+    try {
+        step.run();
+        System.out.println("WRITER:${what}:PASS:${p}");
+        return true;
+    } catch (IOException | IllegalStateException e) {
+        System.out.println("WRITER:${what}:FAIL:${p}");
+        message.text("${failure} ${p}: ${e.getMessage()}").show();
+        return false;
+    }
+}
+
+void openPath(String p) {
+    attempt("OPEN", p, "Could not open") {
+        var bytes = readCapped(p, MAX_DOCUMENT_BYTES);
+        var plain = isPlainText(p);
+        load(plain ? new String(bytes, UTF_8) : strictUtf8(bytes), plain, p);
+    };
+}
+
+String strictUtf8(byte[] bytes) {
+    try {
+        return UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();
+    } catch (CharacterCodingException e) {
+        throw new IOException("not a LazyWriter document (not text)");
+    }
+}
+
+boolean saveTo(String p) {
+    return attempt("SAVE", p, "Could not save") {
+        write(p, editor.json().getBytes(UTF_8));
+        path = p;
+        dirty = false;
+        refresh();
+        editor.focus();
+    };
+}
+
+// Writes a sibling file, then moves it over `p` in one step, so a failed
+// save leaves the old file whole.
+void write(String p, byte[] bytes) {
+    var target = new File(p);
+    var temp = new File(target.getAbsoluteFile().getParentFile(), ".${target.getName()}.tmp");
+    var out = new FileOutputStream(temp);
+    try {
+        out.write(bytes);
+    } finally {
+        out.close();
+    }
+    try {
+        Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING,
+            StandardCopyOption.ATOMIC_MOVE);
+    } catch (IOException e) {
+        temp.delete();
+        throw e;
+    }
+}
+
+// Writes the document as Markdown, its pictures as PNGs in `<stem>_images/`
+// beside it (made only when there is one), linked relatively.
+async CompletionStage<Void> export() {
+    var chosen = await exportPicker.name("${stem(path)}.${MARKDOWN}").folder(startDir()).show();
+    if (chosen == null) {
+        editor.focus();
+        return;
+    }
+    var p = withExtension(chosen, MARKDOWN);
+    var folder = imagesFolderName(p);
+    attempt("EXPORT", p, "Could not export") {
+        var pictures = new ArrayList<byte[]>();
+        var markdown = editor.markdown(folder + "/", pictures);
+        if (!pictures.isEmpty()) {
+            var dir = new File(new File(p).getAbsoluteFile().getParentFile(), folder);
+            // A planted link would send the pictures somewhere else.
+            if (Files.isSymbolicLink(dir.toPath())) throw new IOException("${dir} is a symbolic link");
+            if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot make ${dir}");
+            for (int i = 0; i < pictures.size(); i++) write(new File(dir, "${i + 1}.png").getPath(), pictures.get(i));
+        }
+        write(p, markdown.getBytes(UTF_8));
+        status.text(0, "Exported ${displayName(p)}");
+        editor.focus();
+    };
+}
+
+async CompletionStage<Void> insertImage() {
+    var p = await imagePicker.folder(startDir()).show();
+    if (p == null) {
+        editor.focus();
+        return;
+    }
+    attempt("IMAGE", p, "Could not insert") {
+        editor.insertImage(readCapped(p, MAX_IMAGE_BYTES), stem(p));
+        refocus();
+    };
+}

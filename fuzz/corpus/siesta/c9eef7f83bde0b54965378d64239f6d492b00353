@@ -1,0 +1,22 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method instead of four messages,
+// a flag and a cpublication fie", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method instead of four messages,
+// a flag and a contaveFile(suggestedName(), startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+        await Ui.alert("Could not save", "${target}: ${e.getMessage()}") async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), und();
+     value); };

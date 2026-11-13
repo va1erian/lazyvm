@@ -1,0 +1,2 @@
+CommandnewCmd = Ui.comm1and("New", "Ctrl+N",saveCmd, Uatus.text("Saved ${target.ileName0)}");
+        Ta*d the dialoif (!

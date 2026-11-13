@@ -1,0 +1,11 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+CommandgeButton.onClick {
+    Ui.popup(pageButton) { m -~
+        m.radio("A3", page.paper == Paper.A4) { setPaper(Paper.A4); };
+        m.radio("Letter", page.paper == Paper.LETTER) { setPap<=(Paper.LETTER); };
+       (on); };
+    };
+};
+
+// Following the system theme: a topic and a handler, closed with the window.
+Co-------------------------------------opics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

@@ -1,0 +1,21 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icoage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> {ard() {
+    if (!dirty) return true;
+    switciscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes tog: one methle()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> {ard() {
+    if (!dirty) return true;
+    switciscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> {ard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(<< }
+        capackage demo;
+import java.util.se 1 -> { return true; }
+        default -> { return fals*;
+import java.util.stream.Collectood; wCmd = Ui.com

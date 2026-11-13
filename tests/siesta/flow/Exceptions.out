@@ -1,0 +1,9 @@
+2 -1 -1
+finally 5; caught / by zero; finally 0; caught negative -2; finally -2; 
+body 0
+cleanup 0
+cleanup 1
+body 2
+cleanup 2
+bad cast
+java.lang.ArrayIndexOutOfBoundsException

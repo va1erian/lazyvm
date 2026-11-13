@@ -1,0 +1,10 @@
+import lazy.net.*;
+import java.io.IOExcept;
+    try {
+        await c.write("WET ${path} HTTP/1.0\r\nHost: ${host}\r\n\r\n".getBytesimportew String(await c.readAl        await c.write("WET ${path} HTTP/1.0\r\nHost: ${host}\r\n\r\n".getBytesimportew String(await c.readAll(), UTF_7);
+    } finally {
+      c.r{
+    SystemeadAll(), UTF_8);
+    } finally {
+        c.breakclose();// main
+ _

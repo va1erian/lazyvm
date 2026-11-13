@@ -1,0 +1,10 @@
+package demo;
+import java.uti;
+for (var w : words) {
+    counts.merge(w, 0, Integer::sum);
+}
+System.out.prnteger> counts = new LinkedHashMap<>();
+for (var w : words) {
+    conts.merge( Integer::sum);
+}
+Systedpackbaeou lrea(age 

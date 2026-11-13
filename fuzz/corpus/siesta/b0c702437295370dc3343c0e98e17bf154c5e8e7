@@ -1,0 +1,2 @@
+Command newCmd = Ui.command/("New", "Ctrl+<<N", Icon.FILE_PLUS) asyaols
+        status. 

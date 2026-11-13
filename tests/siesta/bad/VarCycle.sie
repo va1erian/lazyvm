@@ -1,0 +1,3 @@
+var a = b;
+var b = a;
+void show() { System.out.println(a + b); }

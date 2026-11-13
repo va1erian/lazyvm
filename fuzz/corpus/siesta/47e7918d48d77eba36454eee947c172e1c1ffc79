@@ -1,0 +1,8 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.Fommand tch (await Ui.ask("Save chang Œß‹ßÛ„title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { ret!dirty) return true;
+    switch (await Ui.ask("Save chang Œß‹ßÛ„title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> default -> { return false; }
+    }
+}
+
+async Comnchange.value); };

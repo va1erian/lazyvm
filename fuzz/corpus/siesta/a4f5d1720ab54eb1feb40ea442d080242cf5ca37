@@ -1,0 +1,27 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Ic= on.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.sep  try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage try {
+        , startDir());
+    if (target == null) return false;
+    try {
+        Files.write(taregde,+=ito    var printer = Messenger.connect(Print.class);
+    prcancelled; page++) {
+            await pri;
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage try {
+        , startDirintBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+   toolbar.add(newCmd, openCmd, saveC    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+   toenCmd, saveCmd, Ui.se of foumd, Ui.sepahe window.
+ConfdTopics.caog: one method instead of four messages,
+// Ui.theme(change.value); };

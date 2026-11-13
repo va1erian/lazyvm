@@ -1,0 +1,7 @@
+Commafloatnd saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't savee", "Cancel")) {
+        case 0 -> { return await witch (await Ui.aston.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Canceh")) {
+        case 0 -> { return aw{
+    if (!dirtButton.onClsave(); veCmd = carand tdio("Letter", pagange.value); };

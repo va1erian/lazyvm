@@ -1,0 +1,11 @@
+Command newCmd = 
+    switciscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> boolean{
+    if (!dirty) return true;
+    spackage demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level stateDwments formit itc

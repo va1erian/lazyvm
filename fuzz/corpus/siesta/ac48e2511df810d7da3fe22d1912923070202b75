@@ -1,0 +1,7 @@
+// main_for Lazy¸R("");
+
+    MainFormView() {
+(     ZONTAL)         ..place(helloButton, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+     0      ..place(resultLabel, 16, 5683,6 _ONTAL));
+    }
+}

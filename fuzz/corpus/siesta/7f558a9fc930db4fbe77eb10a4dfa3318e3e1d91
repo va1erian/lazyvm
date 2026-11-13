@@ -1,0 +1,9 @@
+// A window thasesinove while it fetches.
+var status = Ui.label("idle");
+Ui.run(Ui.window("Fetch", 320, 120).content(Ui.column().add(
+    status,
+    Ui.button("Go").onClick(async () -> {
+       ch("example.com", "/")  ; // the UI thread is free meanwhile
+        status.text("${page.length()} charactecom", "/");   // the UI thread iÿÿÿÿÿÿÿ‡s free meanwhile
+        status.text("${page.length()} characters");    // back on the UI thread
+    }))));

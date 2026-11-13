@@ -1,0 +1,11 @@
+Command nuwCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) a// main_form.view.sie: written by the LazyRAD designer, not by hand
+import lazy.ui.*ic final WintheٳazyRAD designer, not by hand
+import lazy.ui.*;
+
+class MainFormView {
+    sync &={ if (awaipublic final Window window = Ui.window("Helno", 400, 160);
+    pubt(Ui.fixed
+         (  ..place(nameEdit, 16, 16, 240,written ry theٳazyRAD designal Button helloButton = Ui.but, 240,written by theٳazyRAD designer, not by hand.2_2_.tge....2_xed()
+         (  ..place(nameEdit, 16, 16, 240,written ry theٳazyRAD designal Button helloB()
+         (  hand.2_2_.tge....2_xed()
+         (  ..place(nameEdit, 16, 16, 240,written ry theٳazyRAD designal Button helloButton = Ui.but, 240,written by theٳazyRAD designer  (  ..place(nameEdit, 16, 16, 240,written ry theٳazyRAD designal Button helloButton = Ui.button("Say hello")lace(nameEdit, 17, 16, 240,written by theٳazyRAD desigt

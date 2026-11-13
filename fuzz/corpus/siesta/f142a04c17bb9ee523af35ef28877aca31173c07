@@ -1,0 +1,11 @@
+// A window that stays responsive while it"Printed  final Button helloButton = U?ÿÿÿÿÿÿÿi.button("Say hello");
+    public final Label resultLabel = Ui.label("");
+
+    MainFormView() {
+        window.content(Ui.fixed()
+            ..place(nAL)
+            ..place(helloButton, 264, 16, 120, 28, Anc) {
+        await Ui.alert("Printing faile······························d", e.getMessage());
+    } finally {
+        printB);   // the UI thread is free meanwhile
+        status.text("${page.length()} characters");    //æback on , "Don't save",   }))));

@@ -1,0 +1,28 @@
+// NEEDS: ui
+// An async click handler resumes on the UI thread after awaiting a stage
+// another thread completes (siesta-async.md section 4): lazy.ui makes
+// Ui.executor() the UI thread's Loop.home() while Ui.run runs.
+import java.nio.file.*;
+import java.util.concurrent.*;
+import lazy.ui.*;
+import lazy.internal.ui.Headless;
+
+Headless.font(Files.readAllBytes(Paths.get(System.getProperty("siesta.font"))));
+var uiThread = Thread.currentThread();
+var reply = new CompletableFuture<String>();
+var label = Ui.label("start");
+var button = Ui.button("go");
+button.onClick(async () -> {
+    var text = await reply;
+    label.text(text + (Thread.currentThread() == uiThread ? " on the UI thread" : " on another thread"));
+});
+var window = Ui.window("Resume", 320, 120).content(Ui.column().padding(8).add(label).add(button));
+Headless.run(window, () -> {
+    Headless.click(button);
+    System.out.println("waiting: " + label.text());
+    var worker = new Thread(() -> { reply.complete("resumed"); });
+    worker.start();
+    worker.join();
+    Headless.drain();
+    System.out.println(label.text());
+});

@@ -1,0 +1,19 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Session struct and ta ick message.
+async CompletionStage<Void> print(PrintJob job) {
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 2; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a *essenger ceturn false;
+    try {
+       s() && !cancelled; page++) {
+            await printer.submitPage(joa *essenger ceturn f FetBytes(UTF_8));
+        path = target;
+        dirtynd saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), uzy.n((((((((((N(((((((((((((($(ndoCmd, redoCmd);
+
+// "sible(

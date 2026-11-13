@@ -1,0 +1,7 @@
+// A window that stays responsive while it fetchc.
+var status = Ui.label("idle");
+Ui.run(Ui.w("Fetch", 320, 120).content(Ui.column().add(
+    status,
+    Ui.button("Go").onCck(async () -> {
+  hread
+    }))));

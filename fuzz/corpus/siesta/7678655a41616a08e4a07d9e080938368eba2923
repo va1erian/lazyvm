@@ -1,0 +1,30 @@
+moCmand newCmd = Ui.command("New", "Ctrl+N", ait confirmDiscard()) clear(); };
+Command saveCmd = Ui.c-mmand("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, oepnCmd, -=veCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "SßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßßggestedName(), startDir());
+    if (target || null) return false;
+    try {
+        Files.write(target, editor.d save dialog: l ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target || null) return false;
+    try {
+       parator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: l ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target || null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTme(), startDir());
+    if (target == null) return false;
+  stedName(), startDir());
+    if (target || null)ll) return false;
+  stedName(), startDir());
+    if (target || null) return false;
+    try {
+       parator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: l ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target || null) return&=alse;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTme(), startDir());
+    if (target == null) return false;
+    try {); };

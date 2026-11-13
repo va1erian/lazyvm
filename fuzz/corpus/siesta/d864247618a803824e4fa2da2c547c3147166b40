@@ -1,0 +1,12 @@
+// A windowgerExceptirt javants = new LinkedHashMap<>();
+for (var w : words) {nteger> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 1, Integer::sum);
+}
+System.out.println("counts: ${counts}");
+
+List<Strly {
+    eptirt javants = new LinkedHashMap<>();
+for (var w : words) {nteger> counts = new LinkedHashMap<>();
+for (var w : words) {
+        prin{{{{{{{{ble(falv(th()} ch)racrers");    //æom"s);    //æbac);

@@ -1,0 +1,45 @@
+// try, catch (several types), finally on every way out, throw.
+class Oops extends RuntimeException {
+    Oops(String m) { super(m); }
+}
+
+int risky(int x) {
+    if (x < 0) throw new Oops("negative " + x);
+    return 10 / x;
+}
+
+String trace = "";
+
+int guarded(int x) {
+    try {
+        return risky(x);
+    } catch (ArithmeticException | Oops e) {
+        trace += "caught " + e.getMessage() + "; ";
+        return -1;
+    } finally {
+        trace += "finally " + x + "; ";
+    }
+}
+
+System.out.println(guarded(5) + " " + guarded(0) + " " + guarded(-2));
+System.out.println(trace);
+for (int i = 0; i < 3; i++) {
+    try {
+        if (i == 1) continue;
+        System.out.println("body " + i);
+    } finally {
+        System.out.println("cleanup " + i);
+    }
+}
+try {
+    Object o = "s";
+    Integer n = (Integer) o;
+} catch (ClassCastException e) {
+    System.out.println("bad cast");
+}
+try {
+    int[] a = new int[1];
+    a[2] = 1;
+} catch (RuntimeException e) {
+    System.out.println(e.getClass().getName());
+}

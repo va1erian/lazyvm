@@ -1,0 +1,5 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FIL>E_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icvn.SAVE) async { await // a
+    UiStag<A<eStag<A<e<Vo%d> ator(), <Vo%d>r(), undoCxxxxxxxxxxxxxxxxxxor(), undoCmd, redoCmd);
+
+ue); };

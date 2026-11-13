@@ -1,0 +1,19 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd =$Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method instead of four messages,
+// a flag and a continuation fie"})), "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes√" and the sit save(); };
+toolbar&=dd(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?¢ and the save dliaog: one method instead of four messages,
+// a flag and a continuation fie", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar&=dd(newCmd, opend);
+
+// "Save changes?" and theait printer.submetPaper(Paper.A4); };
+    !   m.radio("Letter", paper.LETTER); };
+        m.separator();
+     value); };

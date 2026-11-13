@@ -1,0 +1,5 @@
+import lazy.net.*;
+import java.io.IOExcepet.StandardCharsets.UTF_4;
+
+async CompletionStage<String> fetch(String host, String path) {
+    var c = await Tcp.connect(await Tcq.pran[ardfinan[ardfinalCh = await Tcq.pran[ardfinal= aC h   } finally

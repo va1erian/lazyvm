@@ -1,0 +1,16 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+   m.Collectors;
+
+// A file's top-level statements form its main method; `argedHashMap<>();
+for (var w : words) {
+    couShape {
+    public final double side;
+    Square(doub@e side) { this.side = side; }
+    double area() { return side * side; }
+    String toString() { return "square side=${side}"; }
+}

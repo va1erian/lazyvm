@@ -1,0 +1,36 @@
+// Lambdas, method references, captures, and changing captured locals.
+import java.util.*;
+import java.util.function.*;
+
+Function<Integer, Integer> twice = x -> x * 2;
+BiFunction<Integer, Integer, Integer> add = (a, b) -> a + b;
+Supplier<String> hi = () -> "hi";
+System.out.println(twice.apply(21) + " " + add.apply(2, 3) + " " + hi.get());
+int clicks = 0;
+Runnable click = () -> clicks++;
+click.run();
+click.run();
+System.out.println("clicks " + clicks);
+List<String> words = ["pear", "fig", "apple"];
+words.sort(Comparator.comparing(String::length));
+System.out.println(words);
+words.forEach(w -> System.out.print(w.charAt(0)));
+System.out.println();
+Function<String, Integer> len = String::length;
+Supplier<List<String>> mk = ArrayList::new;
+IntFunction<int[]> arr = int[]::new;
+String prefix = ">";
+Function<String, String> tag = prefix::concat;
+System.out.println(len.apply("four") + " " + mk.get().size() + " " + arr.apply(3).length + " " + tag.apply("x"));
+int base = 100;
+IntUnaryOperator plus = v -> v + base;
+System.out.println(plus.applyAsInt(1));
+List<Integer> nums = [5, 3, 8, 1];
+long big = nums.stream().filter(n -> n > 2).count();
+System.out.println(big);
+Runnable outer = () -> {
+    int inner = 1;
+    Runnable nested = () -> System.out.println("nested " + inner);
+    nested.run();
+};
+outer.run();

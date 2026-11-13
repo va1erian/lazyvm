@@ -1,0 +1,42 @@
+// A sprite blit loop: 16x16 tiles copied with a transparency test and a
+// palette lookup (bench/bench/Blit.java).
+package bench;
+
+final int W = 256;
+final int H = 144;
+final int TILE = 16;
+final int SHEET_W = 128;
+
+int frames = 200 * scale(args);
+var sheet = new int[SHEET_W * SHEET_W];
+int seed = 12345;
+for (int i = 0; i < sheet.length; i++) {
+    seed = seed * 1103515245 + 12345;
+    sheet[i] = (seed >>> 16) & 0x3FF;
+}
+var palette = new int[256];
+for (int i = 0; i < palette.length; i++) palette[i] = 0xFF000000 | (i * 0x010203);
+var screen = new int[W * H];
+long start = System.nanoTime();
+long sum = 0;
+for (int f = 0; f < frames; f++) {
+    for (int ty = 0; ty < H / TILE; ty++) {
+        for (int tx = 0; tx < W / TILE; tx++) {
+            blit(screen, tx * TILE, ty * TILE, sheet, ((tx + f) & 7) * TILE, ((ty * 3 + f) & 7) * TILE, palette, f & 1);
+        }
+    }
+    sum += screen[(f * 37) % screen.length];
+}
+for (int i = 0; i < screen.length; i += 7) sum = sum * 31 + screen[i];
+report("blit", sum, start);
+
+void blit(int[] dst, int x, int y, int[] sheet, int sx, int sy, int[] palette, int flip) {
+    for (int j = 0; j < TILE; j++) {
+        int d = (y + j) * W + x;
+        int s = (sy + j) * SHEET_W + sx;
+        for (int i = 0; i < TILE; i++) {
+            int px = sheet[s + (flip == 0 ? i : TILE - 1 - i)];
+            if ((px & 0x300) != 0x300) dst[d + i] = palette[px & 0xFF];
+        }
+    }
+}

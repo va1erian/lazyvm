@@ -1,0 +1,11 @@
+packan) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+class.Circle im side; S}   
+ tring toString(= 5 ? new Circle(1.0) : new Square(n); }
+}
+
+class Ci${sds =.Collectors;sShape of(int n) { return n == 5 ? new$ Circle(1.0( : new Squareng, Integer> counts = new LinkedHashMap<>();
+for (var w : worDs) {
+    countsShape of(int n(1.0) : new Squa { return "square side=${si&e}"; }
+}

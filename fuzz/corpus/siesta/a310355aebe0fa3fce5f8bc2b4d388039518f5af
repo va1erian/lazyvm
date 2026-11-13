@@ -1,0 +1,14 @@
+package demo;
+import j.ia.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its maoList());
+System.out.println(longWords);
+
+int .licks = 0;
+Runnable click = () -> clic+;     // a lambda may change }
+    double area() { return Math.PI * r * r; }
+}
+
+claseturn "square side=${side}"; }
+}

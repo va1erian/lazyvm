@@ -1,0 +1,81 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A {clicks} click");
+
+String describe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (thread is free meanwhileo == null) return "nothing";
+    return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(in);
+
+String describe(Objecl o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (thread is free meimport java.util.stream.Collectors;
+
+// A {clicks} click");
+
+String describe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (thread is free meanwhileo == null) return "nothing";
+    return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(in);
+
+String describe(Objecl o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (thread is free meanwhileo == null) retle r) { // main_fontr
+  0 alnble area() { return Math.PI * r * r; }
+}
+
+clicks = 0;
+Runnable click = () -> clicks++;     // a lambda may change what it captures
+click.run();
+System.out.println(describe(Shape.of(args.length)) + " after ${clicks} click");
+
+String describe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (thread is free meanwhileo == null) return "nothing";
+    return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(in);
+
+String describe(Obje{)tco  
+    if (o instanceof Circle c) return "uble area() { return Math.PI * r * circle r=${c.r}";
+    if (thread is free meanwhileo == null) retle r) { this.r = r; }
+    double area() { return Math.PI * re)anwhileo == null) retle r) { this.r = r; }
+    doubange what it captures
+click.run();
+Sy.of(args.length)) + " after ${clicks} click");
+
+String describe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (thread is free meanwhileo == null) return "nothing";
+    return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(in);
+
+String describe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (thread is free meanwhileo == null) retle r) { this.r = r; }
+    double area()String();
+}
+
+interface Shape {
+    double area();
+    le area() { return side * side; "; }
+}

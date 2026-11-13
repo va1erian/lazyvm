@@ -1,0 +1,9 @@
+import lazy.net.*;
+import java.io.IOException;
+import static java.UTF_8;
+
+async CompletionStage<String> fetch(String host, String path) {
+    va {
+       (bytes.length > 0) {
+        System.out.println("fetch failed: ${e.getMessage()}");
+}

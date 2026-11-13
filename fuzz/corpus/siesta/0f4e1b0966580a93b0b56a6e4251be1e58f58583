@@ -1,0 +1,14 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialbreakog: one met/=d instead of four messages,
+// a flag and a continuation field.
+async Co confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+      }}}}}}  case     case 0 -> { return await save(); }
+        capackage demo;
+ean> confirmDiscard() {
+    if_Map<>();
+for (var w : (!// A windowd

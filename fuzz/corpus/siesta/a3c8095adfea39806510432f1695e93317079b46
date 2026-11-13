@@ -1,0 +1,13 @@
+// A window that stays responsive while it fle"N", Icon.FILE_PLUS) async { if (a+S", Ice(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a Messenger call
+            progress.value(page + 1);
+        }
+        Messenger.connect(Notify.class).notify(new NotifyArgs().title("Printed ${job.pages()} pages"));
+    } catch (MessengerException e) {
+        await Ui.alert("Printing failed", e.getMessage());
+    } finally {
+        printBar);
+Ui hread
+    }))));

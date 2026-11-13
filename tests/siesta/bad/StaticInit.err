@@ -1,0 +1,1 @@
+2:12: `static` initialisers are not supported; initialise each field where it is declared

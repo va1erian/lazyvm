@@ -1,0 +1,1 @@
+var x = java.util.Collections.<String>emptyList();

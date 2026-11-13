@@ -1,0 +1,7 @@
+// main:MainForm extends MainFormViow {
+    int clicks = clicks++;
+        resultLabel.text("Hello, ${nameEdit.text()}! (${nectks})${cli[ s})");
+    }
+}
+
+Ui.anForm().wind@ow);

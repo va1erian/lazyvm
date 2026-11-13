@@ -7,6 +7,11 @@ not measured. The release profile is always used.
     python tools/bench.py run --out base.json [--runs 5] [--filter blit calls] [--scale 1]
     python tools/bench.py run --lazyos <LazyOS checkout> --out base-os.json   # inside QEMU
     python tools/bench.py compare base.json new.json [--threshold 10]
+    python tools/bench.py run --siesta --out siesta.json   # the same programs in Siesta (bench/siesta)
+
+`--siesta` runs `bench/siesta/*.sie`, the suite written again in Siesta with
+the same class names, so `compare` sets the two compilers' bytecode side by
+side and its checksum check shows both compute the same thing.
 
 `run` reports the median and the spread ((max - min) / median) of the runs.
 `compare` exits 1 when a benchmark's median is slower than the baseline by
@@ -29,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import javac  # noqa: E402
 import lazyos_test  # noqa: E402
 import lazyrt  # noqa: E402
-from common import BUILD, DIST, LAZYRT_CLASSES, ROOT, cargo_build_launcher, die  # noqa: E402
+from common import BUILD, DIST, EXE, LAZYRT_CLASSES, ROOT, cargo_build_launcher, die  # noqa: E402
 
 SRC = ROOT / "bench"
 CLASSES = BUILD / "bench" / "classes"
@@ -53,6 +58,21 @@ def build_jar() -> Path:
     sources = sorted(SRC.rglob("*.java"))
     javac.compile(sources, CLASSES, bootclasspath=LAZYRT_CLASSES, sourcepath=SRC)
     return lazyrt.write_jar(CLASSES, CLASSES.parent / "bench.jar")
+
+
+def build_siesta_jar() -> Path:
+    """Compile bench/siesta with siestac into one jar, the helper file first."""
+    if subprocess.run(["cargo", "build", "--release", "-p", "siesta"]).returncode != 0:
+        die("cargo build -p siesta failed")
+    sources = [SRC / "siesta" / "report.sie"]
+    sources += sorted(p for p in (SRC / "siesta").glob("*.sie") if p.name != "report.sie")
+    jar = CLASSES.parent / "siesta.jar"
+    jar.parent.mkdir(parents=True, exist_ok=True)
+    siestac = ROOT / "target" / "release" / f"siestac{EXE}"
+    done = subprocess.run([str(siestac), "-cp", str(DIST / "lazyrt.jar"), "-o", str(jar), *map(str, sources)])
+    if done.returncode != 0:
+        die("siestac failed on bench/siesta")
+    return jar
 
 
 def parse(stdout: str, name: str) -> tuple[int, int]:
@@ -126,7 +146,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         die("no benchmark matches the filter")
     if not args.no_build:
         lazyrt.build()
-    jar = build_jar()
+    jar = build_siesta_jar() if args.siesta else build_jar()
     if args.lazyos:
         samples = run_lazyos(args.lazyos, jar, names, args.runs, args.scale, args.no_build)
         platform = "lazyos"
@@ -186,6 +206,7 @@ def main() -> None:
     run.add_argument("--exe", type=Path, help="a prebuilt release lazyvm")
     run.add_argument("--no-build", action="store_true", help="skip cargo and lazyrt (LazyOS: reuse the image)")
     run.add_argument("--lazyos", type=Path, help="run inside LazyOS from this checkout")
+    run.add_argument("--siesta", action="store_true", help="run bench/siesta, the suite compiled by siestac")
     cmp = sub.add_parser("compare", help="compare two JSON files; exit 1 on a regression")
     cmp.add_argument("base", type=Path)
     cmp.add_argument("new", type=Path)

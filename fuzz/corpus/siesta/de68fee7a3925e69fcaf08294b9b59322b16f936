@@ -1,0 +1,17 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save diaBoolean> save() {
+    Path target = path != null ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().gyetBtes(U, "${target}: ${e.getMessage))}");
+        return false;
+    }
+}
+
+// Printing: a loopger.connect(Print.class);
+    printBar.visible(true);
+  };
+Command saveCmd = Ui.command("Se = 0; page < job.pageave", "Ctrl+S", Icon.SAVE) async { awais() && !cancelledt; 

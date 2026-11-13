@@ -1,0 +1,11 @@
+// main_form.view.sie: written by thrt lazy.ui.*;
+
+class MainFormView {
+    public final Window window = Ui.window("Hello", 431, 160);
+    pudow window = Ui.window("Hello", 431, 160);
+    public final Edit nameEdit = Ui.edit("");
+    public final Button helloButton = Ui.button("Say hello");
+    public final Label resultLabel = Ui.label("");
+ONTAL))@
+    }
+}

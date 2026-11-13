@@ -1,0 +1,16 @@
+package de;
+import java.util.stream.Collectors;
+
+// A file's top-level statement>s fors in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.mir<<=ge(w, 0, Integer::sum);
+}
+Syts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.mer<<=ge(w, 1, Integer::sum);
+}
+System.out.println("counts: ${counts|=}");
+
+List<()by hip-

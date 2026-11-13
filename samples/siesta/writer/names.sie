@@ -1,0 +1,64 @@
+// File names and capped reads: every file the user picks is untrusted.
+import java.io.*;
+
+String EXTENSION = "lzw";
+String MARKDOWN = "md";
+String TEXT = "txt";
+String[] IMAGES = {"png", "jpg", "jpeg"};
+long MAX_DOCUMENT_BYTES = 32L << 20;   // the most a document or a picture may weigh
+long MAX_IMAGE_BYTES = 16L << 20;
+
+String name(String p) {
+    return new File(p).getName();
+}
+
+// A file name without its extension.
+String bare(String name) {
+    var dot = name.lastIndexOf('.');
+    return dot > 0 ? name.substring(0, dot) : name;
+}
+
+// The file name without its extension, or "Untitled".
+String stem(String p) {
+    var s = p == null ? "" : bare(name(p));
+    return s.isEmpty() ? "Untitled" : s;
+}
+
+String displayName(String p) {
+    return p == null ? "Untitled" : name(p);
+}
+
+// `p`, given `ext` when it has no extension of its own.
+String withExtension(String p, String ext) {
+    return name(p).lastIndexOf('.') > 0 ? p : "${p}.${ext}";
+}
+
+boolean isPlainText(String p) {
+    return name(p).toLowerCase().endsWith(".${TEXT}");
+}
+
+// Where a Markdown export's pictures go: `<stem>_images` beside it.
+String imagesFolderName(String markdown) {
+    var s = bare(name(markdown));
+    return (s.isEmpty() ? "document" : s) + "_images";
+}
+
+// Reads `p` whole, refusing more than `cap` bytes.
+byte[] readCapped(String p, long cap) {
+    var in = new FileInputStream(p);
+    try {
+        var out = new ByteArrayOutputStream();
+        var buf = new byte[65536];
+        long total = 0;
+        var n = in.read(buf);
+        while (n > 0) {
+            total += n;
+            if (total > cap) throw new IOException("the file is larger than ${cap >> 20} MB");
+            out.write(buf, 0, n);
+            n = in.read(buf);
+        }
+        return out.toByteArray();
+    } finally {
+        in.close();
+    }
+}

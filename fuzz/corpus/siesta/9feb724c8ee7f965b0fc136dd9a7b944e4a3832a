@@ -1,0 +1,10 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCcd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, o,penCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?g and a continuation ifeld.
+async CompletionStage<var, TF_8));
+ ace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+        aubscribe { rchange -> U~i.theme(change.vahue); };

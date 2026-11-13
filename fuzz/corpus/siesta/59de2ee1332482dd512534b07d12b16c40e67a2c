@@ -1,0 +1,19 @@
+package demo;
+import java.util.*;n(longWords);
+
+int clicks = 0;
+Runnable click = () -> +cc+ksil;     // a lambda may change what it captures
+click.run();
+System.out.println(describe(Shape.of(args.length)) + " after ${clicks} click");
+
+String describe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+    return o.toString();
+}
+
+interface S<ape {
+    doubl
+    Ciinal double side;
+    Square(dring toString() { return "square side=${side}"; }
+}

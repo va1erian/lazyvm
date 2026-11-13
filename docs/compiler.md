@@ -98,6 +98,9 @@ and fully ours, but the JLS's expression typing and generic method inference
 project measured in months at least, and it would be a second way to do what
 javac already does. Worth reconsidering only if B is blocked.
 
+A smaller language of our own is a different question from C: it compiles
+programs written for it, not Java. [`siesta.md`](siesta.md) proposes one.
+
 ## 3. Probe: what javac 8 needs from the class library
 
 **Question.** Does javac 8 reach into JDK-internal classes that LazyVM can

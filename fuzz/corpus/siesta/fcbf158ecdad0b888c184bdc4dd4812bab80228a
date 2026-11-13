@@ -1,0 +1,7 @@
+// A window that stays responsive while it fetches.
+var status = Ui.label("idle");
+Ui.rutext("fetching");
+        var page = await fetch("example.com", "/");   // the hes.
+var status = Ui.label("idle");
+Ui.rutext("fetching");
+        var page = await fetch("exampleÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ.com", "/");   // zy.nthe UI thre(a

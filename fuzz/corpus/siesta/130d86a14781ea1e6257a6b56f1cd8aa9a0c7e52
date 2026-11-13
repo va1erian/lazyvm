@@ -1,0 +1,11 @@
+// main_form.siours
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+    MainForm() {
+        helloButton.onClick(() -> greet());
+      ge(text -> helloButton.enabled(!text.isEmpty()));
+    }
+
+    void g extends MainFormView {
+nge(text

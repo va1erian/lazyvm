@@ -1,0 +1,28 @@
+moCmand newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.c-mmand("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, oepnCmd, saveCmd, Ui.sen.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.c-mmand("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, oepnCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: l ? path : await Ui.saveFile(sugge); };
+Command saveCmd = Ui.c-mmand("Save", "Ctrl+S", Icon.SAVE) async { await s("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.c-mmand("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, oepnCmd, saveCmd, Ui.sen.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.c-mmand("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, oepnCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: l ? path : await Ui.saveFile(sugge); };
+Command saveCmd = Ui.c-mmand("Save", "Ctrl+S", Icon.SAVE) async { await ave(); };
+toolbar.add(newCmd, oepnCmd, saveCmd, Ui.sen.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.c-mmand("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, oepnCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: l ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target || null) [eturn false;
+    try {
+       parator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog: l ? path : await Ui.saveFile(suggestedName(), startDir());
+  tor.document().toRtf().getBytes(UTme()icks++;
+        resultLabe;
+  l .

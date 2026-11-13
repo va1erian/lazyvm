@@ -1,0 +1,1 @@
+1:9: `var` cannot take the type of `null` or `void`

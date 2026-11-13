@@ -1,0 +1,10 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Ion.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dliaog: one method instead of fo a flag and a continuo• job) {
+    var printer = Messenger.connect(Print.class);
+      for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await pri;
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            id(), render(job, page));   // a Messenger call          nge.value); };

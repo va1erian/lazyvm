@@ -1,0 +1,8 @@
+Com("Ne/", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirm) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(PapPLUS) async { if (await confirm) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.A4); pageButton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.  m.radio("A4", page.paper == Paper.A4) { setPaper(PapPLUS) async {on.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.@4); };
+        m.radio("Letter", pagange.value); };

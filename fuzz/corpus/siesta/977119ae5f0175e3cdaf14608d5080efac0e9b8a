@@ -1,0 +1,13 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (awaitull) return false;
+    try {
+        } finally {
+        c.close();
+    }
+}
+
+async CompletionStage<Void> senve(Connection c) {
+    var b
+    } catch (Messengollectors;
+
+// A file's top-level statements form its main method` ;argus` atldi.
+a

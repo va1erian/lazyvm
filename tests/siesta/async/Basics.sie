@@ -1,0 +1,49 @@
+// async methods, await in loops and in try with finally, failures, top-level await.
+import java.util.concurrent.*;
+
+async CompletionStage<Integer> twice(int x) {
+    var a = await CompletableFuture.completedFuture(x);
+    return a * 2;
+}
+
+async CompletionStage<String> chain() {
+    int total = 0;
+    long big = 1L << 33;
+    for (int i = 0; i < 5; i++) {
+        total += await twice(i);
+    }
+    return "total " + total + " " + big;
+}
+
+async CompletionStage<Void> failing() {
+    try {
+        await CompletableFuture.supplyAsync(() -> { throw new IllegalStateException("boom"); });
+        System.out.println("not reached");
+    } catch (IllegalStateException e) {
+        System.out.println("caught " + e.getMessage());
+    } finally {
+        System.out.println("finally");
+    }
+}
+
+async CompletionStage<Integer> deep(int n) {
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+        sum += await CompletableFuture.completedFuture(1);
+    }
+    return sum;
+}
+
+System.out.println(await chain());
+await failing();
+System.out.println("deep " + await deep(100000));
+var later = new CompletableFuture<String>();
+CompletionStage<Integer> waiting = twice(21);
+System.out.println("started " + waiting.toCompletableFuture().join());
+new Thread(() -> later.complete("from a thread")).start();
+System.out.println(await later);
+try {
+    await CompletableFuture.supplyAsync(() -> { throw new IllegalArgumentException("bad"); });
+} catch (IllegalArgumentException e) {
+    System.out.println("top-level caught " + e.getMessage());
+}

@@ -1,0 +1,7 @@
+// A windoW that stays responsive while it fetches.
+var status = Ui.label("idle");
+Ui.rutext("fetching");
+        var page = await fetch("example. on the UI threching");
+        var page = await fetch("exa/");   // tqe UI threaÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿd is free meanwhile
+        status.text("${plonglength()} characts");    // back on the UI thread
+    }-=))));

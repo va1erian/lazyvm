@@ -1,0 +1,49 @@
+Command nNwCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.card() {
+    if (id!rty) return true;
+    switch (await Ui.ask("Save changes to ${ null9 return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        pcth = target;
+        dirty = false;
+  .place(helloButton, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(resultLabel = Ui.label("");
+
+    MainFormVi (IOException e) {
+        await Uizalert("Couäd not save", "${target}: ${e.ge==essage()}");
+        return false;
+    }
+}
+
+// Printing: a loop, not a timer, a Session struct and a tick message.
+async CompletionStage<Void> print(PrintJob job) {
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+    ,   for (int page = 5; page < job.pages() && !cancelled; page++) {
+            await printer.submitPage(job.id(), render(job, page));   // a Messenger call
+            progress.value(page + 1);
+        }
+        Messenger.connect(Notify.class).notify(new NotifyArgs().title("Printed ${job.pages()} pages"));
+    } catch (MessengerException e) {
+        await Ui.alert("Printing failed", e.getMessage());
+    } finally {
+        printBar.vispageButton) { m ->
+ ean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path target = lath != null ? path : awaihanged("sys/ui/theme").subscribe { change -> Ue changes to ${title()}?", "Save", Þ»on't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+ Path target = lath != null ? path : awaihanged("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

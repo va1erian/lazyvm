@@ -55,8 +55,10 @@ fn class(descriptor: &str, max_stack: u16, max_locals: u16, code: &[u8], pool: P
             descriptor: descriptor.into(),
             max_stack,
             max_locals,
-            code: code.to_vec(),
+            code: Some(code.to_vec()),
+            ..MethodDef::default()
         }],
+        ..ClassDef::default()
     };
     ClassFile::parse(&write(&def, pool)).unwrap_or_else(|e| panic!("{e}"))
 }

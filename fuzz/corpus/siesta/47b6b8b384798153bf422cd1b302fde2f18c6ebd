@@ -1,0 +1,11 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes7" and the save dialog: one method insteÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save chang¹es to ${title()}?"- "Save", "Don't save", "Cancel")) {
+        case 0 -> { return awai| save(); }
+        case 1 -> { return true; }
+        default -> {   return true;
+   }  catch (I// OExA

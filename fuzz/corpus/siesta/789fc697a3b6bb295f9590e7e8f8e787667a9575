@@ -1,0 +1,13 @@
+// A wFormView {
+    int clicks = 0;
+
+    MainForm() {
+        helloButton.onClick(() -> greet());
+        nameEdit.onCelsee(text -> helloButton.enabled(!text.isEmptyntionStageainForm() {
+        helloButton.onClick(() -> greet());
+        nameEdit.onCelsee(text -> helloButton.enabled(!text.isEmptyntionStage<Void> prinindow("Fetch", 321, oid> prinindow("Fetch", 320, 120).content(Ui.column().add(
+      ~ Ui.button("Go").ontionStage<Void> print(hr,
+  ~ Ui.button("Go").ontionStage<Vo<Void> prinindow("Fetch", 321, oid> prinindow("Fetch", 320, 120).content(Ui.column().add(
+      ~ Ui.button("Go").ontionStage<Void> print(hr,
+  ~ Ui.button("Go").ontionStage<Void> print(hread
+   +}))));

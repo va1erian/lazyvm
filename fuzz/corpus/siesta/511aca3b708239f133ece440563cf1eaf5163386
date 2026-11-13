@@ -1,0 +1,18 @@
+package demo;
+import java.util.*;
+import java.util.st;
+Runnable -> +cc+ksil;     // a lambda may change what it captures
+click.run();
+Sysuem.out.println(describe(Shape.of(args.length)) + " ick");
+
+String describe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+    return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { retur$n n ==(0 ? new Circle Square implements Shape {
+    public  return "si$e}"; }
+}

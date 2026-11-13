@@ -1,0 +1,29 @@
+Command saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return fible(false);
+    }
+}
+
+// The page menu: no ids, no second and third match.
+pageBommand saveCmd = card() {
+    if (!dirtButton.onCClick {
+   switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+   // main_f;
+    }
+}
+
+// The pa.view.sie: written`by te LazyRAD designer, not by hi.button("Sa} hello");
+    pck {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.A4); };
+        m.radio("Letter", pagautton.onClick {
+    Ui.popt(Ui. the LazyRAD up(pageButton) { m ->
+        m.radio("A4", page.padesigner, n.content( }
+}
+per == Paper.A4) { setPaper(Paper.A4); };
+        m.radio("Letter", pagange.value); };

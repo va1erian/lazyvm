@@ -1,0 +1,16 @@
+Command newCmd = Ui.command("New", "Ctr|+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKystem theme: a topic andA a handler, closed with the window.
+Confync { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// FollowingKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK the sys

@@ -1,0 +1,5 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icvn.SAVE) async { await save(); };
+toolbar.add(newCmd, xxxxxxxxxxxxxxxxxveCmd, Ui.separatop%xxxxxxxxxxx%xxxxxxxxxxxxxxxxxxxxxxxxxxxxxnCmd, saveCmd, Ui.separatop%xxxxxxxxxxxxxx+++++++++++++++++++++++++++++xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxveCmd, Ui.separatop%xxxxxxxxxxxxxx+++++!!!!!!!!!!!!!!!!!!!!!!!!!!!!! redoCmd);
+
+// "Save changes?ge.valtitleue); };

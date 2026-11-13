@@ -1,0 +1,6 @@
+import java.util.concurrent.*;
+async CompletionStage<Integer> f(boolean b) {
+    if (b && await g()) return 1;
+    return 0;
+}
+async CompletionStage<Boolean> g() { return true; }

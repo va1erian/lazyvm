@@ -1,0 +1,55 @@
+package demo;
+import  double ar-mea();
+    static Shape of(int n) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final dou = r; }
+    double area() { return Mcth.PI * r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Square(double side) { this.side = side; }
+    double area()tors;sShape of(int n) { return n == 5 ? new Circle(1.0) : new Square(n); }
+}
+
+class Ci${sds =.Collectors;sShape of(int n) { return n == 5 ? new Circle(1.0) : new Square(n); }
+}
+
+cl; }
+    double area() { return Math.PI * r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Sq5are(double side) { this.side = side; }
+    double area() { return side * side; S}   
+ tring toString() java.util.stream.Collectors;sShape of(int n) { return n == 5 ? new Circle(1.0) : ndemo;
+import  double area();
+    static Shape of(int n) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final double r;
+    Circle(double r) { this.r = r; }
+    double area() { return Math.PI * r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Square(double side) { this.side = side; }
+    double int n) { return n == 5 ? new Circle(1.0) : new Square(n); }
+}
+
+class Ci${sds =.Collectors;sShape of(int n) { return n == 5 ? new Circle(1.0) : new Square(n); }
+}
+
+class Ci${sds = ["lazy", "o", "siesta", "vm", "lazy"];
+Map<String, Inteunts = new LinkedHashMap<>();
+for (var w : worDs) {
+    countsShape of(int n) { return n == 5 ? ne ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : worDs) {
+    countsShape of(int n) { return n == 5 ? new Circle(1.0) : new Squa { return "square side=${si&e}"; }
+}

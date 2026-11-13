@@ -1,0 +1,9 @@
+// A program of three files sharing one top level: this file runs, state.sie
+// holds variables (initialised on first use, since it has no statements)
+// and tools.sie the code that changes them.
+var label = title + "!";   // `title` is a `var` of a file given after this one
+bump();
+bump();
+System.out.println("${label} ${count} ${names}");
+new Tally().add("c");
+System.out.println("${count} ${names}");

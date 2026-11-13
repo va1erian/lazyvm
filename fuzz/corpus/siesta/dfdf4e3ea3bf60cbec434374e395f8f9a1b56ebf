@@ -1,0 +1,8 @@
+// A window that stays responsive while it"Printed  final Button heÿÿÿÿÿÿÿn = Ui.button("Say hello");
+    public final Label resultLabel = Uxed()
+            ..place(nameEdit, 16, 16, 240, 24, Anchor.STRETCH_HORIZONTAL)
+            ..place(helloButton, 264, 16, 120, 28, Anc) {
+     ));
+    }
+};
+

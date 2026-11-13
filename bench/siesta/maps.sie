@@ -1,0 +1,35 @@
+// Collections the way game code uses them: a registry looked up by name,
+// maps iterated by entry, key and value, lists, and boxing
+// (bench/bench/Maps.java).
+package bench;
+import java.util.*;
+
+int rounds = 40 * scale(args);
+Map<String, Integer> registry = new HashMap<>();
+var names = new String[200];
+for (int i = 0; i < names.length; i++) {
+    names[i] = "tile_${i}";
+    registry.put(names[i], i);
+}
+Map<Integer, Integer> counts = new HashMap<>();
+List<Integer> list = new ArrayList<>();
+long start = System.nanoTime();
+long sum = 0;
+for (int r = 0; r < rounds; r++) {
+    for (int k = 0; k < 20; k++) {
+        for (var n : names) sum += registry.get(n);
+    }
+    for (int i = 0; i < 2000; i++) {
+        Integer key = (i * 37 + r) & 511;
+        var old = counts.get(key);
+        counts.put(key, old == null ? 1 : old + 1);
+    }
+    for (var e : counts.entrySet()) sum += e.getKey() * e.getValue();
+    for (var v : counts.values()) sum += v;
+    for (var k : counts.keySet()) sum ^= k;
+    list.clear();
+    for (int i = 0; i < 2000; i++) list.add(i ^ r);
+    for (var v : list) sum += v;
+    sum += registry.containsKey("tile_${r % 300}") ? 1 : 0;
+}
+report("maps", sum, start);

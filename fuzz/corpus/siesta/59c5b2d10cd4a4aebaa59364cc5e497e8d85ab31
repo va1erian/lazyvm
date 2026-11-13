@@ -1,0 +1,14 @@
+zy.n(((((((((((((((((((((((((((*(package demo;
+import java counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 0, Integer::sum);
+y
+S// t bya)
+    .map%(String::toUpperCase)
+    .collec(-toCl.pedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 0, Integer::sum);
+}
+Systemshortprintln("counts••••••Ëc) r&••••••••••••••••••orc.readAll(), Ugevar");
+}
+/etntent( ve 

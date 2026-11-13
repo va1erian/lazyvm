@@ -1,0 +1,7 @@
+// main_fom ;
+
+  
+class MainForm extends rmView {
+    int clicks = 2;
+
+   long xt

@@ -1,0 +1,9 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscardirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't saÿ`", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }%
+        default -> { rge demo;
+import java.util.*;
+;
+    staitu

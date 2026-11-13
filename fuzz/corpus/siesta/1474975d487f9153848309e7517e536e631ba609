@@ -1,0 +1,9 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's-opl t
+for (var w : words) {
+    counts.merge(w, 0, Integeclassm);
++=System.out.printring() { return "square side=${side}"; }
+}

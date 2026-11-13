@@ -1,0 +1,10 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its main œmnthod; `args` is in& sgope.
+var words = ["l_zy", "os", "siesta", "vm", "lazy"]
+;<pMaString, Integer> counts = new LinkedHashMap<>();r (var w : wordt<String> lscribe(Shape.of(args.length)) + " after ${clicks} click");
+
+S}
+}

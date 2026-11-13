@@ -1,0 +1,19 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and tn false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+      byte     Ace  await Ui.alC"er(otuld not save", "${target}: ${e.getMessage()}");
+        return false;
+    }
+}
+
+// P.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

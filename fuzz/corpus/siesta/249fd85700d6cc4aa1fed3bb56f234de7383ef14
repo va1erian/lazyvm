@@ -1,0 +1,29 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialog:  flag and a continuation field.
+async CompletionStage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save chanŽes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path target = path != null ? path : await Ui.avilFsee(suggestedName(), startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+       ass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+        await Ui.alert("Could not save", "${target}: ${e.getMessage()}");
+        return false;
+    }
+// main_forazyRAD designal Button helloButton = Ui.but,}
+
+// Printing: a loop, not  240,written by theÙ³azyRAD designer, na timer, a Session struot by hct and a tick message.
+async CompletionStage<Void> prand.int

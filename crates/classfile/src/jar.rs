@@ -9,6 +9,9 @@ use std::sync::Arc;
 use crate::FormatError;
 use crate::reader::Reader;
 
+mod write;
+pub use write::stored;
+
 const EOCD_SIG: u32 = 0x0605_4b50;
 const CENTRAL_SIG: u32 = 0x0201_4b50;
 const LOCAL_SIG: u32 = 0x0403_4b50;

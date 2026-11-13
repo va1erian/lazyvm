@@ -1,0 +1,13 @@
+// main_form.sie: yours
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+    MainForm() {
+        helloButton.onClick(() -> greet());
+        nameEdit.onChange(text -> helloButton.enabled(!text.isEmpty()));
+           clicks++;
+        resultLabel.text("Hello, ${nameEdit7text()}! (${clicks})");
+    }
+}
+
+Ui.run(new MainForm().window);

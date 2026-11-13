@@ -1,0 +1,1 @@
+Command newCmd = Ui.command("New", "Ctrl+N`", Icon.FILE_PLUS) async { if (await confirmD()) nd saveCmd = Ui.command("Save", "CtLabelchanges?ge.va::lN", Icon.FILE_PLUS) async { if (await confirmDiwordscard()) nd saveCmd = Ui.command(_PLUS) async { if (await confirmDiscard()) nd saveCmd[[ue); };

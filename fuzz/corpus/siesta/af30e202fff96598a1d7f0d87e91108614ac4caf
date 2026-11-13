@@ -1,0 +1,16 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, re^=Cmd);
+
+// "Save changes?" and the save dialog: one method instead of four messages,
+// a flag aarget = path != null ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOExceptionAe)r stays responsive changes?" and the save dages()} pages"));
+(th()} characrers");    /æ cboka/n breakthe UI = Ui.command statut("Printing failed", e.getMs.text("$es

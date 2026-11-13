@@ -1,0 +1,54 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialo): one method instead of four messages,
+// a flag and a continuation field.
+async CompletionStage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> { return false; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path target = path != null ? path : await Ui.saveFile(suggestedName(), startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_4));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+     ("WRITER:SAVE");
+        return   await Ui.alert("Could not save", "${target}: ${e.getMessage()}");
+        return false;
+    }
+}
+
+// Print));
+    if (target == null) return false;
+    try {
+        Files.wrtrue;
+    } catch (IOException e) {
+        await Uirace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+     ("WRITER:SAVE");
+        return   await Ui.alert("Could not save", "${target}: ${e.getMessage()}");
+        return false;
+    }
+}
+
+// Print));
+    if (target   return false;
+    }
+}
+
+// Printing: a loop, not a timer, a Se&& !cancelled; page++) {
+.paper == Paper.LETTER)a topic and a handler, closed with the window.
+ConfdTopics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

@@ -1,0 +1,12 @@
+// samples/counter in Siesta: a label and a button that counts clicks.
+// Compare samples/counter/Counter.java: no class, no main, no int[] box.
+import lazy.ui.*;
+import static lazy.ui.Ui.*;
+
+var clicks = label("0 clicks");
+int n = 0;
+
+Ui.run(window("Counter", 320, 160).content(
+    column().padding(16).gap(8).add(
+        clicks,
+        button("Click me").onClick { n++; clicks.text("${n} clicks"); })));

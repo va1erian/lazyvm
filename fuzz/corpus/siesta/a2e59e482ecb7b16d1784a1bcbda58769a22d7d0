@@ -1,0 +1,10 @@
+"Cancel")) {
+        case 0 -> { ; }
+        case 1 -> { return true; }
+        default ull ? path : awaireturn true;
+    } catch (IOException e) {
+        await Ui.alert("Could not save", "${target}: ${e{
+   switch (await Ui.ask("Save changest o ${title()}?", "Save", "Don't save", "Cancel"))dow.
+ConfdTopics.ch.SAVE) async { await save(); }; {
+        cas
+tooe 0 -> {  dtl

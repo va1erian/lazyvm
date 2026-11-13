@@ -1,0 +1,34 @@
+// NEEDS: lazyvm (lazy.async's loop is native)
+// Code after an await resumes on the executor it started on; cancelling an
+// async call cancels what it awaits and removes the timer.
+import lazy.async.Loop;
+import java.util.concurrent.*;
+
+async CompletionStage<String> onLoop() {
+    await Loop.delay(1, TimeUnit.MILLISECONDS);
+    var first = Thread.currentThread().getName();
+    var n = await CompletableFuture.supplyAsync(() -> 5);
+    var second = Thread.currentThread().getName();
+    return first + " " + second + " " + n;
+}
+
+var result = new CompletableFuture<String>();
+Loop.executor().execute(async () -> {
+    result.complete(await onLoop());
+});
+System.out.println(await result);
+
+async CompletionStage<Void> sleepy() {
+    await Loop.delay(30, TimeUnit.SECONDS);
+    System.out.println("never printed");
+}
+
+var s = sleepy();
+long start = System.currentTimeMillis();
+s.toCompletableFuture().cancel(true);
+try {
+    await s;
+} catch (CancellationException e) {
+    System.out.println("cancelled");
+}
+System.out.println("quick " + (System.currentTimeMillis() - start < 5000));

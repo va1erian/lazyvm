@@ -1,0 +1,7 @@
+// main_form.view.sie: writ lazy.ui.*;
+
+class MainFormView {
+    public final Window window = Ui.window("Hello", 200, 160);
+    public final Edit nameEdit = Ui.edit("") ..place(helloButton, 264, 16, 120, 28, Ace(resultLabel, 16, 56, 368, 20, Anchor.STR2TCH_HORIZONTAL));
+    }
+}

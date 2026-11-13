@@ -1,0 +1,7 @@
+// o   MainFormView() {
+        window.content(Ui.fixed()
+            ..place(nameEdit, 16, 16, 240, 24, An..mView() {
+        window.content(Ui.fixed()
+            ..place(nameEdi....Label, 16, 56, 368, 20, Anchor.STRETCH_HORIZONTAL));
+    }
+}

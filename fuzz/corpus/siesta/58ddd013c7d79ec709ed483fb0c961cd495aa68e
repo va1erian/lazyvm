@@ -1,0 +1,12 @@
+Command saveCmd = card() {
+    if (!dirtButton.onClick {
+   switch (await Ui.ask("Save ch/anges to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 ,> { return await (); }
+        case 1 -> { return true
+; }        default -> { return fible(false);
+    }
+}
+
+// The page menuges to {title()}?", "Sutton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radie.value); };

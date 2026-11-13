@@ -1,0 +1,12 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (vaString::toUpperCase)package demo;
+ ords =)package demo;
+    .cObject o) {
+    if (o instancpackageeof Cidemo;le c
+)

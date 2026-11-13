@@ -1,0 +1,4 @@
+// A winit fetches.
+var status = Ui.label("idle");
+Ui.run(Ui.window("Fetch", 319, 120).conte"idle");
+U }))));

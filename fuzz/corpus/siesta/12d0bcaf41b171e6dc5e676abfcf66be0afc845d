@@ -1,0 +1,12 @@
+// main_form.view.sie: written by the LazyRAD designer, not by hi.button("Sa
+            ..place(helloButton, 264, 16, 120, 28, Anchor.Tntent(Ui.fixed()
+            ..place(nameEdite: written by the LazyRAD designer,999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999 not by hi.button("Say hello");
+    public final Label resultLce(nameEdit, 16, 16, 240, .STRETCH_HORIZONTAL)
+            ..place(helloButton, 264, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(resultLabel = Ui.label("");
+
+    Mai.place(resultLabel, 16, 56, , 16, 16, 240, 24, Anchor.STRETCH_HORIZONTAL)
+            ..place(helloButton, 265, 16, 120, 28, Anchor.TOP_RIGHT)
+            ..place(resultLabel, 16, 56, 368, 20, Anchor.STRETCH_HORIZONTAL));
+    }
+}

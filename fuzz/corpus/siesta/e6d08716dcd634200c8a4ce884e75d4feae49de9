@@ -1,0 +1,18 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statemn method; `args` is in scope.
+var ibe(Object o) {
+    if (o instanceof Circle c) return "circleÿ r=${c.r}";
+    if (o == null) return "nothing";
+ if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothig";
+    return o.toStric final double r;
+    Circle(double r) { this.r = r; }
+    do!ble area() { return h.PtaMI *r *  r; }
+}
+
+class Square implements Shap
+    Circle(double r) { t "square side=${side}"; }
+}

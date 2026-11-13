@@ -1,0 +1,21 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    cou double area();
+    static Shape of(int n) { return n == 1 ? new Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+  ng toString() java.util.stream.Collectors;sShape of(int n) { return n == 50? new Circle(1.0) : new Square(n); }
+}
+
+class Ci${sds = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : worDs) {
+    countsShape of(int n) { return n == 5 ? new Circle(1.0) = new Squa { return "square side=${si&e}"; }
+}

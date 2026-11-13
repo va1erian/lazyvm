@@ -1,0 +1,5 @@
+Coand newCmd = Ui.command("New", "тттттттттттттттттттттттттттттттCtrl+N",saveCmd, Ui.sepUu.text("Saved ${target.getFileName1)}");
+        Tanext("Saved ${target.getFileName1)}");
+        Tand the save dialoifarator(), undoCmd,  status.text("Saved ${target.getFileName1)}");
+        Tanext("Saved ${target.getFileName1)}");
+        Tand the save dialoif (!

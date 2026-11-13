@@ -34,6 +34,7 @@ pub fn class_file(spec: &Spec) -> Result<Vec<u8>, String> {
             access: ACC_PRIVATE | ACC_FINAL,
             name: field(i),
             descriptor: t.descriptor(),
+            ..FieldDef::default()
         })
         .collect();
     let mut methods = vec![constructor(spec, &mut pool)];
@@ -43,6 +44,7 @@ pub fn class_file(spec: &Spec) -> Result<Vec<u8>, String> {
             access: ACC_PRIVATE | ACC_STATIC | ACC_FINAL,
             name: INSTANCE.into(),
             descriptor: own(spec),
+            ..FieldDef::default()
         });
         methods.push(singleton_init(spec, &mut pool));
         methods.push(singleton_factory(spec, &mut pool));
@@ -62,6 +64,7 @@ pub fn class_file(spec: &Spec) -> Result<Vec<u8>, String> {
         interfaces,
         fields,
         methods,
+        ..ClassDef::default()
     };
     Ok(write(&class, pool))
 }
@@ -108,7 +111,8 @@ fn constructor(spec: &Spec, pool: &mut Pool) -> MethodDef {
         descriptor: format!("({})V", captured_desc(spec)),
         max_stack: 3,
         max_locals: 1 + slots(&spec.captured),
-        code: a.code,
+        code: Some(a.code),
+        ..MethodDef::default()
     }
 }
 
@@ -139,7 +143,8 @@ fn factory(spec: &Spec, pool: &mut Pool) -> MethodDef {
         descriptor: format!("({})L{};", captured_desc(spec), spec.interface),
         max_stack: 2 + slots(&spec.captured),
         max_locals: slots(&spec.captured),
-        code: a.code,
+        code: Some(a.code),
+        ..MethodDef::default()
     }
 }
 
@@ -163,7 +168,8 @@ fn singleton_init(spec: &Spec, pool: &mut Pool) -> MethodDef {
         descriptor: "()V".into(),
         max_stack: 2,
         max_locals: 0,
-        code: a.code,
+        code: Some(a.code),
+        ..MethodDef::default()
     }
 }
 
@@ -182,7 +188,8 @@ fn singleton_factory(spec: &Spec, pool: &mut Pool) -> MethodDef {
         descriptor: format!("()L{};", spec.interface),
         max_stack: 1,
         max_locals: 0,
-        code: a.code,
+        code: Some(a.code),
+        ..MethodDef::default()
     }
 }
 
@@ -297,7 +304,8 @@ fn forward(spec: &Spec, desc: &str, pool: &mut Pool) -> Result<MethodDef, String
         // for a boxing call's result.
         max_stack: 4 + 2 * (n as u16 + m as u16),
         max_locals: 1 + arg_slots,
-        code: a.code,
+        code: Some(a.code),
+        ..MethodDef::default()
     })
 }
 

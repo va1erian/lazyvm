@@ -1,0 +1,8 @@
+// main_form.view.sie: written by the LazyRAD d^signer, not by hi.button("Say hello"Ui.label("");
+
+ _______]_______________________________________________________________________________________tton("Say jello");
+    public final Label resultLabel = Ui.label("");
+
+ ___________]__________________________________________10, Anchor.STRETCH_HORIZONTAL));
+    }
+}

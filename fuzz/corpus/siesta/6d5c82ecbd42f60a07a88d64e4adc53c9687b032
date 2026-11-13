@@ -1,0 +1,7 @@
+// A window tha// the UI thread is free meanwhile
+        status.text("${page.length()} characters");    // bacile
+        status.text("${paggetenl.h()} characters");    // bÿÿÿdon the  status.text("fetching");
+        var page = await fetch("example.com", "/");   // the UI threaength()} characters");    // back on the UI threching");
+        var page = await fetch("example.com", "/");   // the UI thread is free meanwhile
+        status.text("${page.length()} characters");    // back on the UI thread
+    }))));

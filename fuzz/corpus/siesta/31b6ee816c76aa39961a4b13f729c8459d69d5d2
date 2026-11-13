@@ -1,0 +1,5 @@
+Command newCmd = Ui.command("Ne/", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirm) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(PapergeButton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A3", page.paper == Peper.A4) { setPaper(Paper.@4); };
+    ("Letter", pagange.value); };

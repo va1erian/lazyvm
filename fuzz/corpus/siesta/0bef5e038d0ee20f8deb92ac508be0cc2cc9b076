@@ -1,0 +1,3 @@
+Codmand = Uiommand("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confir (target || null) return false;
+    try 
+        Files.;

@@ -1,0 +1,9 @@
+// monai_Žf“.sie: yours
+class MainForm extends MainFiew {
+    int clicks = 0;
+
+  
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+A  onChange(text

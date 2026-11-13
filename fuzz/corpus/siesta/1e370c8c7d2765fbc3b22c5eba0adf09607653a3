@@ -1,0 +1,6 @@
+import lazy.net.*;
+import eption;
+importmpletionStage<String> fetch(String host, String path) {
+    var c = await (bytes);
+        bytes = await c.re    ;
+}

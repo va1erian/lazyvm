@@ -1,0 +1,2 @@
+// A window thale
+        status.text("${page.length(&)}- characters");    //æback))));

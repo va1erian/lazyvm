@@ -1,0 +1,3 @@
+Command newCmd = Ui.command("New", "CN",xxxxx+++++++++xxxxxxxxxxxxxxxxxxxxxxxxxxxxor(), undoCmd, redoCmd);
+
+// "SIcon.SAVE) ?ge.value); };

@@ -1,0 +1,77 @@
+// The formatting row, and how its controls follow the selection.
+import lazy.ui.*;
+
+double[] SIZES = {10, 12, 14, 16, 18, 24, 32, 48};   // design units; new text is 14
+int ICON = 32;                                        // an icon-only button's width
+
+var block = Ui.comboBox("Normal", "Heading 1", "Heading 2", "Heading 3", "Quote")
+    .icon(0, "Type").icon(1, "Heading1").icon(2, "Heading2").icon(3, "Heading3").icon(4, "TextQuote")
+    .onSelect { i -> editor.block(i); refocus(); };
+var family = Ui.comboBox("Sans", "Serif", "Mono")
+    .onSelect { i -> editor.family(i == 1 ? serif : i == 2 ? mono : null); refocus(); };
+var size = Ui.comboBox("10", "12", "14", "16", "18", "24", "32", "48").select(2)
+    .onSelect { i -> editor.size(SIZES[i]); refocus(); };
+var wrap = Ui.comboBox("Inline", "Float left", "Float right", "Top and bottom")
+    .onSelect { i -> editor.wrap(i); refocus(); }
+    ..enabled(false);
+ToggleButton[] marks = {
+    toggle("Bold", "Bold (Ctrl+B)") { format(RichText.BOLD); },
+    toggle("Italic", "Italic (Ctrl+I)") { format(RichText.ITALIC); },
+    toggle("Underline", "Underline (Ctrl+U)") { format(RichText.UNDERLINE); },
+    toggle("Strikethrough", "Strikethrough") { format(RichText.STRIKE); }};
+ToggleButton[] aligns = {
+    toggle("TextAlignStart", "Align left") { align(0); },
+    toggle("TextAlignCenter", "Centre") { align(1); },
+    toggle("TextAlignEnd", "Align right") { align(2); },
+    toggle("TextAlignJustify", "Justify") { align(3); }};
+ToggleButton[] lists = {
+    toggle("List", "Bulleted list") { list(RichText.BULLETS); },
+    toggle("ListOrdered", "Numbered list") { list(RichText.NUMBERS); }};
+var pageView = Ui.toggle("").icon("BookOpen").checked(true)
+    .onToggle { on -> editor.pageView(on); editor.focus(); refresh(); }
+    ..tooltip("Page view");
+var pageSetup = push("Ruler", "Page setup") { showPages(); };
+var table = push("Table", "Table") { showTables(); };
+
+void align(int a) { editor.align(a); refocus(); }
+void list(int kind) { editor.list(kind); refocus(); }
+
+ToggleButton toggle(String icon, String tip, Runnable action) {
+    return Ui.toggle("").icon(icon).onToggle { on -> action.run(); }..tooltip(tip);
+}
+
+Button push(String icon, String tip, Runnable action) {
+    return Ui.button("").icon(icon).onClick(action)..tooltip(tip);
+}
+
+Widget gap() { return Ui.spacer().width(6); }
+
+Layout toolsRow() {
+    return Ui.row().gap(4).padding(8, 3, 8, 3).add(
+        block.width(120), family.width(96), size.width(64), gap(),
+        marks[0].width(ICON), marks[1].width(ICON), marks[2].width(ICON), marks[3].width(ICON), gap(),
+        aligns[0].width(ICON), aligns[1].width(ICON), aligns[2].width(ICON), aligns[3].width(ICON), gap(),
+        lists[0].width(ICON), lists[1].width(ICON),
+        push("IndentIncrease", "Indent") { format(RichText.INDENT); }.width(ICON),
+        push("IndentDecrease", "Outdent") { format(RichText.OUTDENT); }.width(ICON), gap(),
+        wrap.width(120), gap(), table.width(ICON), Ui.spacer(),
+        pageView.width(ICON), pageSetup.width(ICON));
+}
+
+// Shows `s` in the controls; a mixed attribute shows as off.
+void sync(RichText.Style s) {
+    int[] tris = {s.bold, s.italic, s.underline, s.strike};
+    for (int i = 0; i < 4; i++) marks[i].checked(tris[i] == RichText.Style.ON);
+    for (int i = 0; i < 4; i++) aligns[i].checked(s.align == i);
+    lists[0].checked(s.list == 1);
+    lists[1].checked(s.list == 2);
+    if (s.block >= 0) block.select(s.block);
+    if (!s.familyMixed) family.select(serif.equals(s.family) ? 1 : mono.equals(s.family) ? 2 : 0);
+    for (int i = 0; i < SIZES.length; i++) if (SIZES[i] == s.size) size.select(i);
+}
+
+// The wrap picker is enabled while a picture is selected, showing its wrap.
+void syncWrap(int current) {
+    wrap.enabled(current >= 0);
+    if (current >= 0) wrap.select(current);
+}

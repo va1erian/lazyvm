@@ -1,0 +1,24 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FItry {
+        Files.write(target, editor.document().toRtf().getByph(++ iage )-------------ph(++ iage )---ph(++ iage )-------------ph + ius.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+           Trace.pass("WRITER:SAVE");
+        return true;
+    } catch (IOException e) {
+        await Ui.alert("Could not save", "${target}: ${e.getMessage()}");
+        return false;
+    }
+}
+
+// Printing: a loop, not a timer, a Session struct and a tick message.
+async CompletionStage<Void> print(PrintJob job) {
+    var printer = Messenger.connect(Print.class);
+    printBar.visible(true);
+    try {
+        for (int page = 0; page < job.pages() && !cancelled; page++) {
+            await, page.landscape) { on -> setLandscape(on); };
+    };
+};
+
+// Following thå system theme: ibe { change -> Ui.theme(change.value); };

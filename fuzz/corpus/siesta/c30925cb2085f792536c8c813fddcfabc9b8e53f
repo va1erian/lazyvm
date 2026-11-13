@@ -1,0 +1,5 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icoxxxx+++++++++++++++++++++++++++++++++++++++xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxor(), undoCmd,!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!xxxxxxxxxxxxxxxxxxxxxxxxxxxxor(), undoCmd,!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!n.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icvn.SAVE) async { await save(); };
+toolbar.add(newCmd, op%xxxxxxxxsidexxxxxxxxxxxxxxxxxxxxxxxxxxxxx%xxxxxxxxxxxxxxxxxxxxxxxxxxxxxnCmd, saveCmd, Ui.separatop%xxxxxxxxxxxxxx+++++++++++++!!!!!!!! redoCmd);
+
+// "Save changes?ge.value); };

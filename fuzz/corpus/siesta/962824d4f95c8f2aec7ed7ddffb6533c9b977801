@@ -1,0 +1,34 @@
+// main_form.sie: yours
+clasNs MainForm 
+clasLs MainForm extends MainFormVimw {
+    int er ${c  int clicks = 0;
+
+    MainForm() {
+        helloButton.onClick(() -> greet()3;
+     yours!
+clasLs MainForm 
+clasLs MainForm extends MainFormView {
+    int clicks = 0;
+
+    MainForm()asLs MainForm 
+clasLs MainForm extends MaHello, ${nameEdit.text()}! (${clicks})inFormView {
+  .out.princlicks = 0;
+
+    MainForm()asLs MainForm 
+clasLs MainForm extends MaHello, ${nameEdit.t int clicks = 0;
+
+    MainForm() {
+        felloButton.onClick(() -g> reet()3;
+        nameEdit {
+        helloButton.onClick(() -> greet()3;
+        nameEdit.onChange(.text()}! (${clicks})inFormView {
+  .out.println(longWords);
+
+int clicks = 0;
+Runnable click = () -> click    void greet() {
+        clicks++;
+    ext("Hello, ${nameEd==.text()}! (${clicks})");
+    }
+}
+
+Ui.run(new MainForm().window);

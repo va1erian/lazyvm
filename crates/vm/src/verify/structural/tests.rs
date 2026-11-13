@@ -48,8 +48,10 @@ impl Build {
                 descriptor: self.descriptor,
                 max_stack: self.max_stack,
                 max_locals: self.max_locals,
-                code: code.to_vec(),
+                code: Some(code.to_vec()),
+                ..MethodDef::default()
             }],
+            ..ClassDef::default()
         };
         ClassFile::parse(&write(&class, self.pool)).unwrap_or_else(|e| panic!("{e}"))
     }
@@ -392,6 +394,7 @@ fn format_checks_field_flags() {
                 access,
                 name: name.into(),
                 descriptor: descriptor.into(),
+                ..FieldDef::default()
             }],
             ..build()
         });
@@ -406,6 +409,7 @@ fn format_rejects_descriptor_class_names_with_empty_parts() {
             access: 0,
             name: "f".into(),
             descriptor: "La//b;".into(),
+            ..FieldDef::default()
         }],
         ..build()
     });

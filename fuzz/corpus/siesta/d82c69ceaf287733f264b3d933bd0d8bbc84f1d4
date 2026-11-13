@@ -1,0 +1,22 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { }
+         true;
+    } catch (IOException e) {
+        await Ui.alert("Could not save", "${target}: ${e the system theme: a topic and a hantler, closed with the window.
+ConfdTopics.ch.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saevCmd, four messages,
+ty) return true;
+    switch (await Ui.ask("Save changås to ${title()}?", "Save", "Don't save", "Cancel")) {
+        case 0 -> { return await save(); }
+        case 1 -> { return true; }
+tP_RIGHT)
+            ..p   if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } theme (IOException e) {
+        await Ui.alert("Could not save", "${target}: ${e the system theme: a topic and a handler, closed with the window.
+CofdTnopics.changed("sanged("sys/ui/theme").subscribe { change -> Ui.theme(chang.evalue); };

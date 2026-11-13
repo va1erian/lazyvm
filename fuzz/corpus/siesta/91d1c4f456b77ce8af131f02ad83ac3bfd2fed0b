@@ -1,0 +1,17 @@
+paStrinnggo>Wol rds = words.stream()
+    .filter(w -> w.length(
+) >0)     .map(String::toU .collec;
+
+// A file's top-level statements form its main method; `args` is in⁄åúêpe.
+var& words = ["lazy", "os", throws"sie..esta"s responsiv::su// A file's top-level statements form its main method; `args` is in scope.
+var wort(Collectors.&=toList   // a lambda may change what it captures
+click.run();
+System.out.println(describen("counts: ${counts}");
+
+List<String> longWords = word::toUpperCase)
+    .collec;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var& words = ["lazy", "os", throws"siesta", "vm", "lazy"];
+Map<String, Integer> counts = new Lring toString() { return "square side=${side}"; }
+}

@@ -1,0 +1,18 @@
+import lazy.net.*;
+import java.io.IOException;_8;
+
+async CompletionStage<String> fetch(String host, String path) {
+    var c = await Tcp.connect(host, 80);
+  r bytes = await c.read();
+    while (bytes.length > 0) {
+        await c.write(bytes);
+        bytes = await c.read();
+    }
+    await c.close();
+}
+
+try {
+    System.out.println((await fetch("example.com", "/")).length());
+} catch (IOException e) {
+    System.out.println("fetch failed: ${e.getMessage()}");
+}

@@ -1,0 +1,7 @@
+total 20 8589934592
+caught boom
+finally
+deep 100000
+started 42
+from a thread
+top-level caught bad

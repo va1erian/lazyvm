@@ -1,0 +1,1 @@
+Command newCmd = Ui.commandsync { if (await confirmDiscard()) nd eCmd = Ui.command("Save", "CtLabelchanges?ge.va::lN", Icon.FILE_PLUS) async { if (await confirmDiwordscard()) nd saveCmd = Ui.ep[[[[[[[[[[[[[[[[[[[[[[[ue);

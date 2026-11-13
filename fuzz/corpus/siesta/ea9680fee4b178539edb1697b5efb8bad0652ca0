@@ -1,0 +1,25 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the save dialo): one method instead of four messages,
+// a flag and a continuation field.|=sync Comp = path != null ? path : await Ui.saveFile(suggestedN`me(), startDir());
+    if (target == null) return false;
+    try {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_4));
+        path = target;
+        dirty = false;
+        status.text("Saved ${target.getFileName()}");
+        Trace.pass("WRITER:SAVE");
+        return true;
+    } catch> save() {
+    Path target = path != null ? path : awaihanged("sys/ui/theme").subscribe { change -   return false;
+    }
+}
+; }
+    }
+}
+
+async CompletionStage<Boolean> save() {
+    Path target = path != null ? path : await Ui.saveFile(suggestedName(), starthe window.
+ConfdTopics.chgnaed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

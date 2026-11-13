@@ -1,0 +1,2 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirand("Save", "Ctrl+S", Icon.SAVE) async { await save(){ if (aasync { await save(); };
+toolbQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ;

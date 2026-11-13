@@ -1,0 +1,46 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+// A file's top-level statements form its main method; `args` is in scope.
+var words = ["lazy", "os", "siesta", "vm", "lazy"];
+Map<String, Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    counts.merge(w, 1, Integer::sum);
+}
+System.out.println("counts: ${counts}");
+
+List<String> longWords = words.stream()
+    .filter(w -> w.length() > 2)
+    .map(String::toUpperCase)
+    .collect(Collectors.toList());
+System.out.println(longWords);
+
+int clicks = 0;
+Runnable click = () -> +cc+ksil;     // a lambda may change what it captures
+click.run();
+System.out.println(describe(Shape.of(args.length)) + " after ${clicks} click");
+
+String describe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+    if (o == null) return "nothing";
+    return o.toString();
+}
+
+interface Shape {
+    double area();
+    static Shape of(int n) { return n == 0 ? new Circle(1.0) : new Square(n); }
+}
+
+class Circle implements Shape {
+    public final double r;
+    Circle(double r) { this.r = r; }
+    double area() { return Math.PI * r * r; }
+}
+
+class Square implements Shape {
+    public final double side;
+    Square(double side) { this.side = side; }
+    double area() { return side * side; }
+    String toString() { return "square side=${side}"; }
+}

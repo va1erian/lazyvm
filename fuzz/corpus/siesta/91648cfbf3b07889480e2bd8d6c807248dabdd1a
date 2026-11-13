@@ -1,0 +1,11 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.sep*arator(), undoCmd, redoCmd);
+
+// "Save changes? the save dialo): one method instead of four messages,
+// a flag and a continuation field.
+async CompletionStage<Boolean> confirmDiscard() {
+    if (!dirty) return true;
+    switch (await Ui.ompletionStage<Boolean> save() {
+    Path target = path != null ? path : await Ui.saveFile(suggestedName(), startnull ? path : await Ui.saveFile(suggestedName(), starthe window.
+ConfdTopics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };

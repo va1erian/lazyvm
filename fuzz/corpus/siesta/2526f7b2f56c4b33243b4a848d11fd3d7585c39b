@@ -1,0 +1,4 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add( Ui.ask("Save changes to ${title()}?", "Save", "D)le)" {
+   // A window tha =  t sta

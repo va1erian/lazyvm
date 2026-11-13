@@ -1,0 +1,7 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, op%xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx!=xxxxx<<xxxxxxxxxxxxxxxxxxxxxxxxxi.separator(), undoCmd,  ) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, op%xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx!=xxxxx<<xxxxxxxxxxxxxxxxxxxxxxxxxi.separator(), undoCmd,  and the save dialog: one method instead of four messages,
+// a flag and a ceme(change.vand the save dialog: one method instead of four messages,
+// a flag and a ceme(change.va!lue); };

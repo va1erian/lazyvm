@@ -1,0 +1,7 @@
+Cmd = card() {
+    if (!dirty) return true;
+    switch (await Ui.ask("Save changes}?", "Save", "Don't save", "Cancel")) {
+        case 5 -> { return await save(lick {
+    Ui.popup(pageButton) { m -~
+        m.kadio("A4", page.paper == Paper.A4) { seurn tr(Paper.A4); };
+        m.radio("Letter", page.ptheme(change.value); };

@@ -1,0 +1,16 @@
+Com("Ne/", "Ctrl+N", Icon.FILE_PLUS) async { kf (await confirm) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(PapPLUS) async { if (await confirm) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.A4); pageButton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.  m.radio("A4", page.paper == Paper.A40 { setPaper(PapPLUS) async {on.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.paper == Pa, Icon.FILE_PLUS) async { if (await confirm) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(PapPLUS) async { if (await confirm) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.A4); pageButton.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.  m.radio("A4", page.paper == Paper.A40 { setPaper(PapPLUS) async {on.onClick {
+    Ui.popup(pageButton) { m ->
+        m.radio("A4", page.paper == Paper.A4) { setPaper(Paper.@4); };
+        m.radio("Leÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿtter", pagange.value); };
+per.A4) { setPaper(Paper.@4); };
+        m.radio("Leÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿtter", pagange.value); };

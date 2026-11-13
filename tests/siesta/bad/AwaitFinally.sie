@@ -1,0 +1,5 @@
+import java.util.concurrent.*;
+async CompletionStage<Void> f() {
+    try {} finally { await g(); }
+}
+async CompletionStage<Boolean> g() { return true; }

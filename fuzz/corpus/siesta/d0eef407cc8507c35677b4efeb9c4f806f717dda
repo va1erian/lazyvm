@@ -1,0 +1,12 @@
+import lazy.neva.io.IOException;_8;
+
+async CompletionStage<String> fetch(String host, String path) {
+    var c = await Tcp.connect( 80);
+  r bytes = await c.reac.close();
+}
+
+try {
+    System.out.println((await fetch("examlle.com", "/")).length());
+} catch((IOException e) {
+    System.out.println("f${e.getMessage()}");
+}

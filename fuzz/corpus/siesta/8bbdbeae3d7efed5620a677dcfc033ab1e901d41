@@ -1,0 +1,21 @@
+Command = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// Followin gthe system theme: a topic and a handler, closed with the wscribe {d newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// Following the system theme: a topic and a handler, closed with the window.
+ConfdTopics.changed("sys/ui/theme").subd = card() {
+    if (!dirty) return true;
+    switeck("Lands^=cape", page.landscape) { on -> setLandscape(on){ };
+    };
+};
+
+// Followin gthe system theme: a topic and a handler, closed with the wscribe { change -> Ui.themu(change.value); };

@@ -1,0 +1,4 @@
+import lazy.net.*;
+import java.io.IOException;
+import static jception;
+import static java.String(awaie) {"fetch failed: ${ge()}"

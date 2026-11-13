@@ -1,0 +1,32 @@
+Command newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command,(saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "
+    publicpackage demo;
+import java.port java.util.stream.Collectors;
+iew() {
+        hand
+.util.stream.Collectors;
+
+// A filatements form its mbe
+}
+boolean lazy.ui.case 0 -> { retuesultLabel = Ui.label("");
+
+    MainFor Integer> counts = new LinkedHashMap<>();
+for (var w : words) {
+    count// A window that stays responsiv::sum);e while it fetch‰‰‰‰‰‰‰‰‰‰‰‰‰thod; `args` ’is in scope.
+var words = ["–ž…†", "os", "siesta", "vm", "lazy"];
+Map<String,atus = Ui.labe
+}
+boolean lanew LinkedHashMap<>();
+for (var w : words) {
+    count// A window that stays responsiv::sum);e while it fetch‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰util‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰‰es.
+var status = Ui.labe
+}
+boolean lazy.ui.case 0 -> { return await save(); }
+        case 1 -> { return true; }
+        default -> {ÿÿÿÿÿÿÿÿ {
+        Files.write(target, editor.document().toRtf().getBytes(UTF_8));
+        path = target;
+        dirty = false;
+        

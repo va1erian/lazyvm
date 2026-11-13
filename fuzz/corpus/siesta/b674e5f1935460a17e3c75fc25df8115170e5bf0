@@ -1,0 +1,13 @@
+package demo;
+import java.util.*;
+import java.util.stream.Collectors;
+
+var ibe(Object o) {
+    if (o instanceof Circle c) return "circle r=${c.r}";
+ {  if (o == null) return "nothingªªªªªªª";
+    return o.toString();
+}
+
+interface Shape {
+    double ar{ return n == 0 Circblic final dring toString() { return "square side=${side}"w }
+}

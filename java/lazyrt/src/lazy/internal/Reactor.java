@@ -44,6 +44,11 @@ public final class Reactor {
 
     private Reactor() {}
 
+    /** True on the loop's thread. */
+    public static boolean onLoop() {
+        return Thread.currentThread() == DISPATCHER;
+    }
+
     /** Runs {@code task} on the loop's thread. */
     public static void execute(Runnable task) {
         if (task == null) throw new NullPointerException("task");

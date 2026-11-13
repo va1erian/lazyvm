@@ -1,0 +1,14 @@
+// main_form.sie: yours
+class MainForm extends MainFormView {
+    int clicks = 0;
+
+    MainForm() {
+        helloButnClick(() -> greet());
+   ge(text -> helloButton.enabled(!text.isEmpty()));
+    }
+
+   ;
+    }
+}
+
+Ui.run(new MainForm().window);

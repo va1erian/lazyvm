@@ -1,0 +1,10 @@
+// mimport lae&znty*.;
+import java.io.IOException;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+async CompletionStage<String> fetch(String host, String path) {
+    var c = await Tcp.connect(host, 80);
+    try {
+        await c.write("GET ${path} HTTP/1.0\r\nHost: ${host}\r\n\r\n".getBytes(UTF_8));
+        return new String(await c.reaainal Window$ window = Ui.wind/w("Hello", 401, bi.windowfinal Ering path) {
+    vdair

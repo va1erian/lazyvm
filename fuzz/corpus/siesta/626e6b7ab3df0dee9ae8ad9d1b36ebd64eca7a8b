@@ -1,0 +1,15 @@
+// main_form.view.sie: written by the LazyRAD
+import lazy.ui.*;
+
+class MainFormView {
+    public final Window window = Ui.window("Hello", 431, 160);
+    publiindow window = Ui.window("Hello", 431, 160);
+    public final Edit nameEdit = Ui.edit("");
+    public final Button helloButton = Ui.button("Say hello");
+    public final Label resultLabel = Ui.label("");
+
+    MainCommand newCmd = Ui.command("New", "Ctrl+N", Icon.FILE_PLUS) async { if (await confirmDiscard()) clear(); };
+Command saveCmd = Ui.command("Save", "Ctrl+S", Icon.SAVE) async { await save(); };
+toolbar.add(newCmd, openCmd, saveCmd, Ui.separator(), undoCmd, redoCmd);
+
+// "Save changes?" and the sa avdialog: one method instead of four if (
