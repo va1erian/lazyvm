@@ -1,0 +1,18 @@
+PASS declarations/moved
+PASS declarations/changed_args
+PASS errors/read_reply
+PASS errors/plain_error
+PASS errors/detailed_error
+PASS errors/hint_only_error
+SKIP objects/configure_args: carries kernel objects
+SKIP objects/attach_args: carries kernel objects
+PASS objects/plain_args
+PASS types/put_args
+PASS types/put_reply
+PASS types/scalars
+PASS types/get_reply_some
+PASS types/get_reply_none
+PASS types/many_args
+PASS types/many_args_empty
+PASS types/many_reply
+conformance: PASS

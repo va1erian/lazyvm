@@ -24,8 +24,9 @@ FLAGS = ["-J-Xmx1g", "-source", "8", "-target", "8", "-encoding", "UTF-8", "-Xli
 
 
 def compile(sources: list[Path], out: Path, bootclasspath: Path | None = None,
-            classpath: list[Path] | None = None, sourcepath: Path | None = None) -> None:
-    """Compile `sources` into `out` as major-52 class files, or exit."""
+            classpath: list[Path] | None = None, sourcepath: Path | list[Path] | None = None) -> None:
+    """Compile `sources` into `out` as major-52 class files, or exit. `sourcepath` is where
+    javac finds the other classes the sources use: one directory or several."""
     if not sources:
         return
     out.mkdir(parents=True, exist_ok=True)
@@ -35,7 +36,8 @@ def compile(sources: list[Path], out: Path, bootclasspath: Path | None = None,
     if classpath:
         cmd += ["-cp", os.pathsep.join(map(str, classpath))]
     if sourcepath is not None:
-        cmd += ["-sourcepath", str(sourcepath)]
+        roots = sourcepath if isinstance(sourcepath, list) else [sourcepath]
+        cmd += ["-sourcepath", os.pathsep.join(map(str, roots))]
     # An argument file keeps long source lists under the Windows command limit.
     with tempfile.NamedTemporaryFile("w", suffix=".args", delete=False, encoding="utf-8") as f:
         for src in sources:

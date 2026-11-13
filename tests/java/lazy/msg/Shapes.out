@@ -1,0 +1,10 @@
+ok StatReply[size=5, kind=FILE, tags=[readme], note=has hello]
+ok StatReply[size=0, kind=FILE, tags=[docs, notes], note=null]
+ok StatReply[size=0, kind=DIR, tags=[docs], note=null]
+ok 10
+ok 1099511627786
+ok 20
+app.test.demo.v1.Wait: timed out (ETIMEDOUT)
+ok 0
+store: poked hi
+poke: ok null

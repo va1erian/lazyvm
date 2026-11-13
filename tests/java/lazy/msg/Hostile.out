@@ -1,0 +1,17 @@
+NUL in sentence: 13 "bad"
+truncated header: errno 74 truncated field header
+length past the end: errno 74 field longer than its body
+too deep: errno 74 containers nested deeper than 64
+nested 10: read 10
+unknown kind skipped: Change[key=k, value=null]
+id is 16 bits: Change[key=x, value=null]
+wrong kind: errno 74 field 1 is I32, expected String
+buffer outside its pages: errno 74
+a/# matches a: true
+a/# matches a/b/c: true
+a/+ matches a: false
+segment "ok-1.x": accepted
+segment "sp ace": not a topic segment: "sp ace"
+segment "..": not a topic segment: ".."
+segment "a/b": not a topic segment: "a/b"
+tail a/b: k/a/b

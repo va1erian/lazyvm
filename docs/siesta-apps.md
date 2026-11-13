@@ -132,14 +132,14 @@ async CompletionStage<Boolean> save() {
 
 // Printing: a loop, not a timer, a Session struct and a tick message.
 async CompletionStage<Void> print(PrintJob job) {
-    var printer = Messenger.connect(Print.class);
+    var printer = Print.connect();
     printBar.visible(true);
     try {
         for (int page = 0; page < job.pages() && !cancelled; page++) {
             await printer.submitPage(job.id(), render(job, page));   // a Messenger call
             progress.value(page + 1);
         }
-        Messenger.connect(Notify.class).notify(new NotifyArgs().title("Printed ${job.pages()} pages"));
+        Notify.connect().notify(new NotifyArgs().level(Level.INFO).title("Printed ${job.pages()} pages"));
     } catch (MessengerException e) {
         await Ui.alert("Printing failed", e.getMessage());
     } finally {
@@ -158,7 +158,7 @@ pageButton.onClick {
 };
 
 // Following the system theme: a topic and a handler, closed with the window.
-ConfdTopics.changed("sys/ui/theme").subscribe { change -> Ui.theme(change.value); };
+ConfdTopics.changed("sys/ui/theme").subscribe { e -> Ui.theme(e.value().value); };
 ```
 
 A command's `async { ... }` is a fire-and-forget `async` lambda (its
