@@ -131,6 +131,29 @@ public final class Reactor {
         msgUnserve0(served);
     }
 
+    /**
+     * Subscribes to {@code filter} through the Messenger transport, synchronously: the
+     * subscription's handle, or a negative errno.
+     */
+    public static long subscribe(String filter) throws IOException {
+        return msgSubscribe0(filter);
+    }
+
+    /** The next event of {@code subscription}, as {@code platform::messenger::TopicEvent} encodes it. */
+    public static CompletionStage<byte[]> next(long subscription) {
+        return operation((handle, payload) -> payload, null, id -> msgNext0(id, subscription));
+    }
+
+    /** Ends {@code subscription}; its next fails. */
+    public static void unsubscribe(long subscription) throws IOException {
+        msgUnsubscribe0(subscription);
+    }
+
+    /** Publishes {@code payload} on {@code topic}; the stage completes with the answer once the broker took it. */
+    public static CompletionStage<byte[]> publish(String topic, byte[] payload, boolean retained) {
+        return operation((handle, answer) -> answer, null, id -> msgPublish0(id, topic, payload, retained));
+    }
+
     /** A stage that fails with {@code cause} on the loop, as a real operation would. */
     public static <T> CompletionStage<T> failed(IOException cause) {
         LoopFuture<T> stage = begin(null, null);
@@ -385,4 +408,8 @@ public final class Reactor {
     private static native void msgReceive0(long id, long served) throws IOException;
     private static native void msgReply0(long txn, byte[] body) throws IOException;
     private static native void msgUnserve0(long served) throws IOException;
+    private static native long msgSubscribe0(String filter) throws IOException;
+    private static native void msgNext0(long id, long subscription) throws IOException;
+    private static native void msgUnsubscribe0(long subscription) throws IOException;
+    private static native void msgPublish0(long id, String topic, byte[] payload, boolean retained) throws IOException;
 }

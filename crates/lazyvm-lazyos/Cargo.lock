@@ -1281,6 +1281,7 @@ dependencies = [
  "launcher",
  "lazyos-sys",
  "libmessenger",
+ "messenger-generated",
  "natives-ui",
  "platform",
  "xui-app",

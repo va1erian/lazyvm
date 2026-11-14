@@ -1,0 +1,4 @@
+handler ran on the UI thread
+label: hello
+closed by Ui.run: true
+events after Ui.run: 0

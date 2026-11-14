@@ -15,9 +15,10 @@ use mio::{Events, Poll};
 
 use crate::reactor::{self, Completion, Outcome};
 
-/// What Java asks of the transport. A [`Request::Call`] and a
-/// [`Request::Receive`] each end in one completion with an [`Answer`]; a
-/// [`Request::Serve`] answers on its channel; the others answer nothing.
+/// What Java asks of the transport. A [`Request::Call`], a
+/// [`Request::Receive`], a [`Request::Next`] and a [`Request::Publish`] each
+/// end in one completion with an [`Answer`]; a [`Request::Serve`] and a
+/// [`Request::Subscribe`] answer on their channel; the others answer nothing.
 #[derive(Debug)]
 pub enum Request {
     Call(Call),
@@ -46,6 +47,56 @@ pub enum Request {
     Unserve {
         served: u64,
     },
+    /// Subscribes to `filter` (docs/msg.md section 6): the subscription's
+    /// handle, or the errno, goes straight back to the caller, as for
+    /// [`Request::Serve`].
+    Subscribe {
+        filter: String,
+        done: mpsc::Sender<Result<u64, i32>>,
+    },
+    /// Waits for the next event of `subscription`; answers with it as
+    /// [`TopicEvent::encode`] writes it.
+    Next {
+        id: u64,
+        subscription: u64,
+    },
+    /// Ends `subscription`; its waiting [`Request::Next`] fails.
+    Unsubscribe {
+        subscription: u64,
+    },
+    /// Publishes `payload` on the concrete `topic`; answers with an empty
+    /// reply once the broker took it.
+    Publish {
+        id: u64,
+        topic: String,
+        payload: Vec<u8>,
+        retained: bool,
+    },
+}
+
+/// One topic event, its payload as the publisher's codec wrote it.
+#[derive(Debug, PartialEq)]
+pub struct TopicEvent {
+    pub topic: String,
+    pub payload: Vec<u8>,
+    pub retained: bool,
+    /// The publisher's kernel-stamped task slot.
+    pub publisher: u64,
+}
+
+impl TopicEvent {
+    /// `publisher` (little-endian 64-bit), `retained` (one byte), the
+    /// topic's UTF-8 length (little-endian 32-bit) and bytes, then the
+    /// payload: what `NativeBroker` reads.
+    pub fn encode(self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(13 + self.topic.len() + self.payload.len());
+        out.extend(self.publisher.to_le_bytes());
+        out.push(u8::from(self.retained));
+        out.extend((self.topic.len() as u32).to_le_bytes());
+        out.extend(self.topic.into_bytes());
+        out.extend(self.payload);
+        out
+    }
 }
 
 /// A request a served name received, with the sender's kernel-stamped
@@ -164,13 +215,26 @@ pub fn serve(
     interface: u64,
     interface_name: String,
 ) -> std::io::Result<Result<u64, i32>> {
-    let (done, answer) = mpsc::channel();
-    request(Request::Serve {
+    ask(|done| Request::Serve {
         name,
         interface,
         interface_name,
         done,
-    })?;
+    })
+}
+
+/// Subscribes to `filter` (see [`Request::Subscribe`]).
+pub fn subscribe(filter: String) -> std::io::Result<Result<u64, i32>> {
+    ask(|done| Request::Subscribe { filter, done })
+}
+
+/// Queues the request `make` builds around its answer channel, and waits for
+/// the reactor thread's answer.
+fn ask(
+    make: impl FnOnce(mpsc::Sender<Result<u64, i32>>) -> Request,
+) -> std::io::Result<Result<u64, i32>> {
+    let (done, answer) = mpsc::channel();
+    request(make(done))?;
     answer
         .recv()
         .map_err(|_| std::io::Error::other("the reactor thread ended"))
@@ -195,13 +259,16 @@ pub(crate) fn begin(msg: &mut Option<Box<dyn Transport>>, r: Request) {
     use Request as R;
     let Some(msg) = msg else {
         let id = match r {
-            R::Call(Call { id, .. }) | R::Receive { id, .. } => id,
-            R::Serve { done, .. } => {
+            R::Call(Call { id, .. })
+            | R::Receive { id, .. }
+            | R::Next { id, .. }
+            | R::Publish { id, .. } => id,
+            R::Serve { done, .. } | R::Subscribe { done, .. } => {
                 // A caller that stopped waiting needs no answer.
                 let _ = done.send(Err(ENOSYS));
                 return;
             }
-            R::Reply { .. } | R::Unserve { .. } => return,
+            R::Reply { .. } | R::Unserve { .. } | R::Unsubscribe { .. } => return,
         };
         let refused = Answer::Failed {
             errno: ENOSYS,
@@ -265,5 +332,20 @@ mod tests {
         assert_eq!(bytes[16], 4);
         assert_eq!(bytes[56], 9);
         assert_eq!(&bytes[64..], [3, 0, 0, 0, 0xab]);
+    }
+
+    #[test]
+    fn a_topic_event_encodes_its_header_then_its_payload() {
+        let event = TopicEvent {
+            topic: "a/b".into(),
+            payload: vec![9],
+            retained: true,
+            publisher: 5,
+        };
+        let bytes = event.encode();
+        assert_eq!(&bytes[..8], 5u64.to_le_bytes());
+        assert_eq!(bytes[8], 1);
+        assert_eq!(&bytes[9..13], 3u32.to_le_bytes());
+        assert_eq!(&bytes[13..], b"a/b	");
     }
 }

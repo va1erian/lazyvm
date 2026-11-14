@@ -30,8 +30,10 @@ xui-canvas = { git = "https://github.com/va1erian/xui", rev = "832c61f29419bf31a
 xui-app = { path = "../../build/lazyos-checkout/xui-app" }
 # Messenger for `lazy.msg` (src/messenger.rs): the syscalls and the parcel
 # codec, from the same checkout.
-lazyos-sys = { path = "../../build/lazyos-checkout/libs/lazyos-sys", features = ["std", "parcel"] }
+lazyos-sys = { path = "../../build/lazyos-checkout/libs/lazyos-sys", features = ["client"] }
 libmessenger = { path = "../../build/lazyos-checkout/libs/messenger" }
+# The topics broker's generated client (src/topics.rs).
+messenger-generated = { path = "../../build/lazyos-checkout/libs/generated", default-features = false, features = ["messenger_topics_v1_client"] }
 platform = { path = "../platform" }
 
 [lints.rust]

@@ -4,7 +4,8 @@
 //! parks in one `wait` over the calls doorbell and `mio`'s epoll descriptor
 //! (LazyOS `docs/architecture/call-completion.md`), and reads each finished
 //! call with `CALL_CHECK`. Served names are registered and received on here
-//! too ([`crate::serve`]). Deadlines, resends and errors are `lazy.msg`'s
+//! too ([`crate::serve`]), and topics followed by their doorbells
+//! ([`crate::topics`]). Deadlines, resends and errors are `lazy.msg`'s
 //! (`Client.java`); this moves bytes.
 
 use std::collections::HashMap;
@@ -16,6 +17,7 @@ use libmessenger::{MAX_PARCEL_BYTES, flags};
 use platform::messenger::{Answer, Call, Request, Transport};
 
 use crate::serve::Served;
+use crate::topics::Topics;
 
 /// How many finished transaction ids one `CALL_DRAIN` takes.
 const DRAIN: usize = 64;
@@ -34,6 +36,8 @@ pub struct Kernel {
     dropped: Vec<u64>,
     /// The names this process serves.
     pub(crate) served: Served,
+    /// The topics it follows.
+    topics: Topics,
     pub(crate) reply: Vec<u8>,
     pub(crate) done: Vec<(u64, Answer)>,
     /// What the last park reported: the endpoints it named and the ready
@@ -48,6 +52,7 @@ pub fn factory() -> Option<Box<dyn Transport>> {
         pending: HashMap::new(),
         dropped: Vec::new(),
         served: Served::default(),
+        topics: Topics::default(),
         reply: vec![0; MAX_PARCEL_BYTES],
         done: Vec::new(),
         rung: None,
@@ -77,7 +82,7 @@ impl Kernel {
         if code == -EPIPE {
             self.forget(name);
         }
-        let errno = i32::try_from(-code).unwrap_or(i32::MAX);
+        let errno = errno(code);
         self.done.push((id, Answer::Failed { errno, delivered }));
     }
 
@@ -113,10 +118,11 @@ impl Kernel {
 impl Transport for Kernel {
     fn park(&mut self, fd: i32, timeout: Option<Duration>) {
         let flags = msg::WAIT_CALLS | msg::wait_fd(fd as u32);
-        let words = self.served.waiting();
+        let mut words = self.served.waiting();
+        words.extend(self.topics.waiting());
         // An interrupted or failed wait only costs a turn of the loop, which
         // then looks at everything.
-        let ready = match timeout {
+        let ready = match self.topics.bound(timeout) {
             Some(t) => {
                 let nanos = u64::try_from(t.as_nanos()).unwrap_or(u64::MAX);
                 msg::wait_any_ns(
@@ -143,8 +149,27 @@ impl Transport for Kernel {
                 interface_name,
                 done,
             } => {
+                let taken = self.topics.len();
                 // A caller that stopped waiting needs no answer.
-                let _ = done.send(self.served.serve(name, interface, &interface_name));
+                let _ = done.send(self.served.serve(name, interface, &interface_name, taken));
+            }
+            Request::Subscribe { filter, done } => {
+                let _ = done.send(self.topics.subscribe(&filter, self.served.len()));
+            }
+            Request::Next { id, subscription } => {
+                self.topics.next(id, subscription, &mut self.done)
+            }
+            Request::Unsubscribe { subscription } => {
+                self.topics.unsubscribe(subscription, &mut self.done)
+            }
+            Request::Publish {
+                id,
+                topic,
+                payload,
+                retained,
+            } => {
+                let answer = self.topics.publish(&topic, &payload, retained);
+                self.done.push((id, answer));
             }
             Request::Receive { id, served } => self.served.receive(id, served, &mut self.done),
             Request::Reply { txn, body } => self.served.reply(txn, body),
@@ -163,6 +188,7 @@ impl Transport for Kernel {
             self.dropped.push(txn);
         }
         self.served.cancel(id);
+        self.topics.cancel(id);
     }
 
     /// Looks only where the park says something happened: the calls when
@@ -176,7 +202,11 @@ impl Transport for Kernel {
             self.check_all();
         }
         let endpoints = match &rung {
-            None => self.served.waiting(),
+            None => {
+                let mut all = self.served.waiting();
+                all.extend(self.topics.waiting());
+                all
+            }
             Some((words, mask)) => {
                 let ready = words
                     .iter()
@@ -187,6 +217,7 @@ impl Transport for Kernel {
         };
         self.served
             .take(&endpoints, &mut self.reply, &mut self.done);
+        self.topics.take(&endpoints, &mut self.done);
         std::mem::take(&mut self.done)
     }
 }
@@ -226,6 +257,11 @@ impl Kernel {
             Err(code) => self.fail(call.id, &call.service, code, false),
         }
     }
+}
+
+/// The positive errno an `Answer` carries, from a syscall's negative result.
+pub(crate) fn errno(code: i64) -> i32 {
+    i32::try_from(-code).unwrap_or(i32::MAX)
 }
 
 /// The absolute tick the kernel ends a call at, a little after the

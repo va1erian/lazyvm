@@ -28,6 +28,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+# The `NEEDS:` of the tests that run on lazyvm-ui, which links xui and, on LazyOS, Messenger.
+UI_NEEDS = ("ui", "msg")
 import javac  # noqa: E402
 import lazyrt  # noqa: E402
 from common import LAZYRT_CLASSES, MSG_GEN, TESTS_CLASSES, TESTS_SRC, die, java_sources  # noqa: E402
