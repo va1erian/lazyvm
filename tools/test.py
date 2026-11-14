@@ -57,15 +57,16 @@ def main() -> None:
     exe = args.exe or (None if skip_cargo else cargo_build_launcher())
     if exe is None:
         die("--no-build and --build-java-only need --exe")
-    # `lazy.ui` tests run on lazyvm-ui, the binary that links xui (docs/ui.md, "Size").
+    # `lazy.ui` tests run on lazyvm-ui, the binary that links xui (docs/ui.md, "Size"), and so
+    # do `lazy.msg` ones, as on LazyOS, where only lazyvm-ui carries Messenger.
     ui_exe = args.ui_exe
-    if ui_exe is None and any(t.needs == "ui" for t in tests):
+    if ui_exe is None and any(t.needs in testlib.UI_NEEDS for t in tests):
         ui_exe = None if skip_cargo else cargo_build_launcher(ui=True)
         if ui_exe is None:
             die("NEEDS: ui tests with --no-build need --ui-exe")
     failed = 0
     for test in tests:
-        ok, detail = check(ui_exe if test.needs == "ui" else exe, test, classpath, boot)
+        ok, detail = check(ui_exe if test.needs in testlib.UI_NEEDS else exe, test, classpath, boot)
         print(f"{'PASS' if ok else 'FAIL'} {test.name}")
         if not ok:
             failed += 1

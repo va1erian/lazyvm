@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import lazy.msg.Caller;
 
@@ -134,7 +136,7 @@ final class Loopback implements Broker {
     }
 
     @Override
-    public void publish(String topic, byte[] payload, boolean keep) {
+    public CompletionStage<Void> publish(String topic, byte[] payload, boolean keep) {
         synchronized (delivery) {
             List<Sub> targets = new ArrayList<>();
             synchronized (this) {
@@ -146,5 +148,6 @@ final class Loopback implements Broker {
             RawEvent event = new RawEvent(topic, payload, false, PUBLISHER);
             for (Sub s : targets) s.sink.accept(event);
         }
+        return CompletableFuture.completedFuture(null);
     }
 }

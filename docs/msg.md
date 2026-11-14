@@ -255,16 +255,33 @@ await HealthdTopics.systemHealth("app.demo").publish(new HealthRecord().name("ap
   IDL's; `subscribe(Qos, handler)` overrides it: `LATEST` keeps only the
   newest event per topic not yet handled, `BUFFERED` keeps them all. A
   payload that does not decode is skipped with a line on stderr, as LazyOS's
-  typed subscription consumes it.
+  typed subscription consumes it. A subscription the broker refuses (no
+  grant, a bad filter) throws an `UncheckedIOException` around the
+  `MessengerException`.
 - Delivery uses the broker's doorbell, as LazyOS's one subscriber does
-  (`client-api-plan.md` 3.5): the reactor parks on the bell with its other
-  endpoints and drains `NextEvent` only when it rang. Nothing polls.
+  (`client-api-plan.md` 3.5): the reactor parks on a subscription's bell with
+  its other endpoints while Java waits for that subscription's next event, and
+  pulls `NextEvent` only when it rang. Nothing polls. One event is pulled per
+  wait, so what a slow handler has not taken stays in the broker, which bounds
+  it. At the broker every subscription is `buffered` at its deepest queue (64)
+  and `lazy.msg` applies the QoS itself: the broker's `latest` keeps one event
+  across every topic a filter matches, not one per topic. A process follows
+  and serves at most eight in all on LazyOS (one `wait` names eight
+  endpoints); the ninth is refused with `ENOSPC`.
+- `Event.retained()` is true for a replay only: the retained values a new
+  subscription is given first. LazyOS's broker also marks a live event that
+  was published as retained, so the transport asks, right after subscribing,
+  how many events the subscription holds (the replays, queued during the
+  subscribe) and passes the broker's mark for those alone. A publish another
+  process makes in that instant counts as a replay.
 - **`publish(value)`** returns a stage completed when the broker took it;
   `retained` is the IDL's. An app may publish only what its manifest grants
   (section 8).
 - **Closing.** `Subscription.close()` ends one. An open subscription keeps
-  the program running. Planned, not built: subscriptions and registrations
-  made on the UI thread close when `Ui.run` returns, as a LazyRAD form's do.
+  the program running. A subscription made on the UI thread closes when
+  `Ui.run` returns, as a LazyRAD form's do (`lazy.internal.Homes`: the UI
+  thread's home owns it). Registrations made there will close the same way
+  (S10-03).
 
 There is one way to receive: a handler. A pull form (`await feed.next()` in
 a loop) was considered and left out: it is a second way, and an `async`
@@ -280,7 +297,7 @@ the resend rule, cancelling), serving (`Server`), callback channels
 (`Listeners`), topics (`Topics`, `TopicNames`) and the transport seam
 (`Broker`). A `Broker` has two implementations:
 
-- **LazyOS** (`NativeBroker.java`; calling and serving built, topics and
+- **LazyOS** (`NativeBroker.java`; calling, serving and topics built,
   channel objects not yet): `crates/lazyvm-lazyos`, over `libmessenger` and
   `lazyos-sys` (GPL, so it stays in that crate, D2), reached through
   `platform::messenger`, which LazyOS's `lazyvm-ui` installs. The reactor
@@ -289,8 +306,12 @@ the resend rule, cancelling), serving (`Server`), callback channels
   `mio`'s epoll descriptor as `WAIT_FD` ([`async.md`](async.md)); it reads a
   finished call with `CALL_CHECK`. Serving registers a pair's first end and
   receives on the second, as LazyOS's own servers do, one request asked for
-  at a time per name. `serve` is synchronous, answered by the reactor thread
-  itself, so it may be called from the loop. The plain `lazyvm` installs no
+  at a time per name. Topics go through `messengerd`'s broker with its
+  generated client (`topics.rs`): the reactor subscribes, gives each
+  subscription a doorbell, publishes in LazyOS's payload envelope, and pulls
+  one event per wait (section 6). `serve` and `subscribe` are synchronous,
+  answered by the reactor thread itself, so they may be called from the loop;
+  the reactor's own calls to the broker are bounded to 500 ms. The plain `lazyvm` installs no
   transport and keeps the loopback broker, on LazyOS too; apps run on
   `lazyvm-ui`.
 - **Loopback** (built, `Loopback.java`; the broker on Windows and wherever

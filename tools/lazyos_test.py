@@ -67,7 +67,7 @@ def command_line(main_class: str, args: list[str], vm_args: list[str], exe: str 
 
 def command(test: testlib.Test, extra: list[str]) -> str:
     """The shell line for `test`, with `extra` VM options before its own."""
-    exe = "lazyvm-ui" if test.needs in ("ui", "msg") else "lazyvm"
+    exe = "lazyvm-ui" if test.needs in testlib.UI_NEEDS else "lazyvm"
     return command_line(test.main_class, test.args, extra + test.vm_args, exe)
 
 

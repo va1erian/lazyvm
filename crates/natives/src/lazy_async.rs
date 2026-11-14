@@ -96,6 +96,42 @@ pub fn register(vm: &mut Vm) {
         messenger::request(Request::Unserve { served: id(a, 0)? }).map_err(io_failure)?;
         ret_void()
     });
+    vm.register_native(
+        REACTOR,
+        "msgSubscribe0",
+        "(Ljava/lang/String;)J",
+        msg_subscribe0,
+    );
+    vm.register_native(REACTOR, "msgNext0", "(JJ)V", |_, a| {
+        let r = Request::Next {
+            id: id(a, 0)?,
+            subscription: id(a, 1)?,
+        };
+        messenger::request(r).map_err(io_failure)?;
+        ret_void()
+    });
+    vm.register_native(REACTOR, "msgUnsubscribe0", "(J)V", |_, a| {
+        let r = Request::Unsubscribe {
+            subscription: id(a, 0)?,
+        };
+        messenger::request(r).map_err(io_failure)?;
+        ret_void()
+    });
+    vm.register_native(
+        REACTOR,
+        "msgPublish0",
+        "(JLjava/lang/String;[BZ)V",
+        |vm, a| {
+            let r = Request::Publish {
+                id: id(a, 0)?,
+                topic: vm.string_arg(arg(a, 1)?)?,
+                payload: bytes_arg(vm, a, 2)?,
+                retained: int(a, 3)? != 0,
+            };
+            messenger::request(r).map_err(io_failure)?;
+            ret_void()
+        },
+    );
     vm.register_native(REACTOR, "msgAvailable0", "()Z", |_, _| {
         Ok(Some(Value::Int(i32::from(messenger::available()))))
     });
@@ -143,11 +179,27 @@ fn msg_serve0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
     let interface = long(args, 1)? as u64;
     let interface_name = vm.string_arg(arg(args, 2)?)?;
     let served = vm.blocking(|| messenger::serve(name, interface, interface_name));
-    let value = match served.map_err(io_failure)? {
+    Ok(Some(Value::Long(handle_or_errno(
+        served.map_err(io_failure)?,
+    ))))
+}
+
+/// `(filter)`: the subscription's handle, or a negative errno. Blocks until
+/// the reactor thread has subscribed.
+fn msg_subscribe0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let filter = vm.string_arg(arg(args, 0)?)?;
+    let subscribed = vm.blocking(|| messenger::subscribe(filter));
+    Ok(Some(Value::Long(handle_or_errno(
+        subscribed.map_err(io_failure)?,
+    ))))
+}
+
+/// A handle as Java reads it, an errno as its negation.
+fn handle_or_errno(answer: Result<u64, i32>) -> i64 {
+    match answer {
         Ok(handle) => handle as i64,
         Err(errno) => -i64::from(errno),
-    };
-    Ok(Some(Value::Long(value)))
+    }
 }
 
 /// A copy of the `byte[]` argument `i`, so the caller may reuse its array.

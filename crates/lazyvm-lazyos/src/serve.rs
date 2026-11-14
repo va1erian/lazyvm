@@ -42,20 +42,22 @@ fn failed(code: i64, delivered: bool) -> Answer {
 
 impl Served {
     /// Registers `name`: the receiving endpoint's handle, or the errno. One
-    /// `wait` names at most [`msg::WAIT_MAX_ENDPOINTS`] endpoints, so a name
-    /// past that is refused rather than left unwatched.
+    /// `wait` names at most [`msg::WAIT_MAX_ENDPOINTS`] endpoints, `taken` of
+    /// them by others, so a name past that is refused rather than left
+    /// unwatched.
     pub fn serve(
         &mut self,
         name: String,
         interface: u64,
         interface_name: &str,
+        taken: usize,
     ) -> Result<u64, i32> {
         // The kernel lets an owner register a name again, replacing it;
         // lazy.msg refuses a name it already serves, as its loopback does.
         if self.names.values().any(|n| n.name == name) {
             return Err(errno(-EEXIST));
         }
-        if self.names.len() >= msg::WAIT_MAX_ENDPOINTS {
+        if self.names.len() + taken >= msg::WAIT_MAX_ENDPOINTS {
             return Err(errno(-ENOSPC));
         }
         let (published, endpoint) = msg::create_pair().map_err(errno)?;
@@ -87,6 +89,10 @@ impl Served {
         for name in self.names.values_mut().filter(|n| n.receive == Some(id)) {
             name.receive = None;
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.names.len()
     }
 
     /// The endpoints to park on: those with a receive waiting.

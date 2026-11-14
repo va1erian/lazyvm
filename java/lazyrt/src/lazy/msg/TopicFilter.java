@@ -29,7 +29,13 @@ public class TopicFilter<T> {
         return qos;
     }
 
-    /** Delivers each event to {@code handler} on this thread's home, the retained values first. */
+    /**
+     * Delivers each event to {@code handler} on this thread's home, the retained values first. A
+     * subscription made on the UI thread ends when {@code Ui.run} returns.
+     *
+     * @throws java.io.UncheckedIOException around a {@link MessengerException} when the broker
+     *     refuses it
+     */
     public Subscription subscribe(Consumer<Event<T>> handler) {
         return subscribe(qos, handler);
     }

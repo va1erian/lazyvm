@@ -22,6 +22,7 @@ const UI_FONT: &str = "DroidSans.ttf";
 
 mod messenger;
 mod serve;
+mod topics;
 
 const HOST: UiHost = UiHost { desktop, error_box };
 
