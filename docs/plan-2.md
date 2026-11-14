@@ -308,13 +308,17 @@ corpus test passes on LazyVM (two object samples skipped). `lazy-api.jar` and
 the `siestac check` of it are not done. The runtime of S10-02, S10-03 and
 S10-06 is built over the loopback broker only: `tests/java/lazy/msg`
 (`EchoCall`, `Errors`, `Shapes`, `Events`, `Topics`) and
-`tests/siesta/msg/MsgDemo` pass on Windows. Status (2026-11-14): S10-02 done.
+`tests/siesta/msg/MsgDemo` pass on Windows. Status (2026-11-14): S10-02 and S10-06 done.
+Topics reach `messengerd`'s broker from `crates/lazyvm-lazyos/src/topics.rs`;
+LazyOS's `lazyvm` test fixture now starts `messengerd`, since it replaces
+`init`. Topics through the broker were checked only from a process run as root
+by that fixture; an app's grants are S10-05's.
 The label spike passed (msg.md section 7: the label reaches the VM's threads,
 nothing to change in LazyOS), and LazyOS's `lazyvm-ui` carries the transport
 for calling and serving (`crates/lazyvm-lazyos`, `platform::messenger`):
 `EchoCall` and `Errors` pass inside LazyOS under `tools/lazyos_test.py --msg`.
-Not done: topics and channel objects on LazyOS, the cross-language
-`ServeEcho`, `LateReply`, closing with `Ui.run`, and the other LazyOS checks. The generated test classes live in
+Not done: channel objects on LazyOS, the cross-language `ServeEcho`,
+`LateReply`, closing registrations with `Ui.run`, and the other LazyOS checks. The generated test classes live in
 `tests/msg/gen` (with the tests' own `tests/msg/demo.midl`), refreshed by
 `tools/msg_gen.py --lazyos <checkout>`.
 
@@ -372,13 +376,20 @@ Not done: topics and channel objects on LazyOS, the cross-language
       Check: LazyOS `run_demo.py --lazyvm` boots and launches `samples/notes`
       from the launcher, with a screenshot; a `package.py` test finds the grants
       of a Java and a Siesta jar; the PR reports `lazy-api.jar`'s size.
-- [ ] S10-06 Topics (msg.md section 6): `Topic`, `TopicFilter`, `subscribe`
+- [x] S10-06 Topics (msg.md section 6): `Topic`, `TopicFilter`, `subscribe`
       on the broker's doorbell, `publish`, retained values, QoS, decode
       failures skipped, closing with `Ui.run`.
       Check: `Topics` (retained first, `latest` against `buffered`, a filter
       with `null` placeholders, a bad payload), `UiTopics` (a handler on the UI
       thread, closed by `Ui.run`), both.
       Needs: S10-02.
+      Done (2026-11-14): both pass on Windows (loopback) and inside LazyOS
+      (`lazyos_test.py --msg`, through `messengerd`). The reactor parks on a
+      subscription's doorbell while Java waits for its next event and pulls
+      one event per wait; every subscription is `buffered` at the broker and
+      `lazy.msg` applies `latest` per topic itself (msg.md section 6). A UI
+      thread's subscriptions are owned by its home (`lazy.internal.Homes`)
+      and end when `Ui.run` returns.
 - [ ] S10-07 Siesta apps on Messenger: `siestac` and `lazyvm` put
       `lazy-api.jar` on the class path where it is installed;
       `samples/siesta/echo` (a service and its client) and the Messenger

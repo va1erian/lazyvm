@@ -1,6 +1,7 @@
 package lazy.internal.msg;
 
 import java.util.List;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import lazy.internal.Reactor;
 import lazy.msg.Caller;
@@ -28,13 +29,19 @@ public interface Broker {
     /** Withdraws a name; its calls in flight fail with EPIPE. */
     void unregister(Object token);
 
-    /** Subscribes to {@code filter}; the retained values that match arrive first. Returns the token. */
-    Object subscribe(String filter, Consumer<RawEvent> sink);
+    /**
+     * Subscribes to {@code filter}; the retained values that match arrive first. Returns the token;
+     * a refusal is a {@link Wire.Failure}. {@code ended} runs if the broker ends it (it went away).
+     */
+    Object subscribe(String filter, Consumer<RawEvent> sink, Runnable ended);
 
     void unsubscribe(Object token);
 
-    /** Publishes {@code payload} on the concrete topic {@code topic}. */
-    void publish(String topic, byte[] payload, boolean retained);
+    /**
+     * Publishes {@code payload} on the concrete topic {@code topic}; the stage completes when the
+     * broker took it, and fails with a {@link Wire.Failure} when it refused.
+     */
+    CompletionStage<Void> publish(String topic, byte[] payload, boolean retained);
 
     /** The broker this process uses. */
     static Broker get() {

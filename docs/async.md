@@ -377,10 +377,12 @@ timeout. Because that code is GPL and lives in `crates/lazyvm-lazyos`,
 `crates/platform` defines the seam (`platform::messenger::Transport`: park,
 requests, cancel, finished calls), parks in `mio` alone when none is
 installed, and LazyOS's `lazyvm-ui` installs `lazyvm-lazyos`'s before the VM
-starts. It stays one reactor and one park. As built (S10-02): a served name's
-receiving endpoint joins the wait's items while Java waits for its next
-request; one `wait` names at most eight, so a process serves at most eight
-names there (a ninth is refused with `ENOSPC`).
+starts. It stays one reactor and one park. As built (S10-02, S10-06): a
+served name's receiving endpoint joins the wait's items while Java waits for
+its next request, and so does a topic subscription's doorbell while Java
+waits for its next event; one `wait` names at most eight, so a process serves
+and subscribes at most eight in all there (the ninth is refused with
+`ENOSPC`).
 
 ## Dependencies and size
 
