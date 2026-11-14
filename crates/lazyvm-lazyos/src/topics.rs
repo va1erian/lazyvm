@@ -4,8 +4,9 @@
 //! generated `os.lazy.messenger.topics.v1` client, the payload envelope, and a
 //! doorbell per subscription. The reactor parks on a bell only while Java
 //! waits for that subscription's next event, and pulls one event per wait
-//! (`NextEvent` with an expired deadline, which answers at once), so a slow
-//! handler leaves the backlog in the broker, whose queue bounds it.
+//! (`NextEvent` with an expired deadline, which answers at once). Java asks
+//! for the next once it has queued one for its handler, so what a slow
+//! handler has not taken waits in `lazy.msg`'s queue (`Topics.java`).
 //!
 //! Every subscription is `buffered` at the broker, at its deepest queue:
 //! `lazy.msg` keeps a `latest` subscription's newest event per topic itself
@@ -24,9 +25,11 @@ use lazyos_sys::msg;
 use libmessenger::Parcel;
 use libmessenger::client::{CallFailure, Connection, Deadline, Errno, Handle, Retry, Transport};
 use libmessenger::envelope;
-use libmessenger::errno::{EAGAIN, EINVAL, EIO, ENOSPC, EPIPE};
+use libmessenger::errno::{EAGAIN, EINVAL, ENOSPC, EPIPE};
 use messenger_generated::os_lazy_messenger_topics_v1 as wire;
 use platform::messenger::{Answer, TopicEvent};
+
+use crate::messenger::errno;
 
 /// What one call to the broker may take, finding it included: the reactor
 /// thread waits for it.
@@ -100,8 +103,8 @@ pub struct Topics {
 }
 
 /// The positive errno of a failed broker call.
-fn errno(error: &wire::ClientError) -> i32 {
-    i32::try_from(-error.code()).unwrap_or(EIO as i32)
+fn refused(error: &wire::ClientError) -> i32 {
+    errno(error.code())
 }
 
 fn failed(errno: i32) -> Answer {
@@ -132,7 +135,7 @@ impl Topics {
         let broker = self.broker();
         let id = broker
             .subscribe_within(filter, wire::QOS_BUFFERED, DEPTH, BOUND)
-            .map_err(|e| errno(&e))?;
+            .map_err(|e| refused(&e))?;
         let replays = replays(broker, id);
         let bell = match doorbell(broker, id) {
             Ok(bell) => bell,
@@ -174,14 +177,15 @@ impl Topics {
         quiet.map(|(&bell, _)| bell).collect()
     }
 
-    /// How long the reactor may park: not at all while a waiting `Next`
-    /// has something to pull, briefly after a busy broker.
+    /// How long the reactor may park: briefly after a busy broker, which a
+    /// pull at once would find busy again; else not at all while a waiting
+    /// `Next` has something to pull.
     pub fn bound(&self, timeout: Option<Duration>) -> Option<Duration> {
-        if self.subs.values().any(|s| s.next.is_some() && s.unread) {
-            return Some(Duration::ZERO);
-        }
         if self.busy {
             return Some(timeout.map_or(BUSY_RETRY, |t| t.min(BUSY_RETRY)));
+        }
+        if self.subs.values().any(|s| s.next.is_some() && s.unread) {
+            return Some(Duration::ZERO);
         }
         timeout
     }
@@ -230,7 +234,7 @@ impl Topics {
                 self.busy = true;
                 return;
             }
-            Err(e) => failed(errno(&e)),
+            Err(e) => failed(refused(&e)),
         };
         if let Some(id) = sub.next.take() {
             done.push((id, answer));
@@ -262,7 +266,7 @@ impl Topics {
             .publish_within(topic, &wrapped, retained, BOUND)
         {
             Ok(_) => Answer::Reply(Vec::new()),
-            Err(e) => failed(errno(&e)),
+            Err(e) => failed(refused(&e)),
         }
     }
 }
@@ -288,13 +292,12 @@ fn replay(left: &mut u64) -> bool {
 
 /// Gives subscription `id` a doorbell: our end's handle, or the errno.
 fn doorbell(broker: &Broker, id: u64) -> Result<u64, i32> {
-    let (bell, theirs) =
-        msg::create_pair().map_err(|code| i32::try_from(-code).unwrap_or(EIO as i32))?;
+    let (bell, theirs) = msg::create_pair().map_err(errno)?;
     if let Err(e) = broker.bell_within(id, theirs, BOUND) {
         // The far end may have moved already; closing it then is a harmless EBADF.
         let _ = msg::close(theirs);
         let _ = msg::close(bell);
-        return Err(errno(&e));
+        return Err(refused(&e));
     }
     Ok(bell)
 }

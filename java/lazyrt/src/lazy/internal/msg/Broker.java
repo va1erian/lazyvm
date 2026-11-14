@@ -31,9 +31,9 @@ public interface Broker {
 
     /**
      * Subscribes to {@code filter}; the retained values that match arrive first. Returns the token;
-     * a refusal is a {@link Wire.Failure}.
+     * a refusal is a {@link Wire.Failure}. {@code ended} runs if the broker ends it (it went away).
      */
-    Object subscribe(String filter, Consumer<RawEvent> sink);
+    Object subscribe(String filter, Consumer<RawEvent> sink, Runnable ended);
 
     void unsubscribe(Object token);
 

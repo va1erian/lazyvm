@@ -12,6 +12,8 @@ use libmessenger::Parcel;
 use libmessenger::errno::{EAGAIN, EEXIST, EINTR, EMSGSIZE, ENOSPC, EPIPE, ETIMEDOUT};
 use platform::messenger::{Answer, Incoming};
 
+use crate::messenger::errno;
+
 /// One served name, by its receiving endpoint.
 struct Name {
     name: String,
@@ -25,11 +27,6 @@ pub struct Served {
     names: HashMap<u64, Name>,
     /// Received calls not answered yet: the reply's header, and the endpoint.
     open: HashMap<u64, (u64, u32, u64)>,
-}
-
-/// The positive errno an `Answer` carries, from a syscall's negative result.
-fn errno(code: i64) -> i32 {
-    i32::try_from(-code).unwrap_or(i32::MAX)
 }
 
 /// A failure `Answer` for the positive errno `code`.

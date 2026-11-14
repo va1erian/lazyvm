@@ -113,7 +113,7 @@ final class Loopback implements Broker {
     }
 
     @Override
-    public Object subscribe(String filter, Consumer<RawEvent> sink) {
+    public Object subscribe(String filter, Consumer<RawEvent> sink, Runnable ended) {
         Sub sub = new Sub(filter, sink);
         synchronized (delivery) {
             List<RawEvent> first = new ArrayList<>();

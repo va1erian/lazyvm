@@ -36,7 +36,7 @@ public final class Topics {
         if (qos == null) throw new NullPointerException("qos");
         Sub<T> sub = new Sub<>(qos, codec, handler, Calls.home());
         try {
-            sub.attach(Broker.get().subscribe(filter, sub::offer));
+            sub.attach(Broker.get().subscribe(filter, sub::offer, sub.closer));
         } catch (Wire.Failure f) {
             sub.close();
             throw new UncheckedIOException(refusal(filter, f));

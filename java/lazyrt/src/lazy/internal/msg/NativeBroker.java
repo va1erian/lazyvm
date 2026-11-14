@@ -167,7 +167,7 @@ final class NativeBroker implements Broker {
     }
 
     @Override
-    public Object subscribe(String filter, Consumer<RawEvent> sink) {
+    public Object subscribe(String filter, Consumer<RawEvent> sink, Runnable ended) {
         long handle;
         try {
             handle = Reactor.subscribe(filter);
@@ -175,14 +175,15 @@ final class NativeBroker implements Broker {
             throw new Wire.Failure(Errno.EIO, e.getMessage());
         }
         if (handle < 0) throw new Wire.Failure((int) -handle, Errno.text((int) -handle));
-        Followed followed = new Followed(handle, sink);
+        Followed followed = new Followed(handle, sink, ended);
         next(followed);
         return followed;
     }
 
     /**
-     * One event at a time is asked for; the next once this one is handed to the sink. A failure
-     * other than the subscription's own end is reported, and ends it.
+     * One event at a time is asked for; the next once this one is handed to the sink, which queues
+     * it (the subscriber's QoS bounds that queue, not the broker). A failure other than the
+     * subscription's own end is reported and ends it, so it no longer holds the program open.
      */
     private static void next(Followed followed) {
         Reactor.next(followed.handle).whenComplete((answer, failure) -> {
@@ -190,10 +191,13 @@ final class NativeBroker implements Broker {
             if (failure != null || answer.length < 1 || answer[0] != 0) {
                 int errno = failure != null ? Errno.EIO : errno(answer);
                 System.err.println("lazy.msg: a subscription ended: " + Errno.text(errno));
+                followed.ended.run();
                 return;
             }
             try {
                 followed.sink.accept(event(answer));
+            } catch (Wire.Failure e) {
+                System.err.println("lazy.msg: an event does not read: " + e.getMessage());
             } catch (RuntimeException e) {
                 Reactor.report(e);
             }
@@ -206,7 +210,9 @@ final class NativeBroker implements Broker {
         ByteBuffer in = ByteBuffer.wrap(answer, 1, answer.length - 1).order(ByteOrder.LITTLE_ENDIAN);
         long publisher = in.getLong();
         boolean retained = in.get() != 0;
-        byte[] topic = new byte[in.getInt()];
+        int length = in.getInt();
+        if (length < 0 || length > in.remaining()) throw Wire.malformed("topic length " + length);
+        byte[] topic = new byte[length];
         in.get(topic);
         byte[] payload = new byte[in.remaining()];
         in.get(payload);
@@ -228,11 +234,13 @@ final class NativeBroker implements Broker {
     private static final class Followed {
         final long handle;
         final Consumer<RawEvent> sink;
+        final Runnable ended;
         volatile boolean closed;
 
-        Followed(long handle, Consumer<RawEvent> sink) {
+        Followed(long handle, Consumer<RawEvent> sink, Runnable ended) {
             this.handle = handle;
             this.sink = sink;
+            this.ended = ended;
         }
     }
 

@@ -82,7 +82,7 @@ impl Kernel {
         if code == -EPIPE {
             self.forget(name);
         }
-        let errno = i32::try_from(-code).unwrap_or(i32::MAX);
+        let errno = errno(code);
         self.done.push((id, Answer::Failed { errno, delivered }));
     }
 
@@ -257,6 +257,11 @@ impl Kernel {
             Err(code) => self.fail(call.id, &call.service, code, false),
         }
     }
+}
+
+/// The positive errno an `Answer` carries, from a syscall's negative result.
+pub(crate) fn errno(code: i64) -> i32 {
+    i32::try_from(-code).unwrap_or(i32::MAX)
 }
 
 /// The absolute tick the kernel ends a call at, a little after the

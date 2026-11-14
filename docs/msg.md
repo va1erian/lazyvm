@@ -262,8 +262,11 @@ await HealthdTopics.systemHealth("app.demo").publish(new HealthRecord().name("ap
   (`client-api-plan.md` 3.5): the reactor parks on a subscription's bell with
   its other endpoints while Java waits for that subscription's next event, and
   pulls `NextEvent` only when it rang. Nothing polls. One event is pulled per
-  wait, so what a slow handler has not taken stays in the broker, which bounds
-  it. At the broker every subscription is `buffered` at its deepest queue (64)
+  wait, and Java asks for the next once it has queued one for the handler, so
+  the subscriber's own queue holds what a slow handler has not taken (`LATEST`
+  keeps one per topic there; `BUFFERED` keeps them all, as on the loopback). A
+  subscription the broker ends (it went away) is reported on stderr and closed.
+  At the broker every subscription is `buffered` at its deepest queue (64)
   and `lazy.msg` applies the QoS itself: the broker's `latest` keeps one event
   across every topic a filter matches, not one per topic. A process follows
   and serves at most eight in all on LazyOS (one `wait` names eight
@@ -310,8 +313,11 @@ the resend rule, cancelling), serving (`Server`), callback channels
   generated client (`topics.rs`): the reactor subscribes, gives each
   subscription a doorbell, publishes in LazyOS's payload envelope, and pulls
   one event per wait (section 6). `serve` and `subscribe` are synchronous,
-  answered by the reactor thread itself, so they may be called from the loop;
-  the reactor's own calls to the broker are bounded to 500 ms. The plain `lazyvm` installs no
+  answered by the reactor thread itself, so they may be called from the loop.
+  The reactor waits for its calls to the broker, each bounded to 500 ms (finding
+  the broker included): a subscribe makes three (subscribe, the queue's depth,
+  the doorbell), a publish and an unsubscribe one, and other work waits
+  meanwhile. The broker answers at once when it is up. The plain `lazyvm` installs no
   transport and keeps the loopback broker, on LazyOS too; apps run on
   `lazyvm-ui`.
 - **Loopback** (built, `Loopback.java`; the broker on Windows and wherever
