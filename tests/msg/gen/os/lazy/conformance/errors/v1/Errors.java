@@ -26,7 +26,8 @@ public final class Errors {
     /** Serves {@code server} under {@code name}; a name already served fails with EEXIST. */
     public static lazy.msg.Registration serve(String name, ErrorsServer server) {
         Wire.need(server, "server");
-        return lazy.internal.msg.Server.serve(name, call -> ErrorsCodec.dispatch(server, call));
+        return lazy.internal.msg.Server.serve(name, INTERFACE, ErrorsCodec.INTERFACE_ID,
+                call -> ErrorsCodec.dispatch(server, call));
     }
 
     public CompletionStage<ReadReply> read(String path) {

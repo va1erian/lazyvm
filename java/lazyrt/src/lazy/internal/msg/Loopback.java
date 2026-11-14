@@ -85,7 +85,7 @@ final class Loopback implements Broker {
     }
 
     @Override
-    public Object register(String name, Consumer<Incoming> inbox) {
+    public Object register(String name, long iface, String ifaceName, Consumer<Incoming> inbox) {
         synchronized (this) {
             if (names.containsKey(name)) throw new Wire.Failure(Errno.EEXIST, name + " is already served");
             Served served = new Served(name, inbox);

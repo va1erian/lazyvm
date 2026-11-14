@@ -1,3 +1,4 @@
+// NEEDS: msg
 package lazy.msg;
 
 import java.util.concurrent.CancellationException;

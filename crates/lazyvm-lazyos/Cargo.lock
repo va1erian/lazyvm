@@ -101,6 +101,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
+name = "atomicfile"
+version = "0.1.0"
+
+[[package]]
 name = "audioclient"
 version = "0.1.0"
 dependencies = [
@@ -1187,6 +1191,7 @@ dependencies = [
 name = "lazyhttps"
 version = "0.1.0"
 dependencies = [
+ "fhs",
  "nettls-crypto",
  "rustls",
  "rustls-pki-types",
@@ -1235,6 +1240,7 @@ dependencies = [
 name = "lazysky-core"
 version = "0.1.0"
 dependencies = [
+ "atomicfile",
  "image",
  "lazyhttps",
  "serde",
@@ -1248,6 +1254,7 @@ version = "0.1.0"
 dependencies = [
  "lazysky-core",
  "xui-core",
+ "xui-work",
 ]
 
 [[package]]
@@ -1272,7 +1279,10 @@ name = "lazyvm-lazyos"
 version = "0.1.0"
 dependencies = [
  "launcher",
+ "lazyos-sys",
+ "libmessenger",
  "natives-ui",
+ "platform",
  "xui-app",
  "xui-canvas",
 ]
@@ -1420,6 +1430,9 @@ dependencies = [
 [[package]]
 name = "netpolicy"
 version = "0.1.0"
+dependencies = [
+ "messenger-generated",
+]
 
 [[package]]
 name = "netstack"
@@ -1736,6 +1749,7 @@ dependencies = [
 name = "printd"
 version = "0.1.0"
 dependencies = [
+ "atomicfile",
  "ipp",
 ]
 
@@ -2726,7 +2740,9 @@ name = "vm"
 version = "0.1.0"
 dependencies = [
  "classfile",
+ "libc",
  "platform",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2936,6 +2952,7 @@ name = "xui-app"
 version = "0.1.0"
 dependencies = [
  "accountdb",
+ "atomicfile",
  "audioclient",
  "confd",
  "deskmenu",
@@ -2957,6 +2974,7 @@ dependencies = [
  "netstack",
  "printd",
  "rhai-lazy",
+ "serde",
  "surfbuf",
  "svcpolicy",
  "timezone",
@@ -2973,6 +2991,7 @@ dependencies = [
  "xui-cursored",
  "xui-explorer",
  "xui-golf",
+ "xui-host",
  "xui-icons",
  "xui-markdown",
  "xui-nes",
@@ -2983,6 +3002,7 @@ dependencies = [
  "xui-settings",
  "xui-videoview",
  "xui-webd-client",
+ "xui-work",
  "xui-writer",
 ]
 
@@ -2992,6 +3012,8 @@ version = "0.1.0"
 dependencies = [
  "lazyarc",
  "xui-core",
+ "xui-host",
+ "xui-work",
 ]
 
 [[package]]
@@ -3024,6 +3046,7 @@ dependencies = [
 name = "xui-code-editor"
 version = "0.1.0"
 dependencies = [
+ "atomicfile",
  "regex",
  "ropey",
  "xui-core",
@@ -3034,7 +3057,9 @@ name = "xui-confd-editor"
 version = "0.1.0"
 dependencies = [
  "confd",
+ "messenger-generated",
  "xui-core",
+ "xui-host",
 ]
 
 [[package]]
@@ -3064,6 +3089,7 @@ dependencies = [
  "image",
  "xui-core",
  "xui-icons",
+ "xui-work",
 ]
 
 [[package]]
@@ -3071,6 +3097,18 @@ name = "xui-golf"
 version = "0.1.0"
 dependencies = [
  "xui-core",
+ "xui-work",
+]
+
+[[package]]
+name = "xui-host"
+version = "0.1.0"
+dependencies = [
+ "confd",
+ "serde",
+ "serde_json",
+ "xui-core",
+ "xui-work",
 ]
 
 [[package]]
@@ -3098,6 +3136,7 @@ version = "0.1.0"
 dependencies = [
  "tetanes-core",
  "xui-core",
+ "xui-host",
 ]
 
 [[package]]
@@ -3105,6 +3144,8 @@ name = "xui-paint"
 version = "0.0.0"
 dependencies = [
  "cosmic-text",
+ "crc32fast",
+ "flate2",
  "tiny-skia",
  "xui-core",
 ]
@@ -3115,6 +3156,8 @@ version = "0.1.0"
 dependencies = [
  "lazypdf",
  "xui-core",
+ "xui-host",
+ "xui-work",
 ]
 
 [[package]]
@@ -3151,6 +3194,8 @@ dependencies = [
  "timezone",
  "uitheme",
  "xui-core",
+ "xui-host",
+ "xui-work",
 ]
 
 [[package]]
@@ -3159,6 +3204,7 @@ version = "0.1.0"
 dependencies = [
  "lazyvideo",
  "xui-core",
+ "xui-host",
 ]
 
 [[package]]
@@ -3170,6 +3216,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "xui-work"
+version = "0.1.0"
+dependencies = [
+ "xui-core",
+]
+
+[[package]]
 name = "xui-writer"
 version = "0.1.0"
 dependencies = [
@@ -3178,6 +3231,7 @@ dependencies = [
  "raster",
  "xui-canvas",
  "xui-core",
+ "xui-host",
  "xui-rich-text",
 ]
 

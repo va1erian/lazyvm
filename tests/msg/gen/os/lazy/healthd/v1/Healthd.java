@@ -46,7 +46,8 @@ public final class Healthd {
     /** Serves {@code server} under {@code name}; a name already served fails with EEXIST. */
     public static lazy.msg.Registration serve(String name, HealthdServer server) {
         Wire.need(server, "server");
-        return lazy.internal.msg.Server.serve(name, call -> HealthdCodec.dispatch(server, call));
+        return lazy.internal.msg.Server.serve(name, INTERFACE, HealthdCodec.INTERFACE_ID,
+                call -> HealthdCodec.dispatch(server, call));
     }
 
     /**

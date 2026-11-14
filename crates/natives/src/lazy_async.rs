@@ -2,6 +2,7 @@
 //! is `platform::reactor`, its sockets `platform::net`; these check arguments
 //! and move values.
 
+use platform::messenger::{self, Call, Request};
 use platform::net;
 use platform::reactor::{self, Completion, Outcome};
 use vm::heap::Array;
@@ -62,6 +63,42 @@ pub fn register(vm: &mut Vm) {
         ret_void()
     });
     vm.register_native(REACTOR, "write0", "(JJ[B)V", write0);
+    vm.register_native(
+        REACTOR,
+        "msgCall0",
+        "(JLjava/lang/String;JI[BZJ)V",
+        msg_call0,
+    );
+    vm.register_native(
+        REACTOR,
+        "msgServe0",
+        "(Ljava/lang/String;JLjava/lang/String;)J",
+        msg_serve0,
+    );
+    vm.register_native(REACTOR, "msgReceive0", "(JJ)V", |_, a| {
+        let r = Request::Receive {
+            id: id(a, 0)?,
+            served: id(a, 1)?,
+        };
+        messenger::request(r).map_err(io_failure)?;
+        ret_void()
+    });
+    vm.register_native(REACTOR, "msgReply0", "(J[B)V", |vm, a| {
+        let body = bytes_arg(vm, a, 1)?;
+        messenger::request(Request::Reply {
+            txn: id(a, 0)?,
+            body,
+        })
+        .map_err(io_failure)?;
+        ret_void()
+    });
+    vm.register_native(REACTOR, "msgUnserve0", "(J)V", |_, a| {
+        messenger::request(Request::Unserve { served: id(a, 0)? }).map_err(io_failure)?;
+        ret_void()
+    });
+    vm.register_native(REACTOR, "msgAvailable0", "()Z", |_, _| {
+        Ok(Some(Value::Int(i32::from(messenger::available()))))
+    });
     vm.register_native(REACTOR, "close0", "(JJ)V", |_, a| {
         net::close(id(a, 0)?, id(a, 1)?).map_err(io_failure)?;
         ret_void()
@@ -78,13 +115,47 @@ pub fn register(vm: &mut Vm) {
 }
 
 fn write0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
-    let Array::Byte(bytes) = vm.heap.array(obj(args, 2)?)? else {
-        return Err(VmError::Internal("write0 needs a byte[]".into()));
-    };
-    // Copied here, so the caller may reuse its array at once.
-    let bytes = bytes.iter().map(|&b| b as u8).collect();
+    let bytes = bytes_arg(vm, args, 2)?;
     net::write(id(args, 0)?, id(args, 1)?, bytes).map_err(io_failure)?;
     ret_void()
+}
+
+/// `(id, service, interface, method, body, oneway, deadlineMillis)`: one Messenger call
+/// (`platform::messenger`); its answer comes back as the operation's bytes.
+fn msg_call0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let call = Call {
+        id: id(args, 0)?,
+        service: vm.string_arg(arg(args, 1)?)?,
+        interface: long(args, 2)? as u64,
+        method: int(args, 3)? as u32,
+        body: bytes_arg(vm, args, 4)?,
+        oneway: int(args, 5)? != 0,
+        deadline_ms: u64::try_from(long(args, 6)?).unwrap_or(0),
+    };
+    messenger::request(Request::Call(call)).map_err(io_failure)?;
+    ret_void()
+}
+
+/// `(name, interface, interfaceName)`: the registration's handle, or a
+/// negative errno. Blocks until the reactor thread has registered it.
+fn msg_serve0(vm: &mut Vm, args: &[Value]) -> VmResult<Option<Value>> {
+    let name = vm.string_arg(arg(args, 0)?)?;
+    let interface = long(args, 1)? as u64;
+    let interface_name = vm.string_arg(arg(args, 2)?)?;
+    let served = vm.blocking(|| messenger::serve(name, interface, interface_name));
+    let value = match served.map_err(io_failure)? {
+        Ok(handle) => handle as i64,
+        Err(errno) => -i64::from(errno),
+    };
+    Ok(Some(Value::Long(value)))
+}
+
+/// A copy of the `byte[]` argument `i`, so the caller may reuse its array.
+fn bytes_arg(vm: &Vm, args: &[Value], i: usize) -> VmResult<Vec<u8>> {
+    let Array::Byte(bytes) = vm.heap.array(obj(args, i)?)? else {
+        return Err(VmError::Internal("a byte[] argument was expected".into()));
+    };
+    Ok(bytes.iter().map(|&b| b as u8).collect())
 }
 
 /// `(ids, handles, payloads)`: a payload is a `byte[]`, a `String` naming a

@@ -28,6 +28,11 @@ natives-ui = { path = "../natives-ui" }
 # `xui_core` links.
 xui-canvas = { git = "https://github.com/va1erian/xui", rev = "832c61f29419bf31a0518a47e050b15c97b316e3", default-features = false }
 xui-app = { path = "../../build/lazyos-checkout/xui-app" }
+# Messenger for `lazy.msg` (src/messenger.rs): the syscalls and the parcel
+# codec, from the same checkout.
+lazyos-sys = { path = "../../build/lazyos-checkout/libs/lazyos-sys", features = ["std", "parcel"] }
+libmessenger = { path = "../../build/lazyos-checkout/libs/messenger" }
+platform = { path = "../platform" }
 
 [lints.rust]
 unsafe_code = "deny"

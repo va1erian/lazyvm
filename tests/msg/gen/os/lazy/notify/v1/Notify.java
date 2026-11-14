@@ -69,7 +69,8 @@ public final class Notify {
     /** Serves {@code server} under {@code name}; a name already served fails with EEXIST. */
     public static lazy.msg.Registration serve(String name, NotifyServer server) {
         Wire.need(server, "server");
-        return lazy.internal.msg.Server.serve(name, call -> NotifyCodec.dispatch(server, call));
+        return lazy.internal.msg.Server.serve(name, INTERFACE, NotifyCodec.INTERFACE_ID,
+                call -> NotifyCodec.dispatch(server, call));
     }
 
     /**

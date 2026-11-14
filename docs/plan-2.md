@@ -308,9 +308,13 @@ corpus test passes on LazyVM (two object samples skipped). `lazy-api.jar` and
 the `siestac check` of it are not done. The runtime of S10-02, S10-03 and
 S10-06 is built over the loopback broker only: `tests/java/lazy/msg`
 (`EchoCall`, `Errors`, `Shapes`, `Events`, `Topics`) and
-`tests/siesta/msg/MsgDemo` pass on Windows. Not done: the LazyOS transport and
-the label spike, the cross-language `ServeEcho`, `LateReply`, closing with
-`Ui.run`, and every LazyOS check. The generated test classes live in
+`tests/siesta/msg/MsgDemo` pass on Windows. Status (2026-11-14): S10-02 done.
+The label spike passed (msg.md section 7: the label reaches the VM's threads,
+nothing to change in LazyOS), and LazyOS's `lazyvm-ui` carries the transport
+for calling and serving (`crates/lazyvm-lazyos`, `platform::messenger`):
+`EchoCall` and `Errors` pass inside LazyOS under `tools/lazyos_test.py --msg`.
+Not done: topics and channel objects on LazyOS, the cross-language
+`ServeEcho`, `LateReply`, closing with `Ui.run`, and the other LazyOS checks. The generated test classes live in
 `tests/msg/gen` (with the tests' own `tests/msg/demo.midl`), refreshed by
 `tools/msg_gen.py --lazyos <checkout>`.
 
@@ -326,7 +330,7 @@ the label spike, the cross-language `ServeEcho`, `LateReply`, closing with
       encodes and decodes every vector of LazyOS `idl/conformance/valid` to the
       corpus bytes; `siestac check` compiles a file importing every generated
       package of `lazy-api.jar` with no diagnostic.
-- [ ] S10-02 Calling (msg.md sections 2, 4 and 7): first the label spike
+- [x] S10-02 Calling (msg.md sections 2, 4 and 7): first the label spike
       (the reactor thread resolves, calls and subscribes from a labelled app
       on LazyOS); then the transport seam in `crates/platform`, its LazyOS
       implementation in `crates/lazyvm-lazyos` with the park as LazyOS's one
@@ -338,6 +342,12 @@ the label spike, the cross-language `ServeEcho`, `LateReply`, closing with
       subclass, an errno, a bad reply), both; `EchoCall` against
       `os.lazy.echo` on LazyOS.
       Needs: S10-01.
+      Done (2026-11-14): both pass on Windows (loopback) and inside LazyOS
+      (`lazyos_test.py --msg`, on the kernel's registry). No LazyOS image
+      serves `os.lazy.echo` itself, so `EchoCall` there calls the
+      `os.lazy.echo` it registers in the kernel. Serving landed here too, as
+      `EchoCall` serves; S10-03 keeps channel objects, `Caller` checks and
+      `Ui.run`.
 - [ ] S10-03 Serving and callbacks (msg.md section 5): `serve`, `Caller`,
       dispatch with LazyOS's errnos, faults, replies that come later,
       `Channel<I>` as events objects on both sides, `Peer`, and closing

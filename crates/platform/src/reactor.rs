@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use mio::{Events, Poll, Token, Waker};
 
+use crate::messenger;
 use crate::net::{self, Net};
 use crate::timer;
 
@@ -34,6 +35,7 @@ pub(crate) enum Request {
     Timer { id: u64, deadline: Instant },
     Cancel(u64),
     Net(net::Request),
+    Msg(messenger::Request),
 }
 
 /// What a finished operation left.
@@ -203,6 +205,8 @@ fn run(mut poll: Poll) {
     let mut events = Events::with_capacity(256);
     let mut timers = Timers::default();
     let mut net = Net::default();
+    // Made here, so its handles belong to this thread.
+    let mut msg = messenger::make();
     loop {
         // Out of the loop's head: a guard there would hold the queue through the handling.
         let batch = std::mem::take(&mut *locked(&REQUESTS));
@@ -212,8 +216,12 @@ fn run(mut poll: Poll) {
                 Request::Cancel(id) => {
                     timers.cancel(Due::Operation(id));
                     net.cancel(id, poll.registry(), &mut timers);
+                    if let Some(msg) = msg.as_mut() {
+                        msg.cancel(id);
+                    }
                 }
                 Request::Net(r) => net.request(r, poll.registry(), &mut timers),
+                Request::Msg(r) => messenger::begin(&mut msg, r),
             }
         }
         let now = Instant::now();
@@ -227,7 +235,12 @@ fn run(mut poll: Poll) {
                 other => net.timer(other, poll.registry(), &mut timers),
             }
         }
-        match poll.poll(&mut events, park_for(timers.next_deadline(), now)) {
+        match messenger::park(
+            &mut poll,
+            &mut events,
+            &mut msg,
+            park_for(timers.next_deadline(), now),
+        ) {
             Ok(()) => {}
             Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
             Err(_) => std::thread::sleep(POLL_RETRY),
@@ -235,6 +248,11 @@ fn run(mut poll: Poll) {
         WAKES.fetch_add(1, Ordering::Relaxed);
         for event in events.iter().filter(|e| e.token() != WAKE) {
             net.ready(event.token(), poll.registry(), &mut timers);
+        }
+        if let Some(msg) = msg.as_mut() {
+            for (id, answer) in msg.finished() {
+                post(messenger::completion(id, answer));
+            }
         }
     }
 }

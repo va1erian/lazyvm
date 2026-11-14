@@ -40,7 +40,8 @@ public final class Demo {
     /** Serves {@code server} under {@code name}; a name already served fails with EEXIST. */
     public static lazy.msg.Registration serve(String name, DemoServer server) {
         Wire.need(server, "server");
-        return lazy.internal.msg.Server.serve(name, call -> DemoCodec.dispatch(server, call));
+        return lazy.internal.msg.Server.serve(name, INTERFACE, DemoCodec.INTERFACE_ID,
+                call -> DemoCodec.dispatch(server, call));
     }
 
     /**

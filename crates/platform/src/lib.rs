@@ -5,6 +5,7 @@
 //! get their own crates in S9 (docs/decisions.md D10).
 
 pub mod files;
+pub mod messenger;
 pub mod net;
 pub mod reactor;
 mod resolver;

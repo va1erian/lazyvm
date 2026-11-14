@@ -45,7 +45,8 @@ public final class Confd {
     /** Serves {@code server} under {@code name}; a name already served fails with EEXIST. */
     public static lazy.msg.Registration serve(String name, ConfdServer server) {
         Wire.need(server, "server");
-        return lazy.internal.msg.Server.serve(name, call -> ConfdCodec.dispatch(server, call));
+        return lazy.internal.msg.Server.serve(name, INTERFACE, ConfdCodec.INTERFACE_ID,
+                call -> ConfdCodec.dispatch(server, call));
     }
 
     /**

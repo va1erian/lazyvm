@@ -14,7 +14,9 @@ Optional header lines in the source, before `package`:
     // NEEDS: net           sockets: inside LazyOS, only under `lazyos_test.py --net`
                             `not-lazyos` never inside LazyOS; `windows` needs Windows;
                             `lazyos-net` only under `lazyos_test.py --net`;
-                            `ui` runs on `lazyvm-ui` (lazy.ui, docs/ui.md)
+                            `ui` runs on `lazyvm-ui` (lazy.ui, docs/ui.md);
+                            `msg` runs on LazyOS's `lazyvm-ui` (Messenger, docs/msg.md),
+                            inside LazyOS only under `lazyos_test.py --msg`
 """
 
 from __future__ import annotations

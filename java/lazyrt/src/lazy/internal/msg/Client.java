@@ -67,8 +67,10 @@ public final class Client {
             result.completeExceptionally(new MessengerException(where, f.errno, f.getMessage(), "", null, null));
             return result;
         }
-        Attempt<T> attempt = new Attempt<>(this, where, headerId, method, body, safe, oneway, reply, result);
-        bound(result, deadline == FROM_IDL ? idlDeadline : deadline, where);
+        long millis = deadline == FROM_IDL ? idlDeadline : deadline;
+        Attempt<T> attempt = new Attempt<>(this, where, headerId, method, body, safe, oneway, reply, result,
+                Math.max(millis, 0));
+        bound(result, millis, where);
         // However the stage ends (an answer, a timeout, a cancel), the request is withdrawn:
         // withdrawing an answered one does nothing, and a timed-out one must not stay in flight.
         result.whenComplete((v, t) -> attempt.withdraw());
@@ -100,11 +102,12 @@ public final class Client {
         private final boolean safe, oneway;
         private final Function<WireReader, T> reply;
         private final CompletableFuture<T> result;
+        private final long millis;
         private Broker.Outgoing current;
         private boolean resent;
 
         Attempt(Client client, String where, long headerId, int method, WireWriter body, boolean safe,
-                boolean oneway, Function<WireReader, T> reply, CompletableFuture<T> result) {
+                boolean oneway, Function<WireReader, T> reply, CompletableFuture<T> result, long millis) {
             this.client = client;
             this.where = where;
             this.headerId = headerId;
@@ -115,10 +118,11 @@ public final class Client {
             this.oneway = oneway;
             this.reply = reply;
             this.result = result;
+            this.millis = millis;
         }
 
         void send() {
-            Broker.Outgoing out = new Broker.Outgoing(client.service, headerId, method, body, objects, oneway) {
+            Broker.Outgoing out = new Broker.Outgoing(client.service, headerId, method, body, objects, oneway, millis) {
                 @Override
                 public void answer(byte[] bytes) {
                     Loop.executor().execute(() -> settle(bytes));
