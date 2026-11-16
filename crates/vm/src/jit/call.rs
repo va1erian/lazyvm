@@ -51,7 +51,7 @@ pub(super) extern "C" fn call(ctx: *mut Ctx, site: *const CallSite, sp: u32) -> 
     if !made {
         return 0;
     }
-    run::entered(vm, ctx, site.op)
+    run::called(vm, ctx)
 }
 
 /// The method the call runs, if the record settles it: a known target

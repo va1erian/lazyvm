@@ -86,8 +86,25 @@ impl Vm {
         result
     }
 
+    /// Whether one more frame would pass the depth limit.
+    fn too_deep(&self) -> bool {
+        self.frames.len() >= self.options.max_frames + self.headroom(OVERFLOW_HEADROOM)
+    }
+
+    /// Whether `slots` more locals and stack entries would pass their budget.
+    fn out_of_slots(&self, slots: usize) -> bool {
+        self.frame_slots + slots > self.options.max_frame_slots + self.headroom(OVERFLOW_SLOTS)
+    }
+
+    /// The slots a frame for `code` takes, if the limits `push_frame`
+    /// checks allow one more frame.
+    pub(crate) fn frame_room(&self, code: CodeRef, arg_slots: u16) -> Option<usize> {
+        let slots = usize::from(code.max_locals.max(arg_slots)) + usize::from(code.max_stack);
+        (!self.too_deep() && !self.out_of_slots(slots)).then_some(slots)
+    }
+
     pub(crate) fn push_frame(&mut self, m: MethodRef, args: &[Value]) -> VmResult<()> {
-        if self.frames.len() >= self.options.max_frames + self.headroom(OVERFLOW_HEADROOM) {
+        if self.too_deep() {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let method = self.method(m);
@@ -103,7 +120,7 @@ impl Vm {
         // Locals and stack are not heap objects, so they get their own budget.
         let slots =
             usize::from(code.max_locals.max(method.arg_slots)) + usize::from(code.max_stack);
-        if self.frame_slots + slots > self.options.max_frame_slots + self.headroom(OVERFLOW_SLOTS) {
+        if self.out_of_slots(slots) {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let arg_slots = method.arg_slots;

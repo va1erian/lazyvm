@@ -47,6 +47,41 @@ impl FrameStack {
         Ok(())
     }
 
+    /// `push` for a call made by the top frame: the arguments are the top
+    /// `n` entries of its stack, which they leave, and it resumes `len`
+    /// bytes on. They are copied straight into the new frame, which sits
+    /// next to its caller. False, with nothing changed, if there is no
+    /// caller with `n` entries or the arguments do not fit.
+    pub(crate) fn push_call(
+        &mut self,
+        method: MethodRef,
+        code: CodeRef,
+        arg_slots: u16,
+        n: usize,
+        len: usize,
+    ) -> bool {
+        if self.depth == self.slots.len() {
+            self.slots.push(Frame::empty(method, code));
+        }
+        let (live, retired) = self.slots.split_at_mut(self.depth);
+        let (Some(caller), Some(callee)) = (live.last_mut(), retired.first_mut()) else {
+            return false;
+        };
+        let Some(at) = caller.stack.len().checked_sub(n) else {
+            return false;
+        };
+        if callee
+            .enter(method, code, arg_slots, &caller.stack[at..])
+            .is_err()
+        {
+            return false;
+        }
+        caller.stack.truncate(at);
+        caller.next_pc = caller.pc + len;
+        self.depth += 1;
+        true
+    }
+
     /// Retires the top frame and hands it out for its owner's last rites
     /// (monitors, slot budget), which `trim_retired` must follow; its
     /// contents stay until it is reused.

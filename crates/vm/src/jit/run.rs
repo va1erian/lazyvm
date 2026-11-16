@@ -138,6 +138,36 @@ pub(super) fn entered(vm: &mut Vm, ctx: &mut Ctx, op: u8) -> usize {
     }
 }
 
+/// After an invoke pushed a frame: records where the caller goes on when
+/// that call returns (`continuation`), then the new frame's code as
+/// `transfer` hands it back. A compiled callee is entered at once: counting
+/// runs and looking its entry up are only for one not compiled yet.
+pub(super) fn called(vm: &mut Vm, ctx: &mut Ctx) -> usize {
+    let Vm {
+        frames, classes, ..
+    } = vm;
+    let [.., caller, callee] = &mut frames[..] else {
+        return 1;
+    };
+    caller.jit_ret = ctx.ret;
+    caller.jit_ret_pc = caller.next_pc;
+    let m = callee.method;
+    if let State::Compiled(c) = &classes[m.class.0 as usize].methods[usize::from(m.index)]
+        .jit
+        .state
+        && c.entry0 != 0
+    {
+        ctx.locals = callee.locals.as_mut_ptr();
+        ctx.stack = callee.stack.as_mut_ptr();
+        return c.entry0;
+    }
+    vm.jit_tick();
+    match vm.jit_prepare(ctx) {
+        Some((_, entry)) => entry as usize,
+        None => 1,
+    }
+}
+
 /// An exit inside inlined code (`inline.rs`), from compiled code: makes the
 /// frames the inlined calls stand for, from the scratch area, so the
 /// interpreter can run on from that instruction. The real frame stops at
