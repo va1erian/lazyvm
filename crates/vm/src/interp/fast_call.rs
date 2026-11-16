@@ -6,11 +6,10 @@
 //! the instruction and raises whatever it raises. What is left to `step`:
 //! unresolved refs, natives, `synchronized` methods, a static method whose
 //! class is not initialised, `invokespecial` that needs the superclass
-//! lookup (JVMS 6.5), a selection that fails, more than `INLINE_ARGS`
-//! arguments, a frame holding monitors, and every malformed case.
+//! lookup (JVMS 6.5), a selection that fails, a frame holding monitors, and
+//! every malformed case.
 
 use super::CodeRef;
-use super::ops_invoke::INLINE_ARGS;
 use crate::class::{InitState, MethodRef, Resolved};
 use crate::value::Value;
 use crate::{ClassId, Vm};
@@ -184,7 +183,7 @@ impl Vm {
         let Some(slots) = self.frame_room(code, arg_slots) else {
             return false;
         };
-        if n > INLINE_ARGS || !self.frames.push_call(target, code, arg_slots, n, len) {
+        if !self.frames.push_call(target, code, arg_slots, n, len) {
             return false;
         }
         self.frame_slots += slots;

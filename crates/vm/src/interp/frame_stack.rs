@@ -50,8 +50,8 @@ impl FrameStack {
     /// `push` for a call made by the top frame: the arguments are the top
     /// `n` entries of its stack, which they leave, and it resumes `len`
     /// bytes on. They are copied straight into the new frame, which sits
-    /// next to its caller. False, with nothing changed, if there is no
-    /// caller with `n` entries or the arguments do not fit.
+    /// next to its caller. False, with the live frames as they were, if
+    /// there is no caller with `n` entries or the arguments do not fit.
     pub(crate) fn push_call(
         &mut self,
         method: MethodRef,
@@ -183,6 +183,45 @@ mod tests {
             frames[0].locals.capacity() <= MAX_KEPT_SLOTS,
             "a large buffer is not kept"
         );
+    }
+
+    #[test]
+    fn a_call_moves_its_arguments_into_the_new_frame() {
+        let small = code(3);
+        let mut frames = FrameStack::default();
+        assert!(frames.push(M, CodeRef::new(&small), 0, &[]).is_ok());
+        frames[0].pc = 7;
+        frames[0]
+            .stack
+            .extend([Value::Int(1), Value::Long(2), Value::Int(3)]);
+        assert!(frames.push_call(M, CodeRef::new(&small), 3, 2, 3));
+        assert_eq!(frames.len(), 2);
+        assert_eq!(frames[0].stack, [Value::Int(1)], "arguments left");
+        assert_eq!(frames[0].next_pc, 10);
+        // The long takes two locals, as in `Frame::enter`.
+        assert_eq!(
+            frames[1].locals,
+            [Value::Long(2), Value::Top, Value::Int(3)]
+        );
+        assert!(frames[1].stack.is_empty());
+    }
+
+    #[test]
+    fn a_refused_call_leaves_the_live_frames_as_they_were() {
+        let (small, tiny) = (code(3), code(1));
+        let mut frames = FrameStack::default();
+        // No caller at all.
+        assert!(!frames.push_call(M, CodeRef::new(&small), 0, 0, 3));
+        assert_eq!(frames.len(), 0);
+        assert!(frames.push(M, CodeRef::new(&small), 0, &[]).is_ok());
+        frames[0].stack.push(Value::Long(2));
+        // More arguments than the caller has entries.
+        assert!(!frames.push_call(M, CodeRef::new(&small), 2, 2, 3));
+        // A long that does not fit one local.
+        assert!(!frames.push_call(M, CodeRef::new(&tiny), 1, 1, 3));
+        assert_eq!(frames.len(), 1);
+        assert_eq!(frames[0].stack, [Value::Long(2)]);
+        assert_eq!(frames[0].next_pc, 0);
     }
 
     #[test]

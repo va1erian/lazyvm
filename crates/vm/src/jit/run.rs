@@ -128,9 +128,18 @@ pub(super) extern "C" fn transfer(ctx: *mut Ctx, pc: u32, sp: u32) -> usize {
 /// After the invoke or return `op` changed the frames: the top frame's
 /// code, or 1 for the interpreter (`transfer`'s result).
 pub(super) fn entered(vm: &mut Vm, ctx: &mut Ctx, op: u8) -> usize {
-    if let Some(entry) = continuation(vm, ctx, op) {
-        return entry;
+    if matches!(op, 0xb6..=0xb9) {
+        return called(vm, ctx);
     }
+    match continuation(vm, ctx) {
+        Some(entry) => entry,
+        None => top_code(vm, ctx),
+    }
+}
+
+/// The top frame's code after counting a run of its method, which compiles
+/// it once hot; 1 if the interpreter must run it.
+fn top_code(vm: &mut Vm, ctx: &mut Ctx) -> usize {
     vm.jit_tick();
     match vm.jit_prepare(ctx) {
         Some((_, entry)) => entry as usize,
@@ -138,10 +147,11 @@ pub(super) fn entered(vm: &mut Vm, ctx: &mut Ctx, op: u8) -> usize {
     }
 }
 
-/// After an invoke pushed a frame: records where the caller goes on when
-/// that call returns (`continuation`), then the new frame's code as
-/// `transfer` hands it back. A compiled callee is entered at once: counting
-/// runs and looking its entry up are only for one not compiled yet.
+/// After an invoke pushed a frame: records where the caller goes on
+/// (`ctx.ret`), for `continuation` to use when that call returns, then
+/// gives the new frame's code as `transfer` hands it back. A compiled
+/// callee is entered at once: counting runs and looking its entry up are
+/// only for one not compiled yet.
 pub(super) fn called(vm: &mut Vm, ctx: &mut Ctx) -> usize {
     let Vm {
         frames, classes, ..
@@ -161,11 +171,7 @@ pub(super) fn called(vm: &mut Vm, ctx: &mut Ctx) -> usize {
         ctx.stack = callee.stack.as_mut_ptr();
         return c.entry0;
     }
-    vm.jit_tick();
-    match vm.jit_prepare(ctx) {
-        Some((_, entry)) => entry as usize,
-        None => 1,
-    }
+    top_code(vm, ctx)
 }
 
 /// An exit inside inlined code (`inline.rs`), from compiled code: makes the
@@ -216,18 +222,11 @@ pub(super) extern "C" fn materialize(ctx: *mut Ctx, deopt: *const frame::Deopt) 
     1
 }
 
-/// After an invoke, records where the caller goes on (`ctx.ret`); after a
-/// return, that code if the caller is back at that call. It is the caller's
-/// own code (or code it had before a recompile, which stays), entered at the
-/// stack shape a return there leaves, so it needs no lookup.
-fn continuation(vm: &mut Vm, ctx: &mut Ctx, op: u8) -> Option<usize> {
-    if matches!(op, 0xb6..=0xb9) {
-        if let [.., caller, _] = &mut vm.frames[..] {
-            caller.jit_ret = ctx.ret;
-            caller.jit_ret_pc = caller.next_pc;
-        }
-        return None;
-    }
+/// After a return: the code `called` recorded for the caller, if it is back
+/// at that call. It is the caller's own code (or code it had before a
+/// recompile, which stays), entered at the stack shape a return there
+/// leaves, so it needs no lookup.
+fn continuation(vm: &mut Vm, ctx: &mut Ctx) -> Option<usize> {
     let f = vm.frames.last_mut()?;
     if f.jit_ret == 0 || f.jit_ret_pc != f.pc {
         return None;
