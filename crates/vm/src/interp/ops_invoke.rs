@@ -5,9 +5,8 @@ use crate::class::MethodRef;
 use crate::value::Value;
 use crate::{Vm, VmError, VmResult};
 
-/// Arguments copied to the Rust stack for a call; more spill to the heap
-/// (`step`) or take the full path (`fast_call.rs`). Game drawing methods
-/// take a dozen (S11-06).
+/// Arguments copied to the Rust stack for a call; more spill to the heap.
+/// Game drawing methods take a dozen (S11-06).
 pub(super) const INLINE_ARGS: usize = 16;
 
 impl Vm {

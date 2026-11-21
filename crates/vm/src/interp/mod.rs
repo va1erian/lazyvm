@@ -43,6 +43,13 @@ const OVERFLOW_HEADROOM: usize = 64;
 const OVERFLOW_NESTING: usize = 16;
 const OVERFLOW_SLOTS: usize = 64 * 1024;
 
+/// What a frame for `code` takes from the slot budget: its locals (room
+/// for the arguments at least) and its operand stack, as `Frame::enter`
+/// sizes them and `Vm::pop_frame` gives them back.
+fn frame_slots_of(code: CodeRef, arg_slots: u16) -> usize {
+    usize::from(code.max_locals.max(arg_slots)) + usize::from(code.max_stack)
+}
+
 impl Vm {
     /// Calls a method from Rust and runs it to completion. Reference
     /// arguments are rooted for the duration of the call.
@@ -86,8 +93,25 @@ impl Vm {
         result
     }
 
+    /// Whether one more frame would pass the depth limit.
+    fn too_deep(&self) -> bool {
+        self.frames.len() >= self.options.max_frames + self.headroom(OVERFLOW_HEADROOM)
+    }
+
+    /// Whether `slots` more locals and stack entries would pass their budget.
+    fn out_of_slots(&self, slots: usize) -> bool {
+        self.frame_slots + slots > self.options.max_frame_slots + self.headroom(OVERFLOW_SLOTS)
+    }
+
+    /// The slots a frame for `code` takes, if the limits `push_frame`
+    /// checks allow one more frame.
+    pub(crate) fn frame_room(&self, code: CodeRef, arg_slots: u16) -> Option<usize> {
+        let slots = frame_slots_of(code, arg_slots);
+        (!self.too_deep() && !self.out_of_slots(slots)).then_some(slots)
+    }
+
     pub(crate) fn push_frame(&mut self, m: MethodRef, args: &[Value]) -> VmResult<()> {
-        if self.frames.len() >= self.options.max_frames + self.headroom(OVERFLOW_HEADROOM) {
+        if self.too_deep() {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let method = self.method(m);
@@ -101,9 +125,8 @@ impl Vm {
             return Err(VmError::exception("java/lang/AbstractMethodError", msg));
         };
         // Locals and stack are not heap objects, so they get their own budget.
-        let slots =
-            usize::from(code.max_locals.max(method.arg_slots)) + usize::from(code.max_stack);
-        if self.frame_slots + slots > self.options.max_frame_slots + self.headroom(OVERFLOW_SLOTS) {
+        let slots = frame_slots_of(code, method.arg_slots);
+        if self.out_of_slots(slots) {
             return Err(VmError::bare("java/lang/StackOverflowError"));
         }
         let arg_slots = method.arg_slots;
@@ -121,8 +144,7 @@ impl Vm {
         let Some(code) = method.code.as_ref().map(CodeRef::new) else {
             return Err(VmError::Internal("rebuilt frame without code".into()));
         };
-        let slots =
-            usize::from(code.max_locals.max(method.arg_slots)) + usize::from(code.max_stack);
+        let slots = frame_slots_of(code, method.arg_slots);
         let arg_slots = method.arg_slots;
         self.frames.push(m, code, arg_slots, &[])?;
         self.frame_slots += slots;

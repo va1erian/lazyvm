@@ -78,6 +78,10 @@ pub(crate) struct Compiled {
     sites: Box<[call::CallSite]>,
     max_stack: usize,
     locals: usize,
+    /// The code for pc 0 (0 if there is none), which a new frame can always
+    /// enter (`run::called`): its stack is empty and its buffers are sized
+    /// for the method.
+    entry0: usize,
 }
 
 // SAFETY: the type of compiled code's entry (`frame::Gen`); calling one is

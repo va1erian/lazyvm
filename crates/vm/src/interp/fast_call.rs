@@ -6,10 +6,10 @@
 //! the instruction and raises whatever it raises. What is left to `step`:
 //! unresolved refs, natives, `synchronized` methods, a static method whose
 //! class is not initialised, `invokespecial` that needs the superclass
-//! lookup (JVMS 6.5), a selection that fails, more than `INLINE_ARGS`
-//! arguments, a frame holding monitors, and every malformed case.
+//! lookup (JVMS 6.5), a selection that fails, a frame holding monitors, and
+//! every malformed case.
 
-use super::ops_invoke::INLINE_ARGS;
+use super::CodeRef;
 use crate::class::{InitState, MethodRef, Resolved};
 use crate::value::Value;
 use crate::{ClassId, Vm};
@@ -172,29 +172,22 @@ impl Vm {
     /// stack; the caller resumes `len` bytes on when it returns.
     pub(crate) fn fast_call(&mut self, target: MethodRef, len: usize) -> bool {
         let m = self.method(target);
-        if m.is_native() || m.access & classfile::ACC_SYNCHRONIZED != 0 || m.code.is_none() {
+        if m.is_native() || m.access & classfile::ACC_SYNCHRONIZED != 0 {
             return false;
         }
-        let n = usize::from(m.arg_values);
-        let Some(caller) = self.frames.last() else {
+        let Some(code) = m.code.as_ref().map(CodeRef::new) else {
             return false;
         };
-        let Some(at) = caller.stack.len().checked_sub(n) else {
+        let (n, arg_slots) = (usize::from(m.arg_values), m.arg_slots);
+        // A frame the limits refuse is `step`'s, to throw StackOverflowError.
+        let Some(slots) = self.frame_room(code, arg_slots) else {
             return false;
         };
-        if n > INLINE_ARGS {
+        if !self.frames.push_call(target, code, arg_slots, n, len) {
             return false;
         }
-        let mut args = [Value::Top; INLINE_ARGS];
-        args[..n].copy_from_slice(&caller.stack[at..]);
-        if self.push_frame(target, &args[..n]).is_err() {
-            return false;
-        }
-        let [.., caller, _] = &mut self.frames[..] else {
-            return false;
-        };
-        caller.stack.truncate(at);
-        caller.next_pc = caller.pc + len;
+        self.frame_slots += slots;
+        crate::prof::call(target);
         true
     }
 }

@@ -225,8 +225,15 @@ pub(super) fn compile(vm: &Vm, m: MethodRef, inlining: bool) -> Option<Compiled>
     let deopts = std::mem::take(&mut g.deopts).into_boxed_slice();
     let sites = std::mem::take(&mut g.sites).into_boxed_slice();
     let bytes = g.finish(&deopts, &sites)?;
+    let code = mem::Code::install(&bytes)?;
+    // Code starts with the instruction at pc 0, where the stack is empty.
+    let entry0 = match entries.first() {
+        Some(&at) if at != NONE => code.at(at as usize) as usize,
+        _ => 0,
+    };
     Some(Compiled {
-        code: mem::Code::install(&bytes)?,
+        code,
+        entry0,
         entries,
         depth,
         deopts,
