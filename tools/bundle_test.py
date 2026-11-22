@@ -12,13 +12,14 @@ from __future__ import annotations
 import argparse
 import ctypes
 import os
-import struct
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import launcher_test  # noqa: E402
+import pe  # noqa: E402
 from common import BUILD, ROOT, cargo_build_launcher  # noqa: E402
 
 OUT = BUILD / "bundle"
@@ -42,12 +43,6 @@ def run(exe: Path, *args: str, env: dict | None = None) -> tuple[int, list[str]]
     return p.returncode, (p.stdout + p.stderr).splitlines()
 
 
-def subsystem(exe: Path) -> int:
-    data = exe.read_bytes()
-    pe = struct.unpack_from("<I", data, 0x3C)[0]
-    return struct.unpack_from("<H", data, pe + 4 + 20 + 68)[0]
-
-
 def has_icon(exe: Path) -> bool:
     k32 = ctypes.WinDLL("kernel32")
     k32.LoadLibraryExW.restype = ctypes.c_void_p
@@ -68,9 +63,18 @@ def checks(exe: Path) -> list[tuple[str, object, object]]:
     props = bundle("props", exe, "--cp", str(APP / "app"), "--main", "app.Props",
                    "--vm-arg=-Dbundle.prop=set", "--icon", "none", "--gui")
     got.append(("VM options from the bundle", run(props, "bundle.prop")[1], ["11 112 set"]))
-    got.append(("--gui marks it windowed", subsystem(props), 2))
+    got.append(("--gui marks it windowed", pe.subsystem(props), 2))
     if os.name == "nt":
         got.append(("the icon is a resource", (has_icon(main), has_icon(props)), (True, False)))
+    # A Class-Path directory (a relative URL, `%20` and all) is merged like a jar.
+    spaced = OUT / "lib dir"
+    shutil.rmtree(spaced, ignore_errors=True)
+    shutil.copytree(APP / "lib", spaced)
+    dir_jar = OUT / "dirapp.jar"
+    launcher_test.jar(dir_jar, APP / "app",
+                      "Manifest-Version: 1.0\r\nMain-Class: app.Main\r\nClass-Path: lib%20dir/\r\n\r\n")
+    from_dir = bundle("dirapp", exe, "--jar", str(dir_jar), "--icon", "none")
+    got.append(("a Class-Path directory is bundled", run(from_dir)[1][:1], ["hello, jar"]))
     got += dir_checks(exe)
     damaged = OUT / "damaged.exe"
     data = bytearray(main.read_bytes())
@@ -87,6 +91,7 @@ def dir_checks(exe: Path) -> list[tuple[str, object, object]]:
     (data / "sub").mkdir(parents=True, exist_ok=True)
     (data / "sub" / "note.txt").write_text("from the bundle", encoding="utf-8")
     cache = OUT / "cache"
+    shutil.rmtree(cache, ignore_errors=True)  # so this run unpacks, not an earlier one
     files = bundle("files", exe, "--cp", str(APP / "app"), "--main", "app.Props",
                    "--dir", str(data), "--icon", "none")
     env = {"LOCALAPPDATA": str(cache), "XDG_CACHE_HOME": str(cache)}

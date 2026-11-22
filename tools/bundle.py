@@ -3,7 +3,7 @@
     python tools/bundle.py --out dist/App.exe --jar app.jar
     python tools/bundle.py --out dist/App.exe --cp classes;lib/a.jar;res --main my.App
                            [--vm lazyvm|lazyvm-ui|PATH] [--icon app.ico | --icon none]
-                           [--dir assets ...] [--gui] [--vm-arg -Xmx512m ...]
+                           [--dir assets ...] [--gui] [--vm-arg=-Xmx512m ...]
                            [-- program arguments]
 
 The application's class path (directories and jars, and with `--jar` that jar's
@@ -25,6 +25,7 @@ import os
 import shutil
 import struct
 import sys
+import urllib.parse
 import zipfile
 import zlib
 from pathlib import Path
@@ -40,6 +41,9 @@ EPOCH = (1980, 1, 1, 0, 0, 0)
 # Entries invalid once jars are merged: signatures cover their own jar's files only.
 SIGNATURE_SUFFIXES = (".SF", ".RSA", ".DSA", ".EC")
 MAX_ENTRIES = 65535  # past it a zip needs zip64, which the VM's reader does not take
+# What the launcher accepts (crates/launcher/src/bundle.rs, classfile's jar.rs).
+MAX_UNPACKED = 1 << 30
+MAX_ENTRY = 256 << 20
 
 
 def manifest_attributes(text: str) -> dict[str, str]:
@@ -65,14 +69,21 @@ def jar_attributes(jar: Path) -> dict[str, str]:
 
 
 def expand_jar(jar: Path, seen: set[Path]) -> list[Path]:
-    """`jar`, then the jars its `Class-Path` names, depth first and each once."""
+    """`jar`, then the jars and directories its `Class-Path` names (relative URLs),
+    depth first and each once. Missing entries are skipped, as the launcher skips them."""
     jar = jar.resolve()
     if jar in seen or not jar.is_file():
         return []
     seen.add(jar)
     out = [jar]
     for rel in jar_attributes(jar).get("class-path", "").split():
-        out += expand_jar(jar.parent / rel, seen)
+        target = (jar.parent / urllib.parse.unquote(rel)).resolve()
+        if target.is_dir():
+            if target not in seen:
+                seen.add(target)
+                out.append(target)
+        else:
+            out += expand_jar(target, seen)
     return out
 
 
@@ -100,6 +111,9 @@ def stored_jar(files: dict[str, bytes]) -> bytes:
     Similar files sit together (by extension, then name), which helps that compression."""
     if len(files) > MAX_ENTRIES:
         die(f"{len(files)} entries: a bundle holds at most {MAX_ENTRIES}")
+    for name, data in files.items():
+        if len(data) > MAX_ENTRY:
+            die(f"{name}: {len(data)} bytes; an entry holds at most {MAX_ENTRY}")
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
         for name in sorted(files, key=lambda n: (Path(n).suffix, n)):
@@ -125,10 +139,13 @@ def pack(boot: bytes, app: bytes, files: bytes, args: list[str]) -> bytes:
     if any("\0" in a for a in args):
         die("arguments cannot hold NUL characters")
     arg_bytes = b"".join(a.encode("utf-8") + b"\0" for a in args)
+    unpacked = boot + app + files + arg_bytes
+    if len(unpacked) > MAX_UNPACKED:
+        die(f"{len(unpacked)} bytes unpacked; a bundle holds at most {MAX_UNPACKED}")
     deflate = zlib.compressobj(9, zlib.DEFLATED, -15, 9)
-    packed = deflate.compress(boot + app + files + arg_bytes) + deflate.flush()
-    lens = (len(packed), len(boot), len(app), len(files), len(arg_bytes))
-    return packed + struct.pack("<5Q", *lens) + MAGIC
+    packed = deflate.compress(unpacked) + deflate.flush()
+    trailer = (len(packed), len(boot), len(app), len(files), len(arg_bytes), zlib.crc32(unpacked))
+    return packed + struct.pack("<6Q", *trailer) + MAGIC
 
 
 def launcher(choice: str, build: bool) -> Path:
@@ -202,21 +219,28 @@ def main() -> int:
 def write(args, vm: Path, payload: bytes) -> None:
     """Launcher copy, then icon and subsystem, then the payload: a resource update
     rewrites the file and would drop anything already appended."""
+    is_pe = vm.read_bytes()[:2] == b"MZ"
+    icon = None if args.icon == "none" or not is_pe else Path(args.icon)
+    if icon and os.name != "nt":
+        die("icons are written with the Windows resource API: run on Windows, or --icon none")
+    if icon and not icon.is_file():
+        die(f"--icon {icon} does not exist")
+    if args.gui and not is_pe:
+        die("--gui is for Windows executables")
     args.out.parent.mkdir(parents=True, exist_ok=True)
     tmp = args.out.with_name(args.out.name + ".tmp")
     shutil.copyfile(vm, tmp)
-    is_pe = vm.read_bytes()[:2] == b"MZ"
-    if args.icon != "none" and is_pe:
-        if os.name != "nt":
-            die("icons are written with the Windows resource API: run on Windows, or --icon none")
-        pe.set_icon(tmp, Path(args.icon))
-    if args.gui:
-        if not is_pe:
-            die("--gui is for Windows executables")
-        pe.set_gui(tmp)
-    with open(tmp, "ab") as f:
-        f.write(payload)
-    os.replace(tmp, args.out)
+    try:
+        if icon:
+            pe.set_icon(tmp, icon)
+        if args.gui:
+            pe.set_gui(tmp)
+        with open(tmp, "ab") as f:
+            f.write(payload)
+        os.replace(tmp, args.out)
+    except (OSError, ValueError, struct.error) as e:
+        tmp.unlink(missing_ok=True)
+        die(f"cannot write {args.out}: {e}")
 
 
 if __name__ == "__main__":

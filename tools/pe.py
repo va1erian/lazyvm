@@ -20,6 +20,8 @@ LANG_NEUTRAL = 0
 
 def ico_images(ico: bytes) -> list[tuple[bytes, bytes]]:
     """An .ico's images: each entry's 12 directory bytes (without the offset) and its data."""
+    if len(ico) < 6:
+        raise ValueError("not an .ico file")
     reserved, kind, count = struct.unpack_from("<HHH", ico, 0)
     if reserved != 0 or kind != 1 or count == 0:
         raise ValueError("not an .ico file")
@@ -65,13 +67,26 @@ def set_icon(exe: Path, ico: Path) -> None:
         raise OSError(ctypes.get_last_error(), f"cannot write the icon into {exe}")
 
 
+def subsystem_offset(data: bytes) -> int:
+    """Where a PE file's Subsystem field is: after the signature, the COFF
+    header, and 68 bytes into the optional header (the same for PE32 and PE32+)."""
+    if len(data) < 0x40:
+        raise ValueError("not a PE file")
+    pe = struct.unpack_from("<I", data, 0x3C)[0]
+    if data[pe: pe + 4] != b"PE\0\0" or len(data) < pe + 4 + 20 + 70:
+        raise ValueError("not a PE file")
+    return pe + 4 + 20 + 68
+
+
+def subsystem(exe: Path) -> int:
+    data = exe.read_bytes()
+    return struct.unpack_from("<H", data, subsystem_offset(data))[0]
+
+
 def set_gui(exe: Path) -> None:
     """Mark `exe` as a windowed program, so Windows opens no console for it."""
     data = bytearray(exe.read_bytes())
-    pe = struct.unpack_from("<I", data, 0x3C)[0]
-    if data[pe: pe + 4] != b"PE\0\0":
-        raise ValueError(f"{exe} is not a PE file")
-    at = pe + 4 + 20 + 68  # signature, COFF header, then Subsystem in the optional header
+    at = subsystem_offset(data)
     if struct.unpack_from("<H", data, at)[0] not in (SUBSYSTEM_GUI, SUBSYSTEM_CONSOLE):
         raise ValueError(f"{exe}: unexpected subsystem")
     struct.pack_into("<H", data, at, SUBSYSTEM_GUI)

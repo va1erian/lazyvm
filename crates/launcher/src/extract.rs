@@ -13,7 +13,8 @@ pub fn unpack_dir(files: &Jar, key: u64, exe: &Path) -> Result<PathBuf, String> 
     let stem = exe
         .file_stem()
         .map_or("app".into(), |s| s.to_string_lossy());
-    let root = cache_root();
+    let root = cache_root()
+        .ok_or("no per-user cache directory: set LOCALAPPDATA, XDG_CACHE_HOME or HOME")?;
     let dir = root.join(format!("{stem}-{key:016x}"));
     if dir.is_dir() {
         return Ok(dir);
@@ -35,8 +36,10 @@ pub fn unpack_dir(files: &Jar, key: u64, exe: &Path) -> Result<PathBuf, String> 
     Ok(dir)
 }
 
-/// Per user, where programs keep caches.
-fn cache_root() -> PathBuf {
+/// Per user, where programs keep caches. Never a directory users share, such
+/// as the system's temp directory: what is found there goes on the class
+/// path, so another user could plant classes in it.
+fn cache_root() -> Option<PathBuf> {
     let env = |k: &str| {
         std::env::var_os(k)
             .filter(|v| !v.is_empty())
@@ -45,9 +48,8 @@ fn cache_root() -> PathBuf {
     let base = env("LOCALAPPDATA")
         .map(|p| p.join("LazyVM"))
         .or_else(|| env("XDG_CACHE_HOME").map(|p| p.join("lazyvm")))
-        .or_else(|| env("HOME").map(|p| p.join(".cache").join("lazyvm")))
-        .unwrap_or_else(|| std::env::temp_dir().join("lazyvm"));
-    base.join("bundles")
+        .or_else(|| env("HOME").map(|p| p.join(".cache").join("lazyvm")))?;
+    Some(base.join("bundles"))
 }
 
 fn write_all(files: &Jar, dir: &Path) -> Result<(), String> {
@@ -74,14 +76,30 @@ fn write_all(files: &Jar, dir: &Path) -> Result<(), String> {
 fn safe_path(name: &str) -> Option<PathBuf> {
     let mut out = PathBuf::new();
     for part in name.trim_end_matches('/').split('/') {
-        let bad =
-            part.is_empty() || part == "." || part == ".." || part.contains(['\\', ':', '\0']);
+        // Windows drops trailing dots and spaces, and opens devices for
+        // their names: such a part would not name the file it says.
+        let bad = part.is_empty()
+            || part == "."
+            || part == ".."
+            || part.contains(['\\', ':', '\0'])
+            || part.ends_with(['.', ' '])
+            || is_device_name(part);
         if bad {
             return None;
         }
         out.push(part);
     }
     Some(out)
+}
+
+/// A Windows device name, with or without an extension (`nul.txt`).
+fn is_device_name(part: &str) -> bool {
+    let stem = part.split('.').next().unwrap_or(part).to_ascii_uppercase();
+    let numbered = |prefix: &str| {
+        stem.strip_prefix(prefix)
+            .is_some_and(|n| n.len() == 1 && n.as_bytes()[0].is_ascii_digit())
+    };
+    matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL") || numbered("COM") || numbered("LPT")
 }
 
 /// FNV-1a: a cheap name for one build's payload, not a security check.
@@ -107,6 +125,10 @@ mod tests {
             "a\\..\\x",
             "a//b",
             "./a",
+            "nul.txt",
+            "a/CON",
+            "com1",
+            "dots./x",
             "",
         ] {
             assert_eq!(safe_path(bad), None, "{bad}");

@@ -2,19 +2,21 @@
 //! payload to a copy of the launcher, and the launcher runs it instead of
 //! reading its command line for a class to run.
 //!
-//! The file ends with the packed payload, then a trailer: five u64,
+//! The file ends with the packed payload, then a trailer: six u64,
 //! little-endian (packed, class library, application, files and arguments
-//! lengths), then `MAGIC`. Unpacked, the payload is the class library jar,
-//! the application jar, a jar of files to unpack (`extract.rs`; length 0
-//! for none), then the launch arguments (UTF-8, each ended by a NUL). It is packed as one raw deflate stream so that class files share
-//! their redundancy: the jars inside store their entries uncompressed.
+//! lengths, then the CRC-32 of the unpacked payload), then `MAGIC`.
+//! Unpacked, the payload is the class library jar, the application jar, a
+//! jar of files to unpack (`extract.rs`; length 0 for none), then the launch
+//! arguments (UTF-8, each ended by a NUL). It is packed as one raw deflate
+//! stream so that class files share their redundancy: the jars inside store
+//! their entries uncompressed.
 //! A file without the trailer is a plain launcher.
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::PathBuf;
 
-use classfile::jar::{Jar, inflate};
+use classfile::jar::{Jar, crc32, inflate};
 use vm::ClassPath;
 
 use crate::extract;
@@ -22,7 +24,7 @@ use crate::options::Arg;
 
 /// The trailer's last bytes; the digit is the payload layout's version.
 const MAGIC: &[u8; 8] = b"LZVMBND1";
-const TRAILER: u64 = 48;
+const TRAILER: u64 = 56;
 /// Far above any real application; it bounds what a damaged trailer allocates.
 const MAX_UNPACKED: u64 = 1 << 30;
 
@@ -38,13 +40,14 @@ pub struct Bundle {
     args: Vec<Arg>,
 }
 
-/// The trailer's lengths, in bytes.
+/// The trailer: lengths in bytes, and the unpacked payload's CRC-32.
 struct Lens {
     packed: u64,
     boot: u64,
     app: u64,
     files: u64,
     args: u64,
+    crc: u64,
 }
 
 impl Bundle {
@@ -55,11 +58,11 @@ impl Bundle {
         // `-cp` is what `java.class.path` shows; `classpath` is what loads.
         let mut boot: Arg = "-Xbootclasspath:".encode_utf16().collect();
         boot.extend(&exe);
-        let mut cp = exe;
-        if let Some(dir) = &self.dir {
-            let paths = [self.exe.clone(), dir.clone()];
-            cp = std::env::join_paths(paths).map_or(cp, |p| vm::wtf::to_units(&p));
-        }
+        let cp = match &self.dir {
+            // `unpack` checked that the two paths join.
+            Some(dir) => class_path(&self.exe, dir).map_or(exe, |p| vm::wtf::to_units(&p)),
+            None => exe,
+        };
         let mut out = vec![boot, "-cp".encode_utf16().collect(), cp];
         out.extend(self.args.iter().cloned());
         out.extend(user);
@@ -104,7 +107,7 @@ fn read_trailer(file: &mut File, len: u64) -> Result<Option<Lens>, String> {
     file.seek(SeekFrom::Start(len - TRAILER))
         .and_then(|_| file.read_exact(&mut t))
         .map_err(|e| e.to_string())?;
-    if &t[40..] != MAGIC {
+    if &t[48..] != MAGIC {
         return Ok(None);
     }
     let le = |i: usize| u64::from_le_bytes(t[i * 8..i * 8 + 8].try_into().unwrap_or_default());
@@ -114,6 +117,7 @@ fn read_trailer(file: &mut File, len: u64) -> Result<Option<Lens>, String> {
         app: le(2),
         files: le(3),
         args: le(4),
+        crc: le(5),
     }))
 }
 
@@ -126,7 +130,7 @@ fn unpack(exe: PathBuf, packed: &[u8], lens: &Lens) -> Result<Bundle, String> {
         .ok_or("unpacked size out of range")?;
     // At most MAX_UNPACKED, so every length fits a usize.
     let payload = inflate(packed, total as usize)
-        .filter(|p| p.len() as u64 == total)
+        .filter(|p| p.len() as u64 == total && u64::from(crc32(p)) == lens.crc)
         .ok_or("corrupt payload")?;
     let (boot, rest) = payload.split_at(lens.boot as usize);
     let (app, rest) = rest.split_at(lens.app as usize);
@@ -138,7 +142,16 @@ fn unpack(exe: PathBuf, packed: &[u8], lens: &Lens) -> Result<Bundle, String> {
         None
     } else {
         let files = Jar::open(files.to_vec()).map_err(|e| format!("files: {e}"))?;
-        Some(extract::unpack_dir(&files, extract::fnv64(packed), &exe)?)
+        let dir = extract::unpack_dir(&files, extract::fnv64(packed), &exe)?;
+        // A path holding the separator cannot be listed in `java.class.path`.
+        class_path(&exe, &dir).ok_or_else(|| {
+            format!(
+                "cannot list {} and {} as a class path",
+                exe.display(),
+                dir.display()
+            )
+        })?;
+        Some(dir)
     };
     Ok(Bundle {
         exe,
@@ -147,6 +160,11 @@ fn unpack(exe: PathBuf, packed: &[u8], lens: &Lens) -> Result<Bundle, String> {
         dir,
         args,
     })
+}
+
+/// `java.class.path` for a bundle with a directory.
+fn class_path(exe: &std::path::Path, dir: &std::path::Path) -> Option<std::ffi::OsString> {
+    std::env::join_paths([exe, dir]).ok()
 }
 
 fn split_args(bytes: &[u8]) -> Result<Vec<Arg>, String> {
@@ -188,7 +206,15 @@ mod tests {
     /// A launcher stand-in followed by a payload of `boot`, `app` and `args`.
     fn bundle(boot: &[u8], app: &[u8], args: &[u8]) -> Vec<u8> {
         let packed = stored(&[boot, app, args].concat());
-        let lens = [packed.len(), boot.len(), app.len(), 0, args.len()];
+        let all = [boot, app, args].concat();
+        let lens = [
+            packed.len(),
+            boot.len(),
+            app.len(),
+            0,
+            args.len(),
+            crc32(&all) as usize,
+        ];
         let mut file = b"MZ program".to_vec();
         file.extend(&packed);
         file.extend(lens.iter().flat_map(|&n| (n as u64).to_le_bytes()));
@@ -222,7 +248,7 @@ mod tests {
     #[test]
     fn damaged_lengths_are_errors() {
         let mut file = bundle(&EMPTY_JAR, &EMPTY_JAR, b"a\0");
-        let at = file.len() - 48;
+        let at = file.len() - 56;
         file[at..at + 8].copy_from_slice(&u64::MAX.to_le_bytes());
         assert!(load(tmp("packed", &file)).is_err());
         let mut file = bundle(&EMPTY_JAR, &EMPTY_JAR, b"a\0");
@@ -231,6 +257,17 @@ mod tests {
         let mut file = bundle(&EMPTY_JAR, &EMPTY_JAR, b"a\0");
         file[at + 32..at + 40].copy_from_slice(&3u64.to_le_bytes());
         assert!(load(tmp("short", &file)).is_err());
+    }
+
+    #[test]
+    fn a_changed_argument_fails_the_crc() {
+        let mut file = bundle(&EMPTY_JAR, &EMPTY_JAR, b"a.Main ");
+        let last = file.len() - 57; // the arguments' final byte, stored as is
+        file[last - 1] = b'X';
+        let Err(err) = load(tmp("crc", &file)) else {
+            panic!("a changed payload was accepted");
+        };
+        assert!(err.contains("corrupt payload"), "{err}");
     }
 
     #[test]
