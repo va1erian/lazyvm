@@ -272,7 +272,7 @@ fn default_boot() -> Option<Vec<PathBuf>> {
 /// The running binary's path: the system's answer, else an absolute
 /// `argv[0]` (LazyOS's Linux ABI has no `/proc/self/exe`, and `init` starts
 /// programs by absolute path).
-fn binary_path() -> Option<PathBuf> {
+pub(crate) fn binary_path() -> Option<PathBuf> {
     if let Ok(exe) = std::env::current_exe() {
         return Some(exe);
     }

@@ -5,11 +5,14 @@
 //! it: `lazyvm` (`src/main.rs`) and `lazyvm-ui` (`crates/launcher-ui`), which
 //! adds the `lazy.ui` natives and so links xui (docs/ui.md, "Size").
 
+mod bundle;
+mod extract;
 mod jarfile;
 mod options;
 
 use std::process::ExitCode;
 
+use bundle::Bundle;
 use options::{Command, Launch};
 use vm::verify::VerifyMode;
 use vm::{ClassPath, Value, Vm, VmError};
@@ -35,6 +38,18 @@ pub fn main(extra: Extra) -> ExitCode {
         .skip(1)
         .map(|a| platform::wtf::to_units(&a))
         .collect();
+    // A self-contained executable runs its own application (docs/bundle.md).
+    let bundle = match bundle::load(options::binary_path()) {
+        Ok(b) => b,
+        Err(msg) => {
+            eprintln!("lazyvm: {msg}");
+            return ExitCode::from(1);
+        }
+    };
+    let args = match &bundle {
+        Some(b) => b.command_line(args),
+        None => args,
+    };
     let launch = match options::parse(&args) {
         Ok(Command::Run(launch)) => *launch,
         Ok(Command::Version) => {
@@ -56,7 +71,7 @@ pub fn main(extra: Extra) -> ExitCode {
         println!("Too small initial heap");
         return ExitCode::from(1);
     }
-    let code = match run_vm(launch, extra) {
+    let code = match run_vm(launch, bundle, extra) {
         Ok(code) => code,
         Err(msg) => internal(&msg),
     };
@@ -70,17 +85,17 @@ pub fn main(extra: Extra) -> ExitCode {
 /// Windows the VM keeps the main thread, which windows need (`build.rs`
 /// sizes its stack); elsewhere it gets a thread of its own.
 #[cfg(windows)]
-fn run_vm(launch: Launch, extra: Extra) -> Result<ExitCode, String> {
-    let run = std::panic::AssertUnwindSafe(move || run(launch, extra));
+fn run_vm(launch: Launch, bundle: Option<Bundle>, extra: Extra) -> Result<ExitCode, String> {
+    let run = std::panic::AssertUnwindSafe(move || run(launch, bundle, extra));
     std::panic::catch_unwind(run).map_err(|_| "the VM thread panicked".to_string())
 }
 
 #[cfg(not(windows))]
-fn run_vm(launch: Launch, extra: Extra) -> Result<ExitCode, String> {
+fn run_vm(launch: Launch, bundle: Option<Bundle>, extra: Extra) -> Result<ExitCode, String> {
     let vm_thread = std::thread::Builder::new()
         .name("main".into())
         .stack_size(VM_STACK_BYTES)
-        .spawn(move || run(launch, extra));
+        .spawn(move || run(launch, bundle, extra));
     match vm_thread.map(|t| t.join()) {
         Ok(Ok(code)) => Ok(code),
         Ok(Err(_)) => Err("the VM thread panicked".into()),
@@ -96,7 +111,7 @@ fn print_version() {
     eprintln!("LazyVM (build {v}, interpreted mode, runs Java 8 bytecode)");
 }
 
-fn run(mut launch: Launch, extra: Extra) -> ExitCode {
+fn run(mut launch: Launch, bundle: Option<Bundle>, extra: Extra) -> ExitCode {
     if launch.show_version {
         print_version();
     }
@@ -123,7 +138,10 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
     }
     // The debugger reads named locals, which are otherwise dropped on load.
     classfile::keep_local_variables(launch.options.jdwp.is_some());
-    let classpath = ClassPath::open(&launch.boot_classpath, &launch.classpath);
+    let classpath = match bundle {
+        Some(b) => b.classpath(),
+        None => ClassPath::open(&launch.boot_classpath, &launch.classpath),
+    };
     let mut vm = Vm::new(classpath, launch.options.clone());
     natives::register_all(&mut vm);
     for register in extra {
