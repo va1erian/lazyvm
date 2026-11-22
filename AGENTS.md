@@ -110,6 +110,7 @@ python tools/test.py                   # the differential suite
 python tools/test.py --jar             # the same, from tests.jar with lazyrt.jar
 LAZYVM_JIT=all python tools/test.py    # the same, every verified method compiled by the JIT (S11-07)
 python tools/launcher_test.py          # -jar, manifests and jar errors
+python tools/bundle_test.py            # self-contained executables (docs/bundle.md)
 python tools/fastloop_test.py         # malformed bytecode: the interpreter's tight loop matches -Xtrace:interp
 python tools/jdwp_smoke.py            # a scripted debugger over -agentlib:jdwp (--oracle runs it on Java 8: local, needs the oracle)
 python tools/size.py                   # binary + lazyrt.jar under the 4 MB budget (D14)
@@ -151,6 +152,8 @@ python tools/lazyos_test.py --lazyos <LazyOS checkout> --filter <area>   # insid
 python tools/bench.py run --out base.json   # the benchmark suite (bench/); `compare` checks two runs
 LAZYVM_PROF=out.txt <profiling lazyvm> ...   # sampling profile, built with --features vm/prof; tools/prof.py reports a window
 python tools/sdk.py                    # dist/lazyvm-sdk for IntelliJ (docs/intellij.md)
+python tools/bundle.py --out dist/App.exe --jar app.jar   # one self-contained executable (docs/bundle.md)
+python tools/icon.py                   # redraw tools/bundle/lazyvm.ico
 python tools/verify_test.py --oracle   # the verifier's classes on Java 8 too (docs/design/verifier.md)
 cargo +nightly fuzz run verifier --fuzz-dir fuzz fuzz/corpus/verifier   # or parser
 python tools/check_rules.py

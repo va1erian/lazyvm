@@ -125,7 +125,7 @@ impl Vm {
         let _ = platform::flush(platform::Stream::Out);
         let _ = platform::flush(platform::Stream::Err);
         // The status the launcher gives for an exit on the main thread.
-        std::process::exit(i32::from(code as u8))
+        platform::exit(i32::from(code as u8))
     }
 }
 
@@ -135,9 +135,9 @@ impl Vm {
 fn thread_main(gil: Arc<Gil>, me: usize) {
     let body = std::panic::AssertUnwindSafe(|| run_thread(gil, me));
     if std::panic::catch_unwind(body).is_err() {
-        eprintln!("lazyvm: internal error: a VM thread panicked");
+        platform::err_line("lazyvm: internal error: a VM thread panicked");
         let _ = platform::flush(platform::Stream::Out);
-        std::process::exit(EXIT_INTERNAL);
+        platform::exit(EXIT_INTERNAL);
     }
 }
 
@@ -153,7 +153,7 @@ fn run_thread(gil: Arc<Gil>, me: usize) {
         // after the handler, just ends the thread.
         Err(e) if e.is_catchable() => {}
         Err(e) => {
-            eprintln!("lazyvm: internal error: {e}");
+            platform::err_line(&format!("lazyvm: internal error: {e}"));
             vm.exit_process(EXIT_INTERNAL)
         }
     }

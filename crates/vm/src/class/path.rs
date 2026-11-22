@@ -41,6 +41,18 @@ impl ClassPath {
         }
     }
 
+    /// A self-contained executable's class library and application jar,
+    /// already in memory, then directories it unpacked (docs/bundle.md). The
+    /// application jar was merged by the bundler: no `Class-Path` to follow.
+    pub fn from_jars(boot: Jar, app: Jar, dirs: Vec<PathBuf>) -> ClassPath {
+        let mut entries = vec![Entry::Jar(Arc::new(app))];
+        entries.extend(dirs.into_iter().map(Entry::Dir));
+        ClassPath {
+            boot: vec![Entry::Jar(Arc::new(boot))],
+            app: entries,
+        }
+    }
+
     /// The class file of `name` (internal form, no `.class`).
     pub fn find_class(&self, name: &str) -> Option<Found> {
         is_safe_name(name)

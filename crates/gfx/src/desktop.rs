@@ -48,11 +48,25 @@ struct App {
     last: (Vec<u32>, u32, u32),
 }
 
+/// The icon `tools/bundle.py` gave the executable (group resource 1), so the
+/// window and taskbar show what Explorer shows; none for a plain launcher.
+#[cfg(windows)]
+fn exe_icon() -> Option<winit::window::Icon> {
+    use winit::platform::windows::IconExtWindows;
+    winit::window::Icon::from_resource(1, None).ok()
+}
+
+#[cfg(not(windows))]
+fn exe_icon() -> Option<winit::window::Icon> {
+    None
+}
+
 impl App {
     fn create(&mut self, el: &ActiveEventLoop, title: &str, w: u32, h: u32) -> Result<(), String> {
         let attrs = Window::default_attributes()
             .with_title(title)
-            .with_inner_size(PhysicalSize::new(w, h));
+            .with_inner_size(PhysicalSize::new(w, h))
+            .with_window_icon(exe_icon());
         let window = Rc::new(el.create_window(attrs).map_err(|e| e.to_string())?);
         let context = softbuffer::Context::new(window.clone()).map_err(|e| e.to_string())?;
         let surface = Surface::new(&context, window.clone()).map_err(|e| e.to_string())?;

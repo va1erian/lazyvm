@@ -5,11 +5,15 @@
 //! it: `lazyvm` (`src/main.rs`) and `lazyvm-ui` (`crates/launcher-ui`), which
 //! adds the `lazy.ui` natives and so links xui (docs/ui.md, "Size").
 
+mod bundle;
+mod extract;
 mod jarfile;
 mod options;
+mod silent;
 
 use std::process::ExitCode;
 
+use bundle::Bundle;
 use options::{Command, Launch};
 use vm::verify::VerifyMode;
 use vm::{ClassPath, Value, Vm, VmError};
@@ -27,6 +31,14 @@ const MIN_HEAP_BYTES: usize = 1 << 20;
 /// Natives registered after `natives::register_all`, by the binary.
 pub type Extra = &'static [fn(&mut Vm)];
 
+/// `eprintln!` through `platform::err_line`, so that a windowed bundle keeps
+/// the line for its error box (`silent.rs`).
+macro_rules! err_line {
+    ($($t:tt)*) => {
+        platform::err_line(&format!($($t)*))
+    };
+}
+
 /// The whole command line: parse, run the VM, flush, exit.
 pub fn main(extra: Extra) -> ExitCode {
     // Arguments are kept as UTF-16 units: a Windows command line may hold unpaired
@@ -35,6 +47,37 @@ pub fn main(extra: Extra) -> ExitCode {
         .skip(1)
         .map(|a| platform::wtf::to_units(&a))
         .collect();
+    let exe = options::binary_path();
+    // A self-contained executable runs its own application (docs/bundle.md).
+    // Started windowed, without a console, its errors go in a box.
+    let silent = silent::no_stderr();
+    let code = match bundle::load(exe.clone()) {
+        Ok(b) => {
+            if silent && b.is_some() {
+                silent::arm(exe.as_deref());
+            }
+            launch(args, b, extra)
+        }
+        Err(msg) => {
+            if silent {
+                silent::arm(exe.as_deref());
+            }
+            err_line!("lazyvm: {msg}");
+            ExitCode::from(1)
+        }
+    };
+    if code != ExitCode::SUCCESS {
+        silent::report();
+    }
+    code
+}
+
+/// Parses `args` (a bundle's own first), then runs the VM.
+fn launch(args: Vec<options::Arg>, bundle: Option<Bundle>, extra: Extra) -> ExitCode {
+    let args = match &bundle {
+        Some(b) => b.command_line(args),
+        None => args,
+    };
     let launch = match options::parse(&args) {
         Ok(Command::Run(launch)) => *launch,
         Ok(Command::Version) => {
@@ -46,7 +89,7 @@ pub fn main(extra: Extra) -> ExitCode {
             return ExitCode::SUCCESS;
         }
         Err(msg) => {
-            eprintln!("lazyvm: {msg}\n{}", options::USAGE);
+            err_line!("lazyvm: {msg}\n{}", options::USAGE);
             return ExitCode::from(2);
         }
     };
@@ -56,7 +99,7 @@ pub fn main(extra: Extra) -> ExitCode {
         println!("Too small initial heap");
         return ExitCode::from(1);
     }
-    let code = match run_vm(launch, extra) {
+    let code = match run_vm(launch, bundle, extra) {
         Ok(code) => code,
         Err(msg) => internal(&msg),
     };
@@ -70,17 +113,17 @@ pub fn main(extra: Extra) -> ExitCode {
 /// Windows the VM keeps the main thread, which windows need (`build.rs`
 /// sizes its stack); elsewhere it gets a thread of its own.
 #[cfg(windows)]
-fn run_vm(launch: Launch, extra: Extra) -> Result<ExitCode, String> {
-    let run = std::panic::AssertUnwindSafe(move || run(launch, extra));
+fn run_vm(launch: Launch, bundle: Option<Bundle>, extra: Extra) -> Result<ExitCode, String> {
+    let run = std::panic::AssertUnwindSafe(move || run(launch, bundle, extra));
     std::panic::catch_unwind(run).map_err(|_| "the VM thread panicked".to_string())
 }
 
 #[cfg(not(windows))]
-fn run_vm(launch: Launch, extra: Extra) -> Result<ExitCode, String> {
+fn run_vm(launch: Launch, bundle: Option<Bundle>, extra: Extra) -> Result<ExitCode, String> {
     let vm_thread = std::thread::Builder::new()
         .name("main".into())
         .stack_size(VM_STACK_BYTES)
-        .spawn(move || run(launch, extra));
+        .spawn(move || run(launch, bundle, extra));
     match vm_thread.map(|t| t.join()) {
         Ok(Ok(code)) => Ok(code),
         Ok(Err(_)) => Err("the VM thread panicked".into()),
@@ -91,12 +134,12 @@ fn run_vm(launch: Launch, extra: Extra) -> Result<ExitCode, String> {
 /// On stderr, in the `<name> version "<version>"` shape IDEs parse.
 fn print_version() {
     let v = env!("CARGO_PKG_VERSION");
-    eprintln!("lazyvm version \"1.8.0\"");
-    eprintln!("LazyVM Runtime Environment (build {v})");
-    eprintln!("LazyVM (build {v}, interpreted mode, runs Java 8 bytecode)");
+    err_line!("lazyvm version \"1.8.0\"");
+    err_line!("LazyVM Runtime Environment (build {v})");
+    err_line!("LazyVM (build {v}, interpreted mode, runs Java 8 bytecode)");
 }
 
-fn run(mut launch: Launch, extra: Extra) -> ExitCode {
+fn run(mut launch: Launch, bundle: Option<Bundle>, extra: Extra) -> ExitCode {
     if launch.show_version {
         print_version();
     }
@@ -112,7 +155,7 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
                 launch.classpath = j.classpath;
             }
             Err(msg) => {
-                eprintln!("{msg}");
+                err_line!("{msg}");
                 return ExitCode::from(1);
             }
         }
@@ -123,7 +166,10 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
     }
     // The debugger reads named locals, which are otherwise dropped on load.
     classfile::keep_local_variables(launch.options.jdwp.is_some());
-    let classpath = ClassPath::open(&launch.boot_classpath, &launch.classpath);
+    let classpath = match bundle {
+        Some(b) => b.classpath(),
+        None => ClassPath::open(&launch.boot_classpath, &launch.classpath),
+    };
     let mut vm = Vm::new(classpath, launch.options.clone());
     natives::register_all(&mut vm);
     for register in extra {
@@ -141,8 +187,8 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
     let name: Vec<u16> = "java.class.path".encode_utf16().collect();
     vm.set_property(&name, classpath_text);
     if let Err(e) = vm.boot() {
-        eprintln!("lazyvm: cannot start: the class library is missing or broken ({e})");
-        eprintln!("  boot class path: {:?}", launch.boot_classpath);
+        err_line!("lazyvm: cannot start: the class library is missing or broken ({e})");
+        err_line!("  boot class path: {:?}", launch.boot_classpath);
         return ExitCode::from(1);
     }
     if launch.verify_check {
@@ -151,7 +197,7 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
     if let Some(config) = &launch.options.jdwp
         && let Err(msg) = vm.start_debugger(config)
     {
-        eprintln!("ERROR: {msg}");
+        err_line!("ERROR: {msg}");
         return ExitCode::from(1);
     }
     let main_class = launch.main_class.clone().unwrap_or_default();
@@ -161,7 +207,7 @@ fn run(mut launch: Launch, extra: Extra) -> ExitCode {
         // class; looking up its lossy spelling could find a different one.
         Err(_) => {
             let shown = String::from_utf16_lossy(&main_class);
-            eprintln!("Error: Could not find or load main class {shown}");
+            err_line!("Error: Could not find or load main class {shown}");
             Err(VmError::Exit(1))
         }
     };
@@ -215,7 +261,7 @@ fn run_main(vm: &mut Vm, main_class: &str, args: &[options::Arg]) -> Result<(), 
             class: "java/lang/NoClassDefFoundError",
             ..
         }) => {
-            eprintln!("Error: Could not find or load main class {main_class}");
+            err_line!("Error: Could not find or load main class {main_class}");
             return Err(VmError::Exit(1));
         }
         Err(e) => return Err(e),
@@ -224,10 +270,10 @@ fn run_main(vm: &mut Vm, main_class: &str, args: &[options::Arg]) -> Result<(), 
         .find_in_class(class, "main", "([Ljava/lang/String;)V", false)
         .filter(|&m| vm.method(m).is_static() && vm.method(m).access & 0x0001 != 0);
     let Some(main) = main else {
-        eprintln!(
+        err_line!(
             "Error: Main method not found in class {main_class}, please define the main method as:"
         );
-        eprintln!("   public static void main(String[] args)");
+        err_line!("   public static void main(String[] args)");
         return Err(VmError::Exit(1));
     };
     vm.initialize(class)?;
@@ -281,6 +327,6 @@ fn report_uncaught(vm: &mut Vm, ex: vm::Ref) -> Result<(), VmError> {
 }
 
 fn internal(msg: &str) -> ExitCode {
-    eprintln!("lazyvm: internal error: {msg}");
+    err_line!("lazyvm: internal error: {msg}");
     ExitCode::from(EXIT_INTERNAL)
 }

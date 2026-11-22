@@ -45,6 +45,12 @@ impl std::fmt::Debug for Jar {
     }
 }
 
+/// Raw deflate data (RFC 1951) inflated to at most `limit` bytes; `None`
+/// when it is corrupt or inflates past the limit.
+pub fn inflate(raw: &[u8], limit: usize) -> Option<Vec<u8>> {
+    miniz_oxide::inflate::decompress_to_vec_with_limit(raw, limit).ok()
+}
+
 impl Jar {
     pub fn open(data: impl Into<Arc<[u8]>>) -> Result<Jar, FormatError> {
         let data: Arc<[u8]> = data.into();
@@ -113,8 +119,8 @@ impl Jar {
             .ok_or_else(outside)?;
         let out = match e.method {
             0 => raw.to_vec(),
-            8 => miniz_oxide::inflate::decompress_to_vec_with_limit(raw, e.size as usize)
-                .map_err(|_| FormatError::new(at, format!("corrupt deflate data in {name}")))?,
+            8 => inflate(raw, e.size as usize)
+                .ok_or_else(|| FormatError::new(at, format!("corrupt deflate data in {name}")))?,
             m => {
                 return Err(FormatError::new(
                     at,

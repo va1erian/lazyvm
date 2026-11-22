@@ -56,6 +56,8 @@ jobs:
         run: python tools/size.py --siestac target/release/siestac.exe
       - name: launcher (-jar, manifests, jar errors)
         run: python tools/launcher_test.py
+      - name: self-contained executables (docs/bundle.md)
+        run: python tools/bundle_test.py
       - name: tight loop on malformed bytecode
         run: python tools/fastloop_test.py
       - name: JDWP smoke (scripted debugger - breakpoint, steps, locals)

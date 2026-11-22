@@ -25,9 +25,9 @@ natives-ui = { path = "../natives-ui" }
 # The `lazy.ui` window host; Windows only. On LazyOS the GPL
 # `lazyvm-lazyos` crate builds its own `lazyvm-ui` with xuid's host.
 [target.'cfg(windows)'.dependencies]
-lazyvm-win = { path = "../lazyvm-win", optional = true }
+lazyvm-win = { path = "../lazyvm-win", optional = true, default-features = false }
 
 [features]
 default = ["desktop"]
 # Real windows: `lazy.gfx` and, on Windows, `lazy.ui`.
-desktop = ["launcher/desktop", "dep:lazyvm-win"]
+desktop = ["launcher/desktop", "dep:lazyvm-win", "lazyvm-win/ui"]

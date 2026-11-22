@@ -19,6 +19,11 @@ natives = { path = "../natives", default-features = false }
 platform = { path = "../platform" }
 classfile = { path = "../classfile" }
 
+# The message box a windowed bundle's errors show in (docs/bundle.md); without
+# the `ui` feature, so no xui.
+[target.'cfg(windows)'.dependencies]
+lazyvm-win = { path = "../lazyvm-win", default-features = false }
+
 [features]
 default = ["desktop"]
 # `lazy.gfx` desktop windows (docs/gfx.md); `--no-default-features` builds a
