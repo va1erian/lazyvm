@@ -132,8 +132,8 @@ pub(super) fn spawn(
         .spawn(move || {
             let body = std::panic::AssertUnwindSafe(|| run(&gil, me, &config, source));
             if std::panic::catch_unwind(body).is_err() {
-                eprintln!("lazyvm: internal error: the debugger thread panicked");
-                std::process::exit(EXIT_INTERNAL);
+                platform::err_line("lazyvm: internal error: the debugger thread panicked");
+                platform::exit(EXIT_INTERNAL);
             }
         })
 }
@@ -166,8 +166,8 @@ fn serve(gil: &Arc<Gil>, me: usize, config: &Config, conn: Arc<Conn>, first: boo
     if handshake(&conn).is_err() {
         if !config.server {
             // The one debugger there will be is not one; nothing would resume the VM.
-            eprintln!("ERROR: transport error 202: handshake failed");
-            std::process::exit(2);
+            platform::err_line("ERROR: transport error 202: handshake failed");
+            platform::exit(2);
         }
         return false;
     }
@@ -205,14 +205,18 @@ fn report_bad_packet(e: &PacketError) {
                 e.kind(),
                 UnexpectedEof | ConnectionReset | ConnectionAborted
             ) {
-                eprintln!("lazyvm: the debugger connection failed: {e}");
+                platform::err_line(&format!("lazyvm: the debugger connection failed: {e}"));
             }
         }
         PacketError::BadLength(n) => {
-            eprintln!("lazyvm: the debugger sent a packet of {n} bytes; closing the connection");
+            platform::err_line(&format!(
+                "lazyvm: the debugger sent a packet of {n} bytes; closing the connection"
+            ));
         }
         PacketError::NotACommand => {
-            eprintln!("lazyvm: the debugger sent a reply, not a command; closing the connection");
+            platform::err_line(
+                "lazyvm: the debugger sent a reply, not a command; closing the connection",
+            );
         }
     }
 }

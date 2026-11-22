@@ -5,19 +5,17 @@
 
 #![cfg(windows)]
 
-use std::rc::Rc;
-
-use xui_core::backend::Backend;
-
 /// xui's winit backend. winit makes one event loop per process, on the main
 /// thread; `xui_bind::run` enforces the once, the caller the thread.
-pub fn ui_backend() -> Rc<dyn Backend> {
-    Rc::new(xui_canvas::WinitBackend::new())
+#[cfg(feature = "ui")]
+pub fn ui_backend() -> std::rc::Rc<dyn xui_core::backend::Backend> {
+    std::rc::Rc::new(xui_canvas::WinitBackend::new())
 }
 
 /// Shows `text` in a modal system message box titled `title`, with an error
 /// icon, and waits for OK. By the time it is needed the process's one winit
-/// loop is gone, so it cannot be an xui dialog.
+/// loop is gone, so it cannot be an xui dialog. `lazyvm` shows it too, for a
+/// windowed bundle's errors (docs/bundle.md).
 #[allow(unsafe_code)]
 pub fn error_box(title: &str, text: &str) {
     use windows_sys::Win32::UI::WindowsAndMessaging::{MB_ICONERROR, MB_OK, MessageBoxW};

@@ -15,7 +15,7 @@ pub mod wtf;
 
 use std::ffi::OsString;
 use std::io::{self, Read, Write};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 /// The three standard streams by Java's descriptor numbers.
@@ -37,12 +37,71 @@ impl Stream {
     }
 }
 
+/// The start of what stderr was sent since `capture_err`, for a program
+/// with no console to show it in (a windowed bundle, docs/bundle.md).
+static CAPTURED: Mutex<Option<Vec<u8>>> = Mutex::new(None);
+/// Enough for the messages and the top of a stack trace.
+const CAPTURE_MAX: usize = 16 << 10;
+
+/// From now on, also keep what is written to stderr, for `captured_err`.
+pub fn capture_err() {
+    if let Ok(mut c) = CAPTURED.lock() {
+        *c = Some(Vec::new());
+    }
+}
+
+/// What stderr was sent since `capture_err` (at most `CAPTURE_MAX` bytes).
+pub fn captured_err() -> Vec<u8> {
+    CAPTURED
+        .lock()
+        .ok()
+        .and_then(|mut c| c.as_mut().map(std::mem::take))
+        .unwrap_or_default()
+}
+
+fn keep_err(bytes: &[u8]) {
+    if let Ok(mut c) = CAPTURED.lock()
+        && let Some(kept) = c.as_mut()
+    {
+        let room = CAPTURE_MAX.saturating_sub(kept.len());
+        kept.extend_from_slice(&bytes[..bytes.len().min(room)]);
+    }
+}
+
+/// `text` and a newline on stderr, as `eprintln!` writes them, but through
+/// `write`, so that `capture_err` sees it: the one way the VM and the
+/// launcher report errors.
+pub fn err_line(text: &str) {
+    let _ = write(Stream::Err, format!("{text}\n").as_bytes());
+}
+
+/// Called with the status by `exit`, before the process ends.
+static EXIT_HOOK: OnceLock<fn(i32)> = OnceLock::new();
+
+/// Sets what `exit` calls first (the launcher's error box, docs/bundle.md).
+pub fn set_exit_hook(hook: fn(i32)) {
+    let _ = EXIT_HOOK.set(hook);
+}
+
+/// Ends the process with `code`, after the exit hook. Every exit other than
+/// the launcher's return from `main` (`System.exit` on another thread,
+/// `Runtime.halt`, a VM failure) goes through here.
+pub fn exit(code: i32) -> ! {
+    if let Some(hook) = EXIT_HOOK.get() {
+        hook(code);
+    }
+    std::process::exit(code)
+}
+
 /// Writes all of `bytes` to stdout or stderr. Stdout is line-buffered by
 /// `std`; stderr is unbuffered.
 pub fn write(stream: Stream, bytes: &[u8]) -> io::Result<()> {
     match stream {
         Stream::Out => io::stdout().lock().write_all(bytes),
-        Stream::Err => io::stderr().lock().write_all(bytes),
+        Stream::Err => {
+            keep_err(bytes);
+            io::stderr().lock().write_all(bytes)
+        }
         Stream::In => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "stdin is not writable",

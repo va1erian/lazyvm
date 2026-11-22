@@ -19,7 +19,7 @@ python tools/bundle.py --out dist/App.exe --cp "build/classes;lib/a.jar" --main 
 | `--vm V` | `lazyvm` (default, with `lazy.gfx`), `lazyvm-ui` (for `lazy.ui` apps) or a launcher's path. The named ones are built in release first, unless `--no-build` is given. |
 | `--vm-arg A` | A VM option stored in the bundle, such as `--vm-arg=-Xmx512m` or `--vm-arg=-Dk=v`. Repeatable. |
 | `--icon F` | The `.ico` file Explorer shows; `lazy.gfx` windows show it in their title bar and taskbar button too (`lazy.ui` windows, made by xui, do not yet). The default is LazyVM's (`tools/bundle/lazyvm.ico`, drawn by `tools/icon.py`). `none` leaves the icon out. |
-| `--gui` | A windowed program: Windows opens no console for it, and stdout and stderr go nowhere, so launch errors are silent too. |
+| `--gui` | A windowed program: Windows opens no console for it. Errors are shown in a message box instead (see "Errors"). |
 | `-- args` | Fixed program arguments. The arguments the executable is started with follow them. |
 
 ## Layout
@@ -78,6 +78,25 @@ never sees half a directory. Entry names that would leave the directory
 written (device names such as `nul.txt`, trailing dots or spaces), are refused.
 Directories from older builds are not removed yet. Delete the folder by hand
 to reclaim the space.
+
+## Errors
+
+A `--gui` bundle started from Explorer, a shortcut or the Start menu has no
+stderr, so its error messages would go nowhere. When the launcher finds stderr
+missing, it keeps the first 16 KB written there (`platform::capture_err`). That
+covers the launcher's own messages and Java's `System.err`, including an
+uncaught exception's stack trace. If the program then exits with a failure
+status, the start of that text appears in a message box titled after the
+executable (`crates/launcher/src/silent.rs`). That holds whether `main`
+returns or the process ends from another thread (`System.exit`, `halt`, a VM
+failure): those exits go through `platform::exit`, which runs the launcher's
+hook first. When stderr is redirected or a console shows it, nothing changes.
+A bundle that `Start-Process` launches from a console inherits a stderr handle,
+so it shows no box.
+
+The box is `lazyvm-win::error_box`, the one `lazy.ui` uses. `lazyvm` links it
+without xui: xui now sits behind that crate's `ui` feature, which only
+`lazyvm-ui` turns on.
 
 ## Minicraft
 

@@ -792,6 +792,7 @@ name = "launcher"
 version = "0.1.0"
 dependencies = [
  "classfile",
+ "lazyvm-win",
  "natives",
  "platform",
  "vm",

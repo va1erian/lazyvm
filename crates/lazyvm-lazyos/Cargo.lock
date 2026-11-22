@@ -1163,6 +1163,7 @@ name = "launcher"
 version = "0.1.0"
 dependencies = [
  "classfile",
+ "lazyvm-win",
  "natives",
  "platform",
  "vm",
@@ -1286,6 +1287,13 @@ dependencies = [
  "platform",
  "xui-app",
  "xui-canvas",
+]
+
+[[package]]
+name = "lazyvm-win"
+version = "0.1.0"
+dependencies = [
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
