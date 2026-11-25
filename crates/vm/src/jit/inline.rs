@@ -27,8 +27,11 @@ use super::layout::{LOW, SIZE, TAG, TOP};
 use crate::Vm;
 use crate::class::{ClassId, InitState, MethodRef, Resolved};
 
-/// The largest body inlined, in bytes of bytecode.
-const MAX_CODE: usize = 64;
+/// The largest body inlined, in bytes of bytecode. 64 left out the hash
+/// and gradient helpers of noise kernels (80 bytes or so), which world
+/// generation calls millions of times: at 128, `bench/Noise` runs a third
+/// faster and the rest of the suite is unchanged.
+const MAX_CODE: usize = 128;
 
 enum Guard {
     None,
